@@ -1,15 +1,17 @@
 (ns hypercrud.browser.browser-request
-  (:require [cats.core :as cats :refer [mlet]]
-            [cats.monad.either :as either]
-            [contrib.data :refer [unwrap]]
-            [contrib.reactive :as r]
-            [hypercrud.browser.base :as base]
-            [hypercrud.browser.context :as context]
-            [hypercrud.browser.field :as field]
-            [hypercrud.browser.link :as link]
-            [hypercrud.browser.routing :as routing]
-            [hypercrud.client.schema :as schema-util]
-            [hyperfiddle.data :as data]))
+  (:require
+    [cats.core :as cats :refer [mlet]]
+    [cats.monad.either :as either]
+    [contrib.ct :refer [unwrap]]
+    [contrib.reactive :as r]
+    [hypercrud.browser.base :as base]
+    [hypercrud.browser.context :as context]
+    [hypercrud.browser.field :as field]
+    [hypercrud.browser.link :as link]
+    [hypercrud.browser.routing :as routing]
+    [hypercrud.client.schema :as schema-util]
+    [hyperfiddle.data :as data]
+    [taoensso.timbre :as timbre]))
 
 
 (declare requests)
@@ -18,10 +20,11 @@
 (defn request-from-route [route ctx]
   (let [ctx (-> (context/clean ctx)
                 (routing/route route))]
-    (when-let [meta-fiddle-request (unwrap @(r/apply-inner-r (r/track base/meta-request-for-fiddle ctx)))]
+    (when-let [meta-fiddle-request (unwrap #(timbre/warn %) @(r/apply-inner-r (r/track base/meta-request-for-fiddle ctx)))]
       (assert (r/reactive? meta-fiddle-request))
       (concat [@meta-fiddle-request]
               (unwrap
+                #(timbre/warn %)
                 (mlet [fiddle @(r/apply-inner-r (r/track base/hydrate-fiddle meta-fiddle-request ctx))
                        fiddle-request @(r/apply-inner-r (r/track base/request-for-fiddle fiddle ctx))]
                   (assert (r/reactive? fiddle-request))
@@ -31,11 +34,11 @@
                       (schema-util/schema-requests-for-link ctx)
                       (->> (base/process-results fiddle fiddle-request ctx)
                            (cats/fmap requests)
-                           unwrap)))))))))
+                           (unwrap #(timbre/warn %)))))))))))
 
 (defn request-from-link [link ctx]
-  (unwrap (base/from-link link ctx (fn [route ctx]
-                                     (either/right (request-from-route route ctx))))))
+  (unwrap #(timbre/warn %) (base/from-link link ctx (fn [route ctx]
+                                                      (either/right (request-from-route route ctx))))))
 
 (defn body-field [ctx]
   (->> @(:hypercrud.browser/links ctx)

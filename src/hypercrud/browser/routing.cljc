@@ -1,20 +1,23 @@
 (ns hypercrud.browser.routing
-  (:require [cats.core :as cats :refer [mlet]]
-            [cats.monad.either :as either]
-            [clojure.set :as set]
-            [clojure.walk :as walk]
-            [contrib.data :refer [unwrap xorxs]]
-            [contrib.eval :as eval]
-            [contrib.reactive :as r]
-            [contrib.string :refer [memoized-safe-read-edn-string]]
-            [contrib.try$ :refer [try-either]]
-            [cuerdas.core :as string]
-            [hypercrud.browser.q-util :as q-util]
-            [hypercrud.browser.router :as router]
-            [hypercrud.types.Entity :refer [#?(:cljs Entity)]]
-            [hypercrud.types.ThinEntity :refer [->ThinEntity #?(:cljs ThinEntity)]]
-            [hyperfiddle.domain :as domain]
-            [hyperfiddle.runtime :as runtime])
+  (:require
+    [cats.core :as cats :refer [mlet]]
+    [cats.monad.either :as either]
+    [clojure.set :as set]
+    [clojure.walk :as walk]
+    [contrib.ct :refer [unwrap]]
+    [contrib.data :refer [xorxs]]
+    [contrib.eval :as eval]
+    [contrib.reactive :as r]
+    [contrib.string :refer [memoized-safe-read-edn-string]]
+    [contrib.try$ :refer [try-either]]
+    [cuerdas.core :as string]
+    [hypercrud.browser.q-util :as q-util]
+    [hypercrud.browser.router :as router]
+    [hypercrud.types.Entity :refer [#?(:cljs Entity)]]
+    [hypercrud.types.ThinEntity :refer [->ThinEntity #?(:cljs ThinEntity)]]
+    [hyperfiddle.domain :as domain]
+    [hyperfiddle.runtime :as runtime]
+    [taoensso.timbre :as timbre])
   #?(:clj
      (:import (hypercrud.types.Entity Entity)
               (hypercrud.types.ThinEntity ThinEntity))))
@@ -99,6 +102,7 @@
   (let [[_ [$1 :as params]] route]
     (case (:fiddle/type fiddle)
       :query (let [q (unwrap                                ; todo whats the point of this monad?
+                       #(timbre/warn %)
                        (mlet [q (memoized-safe-read-edn-string (:fiddle/query fiddle))]
                          (if (vector? q)
                            (cats/return q)

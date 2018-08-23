@@ -1,13 +1,14 @@
 (ns hyperfiddle.ui.api
   (:require
     [cats.core :as cats]
-    [contrib.data :refer [unwrap]]
+    [contrib.ct :refer [unwrap]]
     [contrib.reactive :as r]
     [hypercrud.browser.base :as base]
     [hypercrud.browser.context :as context]
     [hypercrud.browser.field :as field]
     [hypercrud.browser.link :as link]
-    [hyperfiddle.data :as data]))
+    [hyperfiddle.data :as data]
+    [taoensso.timbre :as timbre]))
 
 
 (declare api-data)
@@ -17,13 +18,13 @@
   (->> (base/data-from-route route ctx)
        (cats/fmap api-data)
        ; todo cannot swallow this error
-       (unwrap)))
+       (unwrap #(timbre/warn %))))
 
 (defn recurse-from-link [link ctx]
   (->> (base/data-from-link link ctx)
        (cats/fmap api-data)
        ; todo cannot swallow this error
-       (unwrap)))
+       (unwrap #(timbre/warn %))))
 
 (defn body-field [ctx]
   (->> @(:hypercrud.browser/links ctx)

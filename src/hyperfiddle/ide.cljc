@@ -1,36 +1,37 @@
 (ns hyperfiddle.ide
-  (:require [cats.core :refer [mlet return >>=]]
-            [cats.labs.promise]
-            [cats.monad.either :refer [branch]]
-            [clojure.string :as str]
+  (:require
+    [cats.core :refer [mlet return >>=]]
+    [cats.labs.promise]
+    [cats.monad.either :refer [branch]]
+    [clojure.string :as str]
     #?(:cljs [contrib.css :refer [css]])
-            [contrib.data :refer [unwrap]]
-            [contrib.reactive :as r]
+    [contrib.ct :refer [unwrap]]
+    [contrib.reactive :as r]
     #?(:cljs [contrib.reagent :refer [fragment]])
-            [contrib.rfc3986 :refer [split-fragment]]
-            [contrib.string :refer [safe-read-edn-string empty->nil]]
-            [hypercrud.browser.base :as base]
-            [hypercrud.browser.browser-request :refer [request-from-route]]
+    [contrib.rfc3986 :refer [split-fragment]]
+    [contrib.string :refer [safe-read-edn-string empty->nil]]
+    [hypercrud.browser.base :as base]
+    [hypercrud.browser.browser-request :refer [request-from-route]]
     #?(:cljs [hypercrud.browser.browser-ui :as browser-ui])
-            [hypercrud.browser.context :as context]
-            [hypercrud.browser.routing :as routing]
-            [hypercrud.browser.router :as router]
-            [hypercrud.browser.router-bidi :as router-bidi]
-            [hypercrud.browser.system-fiddle :refer [system-fiddle?]]
+    [hypercrud.browser.context :as context]
+    [hypercrud.browser.routing :as routing]
+    [hypercrud.browser.router :as router]
+    [hypercrud.browser.router-bidi :as router-bidi]
+    [hypercrud.browser.system-fiddle :refer [system-fiddle?]]
     #?(:cljs [hyperfiddle.ui :as ui])
     #?(:cljs [hypercrud.ui.error :as ui-error])
     #?(:cljs [hypercrud.ui.stale :as stale])
-            [hyperfiddle.data]
-            [hyperfiddle.foundation :as foundation]
-            [hyperfiddle.io.hydrate-requests :refer [hydrate-one!]]
-            [hyperfiddle.runtime :as runtime]
-            [taoensso.timbre :as timbre]
+    [hyperfiddle.data]
+    [hyperfiddle.foundation :as foundation]
+    [hyperfiddle.io.hydrate-requests :refer [hydrate-one!]]
+    [hyperfiddle.runtime :as runtime]
+    [taoensso.timbre :as timbre]
 
     ; pull in the entire ide app for reference from user-land
     #?(:cljs [hyperfiddle.ide.fiddles.domain])
     #?(:cljs [hyperfiddle.ide.fiddles.fiddle-links.renderer])
     #?(:cljs [hyperfiddle.ide.fiddles.fiddle-src :refer [fiddle-src-renderer]])
-            [hyperfiddle.ide.fiddles.schema]
+    [hyperfiddle.ide.fiddles.schema]
     #?(:cljs [hyperfiddle.ide.fiddles.schema-attribute])
     #?(:cljs [hyperfiddle.ide.fiddles.topnav :as topnav])))
 
@@ -95,8 +96,8 @@
   {:pre [(string? path-and-frag)]}
   (let [[path frag] (split-fragment path-and-frag)
         domain @(runtime/state rt [:hyperfiddle.runtime/domain])
-        home-route (some-> domain :domain/home-route safe-read-edn-string unwrap) ; in hf format
-        router (some-> domain :domain/router safe-read-edn-string unwrap)]
+        home-route (some-> domain :domain/home-route safe-read-edn-string (->> (unwrap #(timbre/error %)))) ; in hf format
+        router (some-> domain :domain/router safe-read-edn-string (->> (unwrap #(timbre/error %))))]
 
     ;(if (= "/!ide/" (subs path-and-frag 0 6)) (routing/decode (subs path-and-frag 5)))
     (or
@@ -111,8 +112,8 @@
 (defn route-encode [rt [fiddle _ _ frag :as route]]
   {:post [(str/starts-with? % "/")]}
   (let [domain @(runtime/state rt [:hyperfiddle.runtime/domain])
-        router (some-> domain :domain/router safe-read-edn-string unwrap)
-        home-route (some-> domain :domain/home-route safe-read-edn-string unwrap)
+        router (some-> domain :domain/router safe-read-edn-string (->> (unwrap #(timbre/error %))))
+        home-route (some-> domain :domain/home-route safe-read-edn-string (->> (unwrap #(timbre/error %))))
         home-route (if router (router-bidi/bidi->hf home-route) home-route)]
     ;(case (namespace fiddle)) "hyperfiddle.ide" (str "/!ide/" (routing/encode route))
     (or

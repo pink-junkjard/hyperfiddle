@@ -1,27 +1,29 @@
 (ns hyperfiddle.ide.fiddles.topnav
-  (:require [cats.core :refer [fmap]]
-            [clojure.string :as string]
-            [contrib.data :refer [unwrap]]
-            [contrib.reactive :as r]
-            [contrib.reader :refer [read-edn-string]]
-            [contrib.reagent :refer [fragment]]
-            [contrib.rfc3986 :refer [encode-rfc3986-pchar]]
-            [contrib.ednish :refer [encode-ednish]]
-            [contrib.ui :refer [radio-option easy-checkbox]]
-            [contrib.ui.tooltip :refer [tooltip]]
-            [hypercrud.browser.context :as context]
-            [hypercrud.browser.fiddle :as fiddle]
-            [hypercrud.browser.router :as router]
-            [hypercrud.browser.system-fiddle :as system-fiddle]
-            [hypercrud.types.Entity :refer [->Entity shadow-entity]]
-            [hyperfiddle.actions :as actions]
-            [hyperfiddle.data]
-            [hyperfiddle.domain :as domain]
-            [hyperfiddle.foundation :as foundation]
-            [hyperfiddle.runtime :as runtime]
-            [hyperfiddle.security :as security]
-            [hyperfiddle.ui :as ui :refer [ui-from-link markdown]]
-            [hyperfiddle.ui.controls :refer [entity-change!]]))
+  (:require
+    [cats.core :refer [fmap]]
+    [clojure.string :as string]
+    [contrib.ct :refer [unwrap]]
+    [contrib.reactive :as r]
+    [contrib.reader :refer [read-edn-string]]
+    [contrib.reagent :refer [fragment]]
+    [contrib.rfc3986 :refer [encode-rfc3986-pchar]]
+    [contrib.ednish :refer [encode-ednish]]
+    [contrib.ui :refer [radio-option easy-checkbox]]
+    [contrib.ui.tooltip :refer [tooltip]]
+    [hypercrud.browser.context :as context]
+    [hypercrud.browser.fiddle :as fiddle]
+    [hypercrud.browser.router :as router]
+    [hypercrud.browser.system-fiddle :as system-fiddle]
+    [hypercrud.types.Entity :refer [->Entity shadow-entity]]
+    [hyperfiddle.actions :as actions]
+    [hyperfiddle.data]
+    [hyperfiddle.domain :as domain]
+    [hyperfiddle.foundation :as foundation]
+    [hyperfiddle.runtime :as runtime]
+    [hyperfiddle.security :as security]
+    [hyperfiddle.ui :as ui :refer [ui-from-link markdown]]
+    [hyperfiddle.ui.controls :refer [entity-change!]]
+    [taoensso.timbre :as timbre]))
 
 
 ; inline sys-link data when the entity is a system-fiddle
@@ -29,7 +31,7 @@
           (cond
             (system-fiddle/system-fiddle? target-ident) (->> (system-fiddle/hydrate-system-fiddle target-ident)
                                                              (fmap fiddle/fiddle-defaults)
-                                                             unwrap
+                                                             (unwrap #(timbre/error %))
                                                              (->Entity nil))
 
             (nil? (:db/id fiddle-val)) fiddle-val
@@ -59,7 +61,7 @@
                 hypercrud.browser/fiddle] :as ctx} (shadow-fiddle ctx)
         ; hack until hyperfiddle.net#156 is complete
         fake-managed-anchor (fn [rel class ctx & [?label props]]
-                              (let [link-ref (->> (unwrap (hyperfiddle.data/select+ ctx rel class))
+                              (let [link-ref (->> (unwrap #(timbre/error %) (hyperfiddle.data/select+ ctx rel class))
                                                   (r/fmap set-managed))]
                                 [ui-from-link link-ref ctx (assoc props :dont-branch? true) ?label]))]
     [:div {:class class}

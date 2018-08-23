@@ -5,8 +5,9 @@
     [cats.monad.either :as either]
     [clojure.core.match :refer [match match*]]
     [clojure.string :as string]
+    [contrib.ct :refer [unwrap]]
     [contrib.css :refer [css css-slugify]]
-    [contrib.data :refer [take-to unwrap]]
+    [contrib.data :refer [take-to]]
     [contrib.pprint :refer [pprint-str]]
     [contrib.reactive :as r]
     [contrib.reagent :refer [fragment]]
@@ -35,7 +36,8 @@
     [hyperfiddle.ui.popover :refer [popover-cmp]]
     [hyperfiddle.ui.select :refer [select]]
     [hyperfiddle.ui.sort :as sort]
-    [hyperfiddle.ui.util :refer [eval-renderer-comp]]))
+    [hyperfiddle.ui.util :refer [eval-renderer-comp]]
+    [taoensso.timbre :as timbre]))
 
 
 (defn attr-renderer-control [val props ctx]
@@ -260,13 +262,13 @@ User renderers should not be exposed to the reaction."
           ; this is a fine place to eval, put error message in the tooltip prop
           ; each prop might have special rules about his default, for example :visible is default true, does this get handled here?
           (let [unvalidated-route' @route'-ref
-                [_ args :as route] (unwrap unvalidated-route')
+                [_ args :as route] (unwrap #(timbre/error %) unvalidated-route')
                 validated-route' (routing/validated-route' @(r/fmap :link/fiddle link-ref) route ctx)
                 errors (->> [unvalidated-route' validated-route']
                             (filter either/left?) (map cats/extract) (into #{}))]
             (merge
               ; doesn't handle tx-fn - meant for the self-link. Weird and prob bad.
-              {:route (unwrap unvalidated-route')
+              {:route (unwrap #(timbre/error %) unvalidated-route')
                :tooltip (if-not (empty? errors)
                           [:warning (pprint-str errors)]
                           (if (:hyperfiddle.ui/debug-tooltips ctx)
