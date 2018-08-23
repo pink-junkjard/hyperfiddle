@@ -1,18 +1,20 @@
 (ns hyperfiddle.service.jvm.hydrate-route
   (:refer-clojure :exclude [sync])
-  (:require [hypercrud.client.core :as hc]
-            [hypercrud.client.peer :as peer]
-            [contrib.data :refer [unwrap]]
-            [contrib.reactive :as r]
-            [hyperfiddle.foundation :as foundation]
-            [hyperfiddle.ide :as ide]
-            [hyperfiddle.io.global-basis :refer [global-basis]]
-            [hyperfiddle.io.hydrate-requests :refer [hydrate-requests stage-val->staged-branches]]
-            [hyperfiddle.io.hydrate-route :refer [hydrate-loop request-fn-adapter]]
-            [hyperfiddle.io.sync :refer [sync]]
-            [hyperfiddle.runtime :as runtime]
-            [hyperfiddle.state :as state]
-            [promesa.core :as p]))
+  (:require
+    [hypercrud.client.core :as hc]
+    [hypercrud.client.peer :as peer]
+    [contrib.ct :refer [unwrap]]
+    [contrib.reactive :as r]
+    [hyperfiddle.foundation :as foundation]
+    [hyperfiddle.ide :as ide]
+    [hyperfiddle.io.global-basis :refer [global-basis]]
+    [hyperfiddle.io.hydrate-requests :refer [hydrate-requests stage-val->staged-branches]]
+    [hyperfiddle.io.hydrate-route :refer [hydrate-loop request-fn-adapter]]
+    [hyperfiddle.io.sync :refer [sync]]
+    [hyperfiddle.runtime :as runtime]
+    [hyperfiddle.state :as state]
+    [promesa.core :as p]
+    [taoensso.timbre :as timbre]))
 
 
 (deftype HydrateRoute [host-env state-atom root-reducer jwt ?subject]
@@ -88,4 +90,4 @@
 
   hc/HydrateApi
   (hydrate-api [this branch request]
-    (unwrap @(hc/hydrate this branch request))))
+    (unwrap #(timbre/warn %) @(hc/hydrate this branch request))))

@@ -1,16 +1,18 @@
 (ns hyperfiddle.service.node.hydrate-route
-  (:require [contrib.data :refer [unwrap]]
-            [contrib.reactive :as r]
-            [hypercrud.client.core :as hc]
-            [hypercrud.client.peer :as peer]
-            [hyperfiddle.foundation :as foundation]
-            [hyperfiddle.ide :as ide]
-            [hyperfiddle.io.global-basis :refer [global-basis-rpc!]]
-            [hyperfiddle.io.hydrate-requests :refer [hydrate-requests-rpc!]]
-            [hyperfiddle.io.hydrate-route :refer [hydrate-loop request-fn-adapter]]
-            [hyperfiddle.io.sync :refer [sync-rpc!]]
-            [hyperfiddle.runtime :as runtime]
-            [hyperfiddle.state :as state]))
+  (:require
+    [contrib.ct :refer [unwrap]]
+    [contrib.reactive :as r]
+    [hypercrud.client.core :as hc]
+    [hypercrud.client.peer :as peer]
+    [hyperfiddle.foundation :as foundation]
+    [hyperfiddle.ide :as ide]
+    [hyperfiddle.io.global-basis :refer [global-basis-rpc!]]
+    [hyperfiddle.io.hydrate-requests :refer [hydrate-requests-rpc!]]
+    [hyperfiddle.io.hydrate-route :refer [hydrate-loop request-fn-adapter]]
+    [hyperfiddle.io.sync :refer [sync-rpc!]]
+    [hyperfiddle.runtime :as runtime]
+    [hyperfiddle.state :as state]
+    [taoensso.timbre :as timbre]))
 
 
 (deftype HydrateRouteRuntime [host-env state-atom root-reducer jwt ?subject]
@@ -82,7 +84,7 @@
 
   hc/HydrateApi
   (hydrate-api [this branch request]
-    (unwrap @(hc/hydrate this branch request)))
+    (unwrap #(timbre/warn %) @(hc/hydrate this branch request)))
 
   IHash
   (-hash [this] (goog/getUid this)))

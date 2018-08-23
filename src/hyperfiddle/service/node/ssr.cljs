@@ -1,29 +1,31 @@
 (ns hyperfiddle.service.node.ssr
-  (:require [contrib.data :refer [map-values unwrap]]
-            [contrib.reactive :as r]
-            [contrib.template :refer [load-resource]]
-            [goog.object :as object]
-            [hypercrud.browser.context :as context]
-            [hypercrud.client.core :as hc]
-            [hypercrud.client.peer :as peer]
-            [hypercrud.transit :as transit]
-            [hypercrud.ui.error :as error]
-            [hyperfiddle.foundation :as foundation]
-            [hyperfiddle.ide :as ide]
-            [hyperfiddle.io.global-basis :refer [global-basis-rpc!]]
-            [hyperfiddle.io.hydrate-requests :refer [hydrate-requests-rpc!]]
-            [hyperfiddle.io.hydrate-route :refer [hydrate-route-rpc!]]
-            [hyperfiddle.io.sync :refer [sync-rpc!]]
-            [hyperfiddle.reducers :as reducers]
-            [hyperfiddle.runtime :as runtime]
-            [hyperfiddle.security :as security]
-            [hyperfiddle.state :as state]
-            [promesa.core :as p]
-            [reagent.dom.server :as reagent-server]
-            [reagent.impl.template :as tmpl]
-            [reagent.impl.util :as rutil]
-            [reagent.ratom :as ratom]
-            [taoensso.timbre :as timbre]))
+  (:require
+    [contrib.ct :refer [unwrap]]
+    [contrib.data :refer [map-values]]
+    [contrib.reactive :as r]
+    [contrib.template :refer [load-resource]]
+    [goog.object :as object]
+    [hypercrud.browser.context :as context]
+    [hypercrud.client.core :as hc]
+    [hypercrud.client.peer :as peer]
+    [hypercrud.transit :as transit]
+    [hypercrud.ui.error :as error]
+    [hyperfiddle.foundation :as foundation]
+    [hyperfiddle.ide :as ide]
+    [hyperfiddle.io.global-basis :refer [global-basis-rpc!]]
+    [hyperfiddle.io.hydrate-requests :refer [hydrate-requests-rpc!]]
+    [hyperfiddle.io.hydrate-route :refer [hydrate-route-rpc!]]
+    [hyperfiddle.io.sync :refer [sync-rpc!]]
+    [hyperfiddle.reducers :as reducers]
+    [hyperfiddle.runtime :as runtime]
+    [hyperfiddle.security :as security]
+    [hyperfiddle.state :as state]
+    [promesa.core :as p]
+    [reagent.dom.server :as reagent-server]
+    [reagent.impl.template :as tmpl]
+    [reagent.impl.util :as rutil]
+    [reagent.ratom :as ratom]
+    [taoensso.timbre :as timbre]))
 
 
 (defn render-to-node-stream
@@ -135,7 +137,7 @@
 
   hc/HydrateApi
   (hydrate-api [this branch request]
-    (unwrap @(hc/hydrate this branch request)))
+    (unwrap #(timbre/warn %) @(hc/hydrate this branch request)))
 
   IHash
   (-hash [this] (goog/getUid this)))
