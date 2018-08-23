@@ -404,10 +404,11 @@ User renderers should not be exposed to the reaction."
     [:div.alert.alert-warning "Warning: invalid route (d/pull requires an entity argument). To add a tempid entity to the URL, click here: "
      [:a {:href "~entity('$','tempid')"} [:code "~entity('$','tempid')"]] "."]))
 
-(defn form [fields val ctx & [props]]
-  (let [ctx (assoc ctx ::layout :hyperfiddle.ui.layout/block)
-        key (-> (data/row-keyfn val) str keyword)]
-    (apply fragment key (fields #_props ctx))))
+(defn form "Not an abstraction." [fields val ctx & [props]]
+  (apply
+    fragment
+    (keyword (str (data/row-keyfn val)))
+    (fields (assoc ctx ::layout :hyperfiddle.ui.layout/block))))
 
 (defn columns [field ctx]
   (concat
