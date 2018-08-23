@@ -15,7 +15,7 @@
   (clojure.pprint/pprint-logical-block
     :prefix "#entity[" :suffix "]"
     (clojure.pprint/write-out (.-dbname o))
-    (.write *out* " ")
+    (#?(:clj .write :cljs -write) *out* " ")
     (clojure.pprint/pprint-newline :linear)
     (clojure.pprint/write-out (.-id o))))
 
