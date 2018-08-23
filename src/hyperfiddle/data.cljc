@@ -18,22 +18,20 @@
         (or (:db/id row) row))
       hash))
 
-(defn form-with-naked-legacy "Field is invoked as fn"                         ; because it unifies with request fn side
+(defn form-with-naked-legacy "Field is invoked as fn"       ; because it unifies with request fn side
   [ctx]                                                     ; f-field :: (relative-path ctx) => Any
-  (let [paths (-> (->> (r/fmap ::field/children (:hypercrud.browser/field ctx))
-                       (r/unsequence ::field/path-segment)
-                       (mapcat (fn [[field path-segment]]
-                                 (-> [[path-segment]]
-                                     (cond->>
-                                         @(r/fmap (r/comp not nil? ::field/source-symbol) field) ; this only happens once at the top for relation queries
-                                         (into (->> (r/fmap ::field/children field)
-                                                    (r/unsequence ::field/path-segment)
-                                                    (mapv (fn [[m-child-field child-segment]]
-                                                            [path-segment child-segment]))))))))))]
+  (let [paths (->> (r/fmap ::field/children (:hypercrud.browser/field ctx))
+                   (r/unsequence ::field/path-segment)
+                   (mapcat (fn [[field path-segment]]
+                             (cond->> [[path-segment]]
+                               (context/find-element-segment? path-segment) ; this only happens once at the top for relation queries
+                               (into (->> (r/fmap ::field/children field)
+                                          (r/unsequence ::field/path-segment)
+                                          (mapv (fn [[m-child-field child-segment]]
+                                                  [path-segment child-segment]))))))))]
     (if-not (= :relation (-> ctx :hypercrud.browser/field deref ::field/level)) ; omit relation-[]
       (conj (vec paths) [])                                 ; entity-[]
-      (vec paths)
-      )))
+      (vec paths))))
 
 (defn cardinality [ctx segment]
   (field/field-at-path @(:hypercrud.browser/field ctx) segment))

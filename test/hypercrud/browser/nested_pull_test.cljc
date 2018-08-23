@@ -56,35 +56,50 @@
                      ::field/path-segment 0
                      ::field/source-symbol '$
                      ::field/children [{::field/data-has-id? false
-                                        ::field/path-segment :some-string}
+                                        ::field/path-segment :some-string
+                                        ::field/source-symbol '$}
                                        {::field/data-has-id? true
-                                        ::field/path-segment :one-ref1}
+                                        ::field/path-segment :one-ref1
+                                        ::field/source-symbol '$}
                                        {::field/data-has-id? true
                                         ::field/path-segment :one-ref2
+                                        ::field/source-symbol '$
                                         ::field/children [{::field/data-has-id? false
-                                                           ::field/path-segment :some-string}
+                                                           ::field/path-segment :some-string
+                                                           ::field/source-symbol '$}
                                                           {::field/data-has-id? true
                                                            ::field/path-segment :one-ref1
+                                                           ::field/source-symbol '$
                                                            ::field/children [{::field/data-has-id? false
-                                                                              ::field/path-segment :some-string}]}
+                                                                              ::field/path-segment :some-string
+                                                                              ::field/source-symbol '$}]}
                                                           {::field/data-has-id? true
                                                            ::field/path-segment :many-ref1
+                                                           ::field/source-symbol '$
                                                            ::field/children [{::field/data-has-id? false
-                                                                              ::field/path-segment :some-string}]}]}
+                                                                              ::field/path-segment :some-string
+                                                                              ::field/source-symbol '$}]}]}
                                        {::field/data-has-id? true
-                                        ::field/path-segment :many-ref1}
+                                        ::field/path-segment :many-ref1
+                                        ::field/source-symbol '$}
                                        {::field/data-has-id? true
                                         ::field/path-segment :many-ref2
+                                        ::field/source-symbol '$
                                         ::field/children [{::field/data-has-id? false
-                                                           ::field/path-segment :some-string}
+                                                           ::field/path-segment :some-string
+                                                           ::field/source-symbol '$}
                                                           {::field/data-has-id? true
                                                            ::field/path-segment :one-ref1
+                                                           ::field/source-symbol '$
                                                            ::field/children [{::field/data-has-id? false
-                                                                              ::field/path-segment :some-string}]}
+                                                                              ::field/path-segment :some-string
+                                                                              ::field/source-symbol '$}]}
                                                           {::field/data-has-id? true
                                                            ::field/path-segment :many-ref1
+                                                           ::field/source-symbol '$
                                                            ::field/children [{::field/data-has-id? false
-                                                                              ::field/path-segment :some-string}]}]}]}]
+                                                                              ::field/path-segment :some-string
+                                                                              ::field/source-symbol '$}]}]}]}]
           actual (walk/prewalk
                    (fn [x]
                      (if (map? x)

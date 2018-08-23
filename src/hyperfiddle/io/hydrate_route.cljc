@@ -64,20 +64,21 @@
 (defn request-fn-adapter [local-basis route stage ctx ->Runtime f]
   ; Hacks because the hydrate-loop doesn't write to the state atom.
   (fn [tempid-lookups ptm]
-    (let [ptm (map-keys #(peer/partitioned-request route (::runtime/branch-aux ctx) local-basis stage %) ptm)
-          ctx (update ctx :peer (fn [peer]
-                                  (-> @(runtime/state peer)
-                                      ; want to keep all user/ui and bootstrapping state, just use overwrite the partition state.
-                                      (select-keys [::runtime/user-id ::runtime/domain])
-                                      (assoc-in [::runtime/partitions (:branch ctx)]
-                                                {:route route
-                                                 ::runtime/branch-aux (::runtime/branch-aux ctx)
-                                                 :local-basis local-basis
-                                                 :ptm ptm
-                                                 :tempid-lookups tempid-lookups})
-                                      (assoc :stage stage)
-                                      (reducers/root-reducer nil)
-                                      (->Runtime))))]
+    (let [ctx (update ctx :peer (fn [peer]
+                                  (let [state (-> @(runtime/state peer)
+                                                  ; want to keep all user/ui and bootstrapping state, just use overwrite the partition state.
+                                                  (select-keys [::runtime/user-id ::runtime/domain])
+                                                  (assoc-in [::runtime/partitions (:branch ctx)]
+                                                            {:route route
+                                                             ::runtime/branch-aux (::runtime/branch-aux ctx)
+                                                             :local-basis local-basis
+                                                             :ptm ptm
+                                                             :tempid-lookups tempid-lookups}))
+                                        state (reduce (fn [state [branch v]]
+                                                        (assoc-in state [::runtime/partitions branch :stage] v))
+                                                      state
+                                                      stage)]
+                                    (->Runtime (reducers/root-reducer state nil)))))]
       (f ctx))))
 
 (defn hydrate-route-rpc! [service-uri local-basis route branch branch-aux stage & [jwt]]

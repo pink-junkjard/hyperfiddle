@@ -14,7 +14,7 @@
   ; This returns a new value each time the transaction changes - can't call it again later.
   ; So tx-fns must inspect the modal-route, they can't re-create the dbid.
   (assert (:uri ctx) "no uri in dynamic scope (If it can't be inferred, add as bindings)")
-  (let [branch-val (branch/branch-val (:uri ctx) (:branch ctx) @(runtime/state (:peer ctx) [:stage]))
+  (let [branch-val @(r/fmap (r/partial branch/branch-val (:uri ctx) (:branch ctx)) (runtime/state (:peer ctx) [::runtime/partitions]))
         id (-> branch-val hash abs-normalized - str)]
     (->ThinEntity (domain/uri->dbname (:uri ctx) (:hypercrud.browser/domain ctx)) id)))
 

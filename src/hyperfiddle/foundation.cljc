@@ -9,7 +9,7 @@
             [contrib.reactive :as r]
             [contrib.reader :refer [read-string read-edn-string]]
     #?(:cljs [contrib.reagent :refer [fragment]])
-            [contrib.pprint :refer [pprint-str pprint-datoms-str]]
+            [contrib.pprint :refer [pprint-datoms-str]]
     #?(:cljs [contrib.ui :refer [code markdown]])
             [hypercrud.browser.context :as context]
             [hypercrud.browser.routing :as routing]
@@ -131,7 +131,7 @@
                                 (sort-by :label))
            change-tab #(reset! selected-uri %)]
        (fn [ctx & [child]]
-         (let [stage (runtime/state (:peer ctx) [:stage (:branch ctx) @selected-uri])]
+         (let [stage (runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :stage @selected-uri])]
            (fragment
              :topnav
              [horizontal-tabs
@@ -172,11 +172,7 @@
      [:div {:class (apply css @(runtime/state (:peer ctx) [:pressed-keys]))}
       [:style {:dangerouslySetInnerHTML {:__html (:domain/css (:hypercrud.browser/domain ctx))}}]
       (f ctx)                                               ; nil, seq or reagent component
-      (when @(runtime/state (:peer ctx) [:staging-open])
-        (let [stage-val @(runtime/state (:peer ctx) [:stage])
-              edn (pprint-str stage-val 70)]
-          ; todo this can throw
-          [code edn #(runtime/dispatch! (:peer ctx) (actions/reset-stage (:peer ctx) (read-edn-string %)))]))]))
+     ]))
 
 #?(:cljs
    (defn view [page-or-leaf ctx f]
@@ -207,7 +203,8 @@
 
 (defn navigable? [route state]
   (and (not= route (get-in state [::runtime/partitions nil :route]))
-       (or (empty? (dissoc (:stage state) nil))
+       (or (->> (dissoc (::runtime/partitions state) nil)
+                (every? (comp empty? :stage second)))
            (confirm "Unstaged work will be lost on navigate, are you sure?"))))
 
 (def LEVEL-NONE 0)

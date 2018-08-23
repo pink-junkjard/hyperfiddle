@@ -11,7 +11,6 @@
     [hypercrud.browser.auto-link-formula]
 
     #?(:cljs [hyperfiddle.ui])
-    #?(:cljs [hyperfiddle.ui.hacks])
 
     ; These things can hardcode hyperfiddle.ui, like userland
     #?(:cljs [hyperfiddle.ui.markdown-extensions])

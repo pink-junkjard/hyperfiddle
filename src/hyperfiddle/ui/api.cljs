@@ -55,8 +55,8 @@
                                 (map #(head-field (-> (context/focus ctx %)
                                                       (dissoc :hypercrud.browser/data))))
                                 (apply merge))
-                           (->> (r/unsequence (:hypercrud.browser/data ctx)) ; the request side does NOT need the cursors to be equiv between loops
-                                (map (fn [[row i]]
+                           (->> (r/unsequence (:hypercrud.browser/data ctx) data/row-keyfn) ; the request side does NOT need the cursors to be equiv between loops
+                                (map (fn [[row k]]
                                        (let [ctx (context/row ctx row)]
                                          (->> (data/form-with-naked-legacy ctx)
                                               (map (fn [path]

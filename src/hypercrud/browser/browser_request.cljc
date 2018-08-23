@@ -53,9 +53,10 @@
                                       (body-field (context/focus ctx path)))))
                              flatten)
     ; Spread across the rows and flip cardinality
-    :db.cardinality/many (->> (r/unsequence (:hypercrud.browser/data ctx)) ; the request side does NOT need the cursors to be equiv between loops
-                              (mapcat (fn [[row i]]
-                                        (let [ctx (context/row ctx row)]
+    :db.cardinality/many (->> @(:hypercrud.browser/data ctx)
+                              (mapcat (fn [row]
+                                        ; the request side does NOT need the cursors to be equiv between loops
+                                        (let [ctx (context/row ctx (r/atom row))]
                                           (->> (data/form-with-naked-legacy ctx)
                                                (map (fn [path]
                                                       (if (seq path)

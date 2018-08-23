@@ -112,7 +112,7 @@
                            (string/join "\n")
                            (str "##### Auto-transact:\n\n"))
                       {:hyperfiddle.ui.markdown-extensions/unp true}]]
-            dirty? (not @(r/fmap empty? (runtime/state (:peer ctx) [:stage nil])))]
+            dirty? (not @(r/fmap empty? (runtime/state (:peer ctx) [::runtime/partitions nil :stage])))]
         (fake-managed-anchor :iframe "stage" ctx "stage" {:tooltip [nil tooltip] :class (when dirty? "stage-dirty")}))
       (ui/link :button "new-fiddle" ctx "new-fiddle" (let [hf-db @(hyperfiddle.runtime/state (:peer ctx) [:hyperfiddle.runtime/domain :domain/fiddle-database])
                                                            subject @(hyperfiddle.runtime/state (:peer ctx) [:hyperfiddle.runtime/user-id])

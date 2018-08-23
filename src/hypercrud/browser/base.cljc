@@ -12,19 +12,16 @@
             [hypercrud.browser.q-util :as q-util]
             [hypercrud.browser.routing :as routing]
             [hypercrud.browser.system-fiddle :as system-fiddle]
-            [hypercrud.browser.user-bindings :as user-bindings]
             [hypercrud.client.core :as hc]
             [hypercrud.client.schema :as schema-util]
             [hypercrud.types.EntityRequest :refer [->EntityRequest]]
             [hypercrud.types.QueryRequest :refer [->QueryRequest]]
-            [hyperfiddle.domain :as domain]
-            [taoensso.timbre :as timbre]))
+            [hyperfiddle.domain :as domain]))
 
 
 (def meta-pull-exp-for-link
   [:db/id
    :db/doc
-   :fiddle/bindings
    :fiddle/css
    :fiddle/ident
    {:fiddle/links [:db/id
@@ -112,10 +109,7 @@
 (let [nil-or-hydrate (fn [peer branch request]
                        (if-let [?request @request]
                          @(hc/hydrate peer branch ?request)
-                         (either/right nil)))
-      deprecated-deref (fn [v]
-                         (timbre/warn ":hypercrud.browser/result has been deprecated.  Please use :hypercrud.browser/data.")
-                         v)]
+                         (either/right nil)))]
   (defn process-results [fiddle request ctx]                ; todo rename to (context/result)
     (mlet [reactive-schemas @(r/apply-inner-r (schema-util/hydrate-schema ctx))
            reactive-result @(r/apply-inner-r (r/track nil-or-hydrate (:peer ctx) (:branch ctx) request))
@@ -123,13 +117,11 @@
                        :hypercrud.browser/data reactive-result
                        :hypercrud.browser/fiddle fiddle     ; for :db/doc
                        :hypercrud.browser/path []
-                       :hypercrud.browser/result (r/fmap deprecated-deref reactive-result) ; legacy
                        ; For tx/entity->statements in userland.
                        :hypercrud.browser/schemas reactive-schemas)]
-           ctx (user-bindings/user-bindings ctx)
            reactive-field @(r/apply-inner-r (r/track field/auto-field request ctx))
            :let [ctx (-> (assoc ctx :hypercrud.browser/field reactive-field)
-                         (context/set-data-source reactive-field))
+                         (context/set-data-source))
                  ctx (assoc ctx :hypercrud.browser/links (r/track auto-links ctx))
                  ctx (if (and (= :entity @(r/cursor fiddle [:fiddle/type]))
                               ; e is nil on the EntityRequest

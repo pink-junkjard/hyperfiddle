@@ -12,7 +12,7 @@
        (not-any? link/popover-link?)))
 
 (defn sortable? [ctx]
-  (let [?dbname (some-> (:hypercrud.browser/source-symbol ctx) str)
+  (let [?dbname (context/dbname ctx)
         ?last-segment (last (:hypercrud.browser/path ctx))]
     (and
       (if (and ?dbname (context/attribute-segment? ?last-segment)) ; [fe attr] or [attr], NOT [fe] or []

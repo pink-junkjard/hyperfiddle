@@ -33,7 +33,6 @@
 (defn result-edn [attrs ctx class]
   (let [s (-> @(:hypercrud.browser/data ctx)
               (as-> $ (if (seq attrs) (select-keys $ attrs) $)) ; omit elided fiddle attrs
-              hyperfiddle.ui.hacks/pull-soup->tree
               (contrib.pprint/pprint-str 50))]
     [contrib.ui/code s #() {:read-only true
                             :class class #_"Class ends up not on the codemirror, todo"}]))

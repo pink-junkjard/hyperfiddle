@@ -22,7 +22,6 @@
           :hypercrud.browser/links
           :hypercrud.browser/parent
           :hypercrud.browser/path
-          :hypercrud.browser/source-symbol
           :hypercrud.browser/schemas))
 
 (defn source-mode [ctx]
@@ -63,13 +62,18 @@
 
 (defn target-route [ctx] @(runtime/state (:peer ctx) [::runtime/partitions nil :route]))
 
+(defn dbname [ctx] (some->> (:hypercrud.browser/field ctx) (r/fmap ::field/source-symbol) deref str))
+
+(defn uri [ctx] (some-> (dbname ctx) (domain/dbname->uri (:hypercrud.browser/domain ctx))))
+
 (defn with-tx! [ctx tx]
-  (let [uri (domain/dbname->uri (str (:hypercrud.browser/source-symbol ctx)) (:hypercrud.browser/domain ctx))
+  (let [uri (uri ctx)
+        _ (assert uri)                                      ; todo downstream action should be validating this
         invert-route (:hypercrud.browser/invert-route ctx)]
     (runtime/dispatch! (:peer ctx) (actions/with (:peer ctx) invert-route (:branch ctx) uri tx))))
 
 (defn hydrate-attribute [ctx ident & ?more-path]
-  (r/cursor (:hypercrud.browser/schemas ctx) (concat [(str (:hypercrud.browser/source-symbol ctx)) ident] ?more-path)))
+  (r/cursor (:hypercrud.browser/schemas ctx) (concat [(dbname ctx) ident] ?more-path)))
 
 (defn- set-parent [ctx]
   (assoc ctx :hypercrud.browser/parent (dissoc ctx :hypercrud.browser/data)))
@@ -77,16 +81,9 @@
 (defn- set-parent-data [ctx]
   (update ctx :hypercrud.browser/parent (fnil into {}) (select-keys ctx [:hypercrud.browser/data])))
 
-(defn set-data-source [ctx field]
-  (if-let [source-symbol @(r/cursor field [::field/source-symbol])]
-    (let [dbname (str source-symbol)
-          uri (when dbname
-                (domain/dbname->uri dbname (:hypercrud.browser/domain ctx)))]
-      (assoc ctx
-        :hypercrud.browser/source-symbol source-symbol
-        ; todo why cant internals get the uri from source-symbol at the last second
-        :uri uri))
-    ctx))
+(defn set-data-source [ctx]
+  ; todo why cant internals get the uri at the last second
+  (assoc ctx :uri (uri ctx)))
 
 (letfn [(find-child-field [path-segment field]
           ; find-child-field is silly;  we already map over the fields to determine which paths to focus...
@@ -99,7 +96,7 @@
                         (set-parent)
                         (update :hypercrud.browser/path conj path-segment)
                         (assoc :hypercrud.browser/field field)
-                        (set-data-source field))]
+                        (set-data-source))]
             (if-not (:hypercrud.browser/data ctx)
               ctx                                           ; head
               (-> (set-parent-data ctx)                     ; body

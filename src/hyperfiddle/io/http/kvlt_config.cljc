@@ -1,6 +1,5 @@
 (ns hyperfiddle.io.http.kvlt-config
-  (:require [clojure.pprint :as pprint]
-            [contrib.reader :refer [read-edn-string]]
+  (:require [contrib.reader :refer [read-edn-string]]
             [hypercrud.transit :as transit]
             [kvlt.middleware]
             [kvlt.middleware.params]))
@@ -22,9 +21,8 @@
   (update resp :body transit/decode))
 
 (defmethod kvlt.middleware.params/coerce-form-params :application/edn [{:keys [form-params]}]
-  (binding [pprint/*print-miser-width* nil
-            pprint/*print-right-margin* 200]
-    (with-out-str (pprint/pprint form-params))))
+  ; hyperfiddle/hyperfiddle.net#38
+  (pr-str form-params))
 
 (defmethod kvlt.middleware/from-content-type :application/edn [resp]
   (let [decoded-val (read-edn-string (:body resp))]         ; todo this can throw

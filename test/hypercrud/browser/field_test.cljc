@@ -3,6 +3,7 @@
   (:require [clojure.test :refer [deftest is testing]]
             [contrib.data :as data]
             [contrib.reactive :as r]
+            [hypercrud.browser.context :as context]
             [hypercrud.browser.field :as field :refer [auto-field infer-attrs]]
             [hypercrud.types.DbVal :refer [->DbVal]]
             [hypercrud.types.Entity :refer [->Entity]]
@@ -95,9 +96,9 @@
          `(let [attributes# (->> @(auto-field (r/atom (~pull->request ~pull)) (build-ctx ~fiddle nil))
                                  ::field/children
                                  (mapcat (fn [field#]
-                                           (if (nil? (::field/source-symbol field#))
-                                             [field#]
-                                             (::field/children field#))))
+                                           (if (context/find-element-segment? (::field/path-segment field#))
+                                             (::field/children field#)
+                                             [field#])))
                                  (mapv ::field/path-segment))]
             (is (~'= [:a/a :a/j :a/k :a/v :a/t :a/u :a/x :a/y :a/z] attributes#)))))))
 
@@ -119,9 +120,9 @@
               attr-level-fields# (->> @(auto-field (r/atom (~pull->request [(symbol "*")])) (build-ctx ~fiddle result#))
                                       ::field/children
                                       (mapcat (fn [field#]
-                                                (if (nil? (::field/source-symbol field#))
-                                                  [field#]
-                                                  (::field/children field#)))))]
+                                                (if (context/find-element-segment? (::field/path-segment field#))
+                                                  (::field/children field#)
+                                                  [field#]))))]
           ; cant test order with splat
           (is (~'= #{:a/x :a/y :a/z :a/comp-one :a/comp-many (symbol "*")}
                 (->> attr-level-fields#
@@ -183,9 +184,9 @@
                 attr-level-fields# (->> @(auto-field (r/atom (~pull->request ~pull)) (build-ctx ~fiddle result#))
                                         ::field/children
                                         (mapcat (fn [field#]
-                                                  (if (nil? (::field/source-symbol field#))
-                                                    [field#]
-                                                    (::field/children field#)))))
+                                                  (if (context/find-element-segment? (::field/path-segment field#))
+                                                    (::field/children field#)
+                                                    [field#]))))
                 attributes# (mapv ::field/path-segment attr-level-fields#)]
             ; can only test order of defined attributes in relation to splat
             (is (~'= :a/a (first attributes#)))

@@ -25,10 +25,10 @@
     (conj (get-all-branches (decode-parent-branch branch)) branch)
     [branch]))
 
-(defn branch-val [uri branch stage-val]
+(defn branch-val [uri branch partitions]
   (->> (get-all-branches branch)
        (reduce (fn [tx branch]
-                 (concat tx (get-in stage-val [branch uri])))
+                 (concat tx (get-in partitions [branch :stage uri])))
                nil)
        hash))
 
@@ -36,8 +36,3 @@
   (condp = (type request)
     EntityRequest [(:db request)]
     QueryRequest (filter #(= (type %) DbVal) (:params request))))
-
-(defn branch-vals-for-dbvals [dbvals stage-val]
-  (->> dbvals
-       (map (fn [db] (branch-val (:uri db) (:branch db) stage-val)))
-       (hash)))

@@ -32,7 +32,6 @@
     [hyperfiddle.ui.api]
     [hyperfiddle.ui.controls :as controls]
     [hyperfiddle.ui.hyper-controls :refer [attribute-label entity-label magic-new-body magic-new-head]]
-    [hyperfiddle.ui.hacks]                                  ; exports
     [hyperfiddle.ui.popover :refer [popover-cmp]]
     [hyperfiddle.ui.select :refer [select]]
     [hyperfiddle.ui.sort :as sort]
@@ -155,10 +154,8 @@
   (->> (:hypercrud.browser/path ctx)
        (concat
          ["hyperfiddle"
-          (:hypercrud.browser/source-symbol ctx)            ; color
+          (context/dbname ctx)                              ; color
           (name (context/segment-type-2 (last (:hypercrud.browser/path ctx))))
-          ;(or (some #{:head} (:hypercrud.browser/path ctx)) ; could be first nested in a body
-          ;    (some #{:body} (:hypercrud.browser/path ctx)))
           (->> (:hypercrud.browser/path ctx)                ; legacy unique selector for each location
                (map css-slugify)
                (string/join "/"))
@@ -259,7 +256,7 @@ User renderers should not be exposed to the reaction."
                                            (some-> @(r/fmap :link/rel link-ref) name)
                                            "_")))
         (p-build-route' [ctx link] (routing/build-route' link ctx))
-        (build-link-props [route'-ref link-ref ctx props]   ; todo this function needs untangling; ui-from-route ignores most of this
+        (build-link-props [route'-ref link-ref ctx props]   ; todo this function needs untangling; iframe ignores most of this
           ; this is a fine place to eval, put error message in the tooltip prop
           ; each prop might have special rules about his default, for example :visible is default true, does this get handled here?
           (let [unvalidated-route' @route'-ref
@@ -363,7 +360,7 @@ User renderers should not be exposed to the reaction."
            [Head nil props ctx]]
     ; Field omits [] but table does not, because we use it to specifically draw repeating anchors with a field renderer.
     :body [:td {:class (css "field" (:class props) "truncate")
-                :style {:border-color (when (:hypercrud.browser/source-symbol ctx) (border-color ctx))}}
+                :style {:border-color (border-color ctx)}}
            [Body @(:hypercrud.browser/data ctx) props ctx]]))
 
 (defn ^:export field "Works in a form or table context. Draws label and/or value."
@@ -474,8 +471,7 @@ nil. call site must wrap with a Reagent component"
      (result @(:hypercrud.browser/data ctx) ctx #_{:class (css (semantic-css ctx))})]))
 
 (letfn [(render-edn [data]
-          (let [edn-str (-> (hyperfiddle.ui.hacks/pull-soup->tree data)
-                            (pprint-str 160))]
+          (let [edn-str (pprint-str data 160)]
             [contrib.ui/code edn-str #() {:read-only true}]))]
   (defn ^:export fiddle-api [ctx class]
     (let [data (hyperfiddle.ui.api/api-data ctx)]
