@@ -114,7 +114,7 @@
       [:long :one] controls/long
       [:instant :one] controls/instant
       [:ref :one] controls/ref                              ; nested form - and causes recursion
-      [:ref :many] (constantly nil)                         ; nested table handled above
+      [:ref :many] controls/edn-many                        ; multi select?
       [_ :one] controls/edn
       [_ :many] controls/edn-many)))
 
