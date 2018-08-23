@@ -85,12 +85,15 @@
   ; todo why cant internals get the uri at the last second
   (assoc ctx :uri (uri ctx)))
 
-(letfn [(find-child-field [path-segment field]
-          ; find-child-field is silly;  we already map over the fields to determine which paths to focus...
-          (->> (::field/children field)
-               (filter #(= (::field/path-segment %) path-segment))
-               first))
-        (focus-segment [ctx path-segment]                   ; attribute or fe segment
+(defn find-child-field [path-segment field]
+  (->> (::field/children field)
+       (filter #(= (::field/path-segment %) path-segment))
+       first))
+
+(defn find-parent-field [ctx]
+  (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/field]))
+
+(letfn [(focus-segment [ctx path-segment]                   ; attribute or fe segment
           (let [field (r/fmap (r/partial find-child-field path-segment) (:hypercrud.browser/field ctx))
                 ctx (-> ctx
                         (set-parent)
@@ -104,7 +107,7 @@
                          (let [f (r/fmap ::field/get-value field)]
                            (assert @f (str "focusing on a non-pulled attribute: " (pr-str (:hypercrud.browser/path ctx)) "."))
                            (r/fapply f (:hypercrud.browser/data ctx))))))))]
-  (defn focus [ctx relative-path]
+  (defn focus "Throws if you focus a higher dimension" [ctx relative-path]
     (reduce focus-segment ctx relative-path)))
 
 (defn row "Toggle :many into :one as we spread through the rows" [ctx rval]
@@ -124,8 +127,6 @@
           (empty? (filter #{:head :body} (:hypercrud.browser/path %)))]}
   (assert (empty? (filter #{:head :body} path)) path)
   (assert (empty? (filter #{:head :body} (:hypercrud.browser/path ctx))) (:hypercrud.browser/path ctx))
-
-
   (let [current-path (:hypercrud.browser/path ctx)
         common-ancestor-path (ancestry-common current-path path)
         unwind-offset (- (count current-path) (count common-ancestor-path))

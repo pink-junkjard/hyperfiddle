@@ -289,14 +289,3 @@
       :blank (either/right [])
 
       (either/right []))))
-
-(defn field-at-path [root-field [segment & rest]]
-  (if segment
-    (let [field (->> (::children root-field)
-                     (filter #(= (::path-segment %) segment))
-                     first)]
-      (if (seq rest)
-        (field-at-path rest field)
-        field))
-    (when (nil? (::path-segment root-field))
-      root-field)))

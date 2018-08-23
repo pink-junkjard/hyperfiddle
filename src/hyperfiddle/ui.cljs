@@ -71,7 +71,7 @@
     (->> (concat
            (data/select-all ctx :options)
            (data/select-all ctx :iframe))
-         (remove (comp (partial data/deps-over-satisfied? (:hypercrud.browser/path ctx)) link/read-path :link/path))
+         (remove (comp (partial data/deps-over-satisfied? ctx) link/read-path :link/path))
          (r/track identity)
          (r/unsequence :db/id)
          (map (fn [[rv k]]
@@ -86,7 +86,7 @@
            (data/select-all ctx :hyperfiddle/remove)
            (data/select-all ctx :anchor)
            (data/select-all ctx :button))
-         (remove (comp (partial data/deps-over-satisfied? (:hypercrud.browser/path ctx)) link/read-path :link/path))
+         (filter (comp (partial = (:hypercrud.browser/path ctx)) link/read-path :link/path))
          (r/track identity)
          (r/unsequence :db/id)
          (map (fn [[rv k]]

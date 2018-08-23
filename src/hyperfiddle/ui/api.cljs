@@ -25,12 +25,6 @@
        ; todo cannot swallow this error
        (unwrap)))
 
-(defn head-field [ctx]
-  (->> @(:hypercrud.browser/links ctx)
-       (filter (partial link/same-path-as? (:hypercrud.browser/path ctx)))
-       (map #(recurse-from-link % ctx))
-       (apply merge)))
-
 (defn body-field [ctx]
   (->> @(:hypercrud.browser/links ctx)
        (filter (partial link/same-path-as? (:hypercrud.browser/path ctx)))
@@ -46,24 +40,18 @@
     :db.cardinality/one (->> (data/form-with-naked-legacy ctx)
                              (map (fn [path]
                                     (if (seq path)          ; scar - guard infinite recursion on [] links
-                                      (let [ctx (context/focus ctx path)]
-                                        (merge (head-field (dissoc ctx :hypercrud.browser/data))
-                                               (body-field ctx))))))
+                                      (body-field (context/focus ctx path)))))
                              (apply merge))
-    :db.cardinality/many (merge
-                           (->> (data/form-with-naked-legacy ctx)
-                                (map #(head-field (-> (context/focus ctx %)
-                                                      (dissoc :hypercrud.browser/data))))
-                                (apply merge))
-                           (->> (r/unsequence (:hypercrud.browser/data ctx) data/row-keyfn) ; the request side does NOT need the cursors to be equiv between loops
-                                (map (fn [[row k]]
-                                       (let [ctx (context/row ctx row)]
-                                         (->> (data/form-with-naked-legacy ctx)
-                                              (map (fn [path]
-                                                     (if (seq path)
-                                                       (body-field (context/focus ctx path)))))
-                                              (apply merge)))))
-                                (apply merge)))
+    :db.cardinality/many (->> (:hypercrud.browser/data ctx)
+                              (r/unsequence data/row-keyfn) ; the request side does NOT need the cursors to be equiv between loops
+                              (map (fn [[row k]]
+                                     (let [ctx (context/row ctx row)]
+                                       (->> (data/form-with-naked-legacy ctx)
+                                            (map (fn [path]
+                                                   (if (seq path)
+                                                     (body-field (context/focus ctx path)))))
+                                            (apply merge)))))
+                              (apply merge))
     ; blank fiddles
     {}))
 
@@ -73,14 +61,16 @@
 (defn api-data [ctx]
   ; at this point we only care about inline links
   ; also no popovers can be opened, so remove managed
-  (let [ctx (update ctx :hypercrud.browser/links (partial r/fmap (r/comp remove-managed filter-inline)))]
+  (let [ctx (update ctx :hypercrud.browser/links (partial r/fmap (r/comp remove-managed filter-inline)))
+        thing (->> (link/links-at (:hypercrud.browser/path ctx) (:hypercrud.browser/links ctx)) ; todo reactivity
+                   (map #(recurse-from-link % ctx))
+                   (apply merge))
+        thing3 (when @(r/fmap :fiddle/hydrate-result-as-fiddle (:hypercrud.browser/fiddle ctx))
+                 ; This only makes sense on :fiddle/type :query because it has arbitrary arguments
+                 ; EntityRequest args are too structured.
+                 (let [[_ [inner-fiddle & inner-args]] (:route ctx)]
+                   (recurse-from-route [inner-fiddle (vec inner-args)] ctx)))]
     (merge (with-result ctx)
-           (->> (link/links-at (:hypercrud.browser/path ctx) (:hypercrud.browser/links ctx)) ; todo reactivity
-                (map #(recurse-from-link % ctx))
-                (apply merge))
-           (when @(r/fmap :fiddle/hydrate-result-as-fiddle (:hypercrud.browser/fiddle ctx))
-             ; This only makes sense on :fiddle/type :query because it has arbitrary arguments
-             ; EntityRequest args are too structured.
-             (let [[_ [inner-fiddle & inner-args]] (:route ctx)]
-               (recurse-from-route [inner-fiddle (vec inner-args)] ctx)))
+           thing
+           thing3
            {(:route ctx) @(:hypercrud.browser/data ctx)})))

@@ -33,30 +33,30 @@
       (conj (vec paths) [])                                 ; entity-[]
       (vec paths))))
 
-(defn cardinality [ctx segment]
-  (field/field-at-path @(:hypercrud.browser/field ctx) segment))
-
-(defn deps-satisfied? "Links in this :body strata" [ctx link-path]
-  ; TODO tighten - needs to understand WHICH find element is in scope
+(defn deps-satisfied? "Links in this :body strata" [ctx target-path]
   (let [this-path (:hypercrud.browser/path ctx)
-        left-divergence (contrib.data/ancestry-divergence link-path this-path)]
-    (loop [path (vec this-path)
-           [x & xs] left-divergence]
+        common-path (contrib.data/ancestry-common this-path target-path)
+        common-ctx (context/refocus ctx common-path)]
+    (loop [field @(:hypercrud.browser/field common-ctx)
+           [x & xs] (contrib.data/ancestry-divergence target-path common-path)]
       (if-not x
-        true
-        (let [next-path (conj path x)]
-          (case (cardinality ctx next-path)
-            :db.cardinality/many false
-            (recur next-path xs)))))))
+        true                                                ; finished
+        (let [child-field (context/find-child-field x field)]
+          (case (::field/cardinality child-field)
+            :db.cardinality/one (recur child-field xs)
+            :db.cardinality/many false))))))
 
-(defn link-path-floor [path]
-  (->> path
-       reverse
-       (drop-while #(#{:attribute :splat} (context/segment-type-2 %)))
-       reverse))
+(defn link-path-floor "Find the shortest path that has equal dimension" [ctx path]
+  (loop [ctx (context/refocus ctx path)]                    ; we know we're at least satisfied so this is safe
+    (if-let [parent-ctx (:hypercrud.browser/parent ctx)]    ; walk it up and see if the dimension changes
+      (case (::field/cardinality @(:hypercrud.browser/field parent-ctx))
+        :db.cardinality/one (recur parent-ctx)              ; Next one is good, keep going
+        :db.cardinality/many ctx)                           ; Next one is one too far, so we're done
+      ctx)))                                                ; Empty path is the shortest path
 
-(defn deps-over-satisfied? "satisfied but not over-satisfied" [this-path link-path]
-  (not= this-path (link-path-floor link-path)))
+(defn deps-over-satisfied? "satisfied but not over-satisfied" [ctx link-path]
+  (let [this-path (:hypercrud.browser/path ctx)]
+    (not= this-path (:hypercrud.browser/path (link-path-floor ctx link-path)))))
 
 (defn ^:export select-all "List[Link]. Find the closest match. Can it search parent scopes for :options ?"
   ; Not reactive! Track it outside. (r/track data/select-all ctx rel ?class)
