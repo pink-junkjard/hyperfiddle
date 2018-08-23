@@ -138,9 +138,8 @@
               :model selected-uri
               :tabs tabs-definition
               :on-change change-tab]
-             [code
-              (pprint-datoms-str @stage)
-              #(runtime/dispatch! (:peer ctx) (actions/reset-stage-uri (:peer ctx) (:branch ctx) @selected-uri (read-edn-string %)))]
+             [code {:value (pprint-datoms-str @stage)
+                    :on-change #(runtime/dispatch! (:peer ctx) (actions/reset-stage-uri (:peer ctx) (:branch ctx) @selected-uri (read-edn-string %)))}]
              (when child [child selected-uri stage ctx])
              [markdown "Hyperfiddle always generates valid transactions, if it doesn't, please file a bug.
 

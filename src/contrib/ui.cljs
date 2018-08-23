@@ -1,20 +1,19 @@
 (ns contrib.ui
   (:require
-    [cats.monad.either :as either]
     [clojure.set :refer [rename-keys]]
     [contrib.cljs-platform :refer [global!]]
+    [contrib.data :as util]
     [contrib.pprint :refer [pprint-str]]
     [contrib.reactive :as r]
-    [contrib.reactive-debug :refer [track-cmp]]
-    [contrib.string :refer [safe-read-edn-string blank->nil]]
+    [contrib.reader]
+    [contrib.string :refer [blank->nil]]
     [contrib.ui.input :refer [adapt-props]]
     [contrib.ui.codemirror :refer [-codemirror camel-keys]]
     [contrib.ui.tooltip :refer [tooltip]]
     [contrib.ui.remark :as remark]
     [goog.object :as object]
     [re-com.core :as re-com]
-    [reagent.core :as reagent]
-    [taoensso.timbre :as timbre]))
+    [reagent.core :as reagent]))
 
 (defn easy-checkbox [label value change! & [props]]
   (let [control [:input (adapt-props (merge props {:type "checkbox" :checked value :on-change change!}))]]
@@ -26,20 +25,20 @@
 (defn ^:export easy-checkbox-boolean [label r & [props]]
   [easy-checkbox label @r (r/partial swap! r not) props])
 
-(defn ^:export code [value change! props]
+(defn ^:export code [props]
   (let [defaults {:lineNumbers true
                   :matchBrackets true
                   :autoCloseBrackets true
                   :viewportMargin js/Infinity}
         ; Reagent as/element tampers with keys, we have to fix them
-        props (merge defaults (camel-keys props))]
+        props (merge defaults props #_(camel-keys props))]
     ; There is nothing to be done about invalid css down here.
     ; You'd have to write CodeMirror implementation-specific css.
-    [-codemirror value change! props]))
+    [-codemirror props]))
 
-(defn ^:export code-inline-block [& args]
+(defn ^:export code-inline-block [props]
   (let [showing? (r/atom false)]
-    (fn [value change! & [props]]
+    (fn [props]
       [:div.truncate
        [re-com/popover-anchor-wrapper
         :showing? showing?
@@ -50,24 +49,24 @@
                   :on-cancel (r/partial reset! showing? false)
                   :no-clip? true
                   :width "600px"
-                  :body (code value change! props)]]
-       " " [:code value]])))
+                  :body (code props)]]
+       " " [:code (:value props)]])))
 
-(letfn [(edn-change! [change! user-edn-str]
-          (-> (safe-read-edn-string user-edn-str)
-              (either/branch
-                (fn [e] (timbre/warn (pr-str e)) nil)       ; report error
-                (fn [v] (change! v)))))]
-  (defn -edn [code-control value change! props]
+(letfn [(read-edn-string [user-edn-str]
+          ; parent on-change can catch exceptions if they care
+          ; otherwise this will bubble up to the console appropriately
+          (some-> user-edn-str contrib.reader/read-edn-string))]
+  (defn- adapt-edn-props [props]
     ; Must validate since invalid edn means there's no value to stage.
     ; Code editors are different since you are permitted to stage broken code (and see the error and fix it)
-    [code-control (pprint-str value) (r/partial edn-change! change!) props])) ; not reactive
+    (-> props
+        (assoc :mode "clojure")
+        (update :value pprint-str)
+        (util/update-existing :on-change r/comp read-edn-string))))
 
-(defn ^:export edn [value change! props]
-  (-edn code value change! (assoc props :mode "clojure")))
+(defn ^:export edn [props] [code (adapt-edn-props props)])
 
-(defn ^:export edn-inline-block [value change! props]
-  (-edn code-inline-block value change! (assoc props :mode "clojure")))
+(defn ^:export edn-inline-block [props] [code-inline-block (adapt-edn-props props)])
 
 (def ^:export ReactSlickSlider
   ; Prevents failure in tests, this is omitted from test preamble

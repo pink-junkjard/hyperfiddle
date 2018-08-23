@@ -34,7 +34,9 @@
   (let [s (-> val
               (as-> $ (if (seq attrs) (select-keys $ attrs) $)) ; omit elided fiddle attrs
               (contrib.pprint/pprint-str 50))]
-    [contrib.ui/code s #() (merge props {:read-only true}) #_"Class ends up not on the codemirror, todo"]))
+    [contrib.ui/code (assoc props                           ; Class ends up not on the codemirror, todo
+                       :value s
+                       :read-only true)]))
 
 ; This is in source control because all hyperblogs want it.
 ; But, they also want to tweak it surely. Can we store this with the fiddle ontology?

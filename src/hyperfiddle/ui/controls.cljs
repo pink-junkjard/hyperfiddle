@@ -9,11 +9,8 @@
     [contrib.ui.input :as input :refer [adapt-props]]
     [contrib.ui.recom-date :refer [recom-date]]
     [hypercrud.browser.context :as context]
-
-    ; This file is the hyperfiddle adapter for the controls, it has to generate
-    ; datomic edits and knows about entity dbid. Perhaps the entity-attribute should be
-    ; passed instead of the value?
-    ))
+    [reagent.core :as reagent]
+    [taoensso.timbre :as timbre]))
 
 
 (defn entity-change->tx [ctx value]
@@ -30,6 +27,49 @@
   ; If the db/id was not pulled, we cannot write through to the entity
   (cljs.core/boolean (:db/id entity-val)))
 
+(letfn [(on-change! [ctx os-ref new-value]
+          (let [attr-ident (last (:hypercrud.browser/path ctx))
+                entity (-> @(get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data])
+                           (select-keys [:db/id])
+                           (assoc attr-ident (empty->nil (last @os-ref))))
+                attribute @(context/hydrate-attribute ctx attr-ident)
+                tx (tx/update-entity-attr entity attribute (empty->nil new-value))]
+            (context/with-tx! ctx tx))
+          (swap! os-ref conj new-value))]
+  (defn entity-adapter [ctx comp props & args]
+    (let [os-ref (r/atom {:value (:value props)
+                          :old-values [(:value props)]})]
+      (reagent/create-class
+        {:reagent-render
+         (fn [ctx comp props & args]
+           (let [props (-> props
+                           (assoc
+                             :value @(r/cursor os-ref [:value])
+                             :on-change (r/partial
+                                          on-change! ctx
+                                          ; reagent/cursor, because we need to swap!
+                                          (reagent/cursor os-ref [:old-values])))
+                           (update :read-only #(or % (not @(r/fmap writable-entity? (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data]))))))]
+             (into [comp props] args)))
+         :component-did-update
+         (fn [this]
+           (let [[_ ctx comp props & args] (reagent/argv this)
+                 b (:value props)
+                 {os :old-values a :value} @os-ref]
+             (if (= 1 (count os))
+               (when (not= a b)
+                 (reset! os-ref {:old-values [b]
+                                 :value b}))
+               (let [[_ [old-update :as rest]] (split-with #(not= % b) os)]
+                 (if (= old-update b)                       ; careful do NOT nil pun
+                   (swap! os-ref assoc :old-values (vec rest))
+                   (when (not= a b)
+                     ; this is either not a big deal, e.g. default values have been applied
+                     ; or multiple users are editing the same value and changes are probably being lost
+                     (timbre/warn "Potential conflicting concurrent edits detected, discarding local state" {:a a :b b :os os})
+                     (reset! os-ref {:old-values [b]
+                                     :value b})))))))}))))
+
 (defn ^:export keyword [val ctx & [props]]
   (let [props (update props :read-only #(or % (not @(r/fmap writable-entity? (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data])))))
         on-change! (r/partial entity-change! ctx)]
@@ -39,6 +79,9 @@
   (let [props (update props :read-only #(or % (not @(r/fmap writable-entity? (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data])))))
         on-change! (r/partial entity-change! ctx)]
     [input/input* val on-change! props]))
+
+#_(defn ^:export string [val props ctx]
+    [entity-adapter ctx input/input* (assoc props :value val)])
 
 (defn ^:export long [val ctx & [props]]
   (let [props (update props :read-only #(or % (not @(r/fmap writable-entity? (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data])))))
@@ -88,56 +131,54 @@
    (r/partial entity-change! ctx)
    (update props :read-only #(or % (not @(r/fmap writable-entity? (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data])))))])
 
-(defn- code-mode [val ctx & [props]]
-  (let [props (update props :read-only #(or % (not @(r/fmap writable-entity? (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data])))))
-        control (case (:hyperfiddle.ui/layout ctx :hyperfiddle.ui.layout/block)
-                  :hyperfiddle.ui.layout/block contrib.ui/code
-                  :hyperfiddle.ui.layout/table contrib.ui/code-inline-block)]
-    [control val (r/partial entity-change! ctx) props]))
+(defn- code-comp [ctx]
+  (case (:hyperfiddle.ui/layout ctx :hyperfiddle.ui.layout/block)
+    :hyperfiddle.ui.layout/block contrib.ui/code
+    :hyperfiddle.ui.layout/table contrib.ui/code-inline-block))
 
 (defn ^:export code [val ctx & [props]]
   (let [props (-> props
+                  (assoc :value val)
                   (update :mode #(or % "clojure"))
                   (assoc :parinfer @(r/fmap :hyperfiddle.ide/parinfer (:hyperfiddle.ide/user ctx))))]
-    [code-mode val ctx props]))
+    [entity-adapter ctx (code-comp ctx) props]))
 
 (defn ^:export css [val ctx & [props]]
-  [code-mode val ctx (update props :mode #(or % "css"))])
+  (let [props (-> props
+                  (assoc :value val)
+                  (update :mode #(or % "css")))]
+    [entity-adapter ctx (code-comp ctx) props]))
 
-(defn ^:export markdown-editor [val ctx & [props]]          ; This is legacy; :mode=markdown should be bound in userland
-  (let [widget (case (:hyperfiddle.ui/layout ctx :hyperfiddle.ui.layout/block)
-                 :hyperfiddle.ui.layout/block contrib.ui/code
-                 :hyperfiddle.ui.layout/table contrib.ui/code-inline-block)]
-    ;code has backwards args - props first
-    [widget val (r/partial entity-change! ctx)
-     (-> props
-         (update :read-only #(or % (not @(r/fmap writable-entity? (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data])))))
-         (assoc :mode "markdown" :lineWrapping true))]))
+(defn ^:export markdown-editor [val ctx & [props]]              ; This is legacy; :mode=markdown should be bound in userland
+  (let [props (assoc props
+                :value val
+                :mode "markdown"
+                :lineWrapping true)]
+    [entity-adapter ctx (code-comp ctx) props]))
 
-(defn ^:export edn-many [val ctx & [props]]
-  (letfn [(change! [ctx value user-val]
-            (let [user-val (set user-val)
-                  rets (set/difference value user-val)
-                  adds (set/difference user-val value)]
-              (context/with-tx! ctx (tx/edit-entity @(r/fmap :db/id (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data]))
-                                                    (last (:hypercrud.browser/path ctx))
-                                                    rets adds))))]
+(defn- edn-comp [ctx]
+  (case (:hyperfiddle.ui/layout ctx :hyperfiddle.ui.layout/block)
+    :hyperfiddle.ui.layout/block contrib.ui/edn
+    :hyperfiddle.ui.layout/table contrib.ui/edn-inline-block))
+
+(letfn [(change! [ctx value user-val]
+          (let [user-val (set user-val)
+                rets (set/difference value user-val)
+                adds (set/difference user-val value)]
+            (context/with-tx! ctx (tx/edit-entity @(r/fmap :db/id (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data]))
+                                                  (last (:hypercrud.browser/path ctx))
+                                                  rets adds))))]
+  (defn ^:export edn-many [val ctx & [props]]
     (let [valueType @(context/hydrate-attribute ctx (last (:hypercrud.browser/path ctx)) :db/valueType :db/ident)
           value (set (if (= valueType :db.type/ref) (map :db/id val) val))
-          widget (case (:hyperfiddle.ui/layout ctx :hyperfiddle.ui.layout/block)
-                   :hyperfiddle.ui.layout/block contrib.ui/edn
-                   :hyperfiddle.ui.layout/table contrib.ui/edn-inline-block)]
-      [widget value
-       (r/partial change! ctx value)
-       (update props :read-only #(or % (not @(r/fmap writable-entity? (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data])))))])))
+          props (-> props
+                    (assoc :value value
+                           :on-change (r/partial change! ctx value))
+                    (update props :read-only #(or % (not @(r/fmap writable-entity? (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data]))))))]
+      [(edn-comp ctx) props])))
 
 (defn ^:export edn [val ctx & [props]]
-  (let [widget (case (:hyperfiddle.ui/layout ctx :hyperfiddle.ui.layout/block)
-                 :hyperfiddle.ui.layout/table contrib.ui/edn-inline-block
-                 :hyperfiddle.ui.layout/block contrib.ui/edn)]
-    [widget val
-     (r/partial entity-change! ctx)
-     (update props :read-only #(or % (not @(r/fmap writable-entity? (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data])))))]))
+  [entity-adapter ctx (edn-comp ctx) (assoc props :value val)])
 
 ;(defn textarea* [{:keys [value on-change] :as props}]       ; unused
 ;  (let [on-change #(let [newval (.. % -target -value)]

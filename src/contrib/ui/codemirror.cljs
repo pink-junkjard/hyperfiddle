@@ -1,6 +1,7 @@
 (ns contrib.ui.codemirror
   (:require
     [cuerdas.core :as str]
+    [goog.functions :as functions]
     [goog.object :as object]
     [reagent.core :as reagent]))
 
@@ -30,15 +31,15 @@
 
   (reagent/create-class
     {:reagent-render
-     (fn [value change! props]
+     (fn [props]
        [:textarea (merge (select-keys props [:id :class])   ; #318 Warning: React does not recognize the `lineNumbers` prop on a DOM element
-                         {:default-value (str value)
+                         {:default-value (str (:value props))
                           :auto-complete "off"})])
 
      :component-did-mount
      (fn [this]
        ; Codemirror will default to the first mode loaded in preamble
-       (let [[_ value change! props] (reagent/argv this)
+       (let [[_ props] (reagent/argv this)
              ref (js/CodeMirror.fromTextArea (reagent/dom-node this) (clj->js props))]
 
          (when (and (:parinfer props) (= "clojure" (:mode props)))
@@ -54,12 +55,13 @@
          ; they must be camelized before we get here.
 
          (object/set this "codeMirrorRef" ref)
-         (.on ref "blur" (fn [_ e]
-                           (let [[_ value change! props] (reagent/argv this)
-                                 value' (.getValue ref)]
-                             (if-not (= value value')
-                               (if change! (change! value'))))
-                           nil))))
+         (let [on-change (fn [new-value]
+                           (let [[_ {:keys [on-change]}] (reagent/argv this)]
+                             (when on-change (on-change new-value))))
+               ; todo lift this debounce
+               debounced-on-change (functions/debounce on-change 250)]
+           (.on ref "change" (fn [_ e] (when-not (= "setValue" (.-origin e))
+                                         (debounced-on-change (.getValue ref))))))))
 
      :component-will-unmount
      (fn [this]
@@ -67,10 +69,10 @@
 
      :component-did-update
      (fn [this]
-       (let [[_ value change! props] (reagent/argv this)
+       (let [[_ props] (reagent/argv this)
              ref (object/get this "codeMirrorRef")
-             new-value (str value)]
+             new-value (str (:value props))]
          ; internal CM value state != ctor props
          (when-not (= (.getValue ref) new-value)
            (.setValue ref new-value))
-         (sync-changed-props! ref props)))}))
+         (sync-changed-props! ref (dissoc props :value :on-change))))}))

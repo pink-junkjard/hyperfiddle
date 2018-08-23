@@ -67,8 +67,8 @@
                  ; Don't hook :code because that is used by inline snippets
                  (let [content (goog.object/getValueByKeys children 0 "props" "children" 0)
                        content (str/rtrim content "\n") #_"Remark yields an unavoidable newline that we don't want"]
-                   [contrib.ui/code content #() {:read-only true}])
-                 [contrib.ui/code content #() props]))
+                   [contrib.ui/code {:value content :read-only true}])
+                 [contrib.ui/code (assoc props :value content)]))
 
        "render" (fn [content argument props ctx]
                   (->> (memoized-safe-eval (str "(fn [ctx] \n" content "\n)"))

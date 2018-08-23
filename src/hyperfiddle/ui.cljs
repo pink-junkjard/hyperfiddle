@@ -478,7 +478,7 @@ nil. call site must wrap with a Reagent component"
 
 (letfn [(render-edn [data]
           (let [edn-str (pprint-str data 160)]
-            [contrib.ui/code edn-str #() {:read-only true}]))]
+            [contrib.ui/code {:value edn-str :read-only true}]))]
   (defn ^:export fiddle-api [val ctx & [props]]
     (let [data (hyperfiddle.ui.api/api-data ctx)]
       [:div.hyperfiddle.display-mode-api (select-keys props [:class])
