@@ -22,7 +22,7 @@
     [hyperfiddle.runtime :as runtime]
     [hyperfiddle.security :as security]
     [hyperfiddle.ui :as ui :refer [ui-from-link markdown]]
-    [hyperfiddle.ui.controls :refer [entity-change!]]
+    [hyperfiddle.ui.controls :as controls]
     [taoensso.timbre :as timbre]))
 
 
@@ -136,7 +136,8 @@
                              {:label (case % :query "query" :entity "pull" :blank "blank")
                               :target %
                               :value val
-                              :change! (r/partial entity-change! ctx)})))]
+                              :change! (r/comp (r/partial context/with-tx! ctx)
+                                               (r/partial controls/on-change->tx ctx val))})))]
     [:span.qe.radio-group props
      (apply fragment options)]))
 
@@ -167,6 +168,8 @@
                        (not (empty? @stage)) {:status :warning :label "please transact! all changes first"})
          (let [is-disabled (or (not writes-allowed?) (not (empty? @stage)))
                is-auto-transact @(runtime/state (:peer ctx) [::runtime/auto-transact @selected-uri])]
-           [easy-checkbox "auto-transact" is-auto-transact
-            (r/partial toggle-auto-transact! ctx selected-uri)
-            {:disabled is-disabled :style (if is-disabled {:pointer-events "none"})}])]))))
+           [easy-checkbox {:disabled is-disabled
+                           :style (if is-disabled {:pointer-events "none"})
+                           :checked is-auto-transact
+                           :on-change (r/partial toggle-auto-transact! ctx selected-uri)}
+            "auto-transact"])]))))

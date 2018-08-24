@@ -1,57 +1,68 @@
 (ns contrib.ui.input
+  (:refer-clojure :exclude [boolean keyword long])
   (:require
-    [cats.monad.either :as either]
-    [clojure.set :refer [rename-keys]]
     [contrib.css :refer [css]]
+    [contrib.data :refer [update-existing]]
     [contrib.reactive :as r]
-    [contrib.reactive-debug :refer [track-cmp]]
-    [contrib.string :refer [safe-read-edn-string]]))
+    [contrib.reader]
+    [contrib.string :refer [blank->nil]]
+    [reagent.core :as reagent]))
 
 
-(defn adapt-props [props]
-  ; :placeholder, etc is allowed and pass through
-  (rename-keys props {:read-only :disabled}))
+(let [checked (fn [e] (.. e -target -checked))]             ; letfn not working #470
+  (defn checkbox [props]
+    [:input (-> (assoc props :type "checkbox")
+                (update-existing :on-change r/comp checked))]))
 
-(defn read-string-or-nil [code-str]
-  (either/branch (safe-read-edn-string code-str)
-                 (constantly nil)
-                 identity))
+(let [target-value (fn [e] (.. e -target -value))]          ; letfn not working #470
+  (defn text [props]
+    [:input (-> (assoc props :type "text")
+                (update-existing :on-change r/comp target-value))]))
 
-(defn- validated-input' [value on-change! parse-string to-string valid? props]
-  (let [intermediate-val (r/atom (to-string value))]
-    (fn [value on-change! parse-string to-string valid? props]
-      ; todo this valid check should NOT be nil punning
-      (let [valid?' (valid? @intermediate-val)]
-        [:input (merge (adapt-props props)
-                       {:type "text"
-                        :class (css (if-not valid?' "invalid") (:class props))
-                        :value @intermediate-val
-                        :on-change #(reset! intermediate-val (.. % -target -value))
-                        :on-blur #(let [parsed (parse-string @intermediate-val)]
-                                    (if (and valid?' (not= parsed value))
-                                      (on-change! parsed)))})]))))
+(let [on-change (fn [state parse-string new-s-value]
+                  (swap! state assoc :s-value new-s-value)
+                  (let [new-value (parse-string new-s-value)] ; todo this should be atomic, but we still want to throw
+                    (swap! state assoc :last-valid-value new-value)
+                    new-value))
+      initial-state-val (fn [to-string props]
+                          {:s-value (to-string (:value props))
+                           :last-valid-value (:value props)})]
+  (defn text-adapter [parse-string to-string props]
+    (let [state (r/atom (initial-state-val to-string props))]
+      (reagent/create-class
+        {:reagent-render
+         (fn [parse-string to-string props]
+           (let [s-value @(r/cursor state [:s-value])]
+             [text (-> (assoc props :value s-value)
+                       (update :class css (let [valid? (try (not (nil? (parse-string s-value))) (catch :default e false))]
+                                            (when-not valid? "invalid")))
+                       (update :on-change (fn [f]
+                                            (r/comp
+                                              (or f identity)
+                                              (r/partial on-change state parse-string)))))]))
+         :component-did-update
+         (fn [this]
+           (let [[_ parse-string to-string props] (reagent/argv this)]
+             (when-not (= (:last-valid-value @state) (:value props))
+               (reset! state (initial-state-val to-string props)))))}))))
 
-(defn validated-input [value on-change! parse-string to-string valid? & [props]]
-  ^{:key value}                                             ; This is to reset the local-state
-  [validated-input' value on-change! parse-string to-string valid? props])
+(let [parse-string (fn [s]                                  ; letfn not working #470
+                     (let [v (some-> s contrib.reader/read-edn-string)]
+                       (assert (or (nil? v) (keyword? v)))
+                       v))
+      to-string (fn [v] (some-> v pr-str))]
+  (defn keyword [props]
+    [text-adapter parse-string to-string props]))
 
-(defn input* [value on-change! & [props]]
-  ^{:key value}
-  [validated-input' value on-change! identity identity (constantly true) props])
+(let [parse-string (fn [s] (some-> s contrib.reader/read-edn-string)) ; letfn not working #470
+      to-string (fn [v] (some-> v pr-str))]
+  (defn edn [props]
+    [text-adapter parse-string to-string props]))
 
-(defn keyword-input* [value on-change! & [props]]
-  (let [valid? #(let [value (read-string-or-nil %)]
-                  (or (nil? value) (keyword? value)))]
-    ^{:key value}
-    [validated-input' value on-change! read-string-or-nil #(some-> % pr-str) valid? props]))
-
-(defn edn-input* [value on-change! & [props]]
-  (let [valid? #(either/branch (safe-read-edn-string %)     ; differentiate between read `nil` and error
-                               (constantly false)
-                               (constantly true))]
-    ^{:key value}
-    [validated-input' value on-change! read-string-or-nil #(some-> % pr-str) valid? props]))
-
-(defn id-input [value on-change! & [props]]
-  ^{:key (:db/id value)}
-  [validated-input' (:db/id value) on-change! read-string-or-nil pr-str read-string-or-nil props])
+(let [parse-string (fn [s]                                  ; letfn not working #470
+                     (when-let [s (blank->nil s)]
+                       (let [v (js/parseInt s 10)]
+                         (assert (integer? v))
+                         v)))]
+  (defn long [props]
+    [text-adapter parse-string str props]))

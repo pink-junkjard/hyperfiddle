@@ -2,28 +2,70 @@
   (:require
     [clojure.set :refer [rename-keys]]
     [contrib.cljs-platform :refer [global!]]
-    [contrib.data :as util]
+    [contrib.data :refer [update-existing]]
     [contrib.pprint :refer [pprint-str]]
     [contrib.reactive :as r]
     [contrib.reader]
     [contrib.string :refer [blank->nil]]
-    [contrib.ui.input :refer [adapt-props]]
+    [contrib.ui.input :as input]
     [contrib.ui.codemirror :refer [-codemirror camel-keys]]
     [contrib.ui.tooltip :refer [tooltip]]
     [contrib.ui.remark :as remark]
     [goog.object :as object]
     [re-com.core :as re-com]
-    [reagent.core :as reagent]))
+    [reagent.core :as reagent]
+    [taoensso.timbre :as timbre]))
 
-(defn easy-checkbox [label value change! & [props]]
-  (let [control [:input (adapt-props (merge props {:type "checkbox" :checked value :on-change change!}))]]
+
+(let [on-change (fn [os-ref f n]                            ; letfn not working #470
+                  (let [o (last (:old-values @os-ref))]
+                    (swap! os-ref (fn [m]
+                                    (-> (assoc m :value n)
+                                        (update :old-values conj n))))
+                    (when f (f o n))))]
+  (defn optimistic-updates [comp props & args]
+    (let [os-ref (r/atom {:value (:value props)
+                          :old-values [(:value props)]})]
+      (reagent/create-class
+        {:reagent-render
+         (fn [comp props & args]
+           (let [props (-> props
+                           (assoc :value @(r/cursor os-ref [:value]))
+                           (update :on-change #(r/partial on-change os-ref %)))]
+             (into [comp props] args)))
+         :component-did-update
+         (fn [this]
+           (let [[_ comp props & args] (reagent/argv this)
+                 b (:value props)
+                 {os :old-values a :value} @os-ref]
+             (if (= 1 (count os))
+               (when (not= a b)
+                 (reset! os-ref {:old-values [b]
+                                 :value b}))
+               (let [[_ [old-update :as rest]] (split-with #(not= % b) os)]
+                 (if (= old-update b)                       ; careful do NOT nil pun
+                   (swap! os-ref assoc :old-values (vec rest))
+                   (when (not= a b)
+                     ; this is either not a big deal, e.g. default values have been applied
+                     ; or multiple users are editing the same value and changes are probably being lost
+                     (timbre/warn "Potential conflicting concurrent edits detected, discarding local state" {:a a :b b :os os})
+                     (reset! os-ref {:old-values [b]
+                                     :value b})))))))}))))
+
+(defn easy-checkbox [props & [label]]
+  (let [control [input/checkbox props]]
     (if (blank->nil label)
-      [:label (merge props {:style {:font-weight "400"}})
+      [:label (-> props
+                  (assoc :style {:font-weight "400"})
+                  (dissoc :on-change :checked))
        control " " label]
       control)))
 
 (defn ^:export easy-checkbox-boolean [label r & [props]]
-  [easy-checkbox label @r (r/partial swap! r not) props])
+  [easy-checkbox (assoc props
+                   :checked @r
+                   :on-change (r/partial swap! r not))
+   label])
 
 (defn ^:export code [props]
   (let [defaults {:lineNumbers true
@@ -62,7 +104,7 @@
     (-> props
         (assoc :mode "clojure")
         (update :value pprint-str)
-        (util/update-existing :on-change r/comp read-edn-string))))
+        (update-existing :on-change r/comp read-edn-string))))
 
 (defn ^:export edn [props] [code (adapt-edn-props props)])
 

@@ -2,7 +2,7 @@
   (:require
     [contrib.reactive :as r]
     [contrib.reagent :refer [fragment]]
-    [contrib.ui.input :refer [keyword-input* edn-input*]]
+    [contrib.ui.input :as input]
     [contrib.ui.tooltip :refer [tooltip-thick]]
     [hypercrud.browser.context :as context]
     [hypercrud.browser.field :as field]
@@ -33,11 +33,13 @@
         doall)])
 
 (defn magic-new-head [_ ctx & [props]]
-  (let [#_#_read-only (r/fmap (comp not controls/writable-entity?) (context/entity ctx)) ;-- don't check this, '* always has a dbid and is writable
-        state (r/cursor (:hyperfiddle.ui.form/state ctx) [:hyperfiddle.ui.form/magic-new-a])]
+  (let [state (r/cursor (:hyperfiddle.ui.form/state ctx) [:hyperfiddle.ui.form/magic-new-a])]
     ;(println (str/format "magic-new-head: %s , %s , %s" @state (pr-str @entity)))
-    [keyword-input* @state (r/partial reset! state)
-     (merge props {:placeholder ":task/title"})]))
+    [input/keyword (-> (assoc props
+                         :placeholder ":task/title"
+                         :value @state
+                         :on-change (r/partial reset! state))
+                       controls/readonly->disabled)]))
 
 (letfn [(change! [ctx state v]
           (context/with-tx! ctx [[:db/add @(r/fmap :db/id (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data])) @state v]]))]
@@ -48,7 +50,9 @@
       ; Uncontrolled widget on purpose i think
       ; Cardinality many is not needed, because as soon as we assoc one value,
       ; we dispatch through a proper typed control
-      [edn-input* nil (r/partial change! ctx state)
-       (merge props {:read-only (let [_ [@state @read-only]] ; force reactions
-                                  (or (nil? @state) @read-only))
-                     :placeholder (pr-str "mow the lawn")})])))
+      [input/edn (-> (assoc props
+                       :on-change (r/partial change! ctx state)
+                       :read-only (let [_ [@state @read-only]] ; force reactions
+                                    (or (nil? @state) @read-only))
+                       :placeholder (pr-str "mow the lawn"))
+                     controls/readonly->disabled)])))

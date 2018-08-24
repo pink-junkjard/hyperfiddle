@@ -14,7 +14,8 @@
      [hyperfiddle.ui/markdown (-> ctx :hypercrud.browser/fiddle deref :db/doc)]
      [:div [:label [:input {:type "checkbox" :checked @hide-datomic :on-change #(swap! hide-datomic not)}] " hide Datomic system attributes"]]
      [:div [:label [:input {:type "checkbox" :checked @hide-archived :on-change #(swap! hide-archived not)}] " hide Hyperfiddle archived attributes"]]
-     [contrib.ui.input/input* @needle #(do (reset! needle %))
+     [contrib.ui.input/text {:value @needle
+                             :on-change #(do (reset! needle %))}
       {:placeholder ":task/title"}]
      (let [ctx (-> ctx
                    (update :hypercrud.browser/data (partial contrib.reactive/fmap do-filter-reactive))

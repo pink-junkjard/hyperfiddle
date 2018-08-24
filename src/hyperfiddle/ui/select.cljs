@@ -1,15 +1,13 @@
 (ns hyperfiddle.ui.select
   (:require
-    [cats.context :refer-macros [with-context]]
-    [cats.core :as cats :refer [fmap mlet return]]
+    [cats.core :refer [mlet return]]
     [cats.monad.either :as either]
+    [contrib.eval]
     [contrib.reactive :as r]
-    [contrib.try$ :refer [try-either]]
+    [hypercrud.browser.context :as context]
     [hypercrud.browser.field :as field]
     [hypercrud.types.Entity :refer [entity?]]
-    [hyperfiddle.data :as data]
-    [hyperfiddle.ui.controls :as controls]
-    [contrib.eval]))
+    [hyperfiddle.ui.controls :as controls]))
 
 (defn field-label [v]
   (if (instance? cljs.core/Keyword v)
@@ -85,7 +83,8 @@
     {:pre [options-ref+ ctx]}
     (-> (mlet [options-ref options-ref+]
           (return
-            (let [default-props {:on-change (r/partial controls/entity-change! ctx)}
+            (let [default-props {:on-change (r/comp (r/partial context/with-tx! ctx)
+                                                    (r/partial controls/entity-change->tx ctx))}
                   props (-> (merge default-props props)
                             (assoc :value @(r/fmap dom-value (:hypercrud.browser/data ctx))))
                   props (-> (select-keys props [:class])

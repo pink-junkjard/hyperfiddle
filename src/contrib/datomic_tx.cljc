@@ -1,40 +1,22 @@
 (ns contrib.datomic-tx
-  (:require [clojure.walk :as walk]))
+  (:require
+    [clojure.set :as set]
+    [clojure.walk :as walk]))
 
 
-(defn retract [id a ids]
-  (map (fn [v] [:db/retract id a v]) ids))
+(defn edit-entity [id attribute o n]
+  (let [{a :db/ident {cardinality :db/ident} :db/cardinality} attribute]
+    (case cardinality
+      :db.cardinality/one
+      (cond-> []
+        o (conj [:db/retract id a o])
+        n (conj [:db/add id a n]))
 
-(defn add [id a ids]
-  (map (fn [v] [:db/add id a v]) ids))
-
-(defn edit-entity [id a rets adds]
-  {:pre [id a]}
-  (vec (concat (retract id a rets)
-               (add id a adds))))
-
-; this fn blasts away previous values
-; in cardinality/many case you may not want that behaviour
-(defn update-entity-attr [{:keys [:db/id] :as entity}
-                          {:keys [:db/ident :db/cardinality :db/valueType] :as attribute}
-                          new-val]
-  {:pre [#_(not (js/isNaN new-val)) #_"What if new-val is nil or ##NaN etc? #88"
-         #_(not (nil? new-val))]}
-  (let [{:keys [old new]} (let [old-val (get entity ident)]
-                            (if (= (:db/ident valueType) :db.type/ref)
-                              (case (:db/ident cardinality)
-                                :db.cardinality/one {:old (let [old-val (:db/id old-val)]
-                                                            (if (nil? old-val) [] [old-val]))
-                                                     :new (if (nil? new-val) [] [new-val])}
-                                :db.cardinality/many {:old (map #(:db/id %) old-val)
-
-                                                      :new (if (nil? new-val) [] new-val)})
-                              (case (:db/ident cardinality)
-                                :db.cardinality/one {:old (if (nil? old-val) [] [old-val])
-                                                     :new (if (nil? new-val) [] [new-val])}
-                                :db.cardinality/many {:old old-val
-                                                      :new (if (nil? new-val) [] new-val)})))]
-    (edit-entity id ident old new)))
+      :db.cardinality/many
+      (let [o (set o)
+            n (set n)]
+        (vec (concat (map (fn [v] [:db/retract id a v]) (set/difference o n))
+                     (map (fn [v] [:db/add id a v]) (set/difference n o))))))))
 
 (defn simplify [simplified-tx next-stmt]
   (let [[op e a v] next-stmt

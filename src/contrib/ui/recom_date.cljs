@@ -1,38 +1,31 @@
 (ns contrib.ui.recom-date
   (:require
     [clojure.set :refer [rename-keys]]
+    [contrib.data :refer [update-existing]]
+    [contrib.reactive :as r]
+    [contrib.ui.input :as input]
     [goog.date.UtcDateTime]
-    [contrib.ui.input :as input :refer [adapt-props]]
     [re-com.core :as re-com]))
 
 
+(let [parse-iso8601-string (fn [s]
+                             (if (empty? s)
+                               nil
+                               (let [ms (.parse js/Date s)] ; NaN if not valid string
+                                 (assert (integer? ms))
+                                 (js/Date. ms))))
+      to-string (fn [v] (some-> v .toISOString))]           ; letfn .toISOString throws in browser? #470
+  (defn iso8601-string [props]
+    [input/text-adapter parse-iso8601-string to-string props]))
 
-(defn valid-date-str? [s]
-  (or (empty? s)
-      (let [ms (.parse js/Date s)]                          ; NaN if not valid string
-        (integer? ms))))
-
-(defn parse-iso8601-string [s]
-  (if (empty? s)
-    nil
-    (let [ms (.parse js/Date s)]
-      (js/Date. ms))))
-
-(defn iso8601-string [value change! props]
-  (let [to-string #(some-> % .toISOString)]
-    [input/validated-input value change! parse-iso8601-string to-string valid-date-str? props]))
-
-
-(defn recom-date [value change! props]
-  ; (new goog.date.UtcDateTime(new Date())).toIsoString()
-  (let [props (-> props
-                  adapt-props
-                  (update :class #(str % (if (:disabled props) " disabled")))
-                  (rename-keys {:disabled :disabled?})
-                  (select-keys [:class :disabled? :id]))]
-    ; I don't think :class does anything
-    (into
-      [re-com/datepicker-dropdown
-       :model (if value (goog.date.UtcDateTime. value))     ; not reactive
-       :on-change #(change! (.-date %))]
-      (flatten (seq props)))))
+(let [on-change (fn [v] (.-date v))]
+  (defn recom-date [props]
+    ; (new goog.date.UtcDateTime(new Date())).toIsoString()
+    (let [props (-> props
+                    (assoc :model (some-> (:value props) (goog.date.UtcDateTime.)))
+                    (update-existing :on-change r/comp on-change)
+                    (update :class #(str % (if (:disabled props) " disabled")))
+                    (rename-keys {:disabled :disabled?})
+                    (select-keys [:class :disabled? :id :model :on-change]))]
+      ; I don't think :class does anything
+      (into [re-com/datepicker-dropdown] (apply concat props)))))

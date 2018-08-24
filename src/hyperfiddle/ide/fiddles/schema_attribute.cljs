@@ -72,7 +72,9 @@
         ident-f (fn [val ctx props]
                   (let [on-change! (r/comp (r/partial ident-with-tx! special-attrs-state ctx)
                                            (r/partial controls/entity-change->tx ctx))]
-                    [input/keyword-input* @(:hypercrud.browser/data ctx) on-change! props]))
+                    [input/keyword (-> (assoc props :value @(:hypercrud.browser/data ctx)
+                                                    :on-change on-change!)
+                                       controls/readonly->disabled)]))
         valueType-and-cardinality-f (fn [val ctx props]
                                       (let [on-change! (r/comp (r/partial valueType-and-cardinality-with-tx! special-attrs-state ctx)
                                                                (r/partial controls/entity-change->tx ctx))]
