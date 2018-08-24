@@ -80,20 +80,17 @@
 
 (let [dom-value (fn [value]                                 ; nil, kw or eid
                   (if (nil? value) "" (str (:db/id value))))]
-  (defn select
-    ([props ctx]                                            ; legacy auto interface
-     (select (data/select+ ctx :options nil) props ctx))
-    ([options-ref+ props ctx]
-     "This arity should take a selector string (class) instead of Right[Reaction[Link]], blocked on removing path backdoor"
-     {:pre [options-ref+ ctx]}
-     (-> (mlet [options-ref options-ref+]
-           (return
-             (let [default-props {:on-change (r/partial controls/entity-change! ctx)}
-                   props (-> (merge default-props props)
-                             (assoc :value @(r/fmap dom-value (:hypercrud.browser/data ctx))))
-                   props (-> (select-keys props [:class])
-                             (assoc :user-renderer (r/partial select-anchor-renderer props {:disabled (compute-disabled ctx props)})))
-                   ctx (assoc ctx
-                         :hypercrud.ui/display-mode (r/track identity :hypercrud.browser.browser-ui/user))]
-               [hyperfiddle.ui/ui-from-link options-ref ctx props])))
-         (either/branch select-error-cmp identity)))))
+  (defn select "This arity should take a selector string (class) instead of Right[Reaction[Link]], blocked on removing path backdoor"
+    [options-ref+ props ctx]
+    {:pre [options-ref+ ctx]}
+    (-> (mlet [options-ref options-ref+]
+          (return
+            (let [default-props {:on-change (r/partial controls/entity-change! ctx)}
+                  props (-> (merge default-props props)
+                            (assoc :value @(r/fmap dom-value (:hypercrud.browser/data ctx))))
+                  props (-> (select-keys props [:class])
+                            (assoc :user-renderer (r/partial select-anchor-renderer props {:disabled (compute-disabled ctx props)})))
+                  ctx (assoc ctx
+                        :hypercrud.ui/display-mode (r/track identity :hypercrud.browser.browser-ui/user))]
+              [hyperfiddle.ui/ui-from-link options-ref ctx props])))
+        (either/branch select-error-cmp identity))))
