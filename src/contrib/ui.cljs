@@ -51,7 +51,7 @@
                   :no-clip? true
                   :width "600px"
                   :body (code value change! props)]]
-       " " value])))
+       " " [:code value]])))
 
 (letfn [(edn-change! [change! user-edn-str]
           (-> (safe-read-edn-string user-edn-str)
