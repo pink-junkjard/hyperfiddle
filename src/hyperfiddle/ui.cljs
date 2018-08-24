@@ -390,7 +390,7 @@ User renderers should not be exposed to the reaction."
     (fn [columns ctx & [props]]
       (let [ctx (assoc ctx ::sort/sort-col sort-col
                            ::layout :hyperfiddle.ui.layout/table)]
-        [:table (update props :class (fnil css "hyperfiddle") "ui-table" "unp") ; fnil case is iframe root (not a field :many)
+        [:table (update props :class (fnil css "hyperfiddle") "unp") ; fnil case is iframe root (not a field :many)
          [:thead (->> (columns #_props (dissoc ctx :hypercrud.browser/data)) (into [:tr]))] ; strict
          (->> (:hypercrud.browser/data ctx)
               (r/fmap sort)
