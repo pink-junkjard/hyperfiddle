@@ -21,7 +21,7 @@
       ; [{:variable {:symbol $}}{:variable {:symbol ?gender}}]
       (return
         (if (seq (drop 1 qin))                              ; Removing the rules and src is hard with the bind wrappers so yolo
-          "(comp deref :hypercrud.browser/data)"
+          "identity"
           "(constantly nil)")))))
 
 (defn auto-link [ctx link]

@@ -33,7 +33,7 @@
                   :hypercrud/sys? true
                   :link/disabled? (context/attribute-segment? (::field/path-segment field))
                   :link/rel :hyperfiddle/remove
-                  :link/formula "(comp deref :hypercrud.browser/data)"
+                  :link/formula "identity"
                   :link/path ?spath
                   :link/render-inline? true
                   :link/fiddle system-fiddle/fiddle-blank-system-remove
@@ -49,7 +49,7 @@
                   :hypercrud/sys? true
                   :link/disabled? (context/attribute-segment? (::field/path-segment field))
                   :link/rel :hyperfiddle/edit
-                  :link/formula "(comp deref :hypercrud.browser/data)"
+                  :link/formula "identity"
                   :link/path ?spath
                   :link/fiddle (system-fiddle/fiddle-system-edit dbname)
                   :link/managed? false})

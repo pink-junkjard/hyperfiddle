@@ -78,12 +78,14 @@
     (mlet [fiddle-id (if-let [page (:link/fiddle link)]
                        (either/right (:fiddle/ident page))
                        (either/left {:message "link has no fiddle" :data {:link link}}))
-           formula (let [formula-str (:link/formula link)]
+           f-wrap (let [formula-str (:link/formula link)]
                      (if (and (string? formula-str) (not (string/blank? formula-str)))
-                       (memoized-eval-string formula-str)
-                       (either/right (constantly nil))))
+                       (memoized-eval-string (str "(fn [ctx] \n" formula-str "\n)"))
+                       (either/right (constantly (constantly nil)))))
+           f (try-either (f-wrap ctx))
+           args (try-either @(r/fmap f (:hypercrud.browser/data ctx)))
            args (try-either
-                  (->> {:remove-this-wrapper @(r/track formula ctx)} ; walk trees wants a map
+                  (->> {:remove-this-wrapper args} ; walk trees wants a map
                        ; shadow-links can be hdyrated here, and we need to talk them.
                        ; Technical debt. Once shadow-links are identities, this is just a mapv.
                        (walk/postwalk (fn [v]
