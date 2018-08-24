@@ -361,7 +361,7 @@ User renderers should not be exposed to the reaction."
                 :on-click (r/partial sort/toggle-sort! relative-path ctx)}
            [Head nil props ctx]]
     ; Field omits [] but table does not, because we use it to specifically draw repeating anchors with a field renderer.
-    :body [:td {:class (css "field" (:class props) "truncate")
+    :body [:td {:class (css "field" (:class props))
                 :style {:border-color (border-color ctx)}}
            [Body @(:hypercrud.browser/data ctx) props ctx]]))
 
