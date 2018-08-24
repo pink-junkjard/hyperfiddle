@@ -99,7 +99,9 @@
 ; }
 (defn popover-cmp [link-ref ctx props label]
   ; we should run the auto-formula logic to determine an appropriate auto-id fn
-  (let [child-branch (let [child-id-str (-> [(auto-link-formula/deterministic-ident ctx) @(r/fmap :db/id link-ref)]
+  (let [child-branch (let [child-id-str (-> [(auto-link-formula/deterministic-ident ctx)
+                                             @(r/fmap :db/id link-ref)
+                                             (:route props)]
                                             hash abs-normalized - str)]
                        (branch/encode-branch-child (:branch ctx) child-id-str))
         popover-id child-branch                             ; just use child-branch as popover-id
