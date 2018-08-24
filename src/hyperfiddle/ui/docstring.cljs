@@ -33,6 +33,7 @@
         typedoc (some->> @(r/fmap attribute-schema-human attr)
                          (interpose " ") (apply str))
         help-md (blank->nil
-                  (str (if dbdoc (str dbdoc "\n\n"))        ; markdown needs double line-break
-                       (if typedoc (str "`" path " " typedoc "`"))))]
+                  (str (if typedoc (str "`" (pr-str path) " " typedoc "`\n\n"))         ; markdown needs double line-break
+                       dbdoc
+                       ))]
     help-md))
