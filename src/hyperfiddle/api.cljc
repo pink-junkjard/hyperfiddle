@@ -4,7 +4,7 @@
 
 
 (defn ^:export tempid-child "stable and idempotent, but implemented through parent-child ctx"
-  [ctx]
+  [ctx val]
   (with-tempid-color ctx tempid-from-ctx))
 
 (defn ^:export tempid-detached "unstable but guaranteed unique tempid"

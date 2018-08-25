@@ -59,7 +59,7 @@
                   :hypercrud/sys? true
                   :link/disabled? (context/attribute-segment? (::field/path-segment field))
                   :link/rel :hyperfiddle/new
-                  :link/formula "(constantly (hyperfiddle.api/tempid-child ctx))"
+                  :link/formula "(partial hyperfiddle.api/tempid-child ctx)"
                   :link/tx-fn parent-child-txfn
                   :link/path ?spath
                   :link/render-inline? true
