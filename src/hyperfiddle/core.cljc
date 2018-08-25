@@ -1,22 +1,21 @@
 (ns hyperfiddle.core
   (:require
-    ; public deps available inside query
-    #?(:clj [contrib.datomic])
 
-    ; public deps available for ui
+    ; Userland API
+    [hyperfiddle.api]
+    #?(:cljs [hyperfiddle.ui])
+
+    ; Optional helpers
+    #?(:clj [contrib.datomic])                              ; fiddle/query
     #?(:cljs [contrib.reagent])
     #?(:cljs [contrib.ui])
-
-    ; public auto formulas
-    [hypercrud.browser.auto-link-formula]
-
-    #?(:cljs [hyperfiddle.ui])
 
     ; These things can hardcode hyperfiddle.ui, like userland
     #?(:cljs [hyperfiddle.ui.markdown-extensions])
     #?(:cljs [hyperfiddle.ide.hf-live])
     ))
 
+; Circular dependency hack, do not alter! should not be dynamic
 #?(:cljs (set! hyperfiddle.ui/markdown hyperfiddle.ui.markdown-extensions/markdown))
 
 ; WARNING:

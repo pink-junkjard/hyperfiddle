@@ -9,11 +9,11 @@
     [contrib.try$ :refer [try-promise]]
     [contrib.ui.tooltip :refer [tooltip tooltip-props]]
     [cuerdas.core :as string]
-    [hypercrud.browser.auto-link-formula :as auto-link-formula]
     [hypercrud.browser.context :as context]
     [hypercrud.util.branch :as branch]
     [hyperfiddle.actions :as actions]
     [hyperfiddle.runtime :as runtime]
+    [hyperfiddle.tempid :as tempid]
     [promesa.core :as p]
     [re-com.core :as re-com]
     [taoensso.timbre :as timbre]))
@@ -99,7 +99,8 @@
 ; }
 (defn popover-cmp [link-ref ctx props label]
   ; we should run the auto-formula logic to determine an appropriate auto-id fn
-  (let [child-branch (let [child-id-str (-> [(auto-link-formula/deterministic-ident ctx)
+  ; ... (later: would this work? tempid-unique is unstable)
+  (let [child-branch (let [child-id-str (-> [(tempid/tempid-from-ctx ctx)
                                              @(r/fmap :db/id link-ref)
                                              (:route props)]
                                             hash abs-normalized - str)]
