@@ -59,7 +59,7 @@
                   :hypercrud/sys? true
                   :link/disabled? (context/attribute-segment? (::field/path-segment field))
                   :link/rel :hyperfiddle/new
-                  :link/formula "hyperfiddle.api/tempid-child"
+                  :link/formula "(constantly (hyperfiddle.api/tempid-child ctx))"
                   :link/tx-fn parent-child-txfn
                   :link/path ?spath
                   :link/render-inline? true
@@ -79,7 +79,7 @@
                              {:db/id (keyword "hyperfiddle.browser.system-link" (str "new-" (hash path)))
                               :hypercrud/sys? true
                               :link/rel :hyperfiddle/new
-                              :link/formula "hyperfiddle.api/tempid-detached"
+                              :link/formula "(constantly (hyperfiddle.api/tempid-detached ctx))"
                               :link/path (blank->nil (str path))
                               :link/render-inline? true
                               :link/fiddle (system-fiddle/fiddle-system-edit dbname)
