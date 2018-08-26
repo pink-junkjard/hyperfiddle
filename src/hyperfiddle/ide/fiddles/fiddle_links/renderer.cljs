@@ -23,19 +23,19 @@
           shadow? @(r/fmap :hypercrud/sys? entity)]
       (or sys? (and shadow? (not (editable-if-shadowed? (last (:hypercrud.browser/path ctx)))))))))
 
-(defn read-only-cell [val props ctx]
+(defn read-only-cell [val ctx props]
   ; Need to delay until we have the value ctx to compute this, which means its a value renderer not a field prop
   (let [props (assoc props :read-only (read-only? ctx))]
-    [hyper-control val props ctx]))
+    [hyper-control val ctx props]))
 
-(defn link-fiddle [val props ctx]
+(defn link-fiddle [val ctx props]
   (fragment
     (link :hyperfiddle/new "fiddle" ctx)
     (let [props (assoc props :read-only (read-only? ctx))]
-      [select+ val props ctx])))
+      [select+ val ctx props])))
 
 (letfn [(remove-children [field] (dissoc field :hypercrud.browser.field/children))]
-  (defn hf-live-link-fiddle [val props ctx]
+  (defn hf-live-link-fiddle [val ctx props]
     (let [ctx (update ctx :hypercrud.browser/field #(r/fmap remove-children %))
           props (assoc props :read-only (read-only? ctx))]
       ; Hacks because hf-live is not yet modeled in the fiddle-graph, we hardcode knowledge of the IDE fiddle-graph instead
@@ -64,7 +64,7 @@
       (field [:link/formula] ctx read-only-cell)
       (when-not embed-mode (field [:link/tx-fn] ctx read-only-cell))
       (when-not embed-mode (field [] ctx
-                                  (fn [val props ctx]
+                                  (fn [val ctx props]
                                     (link :hyperfiddle/remove "link" ctx "remove")
                                     )))])
    ctx

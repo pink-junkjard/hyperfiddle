@@ -76,7 +76,7 @@
         valueType-and-cardinality-f (fn [val props ctx]
                                       (let [on-change! (r/comp (r/partial valueType-and-cardinality-with-tx! special-attrs-state ctx)
                                                                (r/partial controls/entity-change->tx ctx))]
-                                        [hyperfiddle.ui/select+ val (assoc props :on-change on-change!) ctx]))]
+                                        [hyperfiddle.ui/select+ val ctx (assoc props :on-change on-change!)]))]
     (fn [ctx class]
       (let [ctx (update ctx :hypercrud.browser/data (partial r/fmap reactive-merge))
             valid-attr? @(r/fmap completed? (:hypercrud.browser/data ctx))]

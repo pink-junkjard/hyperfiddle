@@ -12,7 +12,7 @@
     [hyperfiddle.ui.docstring :refer [semantic-docstring]]))
 
 
-(defn attribute-label [_ props ctx]
+(defn attribute-label [_ ctx & [props]]
   (when-let [label (some->> (:hypercrud.browser/field ctx)
                             (r/fmap ::field/label)
                             deref)]
@@ -21,7 +21,7 @@
                        [:div.hyperfiddle.docstring [contrib.ui/markdown help-md]])
        [:label props label (if help-md [:sup "†"])]])))
 
-(defn entity-label [_ props ctx]
+(defn entity-label [_ ctx & [props]]
   [:div #_(fragment)
    [attribute-label _ props ctx]
    (->> (data/select-all ctx :hyperfiddle/new)
@@ -32,7 +32,7 @@
                [hyperfiddle.ui/ui-from-link rv ctx props]))
         doall)])
 
-(defn magic-new-head [_ props ctx]
+(defn magic-new-head [_ ctx & [props]]
   (let [#_#_read-only (r/fmap (comp not controls/writable-entity?) (context/entity ctx)) ;-- don't check this, '* always has a dbid and is writable
         state (r/cursor (:hyperfiddle.ui.form/state ctx) [:hyperfiddle.ui.form/magic-new-a])]
     ;(println (str/format "magic-new-head: %s , %s , %s" @state (pr-str @entity)))
@@ -41,7 +41,7 @@
 
 (letfn [(change! [ctx state v]
           (context/with-tx! ctx [[:db/add @(r/fmap :db/id (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data])) @state v]]))]
-  (defn magic-new-body [val props ctx]
+  (defn magic-new-body [val ctx & [props]]
     (let [read-only (r/fmap (comp not controls/writable-entity?) (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data]))
           state (r/cursor (:hyperfiddle.ui.form/state ctx) [:hyperfiddle.ui.form/magic-new-a])]
       ;(println (str/format "magic-new-body: %s , %s , %s" @state @read-only (pr-str @entity)))
