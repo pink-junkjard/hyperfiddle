@@ -83,7 +83,8 @@
                        (memoized-eval-string (str "(fn [ctx] \n" formula-str "\n)"))
                        (either/right (constantly (constantly nil)))))
            f (try-either (f-wrap ctx))
-           args (try-either @(r/fmap f (:hypercrud.browser/data ctx)))
+           args (try-either @(r/fmap f (or (:hypercrud.browser/data ctx) ; Don't NPE in :head https://github.com/hyperfiddle/hyperfiddle/issues/489
+                                           (r/track identity nil))))
            args (try-either
                   (->> {:remove-this-wrapper args} ; walk trees wants a map
                        ; shadow-links can be hdyrated here, and we need to talk them.
