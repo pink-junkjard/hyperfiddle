@@ -34,7 +34,8 @@
          (fn [parse-string to-string props]
            (let [s-value @(r/cursor state [:s-value])]
              [text (-> (assoc props :value s-value)
-                       (update :class css (let [valid? (try (not (nil? (parse-string s-value))) (catch :default e false))]
+                       (update :class css (let [valid? (try (parse-string s-value) true
+                                                            (catch :default e false))]
                                             (when-not valid? "invalid")))
                        (update :on-change (fn [f]
                                             (r/comp
