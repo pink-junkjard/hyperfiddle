@@ -18,7 +18,7 @@
 
                  :else (swap! state update-in path
                               (fn [o]
-                                (when (or (not initial) (not= o v))
+                                (when (and (not initial) (not= o v))
                                   (timbre/info (str (pr-str path) ":\n\told:" (pr-str o) "\n\tnew:" (pr-str v))))
                                 v))))]
        (f [] args true)
