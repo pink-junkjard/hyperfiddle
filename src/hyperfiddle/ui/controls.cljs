@@ -30,17 +30,17 @@
   ; If the db/id was not pulled, we cannot write through to the entity
   (cljs.core/boolean (:db/id entity-val)))
 
-(defn ^:export keyword [val props ctx]
+(defn ^:export keyword [val ctx & [props]]
   (let [props (update props :read-only #(or % (not @(r/fmap writable-entity? (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data])))))
         on-change! (r/partial entity-change! ctx)]
     [input/keyword-input* val on-change! props]))
 
-(defn ^:export string [val props ctx]
+(defn ^:export string [val ctx & [props]]
   (let [props (update props :read-only #(or % (not @(r/fmap writable-entity? (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data])))))
         on-change! (r/partial entity-change! ctx)]
     [input/input* val on-change! props]))
 
-(defn ^:export long [val props ctx]
+(defn ^:export long [val ctx & [props]]
   (let [props (update props :read-only #(or % (not @(r/fmap writable-entity? (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data])))))
         on-change! (r/partial entity-change! ctx)]
     [input/validated-input val on-change!
@@ -49,14 +49,14 @@
      #(or (= "" %) (integer? (js/parseInt % 10)))
      props]))
 
-(defn ^:export boolean [val props ctx]
+(defn ^:export boolean [val ctx & [props]]
   ; wrapper div lets us style block while constraining checkbox clickable surface area inline
   [:div (let [props (adapt-props props)] (update props :class #(str % (if (:disabled props) " disabled"))))
    [contrib.ui/easy-checkbox "" val
     (r/partial entity-change! ctx (not val))
     (update props :read-only #(or % (not @(r/fmap writable-entity? (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data])))))]])
 
-(defn ^:export tristate-boolean [val props ctx]
+(defn ^:export tristate-boolean [val ctx & [props]]
   (letfn [(adapter [e]
             (case (.-target.value e)
               "" nil
@@ -73,38 +73,38 @@
        [:option (assoc option-props :key false :value "false") "False"]
        [:option (assoc option-props :key :nil :value "") "--"]])))
 
-(defn ^:export ref [val props ctx]
+(defn ^:export ref [val ctx & [props]]
   [input/edn-input* val #_(or (:db/ident val) (:db/id val))
    (r/partial entity-change! ctx)                           ; f'ed
    (update props :read-only #(or % (not @(r/fmap writable-entity? (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data])))))])
 
-(defn ^:export dbid [val props ctx]
+(defn ^:export dbid [val ctx & [props]]
   [input/id-input val
    (r/partial entity-change! ctx)
    (update props :read-only #(or % (not @(r/fmap writable-entity? (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data])))))])
 
-(defn ^:export instant [val props ctx]
+(defn ^:export instant [val ctx & [props]]
   [recom-date val
    (r/partial entity-change! ctx)
    (update props :read-only #(or % (not @(r/fmap writable-entity? (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data])))))])
 
-(defn- code-mode [val props ctx]
+(defn- code-mode [val ctx & [props]]
   (let [props (update props :read-only #(or % (not @(r/fmap writable-entity? (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data])))))
         control (case (:hyperfiddle.ui/layout ctx :hyperfiddle.ui.layout/block)
                   :hyperfiddle.ui.layout/block contrib.ui/code
                   :hyperfiddle.ui.layout/table contrib.ui/code-inline-block)]
     [control val (r/partial entity-change! ctx) props]))
 
-(defn ^:export code [val props ctx]
+(defn ^:export code [val ctx & [props]]
   (let [props (-> props
                   (update :mode #(or % "clojure"))
                   (assoc :parinfer @(r/fmap :hyperfiddle.ide/parinfer (:hyperfiddle.ide/user ctx))))]
-    [code-mode val props ctx]))
+    [code-mode val ctx props]))
 
-(defn ^:export css [val props ctx]
-  [code-mode val (update props :mode #(or % "css")) ctx])
+(defn ^:export css [val ctx & [props]]
+  [code-mode val ctx (update props :mode #(or % "css"))])
 
-(defn ^:export markdown-editor [val props ctx]              ; This is legacy; :mode=markdown should be bound in userland
+(defn ^:export markdown-editor [val ctx & [props]]          ; This is legacy; :mode=markdown should be bound in userland
   (let [widget (case (:hyperfiddle.ui/layout ctx :hyperfiddle.ui.layout/block)
                  :hyperfiddle.ui.layout/block contrib.ui/code
                  :hyperfiddle.ui.layout/table contrib.ui/code-inline-block)]
@@ -114,7 +114,7 @@
          (update :read-only #(or % (not @(r/fmap writable-entity? (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data])))))
          (assoc :mode "markdown" :lineWrapping true))]))
 
-(defn ^:export edn-many [val props ctx]
+(defn ^:export edn-many [val ctx & [props]]
   (letfn [(change! [ctx value user-val]
             (let [user-val (set user-val)
                   rets (set/difference value user-val)
@@ -131,7 +131,7 @@
        (r/partial change! ctx value)
        (update props :read-only #(or % (not @(r/fmap writable-entity? (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data])))))])))
 
-(defn ^:export edn [val props ctx]
+(defn ^:export edn [val ctx & [props]]
   (let [widget (case (:hyperfiddle.ui/layout ctx :hyperfiddle.ui.layout/block)
                  :hyperfiddle.ui.layout/table contrib.ui/edn-inline-block
                  :hyperfiddle.ui.layout/block contrib.ui/edn)]

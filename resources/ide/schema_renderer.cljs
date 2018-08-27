@@ -9,8 +9,8 @@
                              (if @hide-archived (remove archived? xs) xs)
                              (if (contrib.string/blank->nil @needle)
                                (filter #(cuerdas.core/includes? (-> % :db/ident str) @needle) xs) xs)))]
-  (fn [ctx class]
-    [:div {:class class}
+  (fn [val ctx props]
+    [:div props
      [hyperfiddle.ui/markdown (-> ctx :hypercrud.browser/fiddle deref :db/doc)]
      [:div [:label [:input {:type "checkbox" :checked @hide-datomic :on-change #(swap! hide-datomic not)}] " hide Datomic system attributes"]]
      [:div [:label [:input {:type "checkbox" :checked @hide-archived :on-change #(swap! hide-archived not)}] " hide Hyperfiddle archived attributes"]]

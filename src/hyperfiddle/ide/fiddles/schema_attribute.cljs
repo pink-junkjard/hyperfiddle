@@ -66,22 +66,22 @@
       [true true]
       (context/with-tx! ctx tx))))
 
-(defn renderer [ctx class]
+(defn renderer [val ctx props]
   (let [special-attrs-state (r/atom nil)
         reactive-merge #(merge-in-tx % @special-attrs-state ctx)
-        ident-f (fn [val props ctx]
+        ident-f (fn [val ctx props]
                   (let [on-change! (r/comp (r/partial ident-with-tx! special-attrs-state ctx)
                                            (r/partial controls/entity-change->tx ctx))]
                     [input/keyword-input* @(:hypercrud.browser/data ctx) on-change! props]))
-        valueType-and-cardinality-f (fn [val props ctx]
+        valueType-and-cardinality-f (fn [val ctx props]
                                       (let [on-change! (r/comp (r/partial valueType-and-cardinality-with-tx! special-attrs-state ctx)
                                                                (r/partial controls/entity-change->tx ctx))]
-                                        [hyperfiddle.ui/select+ val (assoc props :on-change on-change!) ctx]))]
-    (fn [ctx class]
+                                        [hyperfiddle.ui/select+ val ctx (assoc props :on-change on-change!)]))]
+    (fn [val ctx props]
       (let [ctx (update ctx :hypercrud.browser/data (partial r/fmap reactive-merge))
             valid-attr? @(r/fmap completed? (:hypercrud.browser/data ctx))]
         ^{:key @(r/fmap data/row-keyfn (:hypercrud.browser/data ctx))}
-        [:div {:class class}
+        [:div props
          [markdown "See [Datomic schema docs](https://docs.datomic.com/on-prem/schema.html)."]
          (field [:db/ident] ctx ident-f)
          (field [:db/valueType] ctx valueType-and-cardinality-f {:options "valueType-options"})

@@ -67,34 +67,34 @@
    :fiddle/links "See [:fiddle/links examples](http://www.hyperfiddle.net/:docs/:fiddle-links/)."})
 
 (def controls
-  {:fiddle/pull (fn [val props ctx]
+  {:fiddle/pull (fn [val ctx props]
                   [:div
-                   [hyper-control val (dissoc props :embed-mode) ctx]
+                   [hyper-control val ctx (dissoc props :embed-mode)]
                    [:span.schema "schema: " (schema-links ctx)]
                    (when-not (:embed-mode props)
                      #_[:div.hf-underdoc [markdown (:fiddle/pull underdocs)]])])
-   :fiddle/query (fn [val props ctx]
+   :fiddle/query (fn [val ctx props]
                    [:div
-                    [hyper-control @(:hypercrud.browser/data ctx) (dissoc props :embed-mode) ctx]
+                    [hyper-control val ctx (dissoc props :embed-mode)]
                     [:span.schema "schema: " (schema-links ctx)]
                     (when-not (:embed-mode props)
                       #_[:div.hf-underdoc [markdown (:fiddle/query underdocs)]])])
-   :fiddle/markdown (fn [val props ctx]
+   :fiddle/markdown (fn [val ctx props]
                       [:div
-                       [hyper-control val (dissoc props :embed-mode) ctx]
+                       [hyper-control val ctx (dissoc props :embed-mode)]
                        (when-not (:embed-mode props)
                          #_[:div.hf-underdoc [markdown (:fiddle/markdown underdocs)]])])
-   :fiddle/css (fn [val props ctx]
+   :fiddle/css (fn [val ctx props]
                  [:div
-                  [hyper-control val (dissoc props :embed-mode) ctx]
+                  [hyper-control val ctx (dissoc props :embed-mode)]
                   (when-not (:embed-mode props)
                     #_[:div.hf-underdoc [markdown (:fiddle/css underdocs)]])])
-   :fiddle/renderer (fn [val props ctx]
+   :fiddle/renderer (fn [val ctx props]
                       [:div
-                       [hyper-control val (dissoc props :embed-mode) ctx]
+                       [hyper-control val ctx (dissoc props :embed-mode)]
                        (when-not (:embed-mode props)
                          [:div.hf-underdoc [markdown (:fiddle/renderer underdocs)]])])
-   :fiddle/links (fn [val props ctx]
+   :fiddle/links (fn [val ctx props]
                    [:div
                     (link :hyperfiddle/new "link" ctx)
                     [:div [links-fiddle/renderer val ctx props]]
@@ -102,12 +102,12 @@
                       #_[:div.hf-underdoc [markdown (:fiddle/links underdocs)]])])
    })
 
-(defn fiddle-src-renderer [ctx class]
+(defn fiddle-src-renderer [val ctx props]
   (let [ctx (shadow-fiddle ctx)
         ; these two shadow calls are inefficient, throwing away work
         ectx (shadow-links ctx)
         ctx (either/branch ectx (constantly ctx) identity)]
-    [:div {:class class}
+    [:div props
      [:h3 (str @(r/cursor (:hypercrud.browser/data ctx) [:fiddle/ident])) " source"]
      (field [:fiddle/ident] ctx nil)
      (field [:fiddle/type] ctx nil)

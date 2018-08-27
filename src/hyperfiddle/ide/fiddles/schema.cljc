@@ -42,7 +42,7 @@
                       :db/isComponent
                       :db/fulltext])
    :fiddle/pull-database $db
-   :fiddle/renderer (str '[hyperfiddle.ide.fiddles.schema-attribute/renderer ctx class])
+   :fiddle/renderer (str '[hyperfiddle.ide.fiddles.schema-attribute/renderer val ctx props])
    :fiddle/links #{{:db/id (keyword "hyperfiddle.schema.db-cardinality-options" $db)
                     :link/fiddle (db-cardinality-options $db)
                     :link/render-inline? true
@@ -77,7 +77,7 @@
                                                :db/isComponent :db/fulltext :db/doc]) '...]
                          :where [$db :db.part/db :db.install/attribute '?attr]]))
    :fiddle/type :query
-   :fiddle/renderer (load-resource "ide/schema_renderer.cljs") 
+   :fiddle/renderer (load-resource "ide/schema_renderer.cljs")
    :fiddle/links #{{:db/id :system-anchor-edit              ; XXX
                     :link/rel :hyperfiddle/edit
                     :link/fiddle (db-attribute-edit $db)}

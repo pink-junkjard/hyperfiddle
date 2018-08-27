@@ -1,4 +1,4 @@
-[:div {:class class}
+[:div props
  (let [[_ [inner-fiddle & inner-args]] (:route ctx)]
    [hyperfiddle.ui/iframe ctx
     {:route [inner-fiddle inner-args]
