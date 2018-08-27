@@ -28,7 +28,8 @@
         (for [k attrs
               :let [?f (fiddle-src/controls k)
                     props (when ?f {:embed-mode true})]]
-          (field [k] ctx ?f props))))))
+          ^{:key (str [k])}
+          [field [k] ctx ?f props])))))
 
 (defn result-edn [attrs val ctx props]
   (let [s (-> val

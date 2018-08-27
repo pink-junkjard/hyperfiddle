@@ -334,7 +334,7 @@ User renderers should not be exposed to the reaction."
         [ui-from-link link-ref ctx props]))))
 
 (defn form-field "Form fields are label AND value. Table fields are label OR value."
-  [relative-path ctx Body Head props]                       ; ?f :: (val props ctx) => DOM
+  [relative-path ctx Body Head props]
   (let [state (r/atom {:hyperfiddle.ui.form/magic-new-a nil})]
     (fn [relative-path ctx Body Head props]
       (let [ctx (assoc ctx :hyperfiddle.ui.form/state state)]
@@ -369,7 +369,7 @@ User renderers should not be exposed to the reaction."
            [Body @(:hypercrud.browser/data ctx) ctx props]]))
 
 (defn ^:export field "Works in a form or table context. Draws label and/or value."
-  [relative-path ctx & [?f props]]                          ; ?f :: (ref, props, ctx) => DOM
+  [relative-path ctx & [?f props]]
   (let [ctx (context/focus ctx relative-path)
         Body (or ?f hyper-control)
         Head (or (:label-fn props) hyper-label)
@@ -378,13 +378,12 @@ User renderers should not be exposed to the reaction."
         is-magic-new (= '* (last relative-path))]
     (case (:hyperfiddle.ui/layout ctx)
       :hyperfiddle.ui.layout/table (when-not is-magic-new
-                                     ^{:key (str relative-path)}
                                      [table-field relative-path ctx Body Head props])
-      (let [magic-new-key (when is-magic-new
-                            ; guard against crashes for nil data
-                            (hash (some->> ctx :hypercrud.browser/parent :hypercrud.browser/data (r/fmap keys) deref)))]
-        ^{:key (str relative-path magic-new-key #_"reset magic new state")}
-        [form-field relative-path ctx Body Head props]))))
+      (with-meta
+        [form-field relative-path ctx Body Head props]
+        (when is-magic-new
+          ; guard against crashes for nil data
+          {:key (hash (some->> ctx :hypercrud.browser/parent :hypercrud.browser/data (r/fmap keys) deref))})))))
 
 (defn ^:export table "Semantic table; columns driven externally" ; this is just a widget
   [columns ctx & [props]]
@@ -418,28 +417,30 @@ User renderers should not be exposed to the reaction."
 (defn columns [field ctx & [props]]
   (concat
     (->> (-> ctx :hypercrud.browser/field deref ::field/children)
-         (map (fn [{path ::field/path-segment}]
-                (field [path] ctx hyper-control props))))
+         (map (fn [{segment ::field/path-segment}]
+                ^{:key (str [segment])}
+                [field [segment] ctx hyper-control props])))
     ; In both tables and forms, [] is meaningful for the edit link.
     ; But iframes should be omitted, we draw those as if non-repeating.
-    [(field [] ctx entity-links props)]))
+    [^{:key (str [])} [field [] ctx entity-links props]]))
 
 (defn columns-relation-product [field ctx & [props]]
-  (mapcat (fn [{path ::field/path-segment
+  (mapcat (fn [{segment ::field/path-segment
                 child-fields ::field/children}]
             (concat
-              (map (fn [{child-path ::field/path-segment}]
-                     (field [path child-path] ctx hyper-control props))
+              (map (fn [{child-segment ::field/path-segment}]
+                     ^{:key (str [segment child-segment])}
+                     [field [segment child-segment] ctx hyper-control props])
                    child-fields)
               ; No [], that is meaningless in the relation case.
               ; See how we explicitly render the entity-links here
-              [(field [path] ctx entity-links)]))
+              [^{:key (str [segment])} [field [segment] ctx entity-links props]]))
           (-> ctx :hypercrud.browser/field deref ::field/children)))
 
 (defn relation [field val ctx & [props]]
   (fragment
     [table (r/partial columns-relation-product field) ctx props]
-    (field [] ctx entity-links-iframe props)))
+    [field [] ctx entity-links-iframe props]))
 
 (defn pull "handles any datomic result that isn't a relation, recursively"
   [field val ctx & [props]]
@@ -452,17 +453,17 @@ User renderers should not be exposed to the reaction."
       ; Draw data lists here, even if they are repeating.
       ; Unlike anchors and buttons, iframes and options aren't meant to be drawn at their path, it makes
       ; more sense to draw them together as early as their dependency becomes possible to satisfy.
-      (field [] ctx entity-links-iframe props))))
+      [field [] ctx entity-links-iframe props])))
 
 (defn ^:export result "Default result renderer. Invoked as fn, returns seq-hiccup, hiccup or
 nil. call site must wrap with a Reagent component"
   [val ctx & [props]]
   (fragment
     (hint val ctx props)
-    (let [{type :fiddle/type} @(:hypercrud.browser/fiddle ctx)
+    (let [type @(r/fmap :fiddle/type (:hypercrud.browser/fiddle ctx))
           level @(r/fmap ::field/level (:hypercrud.browser/field ctx))]
       (match* [type level]
-        [:blank _] (field [] ctx entity-links-iframe props)
+        [:blank _] [field [] ctx entity-links-iframe props]
         [:query :relation] (relation field val ctx props)
         [_ _] (pull field val ctx props)))))
 

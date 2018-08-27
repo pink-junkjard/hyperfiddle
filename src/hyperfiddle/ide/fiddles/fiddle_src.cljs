@@ -18,7 +18,7 @@
     [hyperfiddle.ide.fiddles.fiddle-links.renderer :as links-fiddle]
     #_[hyperfiddle.ide.hf-live :as hf-live]                 ;cycle
     [hyperfiddle.runtime :as runtime]
-    [hyperfiddle.ui :refer [anchor field hyper-control link markdown]]))
+    [hyperfiddle.ui :as ui :refer [anchor field hyper-control link markdown]]))
 
 
 (defn process-links [uri links]
@@ -131,6 +131,8 @@
           ; todo tighter reactivity
           (map ::field/path-segment)
           (remove #(= (namespace %) "fiddle"))
-          (map #(field [%] ctx nil))
+          (map (fn [segment]
+                 ^{:key (str [segment])}
+                 [field [segment] ctx nil]))
           (doall))
      (link :hyperfiddle/remove "fiddle" ctx "Remove fiddle" {:class "btn-outline-danger"})]))
