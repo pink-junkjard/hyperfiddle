@@ -55,15 +55,16 @@
 
 (defn- set-managed [link] (assoc link :link/managed? true))
 
-(defn renderer [val ctx props]
+(defn renderer [ctx class]
   (let [display-mode @(runtime/state (:peer ctx) [:display-mode])
-        {:keys [hypercrud.browser/data] :as ctx} (shadow-fiddle ctx)
+        {:keys [hypercrud.browser/data
+                hypercrud.browser/fiddle] :as ctx} (shadow-fiddle ctx)
         ; hack until hyperfiddle.net#156 is complete
         fake-managed-anchor (fn [rel class ctx & [?label props]]
                               (let [link-ref (->> (unwrap #(timbre/error %) (hyperfiddle.data/select+ ctx rel class))
                                                   (r/fmap set-managed))]
                                 [ui-from-link link-ref ctx (assoc props :dont-branch? true) ?label]))]
-    [:div props
+    [:div {:class class}
      [:div.left-nav
       [tooltip {:label "Home"} [:a.hf-auto-nav {:href "/"} @(runtime/state (:peer ctx) [::runtime/domain :domain/ident])]]
       [tooltip {:label "This fiddle"}                       ; also a good place for the route
