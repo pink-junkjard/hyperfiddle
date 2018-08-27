@@ -89,9 +89,9 @@
        [:option (assoc option-props :key :nil :value "") "--"]])))
 
 (defn ^:export ref [val ctx & [props]]
-  [input/edn-input* val #_(or (:db/ident val) (:db/id val))
-   (r/partial entity-change! ctx)                           ; f'ed
-   (update props :read-only #(or % (not @(r/fmap writable-entity? (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data])))))])
+  (let [props (-> (entity-props val #_(or (:db/ident val) (:db/id val)) props ctx)
+                  readonly->disabled)]
+    [optimistic-updates props debounced input/edn]))
 
 (defn ^:export dbid [val ctx & [props]]
   (let [props (-> (entity-props (:db/id val) props ctx)
