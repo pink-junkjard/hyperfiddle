@@ -13,7 +13,7 @@
 (defn row-keyfn [row]
   {:pre [(not (r/reactive? row))]}
   ; This keyfn is very tricky, read https://github.com/hyperfiddle/hyperfiddle/issues/341
-  (-> (if (seq row)                                         ; todo should probably inspect fields instead of seq
+  (-> (if (or (vector? row) (seq? row))                     ; todo should probably inspect fields instead of seq
         (map #(or (:db/id %) %) row)
         (or (:db/id row) row))
       hash))
