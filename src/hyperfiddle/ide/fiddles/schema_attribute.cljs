@@ -5,7 +5,6 @@
             [contrib.ui :refer [debounced]]
             [contrib.ui.input :as input]
             [hypercrud.browser.context :as context]
-            [hyperfiddle.data :as data]
             [hyperfiddle.ui :refer [field markdown]]
             [hyperfiddle.ui.controls :as controls]
             [hyperfiddle.ui.select :refer [select]]))
@@ -84,7 +83,6 @@
     (fn [val ctx props]
       (let [ctx (update ctx :hypercrud.browser/data (partial r/fmap reactive-merge))
             valid-attr? @(r/fmap completed? (:hypercrud.browser/data ctx))]
-        ^{:key @(r/fmap data/row-keyfn (:hypercrud.browser/data ctx))}
         [:div props
          [markdown "See [Datomic schema docs](https://docs.datomic.com/on-prem/schema.html)."]
          (field [:db/ident] ctx ident-f)
