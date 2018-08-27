@@ -82,11 +82,7 @@
                      (reset! os-ref {:old-values [b]
                                      :value b})))))))}))))
 
-(let [target-value (fn [e]
-                     (let [n (.. e -target -value)]
-                       (println "textarea" n)
-                       n)
-                     )]                                     ; letfn not working #470
+(let [target-value (fn [e] (.. e -target -value))]          ; letfn not working #470
   (defn textarea [props]
     [:textarea (update-existing props :on-change r/comp target-value)]))
 
