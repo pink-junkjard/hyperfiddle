@@ -1,7 +1,6 @@
 (ns contrib.ui.codemirror
   (:require
     [cuerdas.core :as str]
-    [goog.functions :as functions]
     [goog.object :as object]
     [reagent.core :as reagent]))
 
@@ -55,13 +54,9 @@
          ; they must be camelized before we get here.
 
          (object/set this "codeMirrorRef" ref)
-         (let [on-change (fn [new-value]
-                           (let [[_ {:keys [on-change]}] (reagent/argv this)]
-                             (when on-change (on-change new-value))))
-               ; todo lift this debounce
-               debounced-on-change (functions/debounce on-change 250)]
-           (.on ref "change" (fn [_ e] (when-not (= "setValue" (.-origin e))
-                                         (debounced-on-change (.getValue ref))))))))
+         (.on ref "change" (fn [_ e] (when-not (= "setValue" (.-origin e))
+                                       (let [[_ {:keys [on-change]}] (reagent/argv this)]
+                                         (when on-change (on-change (.getValue ref)))))))))
 
      :component-will-unmount
      (fn [this]

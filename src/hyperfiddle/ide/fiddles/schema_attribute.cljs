@@ -2,6 +2,7 @@
   (:require [clojure.set :as set]
             [contrib.datomic-tx :as tx]
             [contrib.reactive :as r]
+            [contrib.ui :refer [debounced]]
             [contrib.ui.input :as input]
             [hypercrud.browser.context :as context]
             [hyperfiddle.data :as data]
@@ -71,10 +72,11 @@
         reactive-merge #(merge-in-tx % @special-attrs-state ctx)
         ident-f (fn [val ctx props]
                   (let [on-change! (r/comp (r/partial ident-with-tx! special-attrs-state ctx)
-                                           (r/partial controls/entity-change->tx ctx))]
-                    [input/keyword (-> (assoc props :value @(:hypercrud.browser/data ctx)
-                                                    :on-change on-change!)
-                                       controls/readonly->disabled)]))
+                                           (r/partial controls/entity-change->tx ctx))
+                        props (-> (assoc props :value @(:hypercrud.browser/data ctx)
+                                               :on-change on-change!)
+                                  controls/readonly->disabled)]
+                    [debounced props input/keyword]))
         valueType-and-cardinality-f (fn [val ctx props]
                                       (let [on-change! (r/comp (r/partial valueType-and-cardinality-with-tx! special-attrs-state ctx)
                                                                (r/partial controls/entity-change->tx ctx))]

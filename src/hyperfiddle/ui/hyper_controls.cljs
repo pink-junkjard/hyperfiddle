@@ -2,6 +2,7 @@
   (:require
     [contrib.reactive :as r]
     [contrib.reagent :refer [fragment]]
+    [contrib.ui :refer [debounced]]
     [contrib.ui.input :as input]
     [contrib.ui.tooltip :refer [tooltip-thick]]
     [hypercrud.browser.context :as context]
@@ -45,14 +46,15 @@
           (context/with-tx! ctx [[:db/add @(r/fmap :db/id (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data])) @state v]]))]
   (defn magic-new-body [val ctx & [props]]
     (let [read-only (r/fmap (comp not controls/writable-entity?) (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data]))
-          state (r/cursor (:hyperfiddle.ui.form/state ctx) [:hyperfiddle.ui.form/magic-new-a])]
+          state (r/cursor (:hyperfiddle.ui.form/state ctx) [:hyperfiddle.ui.form/magic-new-a])
+          props (-> (assoc props
+                      :on-change (r/partial change! ctx state)
+                      :read-only (let [_ [@state @read-only]] ; force reactions
+                                   (or (nil? @state) @read-only))
+                      :placeholder (pr-str "mow the lawn"))
+                    controls/readonly->disabled)]
       ;(println (str/format "magic-new-body: %s , %s , %s" @state @read-only (pr-str @entity)))
       ; Uncontrolled widget on purpose i think
       ; Cardinality many is not needed, because as soon as we assoc one value,
       ; we dispatch through a proper typed control
-      [input/edn (-> (assoc props
-                       :on-change (r/partial change! ctx state)
-                       :read-only (let [_ [@state @read-only]] ; force reactions
-                                    (or (nil? @state) @read-only))
-                       :placeholder (pr-str "mow the lawn"))
-                     controls/readonly->disabled)])))
+      [debounced props input/edn])))

@@ -11,11 +11,41 @@
     [contrib.ui.codemirror :refer [-codemirror camel-keys]]
     [contrib.ui.tooltip :refer [tooltip]]
     [contrib.ui.remark :as remark]
+    [goog.functions :as functions]
     [goog.object :as object]
     [re-com.core :as re-com]
     [reagent.core :as reagent]
     [taoensso.timbre :as timbre]))
 
+
+(def default-debounce-ms 250)
+
+(let [debounce (memoize functions/debounce)
+      on-change (fn [state n]
+                  (reset! state n)
+                  n)
+      debounced-comp (fn [state props comp & args]
+                       (let [props (-> props
+                                       (assoc :value @state)
+                                       (dissoc :debounce/interval)
+                                       (update :on-change (fn [f]
+                                                            (let [f (if f
+                                                                      (debounce f (or (:debounce/interval props) default-debounce-ms))
+                                                                      identity)]
+                                                              (r/comp f (r/partial on-change state))))))]
+                         (into [comp props] args)))]
+  (defn debounced [props comp & args]
+    (let [state (r/atom (:value props))]
+      (reagent/create-class
+        {:reagent-render
+         (fn [props comp & args]
+           ; indirection so component-did-update does not fire after the state swap from on-change
+           (into [debounced-comp state props comp] args))
+         :component-did-update
+         (fn [this]
+           (let [[_ props comp args] (reagent/argv this)]
+             (when-not (= @state (:value props))
+               (reset! state (:value props)))))}))))
 
 (let [on-change (fn [os-ref f n]                            ; letfn not working #470
                   (let [o (last (:old-values @os-ref))]
@@ -23,19 +53,19 @@
                                     (-> (assoc m :value n)
                                         (update :old-values conj n))))
                     (when f (f o n))))]
-  (defn optimistic-updates [comp props & args]
+  (defn optimistic-updates [props comp & args]
     (let [os-ref (r/atom {:value (:value props)
                           :old-values [(:value props)]})]
       (reagent/create-class
         {:reagent-render
-         (fn [comp props & args]
+         (fn [props comp & args]
            (let [props (-> props
                            (assoc :value @(r/cursor os-ref [:value]))
                            (update :on-change #(r/partial on-change os-ref %)))]
              (into [comp props] args)))
          :component-did-update
          (fn [this]
-           (let [[_ comp props & args] (reagent/argv this)
+           (let [[_ props comp & args] (reagent/argv this)
                  b (:value props)
                  {os :old-values a :value} @os-ref]
              (if (= 1 (count os))
@@ -51,6 +81,14 @@
                      (timbre/warn "Potential conflicting concurrent edits detected, discarding local state" {:a a :b b :os os})
                      (reset! os-ref {:old-values [b]
                                      :value b})))))))}))))
+
+(let [target-value (fn [e]
+                     (let [n (.. e -target -value)]
+                       (println "textarea" n)
+                       n)
+                     )]                                     ; letfn not working #470
+  (defn textarea [props]
+    [:textarea (update-existing props :on-change r/comp target-value)]))
 
 (defn easy-checkbox [props & [label]]
   (let [control [input/checkbox props]]

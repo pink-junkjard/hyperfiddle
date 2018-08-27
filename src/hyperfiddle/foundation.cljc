@@ -10,7 +10,7 @@
             [contrib.reader :refer [read-string read-edn-string]]
     #?(:cljs [contrib.reagent :refer [fragment]])
             [contrib.pprint :refer [pprint-datoms-str]]
-    #?(:cljs [contrib.ui :refer [code markdown]])
+    #?(:cljs [contrib.ui :refer [code debounced markdown]])
             [hypercrud.browser.context :as context]
             [hypercrud.browser.routing :as routing]
             [hypercrud.browser.router :as router]
@@ -138,8 +138,9 @@
               :model selected-uri
               :tabs tabs-definition
               :on-change change-tab]
-             [code {:value (pprint-datoms-str @stage)
-                    :on-change #(runtime/dispatch! (:peer ctx) (actions/reset-stage-uri (:peer ctx) (:branch ctx) @selected-uri (read-edn-string %)))}]
+             (let [props {:value (pprint-datoms-str @stage)
+                          :on-change #(runtime/dispatch! (:peer ctx) (actions/reset-stage-uri (:peer ctx) (:branch ctx) @selected-uri (read-edn-string %)))}]
+               [debounced props code])
              (when child [child selected-uri stage ctx])
              [markdown "Hyperfiddle always generates valid transactions, if it doesn't, please file a bug.
 
