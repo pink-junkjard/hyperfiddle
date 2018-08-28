@@ -54,9 +54,9 @@
          ; they must be camelized before we get here.
 
          (object/set this "codeMirrorRef" ref)
-         (.on ref "change" (fn [_ e] (when-not (= "setValue" (.-origin e))
-                                       (let [[_ {:keys [on-change]}] (reagent/argv this)]
-                                         (when on-change (on-change (.getValue ref)))))))))
+         (.on ref "change" (fn [_ e]
+                             (let [[_ {:keys [on-change]}] (reagent/argv this)]
+                               (when on-change (on-change (.getValue ref))))))))
 
      :component-will-unmount
      (fn [this]
