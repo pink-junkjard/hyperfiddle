@@ -11,18 +11,23 @@
             [taoensso.timbre :as timbre]))
 
 
-(defn auto-formula [link]
+(defn auto-formula [{:keys [:link/fiddle] :as link}]
   ; This is for :anchor, :iframe, :option - anything in the system.
   ; handle root case, by inspecting the target fiddle query input args
-  (unwrap
-    #(timbre/warn %)
-    (mlet [q (memoized-safe-read-edn-string (-> link :link/fiddle :fiddle/query))
-           {qin :qin} (try-either (if q (datascript.parser/parse-query q)))]
-      ; [{:variable {:symbol $}}{:variable {:symbol ?gender}}]
-      (return
-        (if (seq (drop 1 qin))                              ; Removing the rules and src is hard with the bind wrappers so yolo
-          "identity"
-          "(constantly nil)")))))
+  (case (:fiddle/type fiddle)
+    :query
+    (unwrap
+      #(timbre/warn %)
+      (mlet [q (memoized-safe-read-edn-string (:fiddle/query fiddle))
+             {qin :qin} (try-either (if q (datascript.parser/parse-query q)))]
+        ; [{:variable {:symbol $}}{:variable {:symbol ?gender}}]
+        (return
+          (if (seq (drop 1 qin))                            ; Removing the rules and src is hard with the bind wrappers so yolo
+            "identity"
+            "(constantly nil)"))))
+    :entity "identity"
+    :blank nil
+    nil))
 
 (defn auto-link [ctx link]
   (let [auto-fn (fn [link attr auto-f]
