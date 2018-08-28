@@ -67,6 +67,7 @@
           (update props :class #(str % (if (:disabled props) " disabled"))))
    (let [props (-> (entity-props props ctx)
                    (readonly->disabled)
+                   (update :on-change #(r/partial % val))   ; need to adapt (fn [n]) to (fn [o n]) when no optimistic updates
                    (assoc :checked val))]
      [contrib.ui/easy-checkbox props])])
 
