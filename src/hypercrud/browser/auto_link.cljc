@@ -26,8 +26,8 @@
             "identity"
             "(constantly nil)"))))
     :entity "identity"
-    :blank nil
-    nil))
+    :blank "(constantly nil)"
+    "(constantly nil)"))
 
 (defn auto-link [ctx link]
   (let [auto-fn (fn [link attr auto-f]
