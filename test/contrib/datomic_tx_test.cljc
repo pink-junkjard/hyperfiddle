@@ -137,10 +137,10 @@
 
   (let [attribute {:db/ident :many
                    :db/valueType {:db/ident :db.type/string}
-                   :db/cardinality {:db/ident :db.cardinality/one}}]
+                   :db/cardinality {:db/ident :db.cardinality/many}}]
     (is (= (edit-entity "-1" attribute #{"a" "b"} #{"y" "b"})
            [[:db/retract "-1" :many "a"]
-            [:db/retract "-1" :many "y"]]))
+            [:db/add "-1" :many "y"]]))
     (is (= (edit-entity "-1" attribute #{"a" "b"} nil)
            [[:db/retract "-1" :many "a"]
             [:db/retract "-1" :many "b"]]))
