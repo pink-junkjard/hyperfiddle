@@ -1,9 +1,11 @@
 (ns hypercrud.client.peer
-  (:require [cats.monad.either :as either]
-            [contrib.reactive :as r]
-            [hypercrud.types.DbVal :refer [->DbVal]]
-            [contrib.uri :refer [is-uri?]]
-            [hyperfiddle.io.util :refer [process-result]]))
+  (:require
+    [cats.monad.either :as either]
+    [contrib.reactive :as r]
+    [contrib.uri :refer [is-uri?]]
+    [hypercrud.types.DbVal :refer [->DbVal]]
+    [hyperfiddle.io.util :refer [process-result]]
+    [taoensso.timbre :as timbre]))
 
 
 (defn hydrate-val [request ptm]
@@ -18,3 +20,11 @@
 (defn db-pointer [uri ?branch-name]
   {:pre [uri (is-uri? uri)]}
   (->DbVal uri ?branch-name))
+
+(defn -quiet-unwrap [mv]
+  (either/branch
+    mv
+    (fn [e]
+      (when-not (= "Loading" (:message e))
+        (timbre/warn e)))
+    identity))

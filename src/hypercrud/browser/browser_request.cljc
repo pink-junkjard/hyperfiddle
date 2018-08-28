@@ -2,16 +2,15 @@
   (:require
     [cats.core :as cats :refer [mlet]]
     [cats.monad.either :as either]
-    [contrib.ct :refer [unwrap]]
     [contrib.reactive :as r]
     [hypercrud.browser.base :as base]
     [hypercrud.browser.context :as context]
     [hypercrud.browser.field :as field]
     [hypercrud.browser.link :as link]
     [hypercrud.browser.routing :as routing]
+    [hypercrud.client.peer :refer [-quiet-unwrap]]
     [hypercrud.client.schema :as schema-util]
-    [hyperfiddle.data :as data]
-    [taoensso.timbre :as timbre]))
+    [hyperfiddle.data :as data]))
 
 
 (declare requests)
@@ -20,11 +19,10 @@
 (defn request-from-route [route ctx]
   (let [ctx (-> (context/clean ctx)
                 (routing/route route))]
-    (when-let [meta-fiddle-request (unwrap #(timbre/warn %) @(r/apply-inner-r (r/track base/meta-request-for-fiddle ctx)))]
+    (when-let [meta-fiddle-request (-quiet-unwrap @(r/apply-inner-r (r/track base/meta-request-for-fiddle ctx)))]
       (assert (r/reactive? meta-fiddle-request))
       (concat [@meta-fiddle-request]
-              (unwrap
-                #(timbre/warn %)
+              (-quiet-unwrap
                 (mlet [fiddle @(r/apply-inner-r (r/track base/hydrate-fiddle meta-fiddle-request ctx))
                        fiddle-request @(r/apply-inner-r (r/track base/request-for-fiddle fiddle ctx))]
                   (assert (r/reactive? fiddle-request))
@@ -34,11 +32,11 @@
                       (schema-util/schema-requests-for-link ctx)
                       (->> (base/process-results fiddle fiddle-request ctx)
                            (cats/fmap requests)
-                           (unwrap #(timbre/warn %)))))))))))
+                           (-quiet-unwrap))))))))))
 
 (defn request-from-link [link ctx]
-  (unwrap #(timbre/warn %) (base/from-link link ctx (fn [route ctx]
-                                                      (either/right (request-from-route route ctx))))))
+  (-quiet-unwrap (base/from-link link ctx (fn [route ctx]
+                                            (either/right (request-from-route route ctx))))))
 
 (defn body-field [ctx]
   (->> @(:hypercrud.browser/links ctx)
