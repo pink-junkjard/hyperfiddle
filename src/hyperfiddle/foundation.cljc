@@ -118,20 +118,31 @@
 
 #?(:cljs
    (defn ^:export staging [ctx & [child]]
-     (let [source-uri @(runtime/state (:peer ctx) [::runtime/domain :domain/fiddle-database :database/uri])
-           selected-uri (r/atom source-uri)
-           tabs-definition (->> @(runtime/state (:peer ctx) [::runtime/domain :domain/databases])
-                                (reduce (fn [acc hf-db]
-                                          (let [uri (get-in hf-db [:domain.database/record :database/uri])]
-                                            (update acc uri (fnil conj '()) (:domain.database/name hf-db))))
-                                        {source-uri '("src")
-                                         ; domains-uri shouldn't need to be accessed
-                                         domain-uri '("domain")})
-                                (mapv (fn [[uri labels]] {:id uri :label (string/join " " labels)}))
-                                (sort-by :label))
+     (let [source-uri (runtime/state (:peer ctx) [::runtime/domain :domain/fiddle-database :database/uri])
+           selected-uri (r/atom @source-uri)
            change-tab #(reset! selected-uri %)]
        (fn [ctx & [child]]
-         (let [stage (runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :stage @selected-uri])]
+         (let [non-empty-uris (->> @(runtime/state (:peer ctx) [::runtime/partitions nil :stage])
+                                   (remove (comp empty? second))
+                                   (map first)
+                                   (remove (->> @(runtime/state (:peer ctx) [::runtime/domain :domain/databases])
+                                                (map (comp :database/uri :domain.database/record))
+                                                (into #{@source-uri domain-uri})))
+                                   (map (juxt identity (comp vector str)))
+                                   (into {}))
+               tabs-definition (->> @(runtime/state (:peer ctx) [::runtime/domain :domain/databases])
+                                    (reduce (fn [acc hf-db]
+                                              (let [uri (get-in hf-db [:domain.database/record :database/uri])]
+                                                (update acc uri (fnil conj '()) (:domain.database/name hf-db))))
+                                            (into non-empty-uris
+                                                  {@source-uri '("src")
+                                                   ; domains-uri shouldn't need to be accessed
+                                                   domain-uri '("domain")}))
+                                    (mapv (fn [[uri labels]] {:id uri :label (string/join " " labels)}))
+                                    (sort-by :label))
+               stage (runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :stage @selected-uri])]
+           (when-not (contains? (->> tabs-definition (map :id) (into #{})) @selected-uri)
+             (reset! selected-uri @source-uri))
            (fragment
              :topnav
              [horizontal-tabs
@@ -172,7 +183,7 @@
      [:div {:class (apply css @(runtime/state (:peer ctx) [:pressed-keys]))}
       [:style {:dangerouslySetInnerHTML {:__html (:domain/css (:hypercrud.browser/domain ctx))}}]
       (f ctx)                                               ; nil, seq or reagent component
-     ]))
+      ]))
 
 #?(:cljs
    (defn view [page-or-leaf ctx f]
