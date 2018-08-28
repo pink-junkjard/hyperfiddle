@@ -2,6 +2,7 @@
   (:require
     [contrib.reactive :as r]
     [cuerdas.core :as str]
+    [hypercrud.browser.context :as context]
     [hypercrud.browser.system-link :refer [system-link?]]))
 
 
@@ -14,7 +15,7 @@
 (def root-conn "#777")
 
 (defn connection-color [ctx & [l]]
-  (let [uri (:uri ctx)]
+  (let [uri (context/uri ctx)]
     (condp = uri
       nil no-conn
       ;(get-in ctx [:hypercrud.browser/domain :domain/fiddle-database :database/uri]) root-conn

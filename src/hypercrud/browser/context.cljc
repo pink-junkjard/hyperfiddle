@@ -64,7 +64,9 @@
 
 (defn dbname [ctx] (some->> (:hypercrud.browser/field ctx) (r/fmap ::field/source-symbol) deref str))
 
-(defn uri [ctx] (some-> (dbname ctx) (domain/dbname->uri (:hypercrud.browser/domain ctx))))
+(defn uri
+  ([ctx] (uri (dbname ctx) ctx))
+  ([dbname ctx] (some-> dbname (domain/dbname->uri (:hypercrud.browser/domain ctx)))))
 
 (defn with-tx! [ctx tx]
   (let [uri (uri ctx)

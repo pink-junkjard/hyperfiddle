@@ -7,8 +7,10 @@
   [ctx val]
   (with-tempid-color ctx tempid-from-ctx))
 
+; This returns a new value each time the transaction changes - can't call it again later.
+; So tx-fns must inspect the modal-route, they can't re-create the dbid.
 (defn ^:export tempid-detached "unstable but guaranteed unique tempid"
-  [ctx]
-  ; This returns a new value each time the transaction changes - can't call it again later.
-  ; So tx-fns must inspect the modal-route, they can't re-create the dbid.
-  (with-tempid-color ctx tempid-from-stage))
+  ([dbname ctx]
+   (with-tempid-color dbname ctx (partial tempid-from-stage dbname)))
+  ([ctx]
+   (with-tempid-color ctx tempid-from-stage)))

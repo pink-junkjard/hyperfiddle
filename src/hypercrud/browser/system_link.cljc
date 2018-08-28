@@ -14,7 +14,7 @@
 
 (def retract-formula
   "(fn [ctx multi-color-tx modal-route]
-  {:tx {(:uri ctx) [[:db.fn/retractEntity @(contrib.reactive/cursor (:hypercrud.browser/data ctx) [:db/id])]]}})")
+  {:tx {(hypercrud.browser.context/uri ctx) [[:db.fn/retractEntity @(contrib.reactive/cursor (:hypercrud.browser/data ctx) [:db/id])]]}})")
 
 (def parent-child-txfn (-> (template/load-resource "auto-txfn/mt-fet-at.edn") string/trim))
 

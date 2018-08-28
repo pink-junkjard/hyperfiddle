@@ -2,10 +2,10 @@
   (:require
     [contrib.data :refer [abs-normalized]]
     [contrib.reactive :as r]
+    [hypercrud.browser.context :as context]
     [hypercrud.browser.field :as field]
     [hypercrud.types.ThinEntity :refer [->ThinEntity]]
     [hypercrud.util.branch :as branch]
-    [hyperfiddle.domain :as domain]
     [hyperfiddle.runtime :as runtime]))
 
 
@@ -23,12 +23,21 @@
            (hash-data ctx))
       hash abs-normalized - str))
 
-(defn tempid-from-stage "unstable" [ctx]
-  (-> @(r/fmap (r/partial branch/branch-val (:uri ctx) (:branch ctx)) (runtime/state (:peer ctx) [::runtime/partitions]))
-      hash abs-normalized - str))
+(defn tempid-from-stage "unstable"
+  ([ctx]
+   (let [dbname (context/dbname ctx)]
+     (assert dbname "no dbname in dynamic scope (If it can't be inferred, write a custom formula)")
+     (tempid-from-stage dbname ctx)))
+  ([dbname ctx]
+   (-> @(r/fmap (r/partial branch/branch-val (context/uri dbname ctx) (:branch ctx))
+                (runtime/state (:peer ctx) [::runtime/partitions]))
+       hash abs-normalized - str)))
 
 (defn ^:export with-tempid-color "tempids in hyperfiddle are colored, because we need the backing dbval in order to reverse hydrated
   dbid back into their tempid for routing"
-  [ctx factory]
-  (assert (:uri ctx) "no uri in dynamic scope (If it can't be inferred, write a custom formula)")
-  (->ThinEntity (domain/uri->dbname (:uri ctx) (:hypercrud.browser/domain ctx)) (factory ctx)))
+  ([ctx factory]
+   (let [dbname (context/dbname ctx)]
+     (assert dbname "no dbname in dynamic scope (If it can't be inferred, write a custom formula)")
+     (with-tempid-color dbname ctx factory)))
+  ([dbname ctx factory]
+   (->ThinEntity dbname (factory ctx))))
