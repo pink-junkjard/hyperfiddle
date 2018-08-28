@@ -1,10 +1,10 @@
 (ns hyperfiddle.service.jvm.hydrate-route
   (:refer-clojure :exclude [sync])
   (:require
-    [hypercrud.client.core :as hc]
-    [hypercrud.client.peer :as peer]
     [contrib.ct :refer [unwrap]]
     [contrib.reactive :as r]
+    [hypercrud.client.core :as hc]
+    [hypercrud.client.peer :as peer :refer [-quiet-unwrap]]
     [hyperfiddle.foundation :as foundation]
     [hyperfiddle.ide :as ide]
     [hyperfiddle.io.global-basis :refer [global-basis]]
@@ -13,8 +13,7 @@
     [hyperfiddle.io.sync :refer [sync]]
     [hyperfiddle.runtime :as runtime]
     [hyperfiddle.state :as state]
-    [promesa.core :as p]
-    [taoensso.timbre :as timbre]))
+    [promesa.core :as p]))
 
 
 (deftype HydrateRoute [host-env state-atom root-reducer jwt ?subject]
@@ -90,4 +89,4 @@
 
   hc/HydrateApi
   (hydrate-api [this branch request]
-    (unwrap #(timbre/warn %) @(hc/hydrate this branch request))))
+    (-quiet-unwrap @(hc/hydrate this branch request))))
