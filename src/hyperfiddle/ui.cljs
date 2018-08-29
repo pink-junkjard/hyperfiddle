@@ -282,7 +282,8 @@ User renderers should not be exposed to the reaction."
                            (apply str))})))]
   (defn ui-from-link [link-ref ctx & [props ?label]]
     {:pre [link-ref]}
-    (let [ctx (context/refocus ctx (link/read-path @(r/fmap :link/path link-ref)))
+    (let [visual-ctx ctx
+          ctx (context/refocus ctx (link/read-path @(r/fmap :link/path link-ref)))
           error-comp (ui-error/error-comp ctx)
           route'-ref (r/fmap (r/partial p-build-route' ctx) link-ref) ; need to re-focus from the top
           link-props @(r/track build-link-props route'-ref link-ref ctx props)] ; handles :class and :tooltip props
@@ -294,7 +295,7 @@ User renderers should not be exposed to the reaction."
           (cond
             @(r/fmap link/popover-link? link-ref)
             (let [props (update props :class css "hf-auto-nav")] ; should this be in popover-cmp? what is this class? – unify with semantic css
-              [popover-cmp link-ref ctx props @(r/track prompt link-ref ?label)])
+              [popover-cmp link-ref ctx visual-ctx props @(r/track prompt link-ref ?label)])
 
             @(r/fmap :link/render-inline? link-ref)
             ; link-props swallows bad routes (shorts them to nil),

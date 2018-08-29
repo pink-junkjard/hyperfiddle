@@ -97,10 +97,12 @@
 ;   :style    Map[CSS-Key, CSS-Value]
 ;   :on-click (e) => ()
 ; }
-(defn popover-cmp [link-ref ctx props label]
-  ; we should run the auto-formula logic to determine an appropriate auto-id fn
-  ; ... (later: would this work? tempid-unique is unstable)
-  (let [child-branch (let [child-id-str (-> [(tempid/tempid-from-ctx ctx)
+(defn popover-cmp [link-ref ctx visual-ctx props label]
+  ; try to auto-generate branch/popover-id from the product of:
+  ; - link's :db/id
+  ; - route
+  ; - visual-ctx's data & path (where this popover is being drawn NOT its dependencies)
+  (let [child-branch (let [child-id-str (-> [(tempid/tempid-from-ctx visual-ctx)
                                              @(r/fmap :db/id link-ref)
                                              (:route props)]
                                             hash abs-normalized - str)]
