@@ -12,7 +12,6 @@
   ; why not code-database-uri and all the custom ui/render fns?
   (dissoc ctx
           :route                                            ; Route is unrelated to the hyper-control ontology
-          :uri                                              ; todo deprecate
           :hypercrud.ui/error
           :hyperfiddle.ui/layout
 
@@ -83,10 +82,6 @@
 (defn- set-parent-data [ctx]
   (update ctx :hypercrud.browser/parent (fnil into {}) (select-keys ctx [:hypercrud.browser/data])))
 
-(defn set-data-source [ctx]
-  ; todo why cant internals get the uri at the last second
-  (assoc ctx :uri (uri ctx)))
-
 (defn find-child-field [path-segment field]
   (->> (::field/children field)
        (filter #(= (::field/path-segment %) path-segment))
@@ -103,8 +98,7 @@
                 ctx (-> ctx
                         (set-parent)
                         (update :hypercrud.browser/path conj path-segment)
-                        (assoc :hypercrud.browser/field field)
-                        (set-data-source))]
+                        (assoc :hypercrud.browser/field field))]
             (if-not (:hypercrud.browser/data ctx)
               ctx                                           ; head
               (-> (set-parent-data ctx)                     ; body

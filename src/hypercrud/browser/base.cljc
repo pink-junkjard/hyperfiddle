@@ -120,8 +120,7 @@
                        ; For tx/entity->statements in userland.
                        :hypercrud.browser/schemas reactive-schemas)]
            reactive-field @(r/apply-inner-r (r/track field/auto-field request ctx))
-           :let [ctx (-> (assoc ctx :hypercrud.browser/field reactive-field)
-                         (context/set-data-source))
+           :let [ctx (assoc ctx :hypercrud.browser/field reactive-field)
                  ctx (assoc ctx :hypercrud.browser/links (r/track auto-links ctx))
                  ctx (if (and (= :entity @(r/cursor fiddle [:fiddle/type]))
                               ; e is nil on the EntityRequest
