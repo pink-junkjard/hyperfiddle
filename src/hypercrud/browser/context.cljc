@@ -114,9 +114,8 @@
 
 (defn row "Toggle :many into :one as we spread through the rows" [ctx rval]
   {:pre [(r/reactive? rval)]}
-  (assert (= :db.cardinality/many @(r/fmap ::field/cardinality (:hypercrud.browser/field ctx))))
-  (assert (:hypercrud.browser/data ctx) (str "`:body` is invalid directly on card/many (do you need a table wrap?). current path: " (pr-str (:hypercrud.browser/path ctx))))
-  (assert (r/reactive? (:hypercrud.browser/data ctx)))
+  (assert (= :db.cardinality/many @(r/fmap ::field/cardinality (:hypercrud.browser/field ctx)))
+          (str "`context/row` is only valid on cardinality/one. current path: " (pr-str (:hypercrud.browser/path ctx))))
   (-> ctx
       (set-parent-data)
       (assoc :hypercrud.browser/data rval)

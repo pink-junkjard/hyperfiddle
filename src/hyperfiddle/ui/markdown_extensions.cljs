@@ -119,7 +119,7 @@
                 [:ul props
                  (->> (:hypercrud.browser/data ctx)
                       (r/unsequence data/row-keyfn)
-                      (map (fn [[relation k]]
+                      (map (fn [[row k]]
                              ^{:key k}
-                             [:li [markdown content (assoc ctx :hypercrud.browser/data relation)]]))
+                             [:li [markdown content (context/row ctx row)]]))
                       (doall))])})))

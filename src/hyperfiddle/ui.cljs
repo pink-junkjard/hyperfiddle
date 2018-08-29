@@ -398,7 +398,7 @@ User renderers should not be exposed to the reaction."
               (r/fmap sort)
               (r/unsequence data/row-keyfn)
               (map (fn [[row k]]
-                     (->> (columns (assoc ctx :hypercrud.browser/data row) props)
+                     (->> (columns (context/row ctx row) props)
                           (into ^{:key k} [:tr]))))         ; strict
               (into [:tbody]))]))))
 
