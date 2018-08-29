@@ -142,7 +142,7 @@
       [nil :element _ true] entity-label
       [nil :element _ false] attribute-label                ; preserve old behavior
       [nil :naked-or-element _ _] entity-label #_(r/constantly [:span (str "naked entity head")]) ; Schema new attr, and fiddle-links new link - needs to be split
-      ;[:head :relation :naked-or-element seg _] (r/constantly [:span (str "naked relation head, seg: " (pr-str seg))]) ; Schema new attr, and fiddle-links new link - needs to be split
+      ;[:relation :naked-or-element seg _] (r/constantly [:span (str "naked relation head, seg: " (pr-str seg))]) ; Schema new attr, and fiddle-links new link - needs to be split
       )))
 
 (defn auto-link-css [link]                                  ; semantic-css
@@ -151,7 +151,6 @@
        (apply str)))
 
 (defn ^:export semantic-css [ctx]
-  (assert (empty? (filter #{:head :body} (:hypercrud.browser/path ctx))))
   ; Include the fiddle level ident css.
   ; Semantic css needs to be prefixed with - to avoid collisions. todo
   (->> (:hypercrud.browser/path ctx)

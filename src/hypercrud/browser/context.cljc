@@ -38,9 +38,8 @@
                                vec)))))))
 
 (defn attribute-segment? [path-segment]
-  (assert (not (contains? #{:head :body} path-segment)))
-  (and (or (keyword? path-segment)
-           (= '* path-segment))))
+  (or (keyword? path-segment)
+      (= '* path-segment)))
 
 (defn find-element-segment? [path-segment]
   (integer? path-segment))
@@ -121,10 +120,7 @@
 
 (defn refocus "focus common ancestor" [ctx path]
   {:pre [ctx]
-   :post [%
-          (empty? (filter #{:head :body} (:hypercrud.browser/path %)))]}
-  (assert (empty? (filter #{:head :body} path)) path)
-  (assert (empty? (filter #{:head :body} (:hypercrud.browser/path ctx))) (:hypercrud.browser/path ctx))
+   :post [%]}
   (let [current-path (:hypercrud.browser/path ctx)
         common-ancestor-path (ancestry-common current-path path)
         unwind-offset (- (count current-path) (count common-ancestor-path))

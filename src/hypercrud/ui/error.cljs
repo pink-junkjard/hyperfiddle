@@ -42,8 +42,6 @@
 
 (defn error-comp [ctx]
   ; :find-element :attribute :value
-  (assert (not= [:head] (:hypercrud.browser/path ctx)))
-  (assert (not= [:body] (:hypercrud.browser/path ctx)))
   (cond
     (:hypercrud.ui/error ctx) ((:hypercrud.ui/error ctx) ctx)
 

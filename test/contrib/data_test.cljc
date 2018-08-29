@@ -60,21 +60,21 @@
 (deftest ancestry-common-1
   []
   (is (= (ancestry-common [1 2 3 4 5 6] [1 2 3 4 10 11]) '(1 2 3 4)))
-  (is (= (ancestry-common [:body 0 :reg/gender] [:body 0 :reg/shirt-size]) '(:body 0)))
-  (is (= (ancestry-common [:body 0 :user/user-id] '(:body 0 :reg/gender)) '(:body 0)))
-  (is (= (ancestry-common [] [:body 0 :fiddle/links :body :link/fiddle]) '()))
-  (is (= (ancestry-common [:body 0] [:body 0 :fiddle/links :body :link/fiddle]) '(:body 0)))
-  (is (= (ancestry-common [:body 0 :fiddle/links :body :link/fiddle] [:body 0]) '(:body 0)))
-  (is (= (ancestry-common [:body 0 :fiddle/links :body :link/fiddle] []) '()))
+  (is (= (ancestry-common [0 :reg/gender] [0 :reg/shirt-size]) '(0)))
+  (is (= (ancestry-common [0 :user/user-id] '(0 :reg/gender)) '(0)))
+  (is (= (ancestry-common [] [0 :fiddle/links :link/fiddle]) '()))
+  (is (= (ancestry-common [0] [0 :fiddle/links :link/fiddle]) '(0)))
+  (is (= (ancestry-common [0 :fiddle/links :link/fiddle] [0]) '(0)))
+  (is (= (ancestry-common [0 :fiddle/links :link/fiddle] []) '()))
   )
 
 (deftest ancestry-divergence-1
   []
   (is (= (ancestry-divergence [1 2 3 4 5 6] [1 2 3 4 10 11]) '(5 6)))
-  (is (= (ancestry-divergence [:body 0 :reg/gender] [:body 0 :reg/shirt-size]) '(:reg/gender)))
-  (is (= (ancestry-divergence [:body 0 :user/user-id] '(:body 0 :reg/gender)) '(:user/user-id)))
-  (is (= (ancestry-divergence [] [:body 0 :fiddle/links :body :link/fiddle]) '()))
-  (is (= (ancestry-divergence [:body 0] [:body 0 :fiddle/links :body :link/fiddle]) '()))
-  (is (= (ancestry-divergence [:body 0 :fiddle/links :body :link/fiddle] [:body 0]) '(:fiddle/links :body :link/fiddle)))
-  (is (= (ancestry-divergence [:body 0 :fiddle/links :body :link/fiddle] []) '(:body 0 :fiddle/links :body :link/fiddle)))
+  (is (= (ancestry-divergence [0 :reg/gender] [0 :reg/shirt-size]) '(:reg/gender)))
+  (is (= (ancestry-divergence [0 :user/user-id] '(0 :reg/gender)) '(:user/user-id)))
+  (is (= (ancestry-divergence [] [0 :fiddle/links :link/fiddle]) '()))
+  (is (= (ancestry-divergence [0] [0 :fiddle/links :link/fiddle]) '()))
+  (is (= (ancestry-divergence [0 :fiddle/links :link/fiddle] [0]) '(:fiddle/links :link/fiddle)))
+  (is (= (ancestry-divergence [0 :fiddle/links :link/fiddle] []) '(0 :fiddle/links :link/fiddle)))
   )
