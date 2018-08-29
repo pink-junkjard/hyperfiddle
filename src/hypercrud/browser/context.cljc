@@ -96,6 +96,9 @@
   (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/field]))
 
 (letfn [(focus-segment [ctx path-segment]                   ; attribute or fe segment
+          (assert (or (not (:hypercrud.browser/data ctx))   ; head has no data, can focus without calling row
+                      (not= :db.cardinality/many @(r/fmap ::field/cardinality (:hypercrud.browser/field ctx))))
+                  (str "Cannot focus directly from a cardinality/many (do you need a table wrap?). current path: " (:hypercrud.browser/path ctx) ", attempted segment: " path-segment))
           (let [field (r/fmap (r/partial find-child-field path-segment) (:hypercrud.browser/field ctx))
                 ctx (-> ctx
                         (set-parent)
@@ -115,7 +118,7 @@
 (defn row "Toggle :many into :one as we spread through the rows" [ctx rval]
   {:pre [(r/reactive? rval)]}
   (assert (= :db.cardinality/many @(r/fmap ::field/cardinality (:hypercrud.browser/field ctx)))
-          (str "`context/row` is only valid on cardinality/one. current path: " (pr-str (:hypercrud.browser/path ctx))))
+          (str "`context/row` is only valid on cardinality/many. current path: " (pr-str (:hypercrud.browser/path ctx))))
   (-> ctx
       (set-parent-data)
       (assoc :hypercrud.browser/data rval)
