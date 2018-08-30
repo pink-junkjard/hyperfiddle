@@ -66,12 +66,11 @@
 (declare fiddle-xray)
 
 (defn select+ [val ctx & [props]]
-  [select (data/select+ ctx :options (:options props)) props ctx])
+  [select (data/select+ ctx :iframe (:options props)) props ctx])
 
 (defn entity-links-iframe [val ctx & [props]]
   (fragment
     (->> (concat
-           (data/select-all ctx :options)
            (data/select-all ctx :iframe))
          (remove (comp (partial data/deps-over-satisfied? ctx) link/read-path :link/path))
          (r/track identity)

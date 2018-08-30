@@ -45,7 +45,7 @@
                  topnav-fiddle @(hc/hydrate (:peer ctx) nil req) #_"todo tighter reactivity"]
             (return
               (let [ctx (merge ctx {:hypercrud.browser/links (r/track identity (:fiddle/links topnav-fiddle))})]
-                [select (data/select+ ctx :options (:options props)) props ctx])))
+                [select (data/select+ ctx :iframe (:options props)) props ctx])))
           (either/branch select-error-cmp identity))
       )))
 

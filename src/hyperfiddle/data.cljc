@@ -58,7 +58,7 @@
   (let [this-path (:hypercrud.browser/path ctx)]
     (not= this-path (:hypercrud.browser/path (link-path-floor ctx link-path)))))
 
-(defn ^:export select-all "List[Link]. Find the closest match. Can it search parent scopes for :options ?"
+(defn ^:export select-all "List[Link]. Find the closest match."
   ; Not reactive! Track it outside. (r/track data/select-all ctx rel ?class)
   ([ctx]
    (->> @(:hypercrud.browser/links ctx)                     ; Reaction deref is why this belongs in a track
