@@ -113,6 +113,7 @@
   (assert (= :db.cardinality/many @(r/fmap ::field/cardinality (:hypercrud.browser/field ctx)))
           (str "`context/row` is only valid on cardinality/many. current path: " (pr-str (:hypercrud.browser/path ctx))))
   (-> ctx
+      (set-parent)
       (set-parent-data)
       (assoc :hypercrud.browser/data rval)
       (update :hypercrud.browser/field
