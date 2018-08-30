@@ -54,7 +54,7 @@
   (cond
     (= '* segment) :splat
     (keyword? segment) :attribute
-    (integer? segment) :element
+    (integer? segment) :element                             ; can be a variable element, an aggregate element, etc
     ; it can also be entity-[], which has implied :element, this also happens in the query [?e ...] case
     :else :naked-or-element))
 

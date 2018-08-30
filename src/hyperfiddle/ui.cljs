@@ -17,6 +17,7 @@
     [contrib.ui.input]
     [contrib.ui.safe-render :refer [user-portal]]
     [contrib.ui.tooltip :refer [tooltip tooltip-props]]
+    [datascript.parser]
     [hypercrud.browser.context :as context]
     [hypercrud.browser.base :as base]
     [hypercrud.browser.fiddle :as fiddle]
@@ -102,9 +103,7 @@
         type (or (some-> attr :db/valueType :db/ident name keyword) (context/segment-type-2 segment)) ; can include :element ? :aggregate, :entity
         cardinality (some-> attr :db/cardinality :db/ident name keyword)]
     (match* [type cardinality]
-      [:naked-or-element _] entity-links #_(r/constantly [:span "naked control (entity-links)"]) ; auto-form generates this on entity forms but never tables
-
-      ;[:element _] entity-links                             ; only happens in table? Could also be relation form? (Currently this is handled by child-form case)
+      [:element _] controls/string                          ; FindRel-Variable
       #_#_[:aggregate _] controls/string                    ; entity, aggregate, what else?
       #_#_[:entity _] entity-links
 
@@ -424,17 +423,20 @@ User renderers should not be exposed to the reaction."
     [^{:key (str [])} [field [] ctx entity-links props]]))
 
 (defn columns-relation-product [field ctx & [props]]
-  (mapcat (fn [{segment ::field/path-segment
-                child-fields ::field/children}]
-            (concat
-              (map (fn [{child-segment ::field/path-segment}]
-                     ^{:key (str [segment child-segment])}
-                     [field [segment child-segment] ctx hyper-control props])
-                   child-fields)
-              ; No [], that is meaningless in the relation case.
-              ; See how we explicitly render the entity-links here
-              [^{:key (str [segment])} [field [segment] ctx entity-links props]]))
-          (-> ctx :hypercrud.browser/field deref ::field/children)))
+  (->> (-> ctx :hypercrud.browser/field deref ::field/children)
+       (mapcat (fn [{segment ::field/path-segment
+                     child-fields ::field/children
+                     el-type ::field/element-type}]
+                 (concat
+                   (map (fn [{child-segment ::field/path-segment}]
+                          ^{:key (str [segment child-segment])}
+                          [field [segment child-segment] ctx hyper-control props])
+                        child-fields)
+                   ; No [], that is meaningless in the relation case.
+                   ; See how we explicitly render the entity-links here
+                   (let [f (if (= datascript.parser.Variable el-type) hyper-control entity-links)]
+                     [^{:key (str [segment])} [field [segment] ctx f props]])))
+               )))
 
 (defn relation [field val ctx & [props]]
   (fragment
