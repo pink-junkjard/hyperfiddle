@@ -12,8 +12,9 @@
 
 (defn sync-changed-props! [ref props]
   (doseq [[prop val] props
-          :when (not= val (.getOption ref (name prop)))]
-    (.setOption ref (name prop) val)))
+          :let [option (str/camel (name prop))]             ; casing hacks see https://github.com/hyperfiddle/hyperfiddle/issues/497
+          :when (not= val (.getOption ref option))]
+    (.setOption ref option val)))
 
 (defn ensure-mode [ref new-mode]
   (js/parinferCodeMirror.setMode ref new-mode)
@@ -39,7 +40,10 @@
      (fn [this]
        ; Codemirror will default to the first mode loaded in preamble
        (let [[_ props] (reagent/argv this)
-             ref (js/CodeMirror.fromTextArea (reagent/dom-node this) (clj->js props))]
+             ref (js/CodeMirror.fromTextArea (reagent/dom-node this)
+                                             (-> (dissoc props :on-change)
+                                                 camel-keys ; casing hacks see https://github.com/hyperfiddle/hyperfiddle/issues/497
+                                                 clj->js))]
 
          (when (and (:parinfer props) (= "clojure" (:mode props)))
            ; `mode` is 'paren', 'indent', or 'smart'
