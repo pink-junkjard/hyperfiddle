@@ -226,14 +226,12 @@
                    (condp = (type (:element qfind))
                      datascript.parser.Variable
                      (-> (variable (:element qfind))
-                         (assoc ::type (type qfind)
-                                ::cardinality :db.cardinality/many))
+                         (assoc ::cardinality :db.cardinality/many))
 
                      datascript.parser.Pull
                      (let [source-symbol (get-in qfind [:element :source :symbol])
                            pull-pattern (get-in qfind [:element :pattern :value])]
-                       {::type (type qfind)
-                        ::cardinality :db.cardinality/many
+                       {::cardinality :db.cardinality/many
                         ::children (pull->fields (get schemas (str source-symbol)) source-symbol pull-pattern @data [])
                         ::data-has-id? (entity-pull? pull-pattern)
                         ::get-value identity
@@ -243,8 +241,7 @@
 
                      datascript.parser.Aggregate
                      (-> (aggregate (:element qfind))
-                         (assoc ::type (type qfind)
-                                ::cardinality :db.cardinality/many)))
+                         (assoc ::cardinality :db.cardinality/many)))
 
                    datascript.parser.FindTuple
                    {::cardinality :db.cardinality/one
