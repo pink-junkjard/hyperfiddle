@@ -41,10 +41,11 @@
            [x & xs] (contrib.data/ancestry-divergence target-path common-path)]
       (if-not x
         true                                                ; finished
-        (let [child-field (context/find-child-field x field)]
+        (if-let [child-field (context/find-child-field x field)]
           (case (::field/cardinality child-field)
             :db.cardinality/one (recur child-field xs)
-            :db.cardinality/many false))))))
+            :db.cardinality/many false)
+          false #_ "Nonsensical path - probably invalid links for this query, maybe they just changed the query and the links broke")))))
 
 (defn link-path-floor "Find the shortest path that has equal dimension" [ctx path]
   (loop [ctx (context/refocus ctx path)]                    ; we know we're at least satisfied so this is safe
