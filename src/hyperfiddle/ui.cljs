@@ -454,7 +454,7 @@ User renderers should not be exposed to the reaction."
       ; Draw data lists here, even if they are repeating.
       ; Unlike anchors and buttons, iframes and options aren't meant to be drawn at their path, it makes
       ; more sense to draw them together as early as their dependency becomes possible to satisfy.
-      [field [] ctx entity-links-iframe props])))
+      [field [] (dissoc ctx ::layout) entity-links-iframe (update props :class (fnil css "") "debug-sentinel")])))
 
 (defn ^:export result "Default result renderer. Invoked as fn, returns seq-hiccup, hiccup or
 nil. call site must wrap with a Reagent component"
