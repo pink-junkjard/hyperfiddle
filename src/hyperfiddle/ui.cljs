@@ -95,7 +95,7 @@
                 [ui-from-link rv ctx props]))
          doall)))
 
-(defn ^:export control "this is a function, which returns component"
+(defn control "this is a function, which returns component"
   [val ctx & [props]]                                       ; returns Func[(ref, props, ctx) => DOM]
   (let [segment (last (:hypercrud.browser/path ctx))
         attr @(context/hydrate-attribute ctx segment)
@@ -117,13 +117,12 @@
       [_ :one] controls/edn
       [_ :many] controls/edn-many)))
 
-(defn ^:export hyper-control "Handles labels too because we show links there." ; CTX is done after here. props and val only. But recursion needs to look again.
-  [val ctx & [props]]
+(defn ^:export hyper-control [val ctx & [props]]
   {:post [%]}
   (let [is-children (not @(r/fmap (r/comp nil? ::field/children) (:hypercrud.browser/field ctx)))
         f (or
             (attr-renderer ctx)
-            (if is-children
+            (if (and is-children (not (:options props)))    ; Duplicate options test, the other is in controls/ref, due to circular dependency h.ui
               (partial pull field)
               (control val ctx props)))]
     (f val ctx props)))
