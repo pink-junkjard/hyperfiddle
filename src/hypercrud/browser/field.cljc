@@ -287,6 +287,6 @@
                      (-> (aggregate (:element qfind))
                          (assoc ::cardinality :db.cardinality/one))))))
 
-      :blank (either/right [])
+      :blank (either/right nil)
 
-      (either/right []))))
+      (either/right nil))))
