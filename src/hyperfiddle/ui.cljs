@@ -43,18 +43,11 @@
 
 (defn attr-renderer-control [val ctx & [props]]
   ; The only way to stabilize this is for this type signature to become a react class.
-  (let [?user-f @(->> (context/hydrate-attribute ctx (last (:hypercrud.browser/path ctx)))
-                      (r/fmap (r/comp blank->nil :attribute/renderer)))]
-    (if ?user-f
-      [user-portal (ui-error/error-comp ctx)
-       ; ?user-f is stable due to memoizing eval (and only due to this)
-       [eval-renderer-comp nil ?user-f val ctx props]])))
-
-(defn attr-renderer [ctx]
-  (if @(->> (context/hydrate-attribute ctx (last (:hypercrud.browser/path ctx)))
-            (r/fmap (r/comp blank->nil :attribute/renderer)))
-    ; This is the only way to stabilize this.
-    attr-renderer-control))
+  (when-let [?user-f @(->> (context/hydrate-attribute ctx (last (:hypercrud.browser/path ctx)))
+                           (r/fmap (r/comp blank->nil :attribute/renderer)))]
+    [user-portal (ui-error/error-comp ctx)
+     ; ?user-f is stable due to memoizing eval (and only due to this)
+     [eval-renderer-comp nil ?user-f val ctx props]]))
 
 (declare result)
 (declare pull)
@@ -119,13 +112,11 @@
 
 (defn ^:export hyper-control [val ctx & [props]]
   {:post [%]}
-  (let [is-children (not @(r/fmap (r/comp nil? ::field/children) (:hypercrud.browser/field ctx)))
-        f (or
-            (attr-renderer ctx)
-            (if (and is-children (not (:options props)))    ; Duplicate options test, the other is in controls/ref, due to circular dependency h.ui
-              (partial pull field)
-              (control val ctx props)))]
-    (f val ctx props)))
+  (or (attr-renderer-control val ctx props)
+      (let [has-children (not @(r/fmap (r/comp nil? ::field/children) (:hypercrud.browser/field ctx)))]
+        (if (and has-children (not (:options props)))       ; Duplicate options test, the other is in controls/ref, due to circular dependency h.ui
+          [pull field val ctx props]
+          [(control val ctx props) val ctx props]))))
 
 (defn hyper-label [_ ctx & [props]]
   (let [level (-> ctx :hypercrud.browser/field deref ::field/level)
