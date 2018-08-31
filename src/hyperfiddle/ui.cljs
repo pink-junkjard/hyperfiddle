@@ -431,9 +431,10 @@ User renderers should not be exposed to the reaction."
                           ^{:key (str [segment child-segment])}
                           [field [segment child-segment] ctx hyper-control props])
                         child-fields)
-                   ; No [], that is meaningless in the relation case.
-                   ; See how we explicitly render the entity-links here
-                   (let [f (if (= datascript.parser.Variable el-type) hyper-control entity-links)]
+                   (let [f (condp = el-type
+                             datascript.parser.Variable hyper-control
+                             datascript.parser.Aggregate hyper-control
+                             datascript.parser.Pull entity-links)]
                      [^{:key (str [segment])} [field [segment] ctx f props]])))
                )))
 
