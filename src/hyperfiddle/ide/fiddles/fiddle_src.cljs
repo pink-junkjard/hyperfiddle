@@ -96,7 +96,7 @@
                          [:div.hf-underdoc [markdown (:fiddle/renderer underdocs)]])])
    :fiddle/links (fn [val ctx props]
                    [:div
-                    (link :hyperfiddle/new "link" ctx)
+                    (link :hyperfiddle/new :link ctx)
                     [:div [links-fiddle/renderer val ctx props]]
                     (when-not (:embed-mode props)
                       #_[:div.hf-underdoc [markdown (:fiddle/links underdocs)]])])
@@ -135,4 +135,4 @@
                  ^{:key (str [segment])}
                  [field [segment] ctx nil]))
           (doall))
-     (link :hyperfiddle/remove "fiddle" ctx "Remove fiddle" {:class "btn-outline-danger"})]))
+     (link :hyperfiddle/remove :fiddle ctx "Remove fiddle" {:class "btn-outline-danger"})]))

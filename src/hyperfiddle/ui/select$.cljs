@@ -83,7 +83,7 @@
     [val ctx props]
     {:pre [ctx]}
     (assert (:options props) "select: :options prop is required")
-    (-> (mlet [options-ref (data/select+ ctx :iframe (:options props))]
+    (-> (mlet [options-ref (data/select+ ctx :iframe (keyword (:options props)))] ; coerce somewhere else tho
           (return
             (let [default-props {:on-change (r/comp (r/partial context/with-tx! ctx)
                                                     (r/partial entity-change->tx ctx))}
