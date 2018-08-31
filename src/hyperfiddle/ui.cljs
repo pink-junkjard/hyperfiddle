@@ -66,8 +66,8 @@
 (declare fiddle-api)
 (declare fiddle-xray)
 
-(def select hyperfiddle.ui.select$/select)                  ; legacy
-(def select+ hyperfiddle.ui.select$/select)                 ; legacy
+(def select hyperfiddle.ui.controls/ref)                    ; legacy
+(def select+ hyperfiddle.ui.controls/ref)                   ; legacy
 
 (defn entity-links-iframe [val ctx & [props]]
   (fragment

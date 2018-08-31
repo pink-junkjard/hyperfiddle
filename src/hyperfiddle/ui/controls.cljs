@@ -8,7 +8,8 @@
     [contrib.ui :refer [debounced optimistic-updates]]      ; avoid collisions
     [contrib.ui.input :as input]
     [contrib.ui.recom-date :refer [recom-date]]
-    [hypercrud.browser.context :as context]))
+    [hypercrud.browser.context :as context]
+    [hyperfiddle.ui.select$ :refer [select]]))
 
 
 (defn readonly->disabled [props]                            ; this utility is harmful and should be removed
@@ -90,9 +91,11 @@
        [:option (assoc option-props :key :nil :value "") "--"]])))
 
 (defn ^:export ref [val ctx & [props]]
-  (let [props (-> (entity-props val #_(or (:db/ident val) (:db/id val)) props ctx)
-                  readonly->disabled)]
-    [optimistic-updates props debounced input/edn]))
+  (if (:options props)
+    [select val ctx props]
+    (let [props (-> (entity-props val #_(or (:db/ident val) (:db/id val)) props ctx)
+                    readonly->disabled)]
+      [optimistic-updates props debounced input/edn])))
 
 (defn ^:export dbid [val ctx & [props]]
   (let [props (-> (entity-props (:db/id val) props ctx)
