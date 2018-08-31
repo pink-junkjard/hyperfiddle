@@ -22,7 +22,7 @@
     [hyperfiddle.runtime :as runtime]
     [hyperfiddle.security :as security]
     [hyperfiddle.ui :as ui :refer [ui-from-link markdown]]
-    [hyperfiddle.ui.controls :as controls]
+    [hyperfiddle.ui.util :refer [on-change->tx]]
     [taoensso.timbre :as timbre]))
 
 
@@ -137,7 +137,7 @@
                               :target %
                               :value val
                               :change! (r/comp (r/partial context/with-tx! ctx)
-                                               (r/partial controls/on-change->tx ctx val))})))]
+                                               (r/partial on-change->tx ctx val))})))]
     [:span.qe.radio-group props
      (apply fragment options)]))
 

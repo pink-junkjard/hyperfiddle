@@ -7,9 +7,9 @@
     [contrib.ui.tooltip :refer [tooltip-thick]]
     [hypercrud.browser.context :as context]
     [hypercrud.browser.field :as field]
-    #_[hyperfiddle.ui]
     [hyperfiddle.data :as data]
-    [hyperfiddle.ui.controls :as controls]
+    #_[hyperfiddle.ui]
+    [hyperfiddle.ui.util :refer [readonly->disabled writable-entity?]]
     [hyperfiddle.ui.docstring :refer [semantic-docstring]]))
 
 
@@ -40,19 +40,19 @@
                          :placeholder ":task/title"
                          :value @state
                          :on-change (r/partial reset! state))
-                       controls/readonly->disabled)]))
+                       readonly->disabled)]))
 
 (letfn [(change! [ctx state v]
           (context/with-tx! ctx [[:db/add @(r/fmap :db/id (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data])) @state v]]))]
   (defn magic-new-body [val ctx & [props]]
-    (let [read-only (r/fmap (comp not controls/writable-entity?) (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data]))
+    (let [read-only (r/fmap (comp not writable-entity?) (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data]))
           state (r/cursor (:hyperfiddle.ui.form/state ctx) [:hyperfiddle.ui.form/magic-new-a])
           props (-> (assoc props
                       :on-change (r/partial change! ctx state)
                       :read-only (let [_ [@state @read-only]] ; force reactions
                                    (or (nil? @state) @read-only))
                       :placeholder (pr-str "mow the lawn"))
-                    controls/readonly->disabled)]
+                    readonly->disabled)]
       ;(println (str/format "magic-new-body: %s , %s , %s" @state @read-only (pr-str @entity)))
       ; Uncontrolled widget on purpose i think
       ; Cardinality many is not needed, because as soon as we assoc one value,

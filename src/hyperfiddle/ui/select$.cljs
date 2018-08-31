@@ -7,8 +7,8 @@
     [hypercrud.browser.context :as context]
     [hypercrud.browser.field :as field]
     [hypercrud.types.Entity :refer [entity?]]
-    [hyperfiddle.ui.controls :as controls]
-    [hyperfiddle.data :as data]))
+    [hyperfiddle.data :as data]
+    [hyperfiddle.ui.util :refer [writable-entity? entity-change->tx]]))
 
 (defn field-label [v]
   (if (instance? cljs.core/Keyword v)
@@ -75,7 +75,7 @@
   (let [entity (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data])] ; how can this be loading??
     (or (boolean (:read-only props))
         @(r/fmap nil? entity)                               ; no value at all
-        (not @(r/fmap controls/writable-entity? entity)))))
+        (not @(r/fmap writable-entity? entity)))))
 
 (let [dom-value (fn [value]                                 ; nil, kw or eid
                   (if (nil? value) "" (str (:db/id value))))]
@@ -86,7 +86,7 @@
     (-> (mlet [options-ref (data/select+ ctx :iframe (:options props))]
           (return
             (let [default-props {:on-change (r/comp (r/partial context/with-tx! ctx)
-                                                    (r/partial controls/entity-change->tx ctx))}
+                                                    (r/partial entity-change->tx ctx))}
                   props (-> (merge default-props props)
                             (assoc :value @(r/fmap dom-value (:hypercrud.browser/data ctx))))
                   props (-> (select-keys props [:class])
