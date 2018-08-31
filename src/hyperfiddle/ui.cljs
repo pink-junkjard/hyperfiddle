@@ -71,8 +71,7 @@
 
 (defn entity-links-iframe [val ctx & [props]]
   (fragment
-    (->> (concat
-           (data/select-all ctx :iframe))
+    (->> (data/select-all ctx :iframe)
          (remove (comp (partial data/deps-over-satisfied? ctx) link/read-path :link/path))
          (r/track identity)
          (r/unsequence :db/id)
