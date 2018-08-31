@@ -138,7 +138,7 @@
       [nil :element _ true] entity-label
       [nil :element _ false] attribute-label                ; preserve old behavior
       [nil :naked-or-element _ _] entity-label #_(r/constantly [:span (str "naked entity head")]) ; Schema new attr, and fiddle-links new link - needs to be split
-      ;[:relation :naked-or-element seg _] (r/constantly [:span (str "naked relation head, seg: " (pr-str seg))]) ; Schema new attr, and fiddle-links new link - needs to be split
+      [:relation :naked-or-element _ _] (r/constantly nil)
       )))
 
 (defn auto-link-css [link]                                  ; semantic-css
@@ -422,21 +422,22 @@ User renderers should not be exposed to the reaction."
     [^{:key (str [])} [field [] ctx entity-links props]]))
 
 (defn columns-relation-product [field ctx & [props]]
-  (->> (-> ctx :hypercrud.browser/field deref ::field/children)
-       (mapcat (fn [{segment ::field/path-segment
-                     child-fields ::field/children
-                     el-type ::field/element-type}]
-                 (concat
-                   (map (fn [{child-segment ::field/path-segment}]
-                          ^{:key (str [segment child-segment])}
-                          [field [segment child-segment] ctx hyper-control props])
-                        child-fields)
-                   (let [f (condp = el-type
-                             datascript.parser.Variable hyper-control
-                             datascript.parser.Aggregate hyper-control
-                             datascript.parser.Pull entity-links)]
-                     [^{:key (str [segment])} [field [segment] ctx f props]])))
-               )))
+  (concat
+    (->> @(r/fmap ::field/children (:hypercrud.browser/field ctx))
+         (mapcat (fn [{segment ::field/path-segment
+                       child-fields ::field/children
+                       el-type ::field/element-type}]
+                   (concat
+                     (map (fn [{child-segment ::field/path-segment}]
+                            ^{:key (str [segment child-segment])}
+                            [field [segment child-segment] ctx hyper-control props])
+                          child-fields)
+                     (let [f (condp = el-type
+                               datascript.parser.Variable hyper-control
+                               datascript.parser.Aggregate hyper-control
+                               datascript.parser.Pull entity-links)]
+                       [^{:key (str [segment])} [field [segment] ctx f props]])))))
+    [^{:key (str [])} [field [] ctx entity-links props]]))
 
 (defn relation [field val ctx & [props]]
   (fragment
