@@ -189,28 +189,28 @@ User renderers should not be exposed to the reaction."
                  ["hyperfiddle"
                   (css-slugify (some-> ident namespace))
                   (css-slugify ident)])))
-        (build-wrapped-render-expr-str [user-str] (str "(fn [val ctx props]\n" user-str ")"))]
-  (defn ui-comp [val ctx & [props]]                         ; user-renderer comes through here
-    [user-portal (ui-error/error-comp ctx)
-     (let [props' (update props :class css (auto-ui-css-class ctx))
-           props (select-keys props' [:class])]
-       (case @(:hypercrud.ui/display-mode ctx)
-         :hypercrud.browser.browser-ui/user (if-let [user-renderer (:user-renderer props')]
-                                              [user-renderer val ctx props]
-                                              (let [fiddle (:hypercrud.browser/fiddle ctx)]
-                                                [eval-renderer-comp
-                                                 (some-> @(r/cursor fiddle [:fiddle/cljs-ns]) blank->nil)
-                                                 (some-> @(r/cursor fiddle [:fiddle/renderer]) blank->nil build-wrapped-render-expr-str)
-                                                 val ctx props
-                                                 ; If userland crashes, reactions don't take hold, we need to reset here.
-                                                 ; Cheaper to pass this as a prop than to hash everything
-                                                 ; Userland will never see this param as it isn't specified in the wrapped render expr.
-                                                 @(:hypercrud.browser/fiddle ctx) ; for good luck
-                                                 ]))
-         :hypercrud.browser.browser-ui/xray [fiddle-xray val ctx props]
-         :hypercrud.browser.browser-ui/api [fiddle-api val ctx props]))]))
-
-(letfn [(fiddle-css-renderer [s] [:style {:dangerouslySetInnerHTML {:__html @s}}])
+        (build-wrapped-render-expr-str [user-str] (str "(fn [val ctx props]\n" user-str ")"))
+        (ui-comp [ctx & [props]]                            ; user-renderer comes through here
+          [user-portal (ui-error/error-comp ctx)
+           (let [props' (update props :class css (auto-ui-css-class ctx))
+                 props (select-keys props' [:class])
+                 value @(:hypercrud.browser/data ctx)]
+             (case @(:hypercrud.ui/display-mode ctx)
+               :hypercrud.browser.browser-ui/user (if-let [user-renderer (:user-renderer props')]
+                                                    [user-renderer value ctx props]
+                                                    (let [fiddle (:hypercrud.browser/fiddle ctx)]
+                                                      [eval-renderer-comp
+                                                       (some-> @(r/cursor fiddle [:fiddle/cljs-ns]) blank->nil)
+                                                       (some-> @(r/cursor fiddle [:fiddle/renderer]) blank->nil build-wrapped-render-expr-str)
+                                                       value ctx props
+                                                       ; If userland crashes, reactions don't take hold, we need to reset here.
+                                                       ; Cheaper to pass this as a prop than to hash everything
+                                                       ; Userland will never see this param as it isn't specified in the wrapped render expr.
+                                                       @(:hypercrud.browser/fiddle ctx) ; for good luck
+                                                       ]))
+               :hypercrud.browser.browser-ui/xray [fiddle-xray value ctx props]
+               :hypercrud.browser.browser-ui/api [fiddle-api value ctx props]))])
+        (fiddle-css-renderer [s] [:style {:dangerouslySetInnerHTML {:__html @s}}])
         (src-mode [route ctx]
           (mlet [:let [ctx (-> (context/clean ctx)
                                (routing/route route))]
@@ -240,14 +240,14 @@ User renderers should not be exposed to the reaction."
          (let [on-click (r/partial click-fn (:route ctx))]
            [native-click-listener {:on-click on-click}
             (fragment
-              [ui-comp @(:hypercrud.browser/data ctx) ctx (update props :class css "ui")]
+              [ui-comp ctx (update props :class css "ui")]
               [fiddle-css-renderer (r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/css])])]))
        (fn [ctx]
          (let [on-click (r/partial click-fn (:route ctx))]
            ; use the stale ctx's route, otherwise alt clicking while loading could take you to the new route, which is jarring
            [native-click-listener {:on-click on-click}
             (fragment
-              [ui-comp @(:hypercrud.browser/data ctx) ctx (update props :class css "hyperfiddle-loading" "ui")]
+              [ui-comp ctx (update props :class css "hyperfiddle-loading" "ui")]
               [fiddle-css-renderer (r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/css])])]))])))
 
 (letfn [(prompt [link-ref ?label] (str (or ?label
@@ -298,10 +298,11 @@ User renderers should not be exposed to the reaction."
             [stale/loading (stale/can-be-loading? ctx) (fmap #(router/assoc-frag % (:frag props)) @route'-ref) ; what is this frag noise?
              (fn [e] [error-comp e])
              (fn [route]
-               [iframe ctx (-> props                        ; flagged - :class
-                               (assoc :route route)
-                               (dissoc props :tooltip)
-                               (update :class css (css-slugify @(r/fmap auto-link-css link-ref))))])]
+               (let [iframe (or (::custom-iframe props) iframe)]
+                 [iframe ctx (-> props                      ; flagged - :class
+                                 (assoc :route route)
+                                 (dissoc props :tooltip ::custom-iframe)
+                                 (update :class css (css-slugify @(r/fmap auto-link-css link-ref))))]))]
 
             :else [tooltip (tooltip-props props)
                    (let [props (dissoc props :tooltip)]

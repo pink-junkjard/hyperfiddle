@@ -3,7 +3,7 @@
     [clojure.test :refer [deftest is]]
     [contrib.reactive :as r]
     [hyperfiddle.ide.fiddles.schema :as schema]
-    [hyperfiddle.ui :refer [ui-comp]]
+    [hyperfiddle.ui :refer []]
     [reagent.dom.server :as dom-server]))
 
 

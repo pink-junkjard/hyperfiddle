@@ -1,6 +1,7 @@
 (ns hyperfiddle.ui.markdown-extensions
   (:require
-    [cats.core :refer [fmap]]
+    [cats.core :refer [fmap mlet return]]
+    [cats.monad.either :as either]
     [contrib.css :refer [css]]
     [contrib.ct :refer [unwrap]]
     [contrib.eval :as eval]
@@ -10,6 +11,7 @@
     [cuerdas.core :as str]
     [goog.object]
     [hypercrud.browser.context :as context]
+    [hypercrud.ui.error :refer [error-comp]]
     [hyperfiddle.data :as data]
     [hyperfiddle.ui]
     [taoensso.timbre :as timbre]))
@@ -86,6 +88,17 @@
                         class (unwrap #(timbre/warn %) (memoized-safe-read-edn-string spath))
                         f? (unwrap #(timbre/warn %) (memoized-safe-eval content))]
                     (hyperfiddle.ui/browse rel class ctx f? props)))
+
+       "live" (fn [content argument props ctx]
+                (let [[_ srel spath] (re-find #"([^ ]*) ?(.*)" argument)]
+                  (-> (mlet [rel (memoized-safe-read-edn-string srel)
+                             class (memoized-safe-read-edn-string spath)
+                             fiddle-attrs (memoized-safe-read-edn-string (str "[" content "]"))
+                             :let [props (assoc props :hyperfiddle.ide.hf-live/fiddle-attrs fiddle-attrs)]]
+                        (return [hyperfiddle.ide.hf-live/browse rel class ctx props]))
+                      (either/branch
+                        (fn [e] [(error-comp ctx) e])
+                        identity))))
 
        "link" (fn [content argument props ctx]
                 (let [[_ rel-s class-s] (re-find #"([^ ]*) ?(.*)" argument)
