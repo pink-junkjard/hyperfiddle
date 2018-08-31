@@ -1,4 +1,4 @@
-(ns hyperfiddle.ui.select
+(ns hyperfiddle.ui.select$                                  ; WARNING: Namespace hyperfiddle.ui.select clashes with var hyperfiddle.ui/select
   (:require
     [cats.core :refer [mlet return]]
     [cats.monad.either :as either]
@@ -7,7 +7,8 @@
     [hypercrud.browser.context :as context]
     [hypercrud.browser.field :as field]
     [hypercrud.types.Entity :refer [entity?]]
-    [hyperfiddle.ui.controls :as controls]))
+    [hyperfiddle.ui.controls :as controls]
+    [hyperfiddle.data :as data]))
 
 (defn field-label [v]
   (if (instance? cljs.core/Keyword v)
@@ -79,9 +80,10 @@
 (let [dom-value (fn [value]                                 ; nil, kw or eid
                   (if (nil? value) "" (str (:db/id value))))]
   (defn select "This arity should take a selector string (class) instead of Right[Reaction[Link]], blocked on removing path backdoor"
-    [options-ref+ props ctx]
-    {:pre [options-ref+ ctx]}
-    (-> (mlet [options-ref options-ref+]
+    [val ctx props]
+    {:pre [ctx]}
+    (assert (:options props) "select: :options prop is required")
+    (-> (mlet [options-ref (data/select+ ctx :iframe (:options props))]
           (return
             (let [default-props {:on-change (r/comp (r/partial context/with-tx! ctx)
                                                     (r/partial controls/entity-change->tx ctx))}

@@ -35,7 +35,7 @@
     [hyperfiddle.ui.controls :as controls]
     [hyperfiddle.ui.hyper-controls :refer [attribute-label entity-label magic-new-body magic-new-head]]
     [hyperfiddle.ui.popover :refer [popover-cmp]]
-    [hyperfiddle.ui.select :refer [select]]
+    [hyperfiddle.ui.select$]
     [hyperfiddle.ui.sort :as sort]
     [hyperfiddle.ui.util :refer [eval-renderer-comp]]
     [taoensso.timbre :as timbre]))
@@ -66,8 +66,8 @@
 (declare fiddle-api)
 (declare fiddle-xray)
 
-(defn select+ [val ctx & [props]]
-  [select (data/select+ ctx :iframe (:options props)) props ctx])
+(def select hyperfiddle.ui.select$/select)                  ; legacy
+(def select+ hyperfiddle.ui.select$/select)                 ; legacy
 
 (defn entity-links-iframe [val ctx & [props]]
   (fragment

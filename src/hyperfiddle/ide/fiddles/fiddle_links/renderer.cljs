@@ -8,9 +8,8 @@
     [hypercrud.browser.context :as context]
     [hypercrud.browser.system-link :refer [system-link?]]
     [hypercrud.client.core :as hc]
-    [hyperfiddle.data :as data]
-    [hyperfiddle.ui :refer [hyper-control field table select+ link]]
-    [hyperfiddle.ui.select :refer [select select-error-cmp]]))
+    [hyperfiddle.ui :refer [hyper-control field table link select]]
+    [hyperfiddle.ui.select$ :refer [select-error-cmp]]))
 
 
 (def editable-if-shadowed?
@@ -32,7 +31,7 @@
   (fragment
     (link :hyperfiddle/new "fiddle" ctx nil {:disabled (system-link? @(r/fmap :db/id (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data])))})
     (let [props (assoc props :read-only (read-only? ctx))]
-      [select+ val ctx props])))
+      [select val ctx props])))
 
 (letfn [(remove-children [field] (dissoc field :hypercrud.browser.field/children))]
   (defn hf-live-link-fiddle [val ctx props]
@@ -45,7 +44,7 @@
                  topnav-fiddle @(hc/hydrate (:peer ctx) nil req) #_"todo tighter reactivity"]
             (return
               (let [ctx (merge ctx {:hypercrud.browser/links (r/track identity (:fiddle/links topnav-fiddle))})]
-                [select (data/select+ ctx :iframe (:options props)) props ctx])))
+                [select val ctx props])))
           (either/branch select-error-cmp identity))
       )))
 
