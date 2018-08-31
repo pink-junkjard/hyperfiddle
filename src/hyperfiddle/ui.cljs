@@ -115,7 +115,10 @@
   (or (attr-renderer-control val ctx props)
       (let [has-children (not @(r/fmap (r/comp nil? ::field/children) (:hypercrud.browser/field ctx)))]
         (if (and has-children (not (:options props)))       ; Duplicate options test, the other is in controls/ref, due to circular dependency h.ui
-          [pull field val ctx props]
+          (let [ctx (dissoc ctx ::layout)]
+            (fragment
+              [pull field val ctx props]
+              [field [] ctx entity-links-iframe props]))
           [(control val ctx props) val ctx props]))))
 
 (defn hyper-label [_ ctx & [props]]
@@ -430,23 +433,12 @@ User renderers should not be exposed to the reaction."
                        [^{:key (str [segment])} [field [segment] ctx f props]])))))
     [^{:key (str [])} [field [] ctx entity-links props]]))
 
-(defn relation [field val ctx & [props]]
-  (fragment
-    [table (r/partial columns-relation-product field) ctx props]
-    [field [] ctx entity-links-iframe props]))
-
 (defn pull "handles any datomic result that isn't a relation, recursively"
   [field val ctx & [props]]
   (let [cardinality @(r/fmap ::field/cardinality (:hypercrud.browser/field ctx))]
-    (fragment
-      (match* [cardinality]
-        [:db.cardinality/one] [form (r/partial columns field) val ctx props]
-        [:db.cardinality/many] [table (r/partial columns field) ctx props])
-
-      ; Draw data lists here, even if they are repeating.
-      ; Unlike anchors and buttons, iframes and options aren't meant to be drawn at their path, it makes
-      ; more sense to draw them together as early as their dependency becomes possible to satisfy.
-      [field [] (dissoc ctx ::layout) entity-links-iframe props])))
+    (match* [cardinality]
+      [:db.cardinality/one] [form (r/partial columns field) val ctx props]
+      [:db.cardinality/many] [table (r/partial columns field) ctx props])))
 
 (defn ^:export result "Default result renderer. Invoked as fn, returns seq-hiccup, hiccup or
 nil. call site must wrap with a Reagent component"
@@ -456,9 +448,10 @@ nil. call site must wrap with a Reagent component"
     (let [type @(r/fmap :fiddle/type (:hypercrud.browser/fiddle ctx))
           level @(r/fmap ::field/level (:hypercrud.browser/field ctx))]
       (match* [type level]
-        [:blank _] [field [] ctx entity-links-iframe props]
-        [:query :relation] (relation field val ctx props)
-        [_ _] (pull field val ctx props)))))
+        [:blank _] nil
+        [:query :relation] [table (r/partial columns-relation-product field) ctx props]
+        [_ _] (pull field val ctx props)))
+    [field [] ctx entity-links-iframe props]))
 
 (def ^:dynamic markdown)                                    ; this should be hf-contrib or something
 
