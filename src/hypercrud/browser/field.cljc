@@ -244,26 +244,28 @@
                          (assoc ::cardinality :db.cardinality/many)))
 
                    datascript.parser.FindTuple
-                   {::cardinality :db.cardinality/one
+                   {::level :tuple
+                    ::cardinality :db.cardinality/one
                     ::children (->> (:elements qfind)
                                     (map-indexed (fn [fe-pos element]
-                                                   (condp = (type element)
-                                                     datascript.parser.Variable
-                                                     (variable-rel fe-pos element)
+                                                   (-> (condp = (type element)
+                                                         datascript.parser.Variable
+                                                         (variable-rel fe-pos element)
 
-                                                     datascript.parser.Pull
-                                                     (let [source-symbol (get-in element [:source :symbol])
-                                                           pull-pattern (get-in element [:pattern :value])]
-                                                       {::cardinality :db.cardinality/one
-                                                        ::children (pull->fields (get schemas (str source-symbol)) source-symbol pull-pattern (get @data fe-pos) [])
-                                                        ::data-has-id? (entity-pull? pull-pattern)
-                                                        ::get-value (r/partial r/last-arg-first get fe-pos)
-                                                        ::label (get-in element [:variable :symbol])
-                                                        ::path-segment fe-pos
-                                                        ::source-symbol source-symbol})
+                                                         datascript.parser.Pull
+                                                         (let [source-symbol (get-in element [:source :symbol])
+                                                               pull-pattern (get-in element [:pattern :value])]
+                                                           {::cardinality :db.cardinality/one
+                                                            ::children (pull->fields (get schemas (str source-symbol)) source-symbol pull-pattern (get @data fe-pos) [])
+                                                            ::data-has-id? (entity-pull? pull-pattern)
+                                                            ::get-value (r/partial r/last-arg-first get fe-pos)
+                                                            ::label (get-in element [:variable :symbol])
+                                                            ::path-segment fe-pos
+                                                            ::source-symbol source-symbol})
 
-                                                     datascript.parser.Aggregate
-                                                     (aggregate-rel fe-pos element))))
+                                                         datascript.parser.Aggregate
+                                                         (aggregate-rel fe-pos element))
+                                                       (assoc ::element-type (type element)))))
                                     vec)
                     ::data-has-id? false
                     ::get-value identity

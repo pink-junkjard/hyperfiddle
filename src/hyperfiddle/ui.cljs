@@ -133,6 +133,7 @@
       [nil :element _ false] attribute-label                ; preserve old behavior
       [nil :naked-or-element _ _] entity-label #_(r/constantly [:span (str "naked entity head")]) ; Schema new attr, and fiddle-links new link - needs to be split
       [:relation :naked-or-element _ _] (r/constantly nil)
+      [:tuple :naked-or-element _ _] (r/constantly nil)
       )))
 
 (defn auto-link-css [link]                                  ; semantic-css
@@ -330,19 +331,9 @@ User renderers should not be exposed to the reaction."
     (fn [relative-path ctx Body Head props]
       (let [ctx (assoc ctx :hyperfiddle.ui.form/state state)]
         [:div {:class (css "field" (:class props))
-               :style {:border-color (border-color ctx)}}   ; wrapper div has :body stypes - why?
-
-         (if-not (seq relative-path)
-           (fragment
-             ;^{:key :form-head}
-             ;[Head nil props (dissoc ctx :hypercrud.browser/data)]
-             ^{:key :form-body}
-             [Body @(:hypercrud.browser/data ctx) ctx props])
-           (fragment
-             ^{:key :form-head}
-             [Head nil (dissoc ctx :hypercrud.browser/data) props]
-             ^{:key :form-body}
-             [Body @(:hypercrud.browser/data ctx) ctx props]))]))))
+               :style {:border-color (border-color ctx)}}
+         [Head nil (dissoc ctx :hypercrud.browser/data) props]
+         [Body @(:hypercrud.browser/data ctx) ctx props]]))))
 
 (defn table-field "Form fields are label AND value. Table fields are label OR value."
   [relative-path ctx Body Head props]                       ; Body :: (val props ctx) => DOM, invoked as component
@@ -450,6 +441,7 @@ nil. call site must wrap with a Reagent component"
       (match* [type level]
         [:blank _] nil
         [:query :relation] [table (r/partial columns-relation-product field) ctx props]
+        [:query :tuple] [form (r/partial columns-relation-product field) val ctx props]
         [_ _] (pull field val ctx props)))
     [field [] ctx entity-links-iframe props]))
 
