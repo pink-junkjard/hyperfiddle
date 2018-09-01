@@ -224,7 +224,7 @@
             (test-partial-splat ~fiddle ~pull->request ~result-builder)))))
 
 (deftest blank []
-  (is (= [] @(auto-field nil {:hypercrud.browser/schemas (r/atom nil)
+  (is (nil? @(auto-field nil {:hypercrud.browser/schemas (r/atom nil)
                               :hypercrud.browser/fiddle (r/atom {:fiddle/type :blank})}))))
 
 (letfn [(f [a b]
