@@ -90,7 +90,7 @@
   (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/field]))
 
 (letfn [(focus-segment [ctx path-segment]                   ; attribute or fe segment
-          (assert (or (not (:hypercrud.browser/data ctx))   ; head has no data, can focus without calling row
+          #_(assert (or (not (:hypercrud.browser/data ctx))   ; head has no data, can focus without calling row
                       (not= :db.cardinality/many @(r/fmap ::field/cardinality (:hypercrud.browser/field ctx))))
                   (str "Cannot focus directly from a cardinality/many (do you need a table wrap?). current path: " (:hypercrud.browser/path ctx) ", attempted segment: " path-segment))
           (let [field (r/fmap (r/partial find-child-field path-segment) (:hypercrud.browser/field ctx))

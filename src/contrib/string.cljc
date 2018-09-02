@@ -23,6 +23,17 @@
            (not (str/blank? s)))
     s))
 
+(comment
+  (merge-with #(or (blank->nil %1) %2)
+              {:a "a" :b nil :d ""}
+              {:a "aaa" :b "bbb" :c "ccc" :d "ddd"})
+  (merge-with #(orp (complement blank->nil) %1 %2)
+              {:a "a" :b nil :d ""}
+              {:a "aaa" :b "bbb" :c "ccc" :d "ddd"})
+
+  (orp (complement blank->nil) "" "aaa")
+  )
+
 (defn split-first [s sep]
   (let [[x & xs] (str/split s sep)]
     [(empty->nil x) (empty->nil (str/join sep xs))]))

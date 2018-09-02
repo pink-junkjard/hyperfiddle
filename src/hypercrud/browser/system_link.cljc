@@ -2,21 +2,13 @@
   (:require
     [clojure.string :as string]
     [contrib.string :refer [blank->nil]]
-    [contrib.template :as template]
     [hypercrud.browser.context :as context]
-    [hypercrud.browser.field :as field]
-    [hypercrud.browser.system-fiddle :as system-fiddle]))
+    [hypercrud.browser.field :as field]))
 
 
 (defn ^:export system-link? [link-id]
   (and (keyword? link-id)
        (some-> (namespace link-id) (string/starts-with? "hyperfiddle.browser.system-link"))))
-
-(def retract-formula
-  "(fn [ctx multi-color-tx modal-route]
-  {:tx {(hypercrud.browser.context/uri ctx) [[:db.fn/retractEntity @(contrib.reactive/cursor (:hypercrud.browser/data ctx) [:db/id])]]}})")
-
-(def parent-child-txfn (-> (template/load-resource "auto-txfn/mt-fet-at.edn") string/trim))
 
 (defn nested-links-for-field
   ([parent-fiddle dbname schema field path parent-has-id?]
@@ -33,12 +25,7 @@
                   :hypercrud/sys? true
                   :link/disabled? (context/attribute-segment? (::field/path-segment field))
                   :link/rel :hyperfiddle/remove
-                  :link/formula "identity"
-                  :link/path ?spath
-                  :link/render-inline? true
-                  :link/fiddle system-fiddle/fiddle-blank-system-remove
-                  :link/managed? true
-                  :link/tx-fn retract-formula})
+                  :link/path ?spath})
 
            (and (::field/data-has-id? field)
                 (or (or (not (nil? (::field/path-segment field)))
@@ -49,22 +36,14 @@
                   :hypercrud/sys? true
                   :link/disabled? (context/attribute-segment? (::field/path-segment field))
                   :link/rel :hyperfiddle/edit
-                  :link/formula "identity"
-                  :link/path ?spath
-                  :link/fiddle (system-fiddle/fiddle-system-edit dbname)
-                  :link/managed? false})
+                  :link/path ?spath})
 
            parent-has-id?
            (cons {:db/id (keyword "hyperfiddle.browser.system-link" (str "new-" (hash path)))
                   :hypercrud/sys? true
                   :link/disabled? (context/attribute-segment? (::field/path-segment field))
                   :link/rel :hyperfiddle/new
-                  :link/formula "(partial hyperfiddle.api/tempid-child ctx)"
-                  :link/tx-fn parent-child-txfn
-                  :link/path ?spath
-                  :link/render-inline? true
-                  :link/fiddle (system-fiddle/fiddle-system-edit dbname)
-                  :link/managed? true}))))))
+                  :link/path ?spath}))))))
 
 (defn- system-links-impl [parent-fiddle fields schemas]     ; always the top - the root links, never parent-child
   (->> fields
@@ -79,15 +58,11 @@
                              {:db/id (keyword "hyperfiddle.browser.system-link" (str "new-" (hash path)))
                               :hypercrud/sys? true
                               :link/rel :hyperfiddle/new
-                              :link/formula "(constantly (hyperfiddle.api/tempid-detached ctx))"
-                              :link/path (blank->nil (str path))
-                              :link/render-inline? true
-                              :link/fiddle (system-fiddle/fiddle-system-edit dbname)
-                              :link/managed? true}))))))))
+                              :link/path (blank->nil (str path))}))))))))
 
 (defn system-links
   "All sys links can be matched and merged with user-links. Matching is determined by link/rel and link/path"
   [parent-fiddle field schemas]
-  (if (::field/source-symbol field)
+  (if (::field/source-symbol field)                         ; top level never has one, recursive always does
     (system-links-impl parent-fiddle [field] schemas)       ; karl was lazy and never untangled the fe wrapping
     (system-links-impl parent-fiddle (::field/children field) schemas)))
