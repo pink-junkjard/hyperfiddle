@@ -26,7 +26,7 @@
 (defn entity-label [_ ctx & [props]]
   [:div #_(fragment)
    [attribute-label _ props ctx]
-   (->> (data/select-all ctx :hyperfiddle/new)
+   (->> (data/select-all ctx :hf/new)
         (r/track identity)
         (r/unsequence :db/id)
         (map (fn [[rv k]]

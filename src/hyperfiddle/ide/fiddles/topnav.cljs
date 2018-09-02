@@ -68,7 +68,7 @@
       [tooltip {:label "Home"} [:a.hf-auto-nav {:href "/"} @(runtime/state (:peer ctx) [::runtime/domain :domain/ident])]]
       [tooltip {:label "This fiddle"}                       ; also a good place for the route
        [:span.hf-auto-nav (some-> @(r/cursor (:hypercrud.browser/data ctx) [:fiddle/ident]) str)]]
-      (fake-managed-anchor :iframe :fiddle-shortcuts ctx "shortcuts" {:tooltip [nil "Fiddles in this domain"]})]
+      (fake-managed-anchor :hf/iframe :fiddle-shortcuts ctx "shortcuts" {:tooltip [nil "Fiddles in this domain"]})]
 
      [:div.right-nav {:key "right-nav"}                     ; CAREFUL; this key prevents popover flickering
 
@@ -114,18 +114,18 @@
                            (str "##### Auto-transact:\n\n"))
                       {:hyperfiddle.ui.markdown-extensions/unp true}]]
             dirty? (not @(r/fmap empty? (runtime/state (:peer ctx) [::runtime/partitions nil :stage])))]
-        (fake-managed-anchor :iframe :stage ctx "stage" {:tooltip [nil tooltip] :class (when dirty? "stage-dirty")}))
-      (ui/link :button :new-fiddle ctx "new-fiddle" (let [hf-db @(hyperfiddle.runtime/state (:peer ctx) [:hyperfiddle.runtime/domain :domain/fiddle-database])
+        (fake-managed-anchor :hf/iframe :stage ctx "stage" {:tooltip [nil tooltip] :class (when dirty? "stage-dirty")}))
+      (ui/link :hf/edit :new-fiddle ctx "new-fiddle" (let [hf-db @(hyperfiddle.runtime/state (:peer ctx) [:hyperfiddle.runtime/domain :domain/fiddle-database])
                                                            subject @(hyperfiddle.runtime/state (:peer ctx) [:hyperfiddle.runtime/user-id])
                                                            writes-allowed? (hyperfiddle.security/attempt-to-transact? hf-db subject)
                                                            anonymous? (nil? subject)]
                                                        {:disabled #_false (not writes-allowed?)
                                                         :tooltip (cond (and anonymous? (not writes-allowed?)) [:warning "Please login"]
                                                                        (not writes-allowed?) [:warning "Writes restricted"])}))
-      [tooltip {:label "Domain administration"} (ui/link :anchor :domain ctx "domain")]
+      [tooltip {:label "Domain administration"} (ui/link :hf/edit :domain ctx "domain")]
       (if @(runtime/state (:peer ctx) [::runtime/user-id])
-        (let [{:keys [:hypercrud.browser/data]} @(hyperfiddle.data/browse+ ctx :iframe :account)]
-          (fake-managed-anchor :iframe :account ctx @(r/fmap :user/name data)
+        (let [{:keys [:hypercrud.browser/data]} @(hyperfiddle.data/browse+ ctx :hf/iframe :account)]
+          (fake-managed-anchor :hf/iframe :account ctx @(r/fmap :user/name data)
                                {:hidden (not @(hyperfiddle.runtime/state (:peer ctx) [:hyperfiddle.runtime/user-id]))
                                 :tooltip [nil @(r/fmap :user/email data)]}))
         [:a {:href (foundation/stateless-login-url ctx)} "login"])]]))

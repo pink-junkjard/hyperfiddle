@@ -64,7 +64,7 @@
 
 (defn entity-links-iframe [val ctx & [props]]
   (fragment
-    (->> (data/select-all ctx :iframe)
+    (->> (data/select-all ctx :hf/iframe)
          (remove (comp (partial data/deps-over-satisfied? ctx) link/read-path :link/path))
          (r/track identity)
          (r/unsequence :db/id)
@@ -76,11 +76,10 @@
 (defn entity-links [val ctx & [props]]
   (fragment
     (->> (concat
-           (data/select-all ctx :hyperfiddle/edit)
-           (data/select-all ctx :hyperfiddle/remove)
-           (data/select-all ctx :anchor)
-           (data/select-all ctx :button))
+           (data/select-all ctx :hf/edit)
+           (data/select-all ctx :hf/remove))
          (filter (comp (partial = (:hypercrud.browser/path ctx)) link/read-path :link/path))
+         ; remove render-inline ?
          (r/track identity)
          (r/unsequence :db/id)
          (map (fn [[rv k]]

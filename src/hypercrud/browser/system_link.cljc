@@ -24,7 +24,7 @@
            (cons {:db/id (keyword "hyperfiddle.browser.system-link" (str "remove-" (hash path)))
                   :hypercrud/sys? true
                   :link/disabled? (context/attribute-segment? (::field/path-segment field))
-                  :link/rel :hyperfiddle/remove
+                  :link/rel :hf/remove
                   :link/path ?spath})
 
            (and (::field/data-has-id? field)
@@ -35,14 +35,14 @@
            (cons {:db/id (keyword "hyperfiddle.browser.system-link" (str "edit-" (hash path)))
                   :hypercrud/sys? true
                   :link/disabled? (context/attribute-segment? (::field/path-segment field))
-                  :link/rel :hyperfiddle/edit
+                  :link/rel :hf/edit
                   :link/path ?spath})
 
            parent-has-id?
            (cons {:db/id (keyword "hyperfiddle.browser.system-link" (str "new-" (hash path)))
                   :hypercrud/sys? true
                   :link/disabled? (context/attribute-segment? (::field/path-segment field))
-                  :link/rel :hyperfiddle/new
+                  :link/rel :hf/new
                   :link/path ?spath}))))))
 
 (defn- system-links-impl [parent-fiddle fields schemas]     ; always the top - the root links, never parent-child
@@ -57,7 +57,7 @@
                              ; nil path means `:find (count ?x) .`
                              {:db/id (keyword "hyperfiddle.browser.system-link" (str "new-" (hash path)))
                               :hypercrud/sys? true
-                              :link/rel :hyperfiddle/new
+                              :link/rel :hf/new
                               :link/path (blank->nil (str path))}))))))))
 
 (defn system-links

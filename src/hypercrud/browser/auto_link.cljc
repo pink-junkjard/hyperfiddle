@@ -48,21 +48,21 @@
         is-root (::field/source-symbol field)]
 
     (-> (case rel
-          :hyperfiddle/edit {:link/fiddle (system-fiddle/fiddle-system-edit dbname) ; manufacture pull from parent pull
-                             :link/formula (auto-formula link)}
-          :hyperfiddle/new {:link/fiddle (system-fiddle/fiddle-system-edit dbname)
-                            :link/formula (if is-root
-                                            "(constantly (hyperfiddle.api/tempid-detached ctx))"
-                                            "(partial hyperfiddle.api/tempid-child ctx)")
-                            :link/render-inline? true
-                            :link/tx-fn parent-child-txfn
-                            :link/managed? true}
-          :hyperfiddle/remove {:link/fiddle system-fiddle/fiddle-blank-system-remove ; Future: remove this
-                               :link/formula (auto-formula link)
-                               :link/render-inline? true
-                               :link/tx-fn retract-formula
-                               :link/managed? true}
-          :iframe {:link/formula (auto-formula link)}
+          :hf/edit {:link/fiddle (system-fiddle/fiddle-system-edit dbname) ; manufacture pull from parent pull
+                    :link/formula (auto-formula link)}
+          :hf/new {:link/fiddle (system-fiddle/fiddle-system-edit dbname)
+                   :link/formula (if is-root
+                                   "(constantly (hyperfiddle.api/tempid-detached ctx))"
+                                   "(partial hyperfiddle.api/tempid-child ctx)")
+                   :link/render-inline? true
+                   :link/tx-fn parent-child-txfn
+                   :link/managed? true}
+          :hf/remove {:link/fiddle system-fiddle/fiddle-blank-system-remove ; Future: remove this
+                      :link/formula (auto-formula link)
+                      :link/render-inline? true
+                      :link/tx-fn retract-formula
+                      :link/managed? true}
+          :hf/iframe {:link/formula (auto-formula link)}
 
           ; Don't touch the link for rels we don't understand
           nil)

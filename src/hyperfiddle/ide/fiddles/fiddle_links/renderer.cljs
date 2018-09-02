@@ -29,7 +29,7 @@
 
 (defn link-fiddle [val ctx props]
   (fragment
-    (link :hyperfiddle/new :fiddle ctx nil {:disabled (system-link? @(r/fmap :db/id (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data])))})
+    (link :hf/new :fiddle ctx nil {:disabled (system-link? @(r/fmap :db/id (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data])))})
     (let [props (assoc props :read-only (read-only? ctx))]
       [select val ctx props])))
 
@@ -49,7 +49,7 @@
       )))
 
 (let [empty-renderer (fn [val ctx props]
-                       (link :hyperfiddle/remove :link ctx "remove" {:disabled (system-link? @(r/fmap :db/id (:hypercrud.browser/data ctx)))}))]
+                       (link :hf/remove :link ctx "remove" {:disabled (system-link? @(r/fmap :db/id (:hypercrud.browser/data ctx)))}))]
   (defn renderer [val ctx {:keys [:embed-mode] :as props}]
     [table
      #_(partial form (fn [path ctx ?f & args] (field path ctx ?f :read-only (read-only? ctx))))
