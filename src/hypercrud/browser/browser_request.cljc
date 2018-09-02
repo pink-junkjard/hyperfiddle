@@ -66,12 +66,11 @@
     ; blank fiddles
     nil))
 
-(defn- filter-inline [links] (filter :link/render-inline? links))
-(defn- remove-managed [links] (remove :link/managed? links))
+(defn filter-inline [links] (filter (comp (partial = :hf/iframe) :link/rel) links))
 
 (defn requests [ctx]
   ; at this point we only care about inline links and popovers are hydrated on their on hydrate-route calls
-  (let [ctx (update ctx :hypercrud.browser/links (partial r/fmap (r/comp remove-managed filter-inline)))]
+  (let [ctx (update ctx :hypercrud.browser/links (partial r/fmap filter-inline))]
     (concat
       (->> @(:hypercrud.browser/links ctx)
            (filter (partial link/same-path-as? []))

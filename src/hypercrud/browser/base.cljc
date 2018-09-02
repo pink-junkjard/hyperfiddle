@@ -34,10 +34,8 @@
                                   ]}
                    :link/formula
                    :link/ident
-                   :link/managed?
                    :link/path
                    :link/rel
-                   :link/render-inline?
                    :link/tx-fn]}
    :fiddle/markdown
    :fiddle/pull

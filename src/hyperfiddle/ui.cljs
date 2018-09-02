@@ -282,11 +282,11 @@ User renderers should not be exposed to the reaction."
                         (merge (dissoc props :class :tooltip))
                         (dissoc :hidden))]
           (cond
-            @(r/fmap link/popover-link? link-ref)
+            @(r/fmap (comp boolean :link/tx-fn) link-ref)
             (let [props (update props :class css "hf-auto-nav")] ; should this be in popover-cmp? what is this class? – unify with semantic css
               [popover-cmp link-ref ctx visual-ctx props @(r/track prompt link-ref ?label)])
 
-            @(r/fmap :link/render-inline? link-ref)
+            @(r/fmap (r/comp (r/partial = :hf/iframe) :link/rel) link-ref)
             ; link-props swallows bad routes (shorts them to nil),
             ; all errors will always route through as (either/right nil)
             [stale/loading (stale/can-be-loading? ctx) (fmap #(router/assoc-frag % (:frag props)) @route'-ref) ; what is this frag noise?

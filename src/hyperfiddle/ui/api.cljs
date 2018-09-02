@@ -4,6 +4,7 @@
     [contrib.ct :refer [unwrap]]
     [contrib.reactive :as r]
     [hypercrud.browser.base :as base]
+    [hypercrud.browser.browser-request]
     [hypercrud.browser.context :as context]
     [hypercrud.browser.field :as field]
     [hypercrud.browser.link :as link]
@@ -56,13 +57,10 @@
     ; blank fiddles
     {}))
 
-(defn- filter-inline [links] (filter :link/render-inline? links))
-(defn- remove-managed [links] (remove :link/managed? links))
-
 (defn api-data [ctx]
   ; at this point we only care about inline links
   ; also no popovers can be opened, so remove managed
-  (let [ctx (update ctx :hypercrud.browser/links (partial r/fmap (r/comp remove-managed filter-inline)))
+  (let [ctx (update ctx :hypercrud.browser/links (partial r/fmap hypercrud.browser.browser-request/filter-inline))
         thing (->> (link/links-at (:hypercrud.browser/path ctx) (:hypercrud.browser/links ctx)) ; todo reactivity
                    (map #(recurse-from-link % ctx))
                    (apply merge))

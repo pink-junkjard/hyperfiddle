@@ -53,7 +53,7 @@
 (defn src-mode? [frag]
   (= :src (some-> frag read-edn-string)))
 
-(defn- set-managed [link] (assoc link :link/managed? true))
+(defn- set-managed [link] (assoc link :link/tx-fn "(assert false \"Never called, triggers popover view, also this is the same bit of info as dont-branch\")"))
 
 (defn renderer [val ctx props]
   (let [display-mode @(runtime/state (:peer ctx) [:display-mode])

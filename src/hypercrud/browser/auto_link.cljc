@@ -55,16 +55,10 @@
                        :link/formula (if is-root
                                        "(constantly (hyperfiddle.api/tempid-detached ctx))"
                                        "(partial hyperfiddle.api/tempid-child ctx)")
-                       :link/render-inline? true
-                       :link/tx-fn parent-child-txfn
-                       :link/managed? true}
+                       :link/tx-fn parent-child-txfn}
               :hf/remove {:link/fiddle system-fiddle/fiddle-blank-system-remove ; Future: remove this
-                          :link/formula nil                 ; explicitly don't have one
-                          :link/render-inline? true
-                          :link/tx-fn retract-formula
-                          :link/managed? true}
-              :hf/iframe {:link/render-inline? true
-                          ; this fiddle has gotta be a query, otherwise they would pull instead
+                          :link/tx-fn retract-formula}
+              :hf/iframe {; this fiddle has gotta be a query, otherwise they would pull instead
                           ; And the new-fiddle button will set the query.
                           }
               ; Don't touch the link for rels we don't understand
