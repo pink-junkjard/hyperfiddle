@@ -3,7 +3,7 @@
             [clojure.string :as string]
             [contrib.ct :refer [unwrap]]
             [contrib.data :refer [map-values]]
-            [contrib.string :refer [blank->nil memoized-safe-read-edn-string]]
+            [contrib.string :refer [blank->nil memoized-safe-read-edn-string or-str]]
             [contrib.template :as template]
             [contrib.try$ :refer [try-either]]
             [contrib.reactive :as r]
@@ -75,11 +75,10 @@
               #{:hf/remove} b
               b)
           d (condp contains? rel
-              #{:hf/edit :hf/iframe} {:link/formula (auto-formula c)}
-              #{:hf/remove :hf/new} nil
-              nil)]
-      ; This code sucks because the flow of dependencies, be careful!
-      (merge c d))))
+              #{:hf/edit :hf/iframe} (update c :link/formula or-str (auto-formula c))
+              #{:hf/remove :hf/new} c
+              c)]
+      d)))
 
 (defn merge-links [sys-links links]
   (->> (reduce (fn [grouped-links sys-link]
