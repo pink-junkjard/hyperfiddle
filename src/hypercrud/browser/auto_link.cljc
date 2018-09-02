@@ -47,32 +47,39 @@
         dbname (str (::field/source-symbol field))
         is-root (::field/source-symbol field)]
 
-    (-> (case rel
-          :hf/edit {:link/fiddle (system-fiddle/fiddle-system-edit dbname) ; manufacture pull from parent pull
-                    :link/formula (auto-formula link)}
-          :hf/new {:link/fiddle (system-fiddle/fiddle-system-edit dbname)
-                   :link/formula (if is-root
-                                   "(constantly (hyperfiddle.api/tempid-detached ctx))"
-                                   "(partial hyperfiddle.api/tempid-child ctx)")
-                   :link/render-inline? true
-                   :link/tx-fn parent-child-txfn
-                   :link/managed? true}
-          :hf/remove {:link/fiddle system-fiddle/fiddle-blank-system-remove ; Future: remove this
-                      :link/formula (auto-formula link)
-                      :link/render-inline? true
-                      :link/tx-fn retract-formula
-                      :link/managed? true}
-          :hf/iframe {:link/formula (auto-formula link)}
-
-          ; Don't touch the link for rels we don't understand
-          nil)
-
-        (->> (merge-with #(or (blank->nil %1) %2) link))    ; Add back user overrides
-
-        ; Always apply fiddle defaults (even for link rels we don't understand)
-        ; (perhaps a mistake though and should be per rel, also this is a weird place to do it)
-        (update :link/fiddle #(fiddle/data-defaults (into {} %)))
-        )))
+    ; Order is tricky here, and don't crash if we don't understand the rel
+    (let [a (case rel
+              ; We know this is an anchor, otherwise they'd have pulled instead
+              :hf/edit {:link/fiddle (system-fiddle/fiddle-system-edit dbname)}
+              :hf/new {:link/fiddle (system-fiddle/fiddle-system-edit dbname)
+                       :link/formula (if is-root
+                                       "(constantly (hyperfiddle.api/tempid-detached ctx))"
+                                       "(partial hyperfiddle.api/tempid-child ctx)")
+                       :link/render-inline? true
+                       :link/tx-fn parent-child-txfn
+                       :link/managed? true}
+              :hf/remove {:link/fiddle system-fiddle/fiddle-blank-system-remove ; Future: remove this
+                          :link/formula nil                 ; explicitly don't have one
+                          :link/render-inline? true
+                          :link/tx-fn retract-formula
+                          :link/managed? true}
+              :hf/iframe {:link/render-inline? true
+                          ; this fiddle has gotta be a query, otherwise they would pull instead
+                          ; And the new-fiddle button will set the query.
+                          }
+              ; Don't touch the link for rels we don't understand
+              nil)
+          b (merge-with #(or (blank->nil %1) %2) a link)    ; apply userland overrides
+          c (condp contains? rel
+              #{:hf/edit :hf/new :hf/iframe} (update b :link/fiddle #(fiddle/data-defaults (into {} %))) ; default form and title
+              #{:hf/remove} b
+              b)
+          d (condp contains? rel
+              #{:hf/edit :hf/iframe} {:link/formula (auto-formula c)}
+              #{:hf/remove :hf/new} nil
+              nil)]
+      ; This code sucks because the flow of dependencies, be careful!
+      (merge c d))))
 
 (defn merge-links [sys-links links]
   (->> (reduce (fn [grouped-links sys-link]
@@ -98,10 +105,7 @@
         ; Ensure that any specific patterns we need are present.
         sys-links (system-link/system-links @fiddle @(:hypercrud.browser/field ctx) @(:hypercrud.browser/schemas ctx))
         links (->> (merge-links sys-links @(r/cursor fiddle [:fiddle/links]))
-                   (map (partial auto-link ctx)))
-
-        ; Take the links we got. Shadow in the defaults based on rel.
-        links (map (partial auto-link ctx) links)]
+                   (map (partial auto-link ctx)))]
     (if (:keep-disabled-anchors? ctx)
       links
       (remove :link/disabled? links))))
