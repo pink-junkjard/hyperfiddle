@@ -6,7 +6,7 @@
             [contrib.template :as template]
             [contrib.uri :refer [->URI]]
             [hypercrud.browser.field :as field]
-            [hypercrud.browser.system-link :refer [retract-formula]]
+            [hypercrud.browser.auto-link :refer [retract-formula]]
             [hypercrud.types.Entity :refer [->Entity]]))
 
 
