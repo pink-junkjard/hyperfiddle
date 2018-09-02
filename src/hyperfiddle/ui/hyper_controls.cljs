@@ -17,10 +17,11 @@
   (when-let [label (some->> (:hypercrud.browser/field ctx)
                             (r/fmap ::field/label)
                             deref)]
-    (let [help-md (semantic-docstring ctx)]
+    (let [help-md (semantic-docstring ctx)
+          label-props (select-keys props [:class])]         ; https://github.com/hyperfiddle/hyperfiddle/issues/511
       [tooltip-thick (if help-md
                        [:div.hyperfiddle.docstring [contrib.ui/markdown help-md]])
-       [:label props label (if help-md [:sup "†"])]])))
+       [:label label-props label (if help-md [:sup "†"])]])))
 
 (defn entity-label [_ ctx & [props]]
   [:div #_(fragment)
