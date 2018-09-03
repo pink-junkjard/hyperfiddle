@@ -330,7 +330,8 @@ User renderers should not be exposed to the reaction."
       (let [ctx (assoc ctx :hyperfiddle.ui.form/state state)]
         [:div {:class (css "field" (:class props))
                :style {:border-color (border-color ctx)}}
-         [Head nil (dissoc ctx :hypercrud.browser/data) props]
+         (when (seq relative-path)                          ; hack assume the user does NOT want a head when the user is NOT focusing #512
+           [Head nil (dissoc ctx :hypercrud.browser/data) props])
          [Body @(:hypercrud.browser/data ctx) ctx props]]))))
 
 (defn table-field "Form fields are label AND value. Table fields are label OR value."
