@@ -8,14 +8,14 @@
     [taoensso.timbre :as timbre]))
 
 
-(defn hydrate-val [request ptm]
+(defn hydrate-val+ [request ptm]
   (if (contains? ptm request)
     (process-result (get ptm request) request)
     (either/left {:message "Loading" :data {:request request}})))
 
 (defn hydrate [state-atom branch request]
   (->> (r/cursor state-atom [:hyperfiddle.runtime/partitions branch :ptm])
-       (r/fmap (r/partial hydrate-val request))))
+       (r/fmap (r/partial hydrate-val+ request))))
 
 (defn db-pointer [uri ?branch-name]
   {:pre [uri (is-uri? uri)]}

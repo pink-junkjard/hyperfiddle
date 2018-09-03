@@ -1,6 +1,7 @@
 (ns hyperfiddle.actions
   (:require [cats.core :refer [mlet]]
             [cats.monad.either :as either]
+            [contrib.ct :refer [unwrap]]
             [contrib.data :refer [map-values map-keys]]
             [contrib.datomic-tx :as tx]
             [hypercrud.browser.router :as router]
@@ -109,12 +110,11 @@
 
 (defn update-to-tempids [get-state branch uri tx]
   (let [{:keys [tempid-lookups ptm]} (get-in (get-state) [::runtime/partitions branch])
-        dbval (->DbVal uri branch)
-        schema (let [schema-request (schema/schema-request dbval)]
-                 (-> (peer/hydrate-val schema-request ptm)
-                     (either/branch (fn [e] (throw e)) identity)))
-        id->tempid (get tempid-lookups uri)]
-    (map (partial tx/stmt-id->tempid id->tempid schema) tx)))
+        +schema (peer/hydrate-val+ (schema/schema-request (->DbVal uri branch)) ptm)
+        ?schema (unwrap (constantly nil) +schema)]
+    (if-not ?schema                                         ; This means we never hydrated the branch, which means no popover body (otherwise how did they click stage?)
+      tx                                                    ; https://github.com/hyperfiddle/hyperfiddle/issues/522
+      (map (partial tx/stmt-id->tempid (get tempid-lookups uri) ?schema) tx))))
 
 (defn transact! [rt invert-route tx-groups dispatch! get-state & {:keys [route post-tx]}]
   (dispatch! [:transact!-start])

@@ -108,8 +108,7 @@
                                             hash abs-normalized - str)]
                        (branch/encode-branch-child (:branch ctx) child-id-str))
         popover-id child-branch                             ; just use child-branch as popover-id
-        dont-branch (or (:dont-branch? props) (not (:route props))) ; Hacks for buttons that don't have a fiddle, like :hf/remove
-        child-branch (when-not dont-branch child-branch)
+        child-branch (when-not (:dont-branch? props) child-branch)
         button-effect! (if (:route props) open! (r/partial stage! link-ref))
         btn-props (-> props
                       (dissoc :route :tooltip :dont-branch?)
