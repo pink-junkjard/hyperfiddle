@@ -107,6 +107,17 @@
 (defn orp "or with custom predicate" [f? & args]            ; todo macro
   (first (remove f? args)))
 
+; https://crossclj.info/ns/net.mikera/core.matrix/0.62.0/clojure.core.matrix.utils.html#_xor
+(defn xor "Returns the logical xor of a set of values, considered as booleans."
+  ([] false)
+  ([x] (boolean x))
+  ([x y] (if x (not y) (boolean y)))
+  ([x y & more]
+   (loop [p (xor x y) ss (seq more)]
+     (if ss
+       (recur (if (first ss) (not p) p) (next ss))
+       p))))
+
 (defmacro cond-let [& clauses]
   (when clauses
     (list 'if-let (first clauses)
