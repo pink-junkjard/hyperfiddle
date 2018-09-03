@@ -257,18 +257,17 @@ User renderers should not be exposed to the reaction."
                 validated-route' (routing/validated-route' @(r/fmap :link/fiddle link-ref) route ctx)
                 errors (->> [unvalidated-route' validated-route']
                             (filter either/left?) (map cats/extract) (into #{}))]
-            (merge
-              ; doesn't handle tx-fn - meant for the self-link. Weird and prob bad.
-              {:route (unwrap #(timbre/error %) unvalidated-route')
-               :tooltip (if-not (empty? errors)
-                          [:warning (pprint-str errors)]
-                          (if (:hyperfiddle.ui/debug-tooltips ctx)
-                            [nil (pr-str args)]
-                            (:tooltip props)))
-               :class (->> [(if-not (empty? errors) "invalid")]
-                           (remove nil?)
-                           (interpose " ")
-                           (apply str))})))]
+            ; doesn't handle tx-fn - meant for the self-link. Weird and prob bad.
+            {:route (unwrap #(timbre/error %) unvalidated-route')
+             :tooltip (if-not (empty? errors)
+                        [:warning (pprint-str errors)]
+                        (if (:hyperfiddle.ui/debug-tooltips ctx)
+                          [nil (pr-str args)]
+                          (:tooltip props)))
+             :class (->> [(if-not (empty? errors) "invalid")]
+                         (remove nil?)
+                         (interpose " ")
+                         (apply str))}))]
   (defn ui-from-link [link-ref ctx & [props ?label]]
     {:pre [link-ref]}
     (let [visual-ctx ctx
