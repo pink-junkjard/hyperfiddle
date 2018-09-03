@@ -126,8 +126,7 @@
       (if @(runtime/state (:peer ctx) [::runtime/user-id])
         (let [{:keys [:hypercrud.browser/data]} @(hyperfiddle.data/browse+ ctx :hf/iframe :account)]
           (fake-managed-anchor :hf/iframe :account ctx @(r/fmap :user/name data)
-                               {:hidden (not @(hyperfiddle.runtime/state (:peer ctx) [:hyperfiddle.runtime/user-id]))
-                                :tooltip [nil @(r/fmap :user/email data)]}))
+                               {:tooltip [nil @(r/fmap :user/email data)]}))
         [:a {:href (foundation/stateless-login-url ctx)} "login"])]]))
 
 (defn ^:export qe-picker-control [val ctx props]

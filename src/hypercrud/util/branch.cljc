@@ -1,5 +1,6 @@
 (ns hypercrud.util.branch
   (:require [clojure.string :as str]
+            [contrib.string :refer [blank->nil]]
             [hypercrud.types.DbVal :refer [#?(:cljs DbVal)]]
             [hypercrud.types.EntityRequest :refer [->EntityRequest #?(:cljs EntityRequest)]]
             [hypercrud.types.QueryRequest :refer [->QueryRequest #?(:cljs QueryRequest)]])
@@ -9,11 +10,8 @@
               (hypercrud.types.QueryRequest QueryRequest))))
 
 
-(defn decode-parent-branch [branch]
-  (let [parent (second (re-find #"(.*)`.*" branch))]
-    (if (str/blank? parent)
-      nil
-      parent)))
+(defn decode-parent-branch "nil is a valid branch" [branch]
+  (some->> branch (re-find #"(.*)`.*") second blank->nil))
 
 (defn encode-branch-child [parent-branch child-id-str]
   (if (str/blank? child-id-str)

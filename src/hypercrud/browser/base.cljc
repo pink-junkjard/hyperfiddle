@@ -138,7 +138,7 @@
 
 (defn from-link [link ctx with-route]                       ; ctx is for formula and routing (tempids and domain)
   (let [ctx (context/refocus ctx (link/read-path (:link/path link)))] ; symmetry with UI - popovers, txfn etc
-    (mlet [route (routing/build-route' link ctx)]
+    (mlet [route (routing/build-route' ctx link)]
       (with-route route ctx))))
 
 (defn data-from-link [link ctx]                             ; todo rename

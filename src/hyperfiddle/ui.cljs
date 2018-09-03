@@ -248,11 +248,10 @@ User renderers should not be exposed to the reaction."
                                            (some-> @(r/fmap :link/class link-ref) (->> (interpose " ") (apply str)) blank->nil)
                                            (some-> @(r/fmap :link/rel link-ref) name)
                                            "_")))
-        (p-build-route' [ctx link] (routing/build-route' link ctx))
-        (build-link-props [route'-ref link-ref ctx props]   ; todo this function needs untangling; iframe ignores most of this
+        (build-link-props [r+route link-ref ctx props]   ; todo this function needs untangling; iframe ignores most of this
           ; this is a fine place to eval, put error message in the tooltip prop
           ; each prop might have special rules about his default, for example :visible is default true, does this get handled here?
-          (let [unvalidated-route' @route'-ref
+          (let [unvalidated-route' @r+route
                 [_ args :as route] (unwrap #(timbre/error %) unvalidated-route')
                 validated-route' (routing/validated-route' @(r/fmap :link/fiddle link-ref) route ctx)
                 errors (->> [unvalidated-route' validated-route']
@@ -273,8 +272,8 @@ User renderers should not be exposed to the reaction."
     (let [visual-ctx ctx
           ctx (context/refocus ctx (link/read-path @(r/fmap :link/path link-ref)))
           error-comp (ui-error/error-comp ctx)
-          route'-ref (r/fmap (r/partial p-build-route' ctx) link-ref) ; need to re-focus from the top
-          link-props @(r/track build-link-props route'-ref link-ref ctx props)] ; handles :class and :tooltip props
+          r+route (r/fmap (r/partial routing/build-route' ctx) link-ref) ; need to re-focus from the top
+          link-props @(r/track build-link-props r+route link-ref ctx props)] ; handles :class and :tooltip props
       (when-not (:hidden link-props)
         (let [props (-> link-props
                         (update :class css (:class props))
@@ -288,7 +287,7 @@ User renderers should not be exposed to the reaction."
             @(r/fmap (r/comp (r/partial = :hf/iframe) :link/rel) link-ref)
             ; link-props swallows bad routes (shorts them to nil),
             ; all errors will always route through as (either/right nil)
-            [stale/loading (stale/can-be-loading? ctx) (fmap #(router/assoc-frag % (:frag props)) @route'-ref) ; what is this frag noise?
+            [stale/loading (stale/can-be-loading? ctx) (fmap #(router/assoc-frag % (:frag props)) @r+route) ; what is this frag noise?
              (fn [e] [error-comp e])
              (fn [route]
                (let [iframe (or (::custom-iframe props) iframe)]

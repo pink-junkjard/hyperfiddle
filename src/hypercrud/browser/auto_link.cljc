@@ -56,10 +56,9 @@
                                        "(constantly (hyperfiddle.api/tempid-detached ctx))"
                                        "(partial hyperfiddle.api/tempid-child ctx)")
                        :link/tx-fn parent-child-txfn}
-              :hf/remove {:link/fiddle system-fiddle/fiddle-blank-system-remove ; Future: remove this
-                          :link/tx-fn retract-formula}
+              :hf/remove {:link/tx-fn retract-formula}
               :hf/iframe {; this fiddle has gotta be a query, otherwise they would pull instead
-                          ; And the new-fiddle button will set the query.
+                          ; And the new-fiddle button will set the query. Easier done here though!
                           }
               ; Don't touch the link for rels we don't understand
               nil)

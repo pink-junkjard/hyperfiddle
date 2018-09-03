@@ -17,6 +17,7 @@
 
 ; these need to be thick/hydrated params bc we are manufacturing a pulled tree here.
 
+; TODO: manufacture pull from parent pull
 (defn fiddle-system-edit [dbname]
   {:fiddle/ident (keyword "hyperfiddle.system" (str "edit-" dbname))
    :fiddle/type :entity
@@ -37,7 +38,6 @@
     (let [name' (name ident)]
       (case (namespace ident)
         "hyperfiddle.system" (cond
-                               (= name' "remove") fiddle-blank-system-remove
                                (= name' "not-found") errors/not-found
                                (= name' "unauthorized") errors/unauthorized
                                (= name' "live") hf-live

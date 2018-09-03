@@ -74,7 +74,7 @@
         :else (vec (xorxs porps))))
 
 (let [memoized-eval-string (memoize eval/safe-eval-string)]
-  (defn ^:export build-route' [link ctx]
+  (defn ^:export build-route' [ctx link]
     (mlet [fiddle-id (if-let [page (:link/fiddle link)]
                        (either/right (:fiddle/ident page))
                        (either/left {:message "link has no fiddle" :data {:link link}}))

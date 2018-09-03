@@ -108,21 +108,25 @@
                                             hash abs-normalized - str)]
                        (branch/encode-branch-child (:branch ctx) child-id-str))
         popover-id child-branch                             ; just use child-branch as popover-id
-        child-branch (when-not (:dont-branch? props) child-branch)]
-    [wrap-with-tooltip popover-id ctx props
-     [with-keychord
-      "esc" #(do (js/console.warn "esc") (if child-branch
-                                           (cancel! popover-id child-branch ctx)
-                                           (close! popover-id ctx)))
-      [re-com/popover-anchor-wrapper
-       :showing? (show-popover? popover-id ctx)
-       :position :below-center
-       :anchor (let [btn-props (-> props
-                                   (dissoc :route :tooltip :dont-branch?)
-                                   (assoc :on-click (r/partial open! (:route props) popover-id child-branch ctx))
-                                   ; use twbs btn coloring but not "btn" itself
-                                   (update :class #(css % "btn-default")))]
-                 [:button btn-props [:span (str label "▾")]])
-       :popover [re-com/popover-content-wrapper
-                 :no-clip? true
-                 :body [managed-popover-body (:route props) popover-id child-branch link-ref ctx]]]]]))
+        dont-branch (or (:dont-branch? props) (not (:route props))) ; Hacks for buttons that don't have a fiddle, like :hf/remove
+        child-branch (when-not dont-branch child-branch)
+        button-effect! (if (:route props) open! (r/partial stage! link-ref))
+        btn-props (-> props
+                      (dissoc :route :tooltip :dont-branch?)
+                      (assoc :on-click (r/partial button-effect! (:route props) popover-id child-branch ctx))
+                      ; use twbs btn coloring but not "btn" itself
+                      (update :class #(css % "btn-default")))]
+    (if-not (:route props)
+      [:button btn-props [:span (str label "!")]]
+      [wrap-with-tooltip popover-id ctx props
+       [with-keychord
+        "esc" #(do (js/console.warn "esc") (if child-branch
+                                             (cancel! popover-id child-branch ctx)
+                                             (close! popover-id ctx)))
+        [re-com/popover-anchor-wrapper
+         :showing? (show-popover? popover-id ctx)
+         :position :below-center
+         :anchor [:button btn-props [:span (str label "▾")]]
+         :popover [re-com/popover-content-wrapper
+                   :no-clip? true
+                   :body [managed-popover-body (:route props) popover-id child-branch link-ref ctx]]]]])))
