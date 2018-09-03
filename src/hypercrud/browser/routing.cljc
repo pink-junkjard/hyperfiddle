@@ -1,11 +1,11 @@
 (ns hypercrud.browser.routing
   (:require
     [cats.core :as cats :refer [mlet]]
-    [cats.monad.either :as either]
+    [cats.monad.either :as either :refer [left right]]
     [clojure.set :as set]
     [clojure.walk :as walk]
     [contrib.ct :refer [unwrap]]
-    [contrib.data :refer [xorxs]]
+    [contrib.data :refer [xorxs xor]]
     [contrib.eval :as eval]
     [contrib.reactive :as r]
     [contrib.string :refer [memoized-safe-read-edn-string]]
@@ -74,33 +74,36 @@
         :else (vec (xorxs porps))))
 
 (let [memoized-eval-string (memoize eval/safe-eval-string)]
-  (defn ^:export build-route' [ctx link]
-    (mlet [fiddle-id (if-let [page (:link/fiddle link)]
-                       (either/right (:fiddle/ident page))
-                       (either/left {:message "link has no fiddle" :data {:link link}}))
-           f-wrap (let [formula-str (:link/formula link)]
-                     (if (and (string? formula-str) (not (string/blank? formula-str)))
-                       (memoized-eval-string (str "(fn [ctx] \n" formula-str "\n)"))
-                       (either/right (constantly (constantly nil)))))
-           f (try-either (f-wrap ctx))
-           args (try-either @(r/fmap f (or (:hypercrud.browser/data ctx) ; Don't NPE in :head https://github.com/hyperfiddle/hyperfiddle/issues/489
-                                           (r/track identity nil))))
-           args (try-either
-                  (->> {:remove-this-wrapper args} ; walk trees wants a map
-                       ; shadow-links can be hdyrated here, and we need to talk them.
-                       ; Technical debt. Once shadow-links are identities, this is just a mapv.
-                       (walk/postwalk (fn [v]
-                                        (if (instance? Entity v)
-                                          (let [dbname (some-> v .-uri (domain/uri->dbname (:hypercrud.browser/domain ctx)))]
-                                            (->ThinEntity dbname (or (:db/ident v) (:db/id v))))
-                                          v)))
-                       (into {})
-                       :remove-this-wrapper
-                       normalize-args))]
-      (cats/return
-        (id->tempid (router/canonicalize fiddle-id args) ctx)))))
+  (defn ^:export build-route' [ctx {:keys [:link/fiddle :link/tx-fn] :as link}]
+    (if (and (not fiddle) tx-fn)
+      (right nil)                                           ; :hf/remove doesn't have one by default, :hf/new does, both can be customized
+      (mlet [fiddle-id (if fiddle
+                         (right (:fiddle/ident fiddle))
+                         (left {:message ":link/fiddle required" :data {:link link}}))
+             f-wrap (let [formula-str (:link/formula link)]
+                      (if (and (string? formula-str) (not (string/blank? formula-str)))
+                        (memoized-eval-string (str "(fn [ctx] \n" formula-str "\n)"))
+                        (either/right (constantly (constantly nil)))))
+             f (try-either (f-wrap ctx))
+             args (try-either @(r/fmap f (or (:hypercrud.browser/data ctx) ; Don't NPE in :head https://github.com/hyperfiddle/hyperfiddle/issues/489
+                                             (r/track identity nil))))
+             args (try-either
+                    (->> {:remove-this-wrapper args}        ; walk trees wants a map
+                         ; shadow-links can be hdyrated here, and we need to talk them.
+                         ; Technical debt. Once shadow-links are identities, this is just a mapv.
+                         (walk/postwalk (fn [v]
+                                          (if (instance? Entity v)
+                                            (let [dbname (some-> v .-uri (domain/uri->dbname (:hypercrud.browser/domain ctx)))]
+                                              (->ThinEntity dbname (or (:db/ident v) (:db/id v))))
+                                            v)))
+                         (into {})
+                         :remove-this-wrapper
+                         normalize-args))]
+        (cats/return
+          (id->tempid (router/canonicalize fiddle-id args) ctx))))))
 
-(defn validated-route' [fiddle route ctx]
+(defn validated-route+ [fiddle route ctx]
+  {:pre [route]}
   ; We specifically hydrate this deep just so we can validate anchors like this.
   (let [[_ [$1 :as params]] route]
     (case (:fiddle/type fiddle)
