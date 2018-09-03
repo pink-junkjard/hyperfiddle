@@ -37,7 +37,7 @@
                          (interpose " ") (apply str))
         help-md (blank->nil
                   (str (if typedoc (str "`" (pr-str path) " " typedoc "`\n\n")) ; markdown needs double line-break
-                       "`" (pprint-str field) "`\n\n"       ; debug
+                       ;"`" (pprint-str field) "`\n\n"       ; debug
                        dbdoc
                        ))]
     help-md))
