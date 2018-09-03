@@ -19,7 +19,7 @@
     [taoensso.timbre :as timbre]))
 
 
-(let [safe-eval-string #(try-promise (eval/eval-string %))
+(let [safe-eval-string #(try-promise (eval/eval-string! %))
       memoized-eval-string (memoize safe-eval-string)]
   (defn stage! [link-ref route popover-id child-branch ctx]
     (let [{:keys [:link/tx-fn] :as link} @link-ref]

@@ -13,9 +13,8 @@
 
 #?(:cljs (def ^:private -cljs-empty-state-val @(cljs/empty-state)))
 
-(defn eval-string [code-str]
-  {:pre [(string? code-str)
-         (not (string/blank? code-str))]}
+(defn eval-string! [code-str]
+  #_{:pre [(string? code-str) (not (string/blank? code-str))]}
   ;; Hack - we don't understand why cljs compiler doesn't handle top level forms naturally
   ;; but wrapping in identity fixes the problem
   (let [code-str' (str "(identity\n" code-str "\n)")]
@@ -35,9 +34,9 @@
                    :else value))))))
 
 (defn safe-eval-string [& args]
-  (try-either (apply eval-string args)))
+  (try-either (apply eval-string! args)))
 
-(let [safe-eval-string #(try-either (when % (eval-string %)))
+(let [safe-eval-string #(try-either (when % (eval-string! %)))
       memoized-eval-string (memoize safe-eval-string)]
   (defn ensure-fn [s]
     (if-not (string? s)

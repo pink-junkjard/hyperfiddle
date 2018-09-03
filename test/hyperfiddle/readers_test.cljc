@@ -28,8 +28,8 @@
 
 (defn test-eval [control strd]
   (is (= control
-         (eval/eval-string (pr-str control))
-         (eval/eval-string strd))))
+         (eval/eval-string! (pr-str control))
+         (eval/eval-string! strd))))
 
 (defn test-transit [control transit-strd]
   (is (= control
