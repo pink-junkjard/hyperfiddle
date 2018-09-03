@@ -85,7 +85,7 @@
 (defn request-for-fiddle [fiddle ctx]                       ; depends on route
   (case @(r/cursor fiddle [:fiddle/type])
     :query (mlet [q (memoized-safe-read-edn-string @(r/cursor fiddle [:fiddle/query]))
-                  args (q-util/validate-query-params q (get-in ctx [:route 1]) ctx)]
+                  args (q-util/validate-query-params+ q (get-in ctx [:route 1]) ctx)]
              (return (->QueryRequest q args)))
 
     :entity

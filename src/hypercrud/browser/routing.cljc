@@ -5,7 +5,7 @@
     [clojure.set :as set]
     [clojure.walk :as walk]
     [contrib.ct :refer [unwrap]]
-    [contrib.data :refer [xorxs xor]]
+    [contrib.data :refer [xorxs]]
     [contrib.eval :as eval]
     [contrib.reactive :as r]
     [contrib.string :refer [memoized-safe-read-edn-string]]
@@ -73,6 +73,26 @@
   (cond (instance? ThinEntity porps) [porps]                ; entity is also a map so do this first
         :else (vec (xorxs porps))))
 
+(defn validated-route+ [fiddle route ctx]
+  {:pre [route]}
+  ; We specifically hydrate this deep just so we can validate anchors like this.
+  (let [[_ [$1 :as params]] route]
+    (case (:fiddle/type fiddle)
+      :query (let [q (unwrap                                ; todo whats the point of this monad?
+                       #(timbre/warn %)
+                       (mlet [q (memoized-safe-read-edn-string (:fiddle/query fiddle))]
+                         (if (vector? q)
+                           (cats/return q)
+                           (either/left {:message (str "Invalid query '" (pr-str q) "', only vectors supported")}))))]
+               (mlet [q-params (q-util/validate-query-params+ q params ctx)]
+                 ; Ignore the params, just care that they validated.
+                 (right route)))
+      :entity (if (not= nil $1)                             ; todo check conn
+                (right route)
+                (left {:message "malformed entity param" :data {:params params}}))
+      ; nil means :blank
+      (either/right route))))
+
 (let [memoized-eval-string (memoize eval/safe-eval-string)]
   (defn ^:export build-route' [ctx {:keys [:link/fiddle :link/tx-fn] :as link}]
     (if (and (not fiddle) tx-fn)
@@ -98,28 +118,9 @@
                                             v)))
                          (into {})
                          :remove-this-wrapper
-                         normalize-args))]
-        (cats/return
-          (id->tempid (router/canonicalize fiddle-id args) ctx))))))
-
-(defn validated-route+ [fiddle route ctx]
-  {:pre [route]}
-  ; We specifically hydrate this deep just so we can validate anchors like this.
-  (let [[_ [$1 :as params]] route]
-    (case (:fiddle/type fiddle)
-      :query (let [q (unwrap                                ; todo whats the point of this monad?
-                       #(timbre/warn %)
-                       (mlet [q (memoized-safe-read-edn-string (:fiddle/query fiddle))]
-                         (if (vector? q)
-                           (cats/return q)
-                           (either/left {:message (str "Invalid query '" (pr-str q) "', only vectors supported")}))))]
-               (q-util/validate-query-params q params ctx))
-      :entity (if (not= nil $1)
-                ; todo check conn
-                (either/right route)
-                (either/left {:message "malformed entity param" :data {:params params}}))
-      ; nil means :blank
-      (either/right route))))
+                         normalize-args))
+             :let [route (id->tempid (router/canonicalize fiddle-id args) ctx)]]
+        (validated-route+ fiddle route ctx)))))
 
 (def encode router/encode)
 (def decode router/decode)

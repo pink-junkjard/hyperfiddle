@@ -26,7 +26,7 @@
     (instance? ThinEntity param) (:db/id param)
     :else param))
 
-(defn validate-query-params [q args ctx]
+(defn validate-query-params+ [q args ctx]
   (mlet [query-holes (try-either (parse-holes q)) #_"normalizes for :in $"
          :let [db-lookup (->> (get-in ctx [:hypercrud.browser/domain :domain/databases])
                               (map (juxt :domain.database/name #(hc/db (:peer ctx) (get-in % [:domain.database/record :database/uri]) (:branch ctx))))

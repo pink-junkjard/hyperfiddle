@@ -248,16 +248,12 @@ User renderers should not be exposed to the reaction."
                                            (some-> @(r/fmap :link/class link-ref) (->> (interpose " ") (apply str)) blank->nil)
                                            (some-> @(r/fmap :link/rel link-ref) name)
                                            "_")))
-        (build-link-props [r+route rlink ctx props]         ; todo this function needs untangling; iframe ignores most of this
+        (build-link-props [r+route ctx props]               ; todo this function needs untangling; iframe ignores most of this
           ; this is a fine place to eval, put error message in the tooltip prop
           ; each prop might have special rules about his default, for example :visible is default true, does this get handled here?
-          (let [+unvalidated-route @r+route
-                [_ args :as ?route] (unwrap (constantly nil) +unvalidated-route) ; Error reporting is explicitly later
-                +validated-route (if ?route
-                                   (routing/validated-route+ @(r/fmap :link/fiddle rlink) ?route ctx) ; For iframe and anchor, its required.
-                                   (either/right nil))         ; This case is already validated in build-route
-                errors (->> [+unvalidated-route +validated-route]
-                            (filter either/left?) (map cats/extract) (into #{}))]
+          (let [+route @r+route
+                [_ args :as ?route] (unwrap (constantly nil) +route)
+                errors (->> [+route] (filter either/left?) (map cats/extract) (into #{}))]
             ; doesn't handle tx-fn - meant for the self-link. Weird and prob bad.
             {:route ?route                                  ; nil means no popover body
              :tooltip (if-not (empty? errors)
@@ -275,7 +271,7 @@ User renderers should not be exposed to the reaction."
           ctx (context/refocus ctx (link/read-path @(r/fmap :link/path link-ref)))
           error-comp (ui-error/error-comp ctx)
           r+route (r/fmap (r/partial routing/build-route' ctx) link-ref) ; need to re-focus from the top
-          link-props @(r/track build-link-props r+route link-ref ctx props)] ; handles :class and :tooltip props
+          link-props @(r/track build-link-props r+route ctx props)] ; handles :class and :tooltip props
       (when-not (:hidden link-props)
         (let [props (-> link-props
                         (update :class css (:class props))
