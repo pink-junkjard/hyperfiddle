@@ -115,7 +115,7 @@
                       (dissoc :route :tooltip :dont-branch?)
                       (assoc :on-click (r/partial button-effect! (:route props) popover-id child-branch ctx))
                       ; use twbs btn coloring but not "btn" itself
-                      (update :class #(css % "btn-default")))]
+                      (update :class #(css % (if (:route props) "btn-default" "btn-warning"))))]
     (if-not (:route props)
       [:button btn-props [:span (str label "!")]]
       [wrap-with-tooltip popover-id ctx props
