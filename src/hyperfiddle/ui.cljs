@@ -81,7 +81,6 @@
            (data/select-all ctx :hf/edit)
            (data/select-all ctx :hf/remove))
          (filter (comp (partial = (:hypercrud.browser/path ctx)) link/read-path :link/path))
-         ; remove render-inline ?
          (r/track identity)
          (r/unsequence :db/id)
          (map (fn [[rv k]]
