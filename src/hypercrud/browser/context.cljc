@@ -103,7 +103,7 @@
               (-> (set-parent-data ctx)                     ; body
                   (assoc :hypercrud.browser/data
                          (let [f (r/fmap ::field/get-value field)]
-                           (assert @f (str "focusing on a non-pulled attribute: " (pr-str (:hypercrud.browser/path ctx)) "."))
+                           #_(assert @f (str "focusing on a non-pulled attribute: " (pr-str (:hypercrud.browser/path ctx)) "."))
                            (r/fapply f (:hypercrud.browser/data ctx))))))))]
   (defn focus "Throws if you focus a higher dimension" [ctx relative-path]
     (reduce focus-segment ctx relative-path)))
