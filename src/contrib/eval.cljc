@@ -4,8 +4,9 @@
                [cljs.js :as cljs]
                [cljs.tagged-literals :as tags]])
     [clojure.string :as string]
+    [cats.monad.either :as either :refer [left right]]
+    [contrib.string :refer [blank->nil]]
     [contrib.try$ :refer [try-either]]
-    [cats.monad.either :as either]
     ; This is contrib code, shouldn't be hyperfiddle deps
     [hyperfiddle.hc_data_readers :refer [hc-data-readers]]
     [hyperfiddle.readers :as hc-readers]))
@@ -14,7 +15,7 @@
 #?(:cljs (def ^:private -cljs-empty-state-val @(cljs/empty-state)))
 
 (defn eval-string! [code-str]
-  #_{:pre [(string? code-str) (not (string/blank? code-str))]}
+  {:pre [(string? code-str) (not (string/blank? code-str))]}
   ;; Hack - we don't understand why cljs compiler doesn't handle top level forms naturally
   ;; but wrapping in identity fixes the problem
   (let [code-str' (str "(identity\n" code-str "\n)")]
@@ -33,8 +34,10 @@
                    error (throw (ex-info "cljs eval failed" {:cljs-input code-str :cljs-result eval-result}))
                    :else value))))))
 
-(defn safe-eval-string [& args]
-  (try-either (apply eval-string! args)))
+(defn safe-eval-string [code-str]
+  (if (blank->nil code-str)
+    (try-either (eval-string! code-str))
+    (left nil)))
 
 (let [safe-eval-string #(try-either (when % (eval-string! %)))
       memoized-eval-string (memoize safe-eval-string)]

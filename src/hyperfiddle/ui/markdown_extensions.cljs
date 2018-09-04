@@ -78,16 +78,16 @@
                        (unwrap #(timbre/warn %))))
 
        "f" (fn [content argument props ctx]
-             (let [f (unwrap #(timbre/warn %) (memoized-safe-eval content))
-                   val (unwrap #(timbre/warn %) (memoized-safe-read-edn-string argument))]
+             (let [f (some->> content memoized-safe-eval (unwrap #(timbre/warn %)))
+                   val (some->> argument memoized-safe-eval (unwrap #(timbre/warn %)))]
                (when f [f val props ctx])))
 
        "browse" (fn [content argument props ctx]
-                  (let [[_ srel spath] (re-find #"([^ ]*) ?(.*)" argument)
-                        rel (unwrap #(timbre/warn %) (memoized-safe-read-edn-string srel))
-                        class (unwrap #(timbre/warn %) (memoized-safe-read-edn-string spath))
-                        f? (unwrap #(timbre/warn %) (memoized-safe-eval content))]
-                    (hyperfiddle.ui/browse rel class ctx f? props)))
+                  (let [[_ srel sclass] (re-find #"([^ ]*) ?(.*)" argument)
+                        rel (some->> srel memoized-safe-eval (unwrap #(timbre/warn %)))
+                        class (some->> sclass memoized-safe-eval (unwrap #(timbre/warn %)))
+                        ?f (some->> content memoized-safe-eval (unwrap #(timbre/warn %)))]
+                    (hyperfiddle.ui/browse rel class ctx ?f props)))
 
        "live" (fn [content argument props ctx]
                 (let [[_ srel spath] (re-find #"([^ ]*) ?(.*)" argument)]
@@ -102,25 +102,25 @@
 
        "link" (fn [content argument props ctx]
                 (let [[_ rel-s class-s] (re-find #"([^ ]*) ?(.*)" argument)
-                      rel (unwrap #(timbre/warn %) (memoized-safe-read-edn-string rel-s))
-                      class (unwrap #(timbre/warn %) (memoized-safe-read-edn-string class-s))
+                      rel (some->> rel-s memoized-safe-eval (unwrap #(timbre/warn %)))
+                      ?class (some->> class-s memoized-safe-eval (unwrap #(timbre/warn %)))
                       ; https://github.com/medfreeman/remark-generic-extensions/issues/45
                       label (or-str content (name rel))]
-                  (hyperfiddle.ui/link rel class ctx label props)))
+                  (hyperfiddle.ui/link rel ?class ctx label props)))
 
        "result" (fn [content argument props ctx]
                   (let [ctx (assoc ctx ::unp true)]
-                    (if-let [f (unwrap #(timbre/warn %) (memoized-safe-eval content))]
+                    (if-let [f (some->> content memoized-safe-eval (unwrap #(timbre/warn %)))]
                       [f ctx]
                       (hyperfiddle.ui/result @(:hypercrud.browser/data ctx) ctx (update props :class css "unp")))))
        "value" (fn [content argument props ctx]
                  (let [path (unwrap #(timbre/warn %) (memoized-safe-read-edn-string (str "[" argument "]")))
-                       ?f (some->> (unwrap #(timbre/warn %) (memoized-safe-eval content)))]
+                       ?f (some->> content memoized-safe-eval (unwrap #(timbre/warn %)))]
                    (hyperfiddle.ui/value path ctx ?f props)))
 
        "field" (fn [content argument props ctx]
                  (let [path (unwrap #(timbre/warn %) (memoized-safe-read-edn-string (str "[" argument "]")))
-                       ?f (some->> (unwrap #(timbre/warn %) (memoized-safe-eval content)))]
+                       ?f (some->> content memoized-safe-eval (unwrap #(timbre/warn %)))]
                    (hyperfiddle.ui/field path ctx ?f (update props :class css "unp"))))
 
        "table" (letfn [(fields [content props ctx]
