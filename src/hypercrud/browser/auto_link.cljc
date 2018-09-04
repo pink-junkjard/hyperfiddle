@@ -73,24 +73,6 @@
               c)]
       d)))
 
-(defn merge-links [sys-links links]
-  (->> (reduce (fn [grouped-links sys-link]
-                 (update-in grouped-links
-                            [(:link/rel sys-link) (blank->nil (:link/path sys-link))]
-                            (fn [maybe-links]
-                              (if maybe-links
-                                (map (partial merge sys-link) maybe-links)
-                                [sys-link]))))
-               (->> links
-                    (map #(into {} %))
-                    (group-by #(or (:link/rel %) (:db/id %)))
-                    (map-values #(group-by (comp blank->nil :link/path) %)))
-               sys-links)
-       vals
-       (map vals)
-       flatten
-       doall))
-
 ; todo tighter reactivity
 (defn auto-links [ctx]
   (let [links (map (partial auto-link ctx) @(r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/links]))]
