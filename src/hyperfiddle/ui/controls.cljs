@@ -53,11 +53,12 @@
        [:option (assoc option-props :key :nil :value "") "--"]])))
 
 (defn ^:export ref [val ctx & [props]]
-  (if (:options props)
-    [select val ctx props]
-    (let [props (-> (entity-props val #_(or (:db/ident val) (:db/id val)) props ctx)
-                    readonly->disabled)]
-      [optimistic-updates props debounced input/edn])))
+  (cond
+    (:options props) [select val ctx props]
+    :else (let [props (-> (entity-props (or (:db/ident val) (:db/id val)) props ctx)
+                          (assoc :read-only true)
+                          readonly->disabled)]
+            [optimistic-updates props debounced input/edn])))
 
 (defn ^:export dbid [val ctx & [props]]
   (let [props (-> (entity-props (:db/id val) props ctx)

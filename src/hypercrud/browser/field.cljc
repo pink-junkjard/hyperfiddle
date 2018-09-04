@@ -55,7 +55,7 @@
        ::source-symbol source-symbol})))
 
 (defn entity-pull? [pull-pattern]
-  (boolean (some #{'* :db/id} pull-pattern)))
+  (boolean (some #{'* :db/id :db/ident} pull-pattern)))
 
 (defn infer-attrs [data get-values]
   (let [f (reduce (fn [f get-value]

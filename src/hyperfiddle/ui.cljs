@@ -111,16 +111,25 @@
       [_ :one] controls/edn
       [_ :many] controls/edn-many)))
 
+(defn children-identity-only? [field]
+  (->> (::field/children field)
+       (remove (comp (partial = :db/ident) ::field/path-segment))
+       empty?))
+
 (defn ^:export hyper-control [val ctx & [props]]
   {:post [%]}
   (or (attr-renderer-control val ctx props)
-      (let [has-children (not @(r/fmap (r/comp nil? ::field/children) (:hypercrud.browser/field ctx)))]
-        (if (and has-children (not (:options props)))       ; Duplicate options test, the other is in controls/ref, due to circular dependency h.ui
-          (let [ctx (dissoc ctx ::layout)]
-            (fragment
-              [pull field val ctx props]
-              [field [] ctx entity-links-iframe props]))
-          [(control val ctx props) val ctx props]))))
+      (let [-field @(:hypercrud.browser/field ctx)
+            segment (last (:hypercrud.browser/path ctx))]
+        (cond                                               ; Duplicate options test to avoid circular dependency in controls/ref
+          (:options props) [(control val ctx props) val ctx props]
+          (= segment :db/ident) [(control val ctx props) val ctx (assoc props :read-only true)] ; Never alter idents from userland.
+          (children-identity-only? -field) [(control val ctx props) val ctx props]
+          (seq (::field/children -field)) (let [ctx (dissoc ctx ::layout)]
+                                            (fragment
+                                              [pull field val ctx props]
+                                              [field [] ctx entity-links-iframe props]))
+          :else [(control val ctx props) val ctx props]))))
 
 (defn hyper-label [_ ctx & [props]]
   (let [level (-> ctx :hypercrud.browser/field deref ::field/level)
