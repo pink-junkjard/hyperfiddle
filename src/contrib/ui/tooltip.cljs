@@ -69,9 +69,8 @@
     anchor
     (r/partial tooltip-thick* (r/atom false))))
 
-(defn tooltip-props [props]
-  (let [tooltip-config (:tooltip props)
-        [status label] (if (string? tooltip-config)
+(defn tooltip-props [tooltip-config]
+  (let [[status label] (if (string? tooltip-config)
                          [:info tooltip-config]
                          [(first tooltip-config) (second tooltip-config)])]
     {:status status :label label}))

@@ -34,14 +34,14 @@
                          (not= '* (::field/path-segment field)))))
            (cons {:db/id (keyword "hyperfiddle.browser.system-link" (str "edit-" (hash path)))
                   :hypercrud/sys? true
-                  :link/disabled? (context/attribute-segment? (::field/path-segment field))
+                  ;:link/disabled? (context/attribute-segment? (::field/path-segment field))
                   :link/rel :hf/edit
                   :link/path ?spath})
 
            parent-has-id?
            (cons {:db/id (keyword "hyperfiddle.browser.system-link" (str "new-" (hash path)))
                   :hypercrud/sys? true
-                  :link/disabled? (context/attribute-segment? (::field/path-segment field))
+                  ;:link/disabled? (context/attribute-segment? (::field/path-segment field))
                   :link/rel :hf/new
                   :link/path ?spath}))))))
 

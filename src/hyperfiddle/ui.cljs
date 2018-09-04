@@ -26,7 +26,7 @@
     [hypercrud.browser.link :as link]
     [hypercrud.browser.router :as router]
     [hypercrud.browser.routing :as routing]
-    [hypercrud.browser.system-link :refer [console-links]]
+    [hypercrud.browser.system-link :refer [console-links system-link?]]
     [hypercrud.types.ThinEntity :refer [->ThinEntity]]
     [hypercrud.ui.connection-color :refer [border-color]]
     [hypercrud.ui.error :as ui-error]
@@ -249,33 +249,20 @@ User renderers should not be exposed to the reaction."
 (letfn [(prompt [link-ref ?label] (str (or ?label
                                            (some-> @(r/fmap :link/class link-ref) (->> (interpose " ") (apply str)) blank->nil)
                                            (some-> @(r/fmap :link/rel link-ref) name)
-                                           "_")))
-        (build-link-props [r+route ctx props]               ; todo this function needs untangling; iframe ignores most of this
-          ; this is a fine place to eval, put error message in the tooltip prop
-          ; each prop might have special rules about his default, for example :visible is default true, does this get handled here?
-          (let [+route @r+route
-                [_ args :as ?route] (unwrap (constantly nil) +route)
-                errors (->> [+route] (filter either/left?) (map cats/extract) (into #{}))]
-            ; doesn't handle tx-fn - meant for the self-link. Weird and prob bad.
-            {:route ?route                                  ; nil means no popover body
-             :tooltip (if-not (empty? errors)
-                        [:warning (pprint-str errors)]
-                        (if (:hyperfiddle.ui/debug-tooltips ctx)
-                          [nil (pr-str args)]
-                          (:tooltip props)))
-             :class (->> [(if-not (empty? errors) "invalid")]
-                         (remove nil?)
-                         (interpose " ")
-                         (apply str))}))]
+                                           "_")))]
   (defn ui-from-link [link-ref ctx & [props ?label]]
     {:pre [link-ref]}
     (let [visual-ctx ctx
           ctx (context/refocus ctx (link/read-path @(r/fmap :link/path link-ref)))
           error-comp (ui-error/error-comp ctx)
           r+route (r/fmap (r/partial routing/build-route' ctx) link-ref) ; need to re-focus from the top
-          link-props @(r/track build-link-props r+route ctx props)] ; handles :class and :tooltip props
+          link-props @(r/track routing/build-link-props @r+route ctx props)] ; handles :class and :tooltip props
       (when-not (:hidden link-props)
-        (let [props (-> link-props
+        (let [style {:color (border-color ctx (cond
+                                                (system-link? (:db/id @link-ref)) 80
+                                                :else 40))}
+              props (-> link-props
+                        (assoc :style style)
                         (update :class css (:class props))
                         (merge (dissoc props :class :tooltip))
                         (dissoc :hidden))]
@@ -296,7 +283,7 @@ User renderers should not be exposed to the reaction."
                                  (dissoc props :tooltip ::custom-iframe)
                                  (update :class css (css-slugify @(r/fmap auto-link-css link-ref))))]))]
 
-            :else [tooltip (tooltip-props props)
+            :else [tooltip (tooltip-props (:tooltip props))
                    (let [props (dissoc props :tooltip)]
                      ; what about class - flagged
                      [anchor ctx props @(r/track prompt link-ref ?label)])]
@@ -451,7 +438,7 @@ nil. call site must wrap with a Reagent component"
   (let [{:keys [:hypercrud.browser/fiddle]} ctx
         console-links (->> (console-links @fiddle @(:hypercrud.browser/field ctx) @(:hypercrud.browser/schemas ctx))
                            (map (partial auto-link ctx)))
-        #_#_ctx (update ctx :hypercrud.browser/links concat console-links)]
+        ctx (update ctx :hypercrud.browser/links (partial r/fmap (r/partial concat console-links)))]
     [:div (select-keys props [:class])
      [:h3 (pr-str (:route ctx))]
      (result val ctx {})]))

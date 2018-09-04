@@ -14,6 +14,7 @@
     [hyperfiddle.actions :as actions]
     [hyperfiddle.runtime :as runtime]
     [hyperfiddle.tempid :as tempid]
+    [hypercrud.ui.connection-color :refer [border-color]]
     [promesa.core :as p]
     [re-com.core :as re-com]
     [taoensso.timbre :as timbre]))
@@ -85,7 +86,7 @@
   ; omit the formula tooltip when popover is open
   (if @(show-popover? popover-id ctx)
     child
-    [tooltip (tooltip-props props) child]))
+    [tooltip (tooltip-props (:tooltip props)) child]))
 
 ; props = {
 ;   :route          [fiddle args]

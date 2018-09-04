@@ -7,6 +7,7 @@
     [contrib.ct :refer [unwrap]]
     [contrib.data :refer [xorxs]]
     [contrib.eval :as eval]
+    [contrib.pprint :refer [pprint-str]]
     [contrib.reactive :as r]
     [contrib.string :refer [memoized-safe-read-edn-string blank->nil]]
     [contrib.try$ :refer [try-either]]
@@ -91,6 +92,23 @@
                 (left {:message "malformed entity param" :data {:params params}}))
       ; nil means :blank
       (either/right route))))
+
+(defn build-link-props [+route ctx props]                  ; todo this function needs untangling; iframe ignores most of this
+  ; this is a fine place to eval, put error message in the tooltip prop
+  ; each prop might have special rules about his default, for example :visible is default true, does this get handled here?
+  (let [[_ args :as ?route] (unwrap (constantly nil) +route)
+        errors (->> [+route] (filter either/left?) (map cats/extract) (into #{}))]
+    ; doesn't handle tx-fn - meant for the self-link. Weird and prob bad.
+    {:route ?route                                          ; nil means no popover body
+     :tooltip (if-not (empty? errors)
+                [:warning (pprint-str errors)]
+                (if (:hyperfiddle.ui/debug-tooltips ctx)
+                  [nil (pr-str args)]
+                  (:tooltip props)))
+     :class (->> [(if-not (empty? errors) "invalid")]
+                 (remove nil?)
+                 (interpose " ")
+                 (apply str))}))
 
 (let [memoized-eval-string (memoize eval/safe-eval-string)]
   (defn ^:export build-route' [ctx {:keys [:link/fiddle :link/tx-fn] :as link}]

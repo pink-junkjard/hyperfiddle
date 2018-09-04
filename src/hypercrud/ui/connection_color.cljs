@@ -14,16 +14,18 @@
 (def no-conn "#ccc")
 (def root-conn "#777")
 
+(defn hsl [h s l]
+  (str/format "hsl(%s, %s%, %s%)" h s l))
+
 (defn connection-color [ctx & [l]]
   (let [uri (context/uri ctx)]
     (condp = uri
       nil no-conn
       ;(get-in ctx [:hypercrud.browser/domain :domain/fiddle-database :database/uri]) root-conn
-      (str/format "hsl(%s, %s%, %s%)"
-                  (* 360 (mod (+ seed (* (hash uri) golden-ratio)) 1))
-                  55  #_"Too bright hurts the eyes"
-                  (or l 70) #_"Medium gray (50) can be read on white and black backgrounds"
-                  ))))
+      (hsl (* 360 (mod (+ seed (* (hash uri) golden-ratio)) 1))
+           55  #_"Too bright hurts the eyes"
+           (or l 70)) #_"Medium gray (50) can be read on white and black backgrounds"
+      )))
 
 (letfn [(shadow-link? [ctx]
           (if (or (nil? ctx)
@@ -34,6 +36,6 @@
               (shadow-link? (:hypercrud.browser/parent ctx)))))]
   ; this entire function is a hack for the sys links editor
   ; we just want to call connection-color
-  (defn border-color [ctx]
+  (defn border-color [ctx & [l]]
     (when-not (shadow-link? ctx)
-      (connection-color ctx))))
+      (connection-color ctx l))))
