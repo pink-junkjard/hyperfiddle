@@ -8,9 +8,8 @@
     [contrib.data :refer [xorxs]]
     [contrib.eval :as eval]
     [contrib.reactive :as r]
-    [contrib.string :refer [memoized-safe-read-edn-string]]
+    [contrib.string :refer [memoized-safe-read-edn-string blank->nil]]
     [contrib.try$ :refer [try-either]]
-    [cuerdas.core :as string]
     [hypercrud.browser.q-util :as q-util]
     [hypercrud.browser.router :as router]
     [hypercrud.types.Entity :refer [#?(:cljs Entity)]]
@@ -100,10 +99,9 @@
       (mlet [fiddle-id (if fiddle
                          (right (:fiddle/ident fiddle))
                          (left {:message ":link/fiddle required" :data {:link link}}))
-             f-wrap (let [formula-str (:link/formula link)]
-                      (if (and (string? formula-str) (not (string/blank? formula-str)))
-                        (memoized-eval-string (str "(fn [ctx] \n" formula-str "\n)"))
-                        (either/right (constantly (constantly nil)))))
+             f-wrap (if-let [formula-str (blank->nil (:link/formula link))]
+                      (memoized-eval-string (str "(fn [ctx] \n" formula-str "\n)"))
+                      (either/right (constantly (constantly nil))))
              f (try-either (f-wrap ctx))
              args (try-either @(r/fmap f (or (:hypercrud.browser/data ctx) ; Don't NPE in :head https://github.com/hyperfiddle/hyperfiddle/issues/489
                                              (r/track identity nil))))
