@@ -18,6 +18,7 @@
     [contrib.ui.safe-render :refer [user-portal]]
     [contrib.ui.tooltip :refer [tooltip tooltip-props]]
     [datascript.parser]
+    [hypercrud.browser.auto-link :refer [auto-link]]
     [hypercrud.browser.context :as context]
     [hypercrud.browser.base :as base]
     [hypercrud.browser.fiddle :as fiddle]
@@ -25,6 +26,7 @@
     [hypercrud.browser.link :as link]
     [hypercrud.browser.router :as router]
     [hypercrud.browser.routing :as routing]
+    [hypercrud.browser.system-link :refer [console-links]]
     [hypercrud.types.ThinEntity :refer [->ThinEntity]]
     [hypercrud.ui.connection-color :refer [border-color]]
     [hypercrud.ui.error :as ui-error]
@@ -446,10 +448,13 @@ nil. call site must wrap with a Reagent component"
 (def ^:export fiddle (-build-fiddle))
 
 (defn ^:export fiddle-xray [val ctx & [props]]
-  (let [{:keys [:hypercrud.browser/fiddle]} ctx]
+  (let [{:keys [:hypercrud.browser/fiddle]} ctx
+        console-links (->> (console-links @fiddle @(:hypercrud.browser/field ctx) @(:hypercrud.browser/schemas ctx))
+                           (map (partial auto-link ctx)))
+        ctx (update ctx :hypercrud.browser/links concat console-links)]
     [:div (select-keys props [:class])
-     [:h3 (pr-str (:route ctx)) #_(some-> @fiddle :fiddle/ident str)]
-     (result val ctx {} #_{:class (css (semantic-css ctx))})]))
+     [:h3 (pr-str (:route ctx))]
+     (result val ctx {})]))
 
 (letfn [(render-edn [data]
           (let [edn-str (pprint-str data 160)]

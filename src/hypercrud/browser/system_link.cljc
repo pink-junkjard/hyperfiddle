@@ -60,7 +60,7 @@
                               :link/rel :hf/new
                               :link/path (blank->nil (str path))}))))))))
 
-(defn system-links
+(defn console-links
   "All sys links can be matched and merged with user-links. Matching is determined by link/rel and link/path"
   [parent-fiddle field schemas]
   (if (::field/source-symbol field)                         ; top level never has one, recursive always does

@@ -4,7 +4,7 @@
             [contrib.data :as data]
             [contrib.reactive :as r]
             [hypercrud.browser.field :as field :refer [auto-field]]
-            [hypercrud.browser.system-link :refer [system-links]]
+            [hypercrud.browser.system-link :refer [console-links]]
             [hypercrud.types.QueryRequest :refer [->QueryRequest]]))
 
 
@@ -114,7 +114,7 @@
                    (::field/children field))]
       (is (= expected actual)))
 
-    (let [links (system-links fiddle field @(:hypercrud.browser/schemas ctx))
+    (let [links (console-links fiddle field @(:hypercrud.browser/schemas ctx))
           expected #{{:link/path "0" :link/rel :hf/new}
                      {:link/path "0" :link/rel :hf/edit}
                      {:link/path "0" :link/rel :hf/remove}
