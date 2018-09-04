@@ -3,7 +3,8 @@
     [clojure.string :as string]
     [contrib.string :refer [blank->nil]]
     [hypercrud.browser.context :as context]
-    [hypercrud.browser.field :as field]))
+    [hypercrud.browser.field :as field]
+    [hypercrud.browser.system-fiddle :as system-fiddle]))
 
 
 (defn ^:export system-link? [link-id]
@@ -36,7 +37,8 @@
                   :hypercrud/sys? true
                   ;:link/disabled? (context/attribute-segment? (::field/path-segment field))
                   :link/rel :hf/edit
-                  :link/path ?spath})
+                  :link/path ?spath
+                  :link/fiddle (system-fiddle/fiddle-system-edit dbname)})
 
            parent-has-id?
            (cons {:db/id (keyword "hyperfiddle.browser.system-link" (str "new-" (hash path)))
@@ -58,7 +60,8 @@
                              {:db/id (keyword "hyperfiddle.browser.system-link" (str "new-" (hash path)))
                               :hypercrud/sys? true
                               :link/rel :hf/new
-                              :link/path (blank->nil (str path))}))))))))
+                              :link/path (blank->nil (str path))
+                              :link/fiddle (system-fiddle/fiddle-system-edit dbname)}))))))))
 
 (defn console-links
   "All sys links can be matched and merged with user-links. Matching is determined by link/rel and link/path"

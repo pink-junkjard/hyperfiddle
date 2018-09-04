@@ -11,8 +11,6 @@
             [hypercrud.browser.context :as context]
             [hypercrud.browser.field :as field]
             [hypercrud.browser.fiddle :as fiddle]
-            [hypercrud.browser.system-fiddle :as system-fiddle]
-            [hypercrud.browser.system-link :as system-link]
             [taoensso.timbre :as timbre]
             [hypercrud.browser.link :as link]))
 
@@ -44,29 +42,24 @@
 (defn auto-link [ctx {:keys [:link/rel] :as link}]
   (let [path (-> link :link/path link/read-path)
         field @(:hypercrud.browser/field (context/refocus ctx path)) ; can't focus without data
-        dbname (str (::field/source-symbol field))
         is-root (::field/source-symbol field)]
-
-    ; Order is tricky here, and don't crash if we don't understand the rel
+    ; Don't crash if we don't understand the rel
     (let [a (case rel
-              ; We know this is an anchor, otherwise they'd have pulled instead
-              :hf/edit {:link/fiddle (system-fiddle/fiddle-system-edit dbname)}
-              :hf/new {:link/fiddle (system-fiddle/fiddle-system-edit dbname)
-                       :link/formula (if is-root
+              :hf/new {:link/formula (if is-root
                                        "(constantly (hyperfiddle.api/tempid-detached ctx))"
                                        "(partial hyperfiddle.api/tempid-child ctx)")
                        :link/tx-fn parent-child-txfn}
               :hf/remove {:link/tx-fn retract-formula}
-              :hf/iframe {; this fiddle has gotta be a query, otherwise they would pull instead
-                          ; And the new-fiddle button will set the query. Easier done here though!
-                          }
-              ; Don't touch the link for rels we don't understand
+              :hf/edit {}                                   ; We know this is an anchor, otherwise pull deeper instead
+              :hf/iframe {}                                 ; iframe is always a query, otherwise pull deeper instead. Today this defaults in the add-fiddle txfn
               nil)
           b (merge-with #(or (blank->nil %1) %2) a link)    ; apply userland overrides
           c (condp contains? rel
               #{:hf/edit :hf/new :hf/iframe} (update b :link/fiddle #(fiddle/data-defaults (into {} %))) ; default form and title
               #{:hf/remove} b
               b)
+
+          ; Formula inspects the fiddle query
           d (condp contains? rel
               #{:hf/edit :hf/iframe} (update c :link/formula or-str (auto-formula c))
               #{:hf/remove :hf/new} c
