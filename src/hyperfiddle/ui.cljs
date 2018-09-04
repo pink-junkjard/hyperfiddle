@@ -451,7 +451,7 @@ nil. call site must wrap with a Reagent component"
   (let [{:keys [:hypercrud.browser/fiddle]} ctx
         console-links (->> (console-links @fiddle @(:hypercrud.browser/field ctx) @(:hypercrud.browser/schemas ctx))
                            (map (partial auto-link ctx)))
-        ctx (update ctx :hypercrud.browser/links concat console-links)]
+        #_#_ctx (update ctx :hypercrud.browser/links concat console-links)]
     [:div (select-keys props [:class])
      [:h3 (pr-str (:route ctx))]
      (result val ctx {})]))
