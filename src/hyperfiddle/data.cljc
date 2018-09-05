@@ -68,20 +68,20 @@
   ([ctx rel] {:pre [rel]}
    (->> (select-all ctx)
         (filter #(= rel (:link/rel %)))))
-  ([ctx rel ?class]
+  ([ctx rel ?corcs]
    (->> (select-all ctx rel)
         (filter (fn [link]
-                  (if ?class
-                    (boolean ((set (:link/class link)) ?class))
-                    true))))))
+                  (clojure.set/superset?
+                    (set (:link/class link))                ; add more stuff here
+                    (contrib.data/xorxs ?corcs)))))))
 
-(defn ^:export select+ "get a link for browsing later" [ctx rel & [?class]] ; Right[Reaction[Link]], Left[String]
-  (let [link?s (r/track select-all ctx rel ?class)
+(defn ^:export select+ "get a link for browsing later" [ctx rel & [?corcs]] ; Right[Reaction[Link]], Left[String]
+  (let [link?s (r/track select-all ctx rel ?corcs)
         count @(r/fmap count link?s)]
     (cond
       (= 1 count) (right (r/fmap first link?s))
-      (= 0 count) (left (str/format "no match for rel: %s class: %s" (pr-str rel) (pr-str ?class)))
-      :else (left (str/format "Too many links matched for rel: %s class: %s" (pr-str rel) (pr-str ?class))))))
+      (= 0 count) (left (str/format "no match for rel: %s class: %s" (pr-str rel) (pr-str ?corcs)))
+      :else (left (str/format "Too many links matched for rel: %s class: %s" (pr-str rel) (pr-str ?corcs))))))
 
 (defn ^:export browse+ "Navigate a link by hydrating its context accounting for dependencies in scope.
   returns Either[Loading|Error,ctx]."

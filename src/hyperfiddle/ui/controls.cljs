@@ -1,11 +1,14 @@
 (ns hyperfiddle.ui.controls
   (:refer-clojure :exclude [boolean keyword long])
   (:require
+    [cats.monad.either :refer [branch]]
     [contrib.reactive :as r]
+    [contrib.reagent :refer [fragment]]
     [contrib.ui :refer [debounced optimistic-updates]]      ; avoid collisions
     [contrib.ui.input :as input]
     [contrib.ui.recom-date :refer [recom-date]]
     [hypercrud.browser.context :as context]
+    [hyperfiddle.data :as data]
     [hyperfiddle.ui.select$ :refer [select]]
     [hyperfiddle.ui.util :refer [entity-props readonly->disabled on-change->tx writable-entity?]]))
 
@@ -55,10 +58,13 @@
 (defn ^:export ref [val ctx & [props]]
   (cond
     (:options props) [select val ctx props]
-    :else (let [props (-> (entity-props (or (:db/ident val) (:db/id val)) props ctx)
-                          (assoc :read-only true)
-                          readonly->disabled)]
-            [optimistic-updates props debounced input/edn])))
+    :else (let [label (pr-str (or (:db/ident val) (:db/id val)))
+                attr (last (:hypercrud.browser/path ctx))]
+            (branch
+              (data/select+ ctx :hf/edit #{:hf.ide/console attr})
+              #(vector :div label)
+              (fn [link-ref]
+                [hyperfiddle.ui/ui-from-link link-ref ctx props label])))))
 
 (defn ^:export dbid [val ctx & [props]]
   (let [props (-> (entity-props (:db/id val) props ctx)

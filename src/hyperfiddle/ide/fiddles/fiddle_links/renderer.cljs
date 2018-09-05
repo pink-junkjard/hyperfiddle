@@ -29,9 +29,8 @@
 
 (defn link-fiddle [val ctx props]
   (fragment
-    (link :hf/new :fiddle ctx nil {:disabled (system-link? @(r/fmap :db/id (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data])))})
-    (let [props (assoc props :read-only (read-only? ctx))]
-      [select val ctx props])))
+    [select val ctx (assoc props :read-only (read-only? ctx))]
+    (link :hf/new :fiddle ctx "new" {:disabled (system-link? @(r/fmap :db/id (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data])))})))
 
 (letfn [(remove-children [field] (dissoc field :hypercrud.browser.field/children))]
   (defn hf-live-link-fiddle [val ctx props]

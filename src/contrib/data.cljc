@@ -93,6 +93,7 @@
 
 (defn xorxs [xorxs]
   (cond (vector? xorxs) xorxs
+        (set? xorxs) xorxs
         (seq? xorxs) xorxs
         (nil? xorxs) nil
         :else-single-value [xorxs] #_"can be a map"))

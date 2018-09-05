@@ -254,10 +254,10 @@ User renderers should not be exposed to the reaction."
               [ui-comp ctx (update props :class css "hyperfiddle-loading" "ui")]
               [fiddle-css-renderer (r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/css])])]))])))
 
-(letfn [(prompt [link-ref ?label] (str (or ?label
-                                           (some-> @(r/fmap :link/class link-ref) (->> (interpose " ") (apply str)) blank->nil)
-                                           (some-> @(r/fmap :link/rel link-ref) name)
-                                           "_")))]
+(letfn [(prompt [link-ref ?label]
+          (or ?label (->> (conj (set @(r/fmap :link/class link-ref))
+                                @(r/fmap :link/rel link-ref))
+                          (interpose " ") (apply str) blank->nil)))]
   (defn ui-from-link [link-ref ctx & [props ?label]]
     {:pre [link-ref]}
     (let [visual-ctx ctx
@@ -267,7 +267,7 @@ User renderers should not be exposed to the reaction."
           link-props @(r/track routing/build-link-props @r+route ctx props)] ; handles :class and :tooltip props
       (when-not (:hidden link-props)
         (let [style {:color (border-color ctx (cond
-                                                (system-link? (:db/id @link-ref)) 80
+                                                (system-link? (:db/id @link-ref)) 60
                                                 :else 40))}
               props (-> link-props
                         (assoc :style style)
