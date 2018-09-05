@@ -15,7 +15,6 @@
             [hypercrud.browser.routing :as routing]
             [hypercrud.browser.router :as router]
             [hypercrud.client.core :as hc]
-            [hypercrud.types.Entity :refer [shadow-entity]]
             [hypercrud.types.EntityRequest :refer [->EntityRequest]]
             [hypercrud.types.Err :as Err]
     #?(:cljs [hypercrud.ui.stale :as stale])
@@ -167,7 +166,7 @@
 #?(:cljs
    (defn domain-init! [domain f]
      (let [result (if-let [cljs (:domain/code domain)]
-                    (eval/safe-eval-string cljs)
+                    (eval/safe-eval-string+ cljs)
                     (right nil))]
        (fn reagent-render [domain f]
          (branch

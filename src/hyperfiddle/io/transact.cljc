@@ -10,7 +10,7 @@
             [taoensso.timbre :as timbre]))
 
 #?(:clj
-   (let [memoized-safe-eval-string (memoize eval/safe-eval-string)]
+   (let [memoized-safe-eval-string (memoize eval/safe-eval-string+)]
      (defn process-tx [domains-uri subject uri tx]
        (let [hf-db (-> (d/db (d/connect (str domains-uri)))
                        (d/entity [:database/uri uri]))

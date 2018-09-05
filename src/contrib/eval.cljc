@@ -34,7 +34,7 @@
                    error (throw (ex-info "cljs eval failed" {:cljs-input code-str :cljs-result eval-result}))
                    :else value))))))
 
-(defn safe-eval-string [code-str]
+(defn safe-eval-string+ [code-str]
   (if (blank->nil code-str)
     (try-either (eval-string! code-str))
     (left nil)))

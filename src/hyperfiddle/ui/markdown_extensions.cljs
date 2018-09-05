@@ -25,7 +25,7 @@
 ; mutual recursion, it would be letfn if wasn't react components
 (declare markdown)
 
-(let [memoized-safe-eval (memoize eval/safe-eval-string)]
+(let [memoized-safe-eval (memoize eval/safe-eval-string+)]
   (def ^:export markdown
     (remark/remark!
 
