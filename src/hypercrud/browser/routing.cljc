@@ -17,7 +17,8 @@
     [hypercrud.types.ThinEntity :refer [->ThinEntity #?(:cljs ThinEntity)]]
     [hyperfiddle.domain :as domain]
     [hyperfiddle.runtime :as runtime]
-    [taoensso.timbre :as timbre])
+    [taoensso.timbre :as timbre]
+    [hypercrud.browser.context :as context])
   #?(:clj
      (:import (hypercrud.types.Entity Entity)
               (hypercrud.types.ThinEntity ThinEntity))))
@@ -60,19 +61,6 @@
          (some-> ctx :hypercrud.browser/domain :domain/fiddle-database :database/uri)]}
   (assoc ctx :route (tempid->id route ctx)))
 
-(defn normalize-args [porps]
-  {:pre [(not (:entity porps)) #_"legacy"
-         ; There is some weird shit hitting this assert, like {:db/id nil}
-         #_(not (map? porps)) #_"legacy"]
-   :post [(vector? %) #_"route args are associative by position"]}
-
-  ; careful here -
-  ; (seq [1]) - truthy
-  ; (seq? [1]) - false
-  ; (seq 1) - IllegalArgumentException
-  (cond (instance? ThinEntity porps) [porps]                ; entity is also a map so do this first
-        :else (vec (xorxs porps))))
-
 (defn validated-route+ [fiddle route ctx]
   {:pre [route]}
   ; We specifically hydrate this deep just so we can validate anchors like this.
@@ -93,7 +81,7 @@
       ; nil means :blank
       (either/right route))))
 
-(defn build-link-props [+route ctx props]                  ; todo this function needs untangling; iframe ignores most of this
+(defn build-link-props [+route ctx props]                   ; todo this function needs untangling; iframe ignores most of this
   ; this is a fine place to eval, put error message in the tooltip prop
   ; each prop might have special rules about his default, for example :visible is default true, does this get handled here?
   (let [[_ args :as ?route] (unwrap (constantly nil) +route)
@@ -110,7 +98,30 @@
                  (interpose " ")
                  (apply str))}))
 
-(let [memoized-eval-string (memoize eval/safe-eval-string)]
+(defn normalize-args [porps]
+  {:pre [(not (:entity porps)) #_"legacy"
+         ; There is some weird shit hitting this assert, like {:db/id nil}
+         #_(not (map? porps)) #_"legacy"]
+   :post [(vector? %) #_"route args are associative by position"]}
+
+  ; careful here -
+  ; (seq [1]) - truthy
+  ; (seq? [1]) - false
+  ; (seq 1) - IllegalArgumentException
+  (cond (instance? Entity porps) [porps]                    ; entity is also a map so do this first
+        :else (vec (xorxs porps))))
+
+(defn fix-entity-types [ctx v]
+  ; Returns a datomic primitive suitable for passing to :in. In edge cases, this could be a composite.
+  ; In happy path, this can be a subpull, which needs to turn into entity.
+  (if (#{Entity
+         #?(:clj clojure.lang.PersistentArrayMap :cljs cljs.core.PersistentArrayMap)
+         #?(:clj clojure.lang.PersistentHashMap :cljs cljs.core.PersistentHashMap)}
+        (type v))
+    (->ThinEntity (context/dbname ctx) (or (:db/ident v) (:db/id v)))
+    v))
+
+(let [eval-string+ (memoize eval/safe-eval-string+)]
   (defn ^:export build-route' [ctx {:keys [:link/fiddle :link/tx-fn] :as link}]
     (if (and (not fiddle) tx-fn)
       (right nil)                                           ; :hf/remove doesn't have one by default, :hf/new does, both can be customized
@@ -118,24 +129,12 @@
                          (right (:fiddle/ident fiddle))
                          (left {:message ":link/fiddle required" :data {:link link}}))
              f-wrap (if-let [formula-str (blank->nil (:link/formula link))]
-                      (memoized-eval-string (str "(fn [ctx] \n" formula-str "\n)"))
+                      (eval-string+ (str "(fn [ctx] \n" formula-str "\n)"))
                       (either/right (constantly (constantly nil))))
              f (try-either (f-wrap ctx))
-             args (try-either @(r/fmap f (or (:hypercrud.browser/data ctx) ; Don't NPE in :head https://github.com/hyperfiddle/hyperfiddle/issues/489
-                                             (r/track identity nil))))
-             args (try-either
-                    (->> {:remove-this-wrapper args}        ; walk trees wants a map
-                         ; shadow-links can be hdyrated here, and we need to talk them.
-                         ; Technical debt. Once shadow-links are identities, this is just a mapv.
-                         (walk/postwalk (fn [v]
-                                          (if (instance? Entity v)
-                                            (let [dbname (some-> v .-uri (domain/uri->dbname (:hypercrud.browser/domain ctx)))]
-                                              (->ThinEntity dbname (or (:db/ident v) (:db/id v))))
-                                            v)))
-                         (into {})
-                         :remove-this-wrapper
-                         normalize-args))
-             :let [route (id->tempid (router/canonicalize fiddle-id args) ctx)]]
+             args (try-either @(r/fmap f (or (:hypercrud.browser/data ctx) (r/track identity nil))))
+             :let [args (mapv (partial fix-entity-types ctx) (normalize-args args))
+                   route (id->tempid (router/canonicalize fiddle-id args) ctx)]]
         (validated-route+ fiddle route ctx)))))
 
 (def encode router/encode)
