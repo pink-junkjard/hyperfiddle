@@ -301,89 +301,34 @@
       (testing "succeeds for owner, and no additional statements added"
         (is (= tx (transact/process-tx fixtures/test-domains-uri db-owner fixtures/test-uri tx)))))))
 
-(deftest test-merging-tx-statements []
+(deftest test-merging-tx []
   (let [email "asdf@example.com"]
-    (let [tx [[:db/add "-1" :person/email email]
-              [:db/add "-1" :person/name "Asdf"]]]
-      (testing "appends owner to new entity"
-        (is (= (conj tx [:db/add "-1" :hyperfiddle/owners db-owner])
-               (transact/process-tx fixtures/test-domains-uri db-owner fixtures/test-uri tx))))
-      (transact/transact! fixtures/test-domains-uri db-owner {fixtures/test-uri tx}))
+    (letfn [(f [tx]
+              (testing "appends owner to new entity"
+                (is (= (conj tx [:db/add "-1" :hyperfiddle/owners db-owner])
+                       (transact/process-tx fixtures/test-domains-uri db-owner fixtures/test-uri tx)))))]
+      (let [list-tx [[:db/add "-1" :person/email email]
+                     [:db/add "-1" :person/name "Asdf"]]
+            map-tx [{:db/id "-1"
+                     :person/email email
+                     :person/name "Asdf"}]]
+        (f list-tx)
+        (f map-tx)
+        ; transact only once
+        (transact/transact! fixtures/test-domains-uri db-owner {fixtures/test-uri list-tx})))
 
-    (let [mergable-tx [[:db/add "-1" :person/email email]
-                       [:db/add "-1" :person/age 1]]]
-      (testing "fails for non-owner"
-        (is (thrown-with-msg?
-              RuntimeException #"user tx failed validation"
-              (transact/process-tx fixtures/test-domains-uri "someone-else" fixtures/test-uri mergable-tx))))
-
-      (testing "no owner reappended to existing entity"
-        (is (= mergable-tx (transact/process-tx fixtures/test-domains-uri db-owner fixtures/test-uri mergable-tx)))))))
-
-(deftest test-merging-tx-maps []
-  (let [email "asdf@example.com"]
-    (let [tx [{:db/id "-1"
-               :person/email email
-               :person/name "Asdf"}]]
-      (testing "appends owner to new entity"
-        (is (= (conj tx [:db/add "-1" :hyperfiddle/owners db-owner])
-               (transact/process-tx fixtures/test-domains-uri db-owner fixtures/test-uri tx))))
-      (transact/transact! fixtures/test-domains-uri db-owner {fixtures/test-uri tx}))
-
-    (let [mergable-tx [{:db/id "-1"
-                        :person/email email
-                        :person/age 1}]]
-      (testing "fails for non-owner"
-        (is (thrown-with-msg?
-              RuntimeException #"user tx failed validation"
-              (transact/process-tx fixtures/test-domains-uri "someone-else" fixtures/test-uri mergable-tx))))
-
-      (testing "no owner reappended to existing entity"
-        (is (= mergable-tx (transact/process-tx fixtures/test-domains-uri db-owner fixtures/test-uri mergable-tx)))))))
-
-(deftest test-components-statements []
-  (let [email "asdf@example.com"]
-    (let [tx [[:db/add "-1" :fiddle/link "-2"]
-              [:db/add "-1" :person/email email]
-              [:db/add "-2" :link/rel :some-link]]]
-      (testing "appends owner only to parent entity"
-        (is (= (conj tx [:db/add "-1" :hyperfiddle/owners db-owner])
-               (transact/process-tx fixtures/test-domains-uri db-owner fixtures/test-uri tx))))
-      (transact/transact! fixtures/test-domains-uri db-owner {fixtures/test-uri tx}))
-
-    (let [link-id (d/q '[:find ?e . :where [?e :link/rel :some-link]] (d/db (d/connect (str fixtures/test-uri))))]
-      (testing "update component"
-        (let [tx [[:db/add link-id :person/name "Asdf"]]]
-          (testing "fails for non-owner"
-            (is (thrown-with-msg?
-                  RuntimeException #"user tx failed validation"
-                  (transact/process-tx fixtures/test-domains-uri "someone-else" fixtures/test-uri tx))))
-
-          (testing "succeeds for owner, and no additional statements added"
-            (is (= tx (transact/process-tx fixtures/test-domains-uri db-owner fixtures/test-uri tx))))))
-
-      (testing "multiple component"
-        (let [tx [[:db/add link-id :fiddle/link "-1"]
-                  [:db/add "-1" :person/name "Qwerty"]
-                  [:db/add "-1" :fiddle/link "-2"]
-                  [:db/add "-2" :person/name "3rd child"]]]
-          (testing "fails for non-owner"
-            (is (thrown-with-msg?
-                  RuntimeException #"user tx failed validation"
-                  (transact/process-tx fixtures/test-domains-uri "someone-else" fixtures/test-uri tx))))
-
-          (testing "succeeds for owner, and no additional statements added"
-            (is (= tx (transact/process-tx fixtures/test-domains-uri db-owner fixtures/test-uri tx))))))
-
-      (testing "retract component"
-        (let [tx [[:db/retractEntity link-id]]]
-          (testing "fails for non-owner"
-            (is (thrown-with-msg?
-                  RuntimeException #"user tx failed validation"
-                  (transact/process-tx fixtures/test-domains-uri "someone-else" fixtures/test-uri tx))))
-
-          (testing "succeeds for owner, and no additional statements added"
-            (is (= tx (transact/process-tx fixtures/test-domains-uri db-owner fixtures/test-uri tx)))))))))
+    (letfn [(f [tx]
+              (testing "fails for non-owner"
+                (is (thrown-with-msg?
+                      RuntimeException #"user tx failed validation"
+                      (transact/process-tx fixtures/test-domains-uri "someone-else" fixtures/test-uri tx))))
+              (testing "no owner reappended to existing entity"
+                (is (= tx (transact/process-tx fixtures/test-domains-uri db-owner fixtures/test-uri tx)))))]
+      (f [[:db/add "-1" :person/email email]
+          [:db/add "-1" :person/age 1]])
+      (f [{:db/id "-1"
+           :person/email email
+           :person/age 1}]))))
 
 (deftest test-merging-components-statements []
   (let [email "asdf@example.com"]
@@ -426,48 +371,62 @@
           (testing "succeeds for owner, and no additional statements added"
             (is (= tx (transact/process-tx fixtures/test-domains-uri db-owner fixtures/test-uri tx)))))))))
 
-(deftest test-components-maps []
-  (let [email "asdf@example.com"]
-    (let [tx [{:db/id "-1"
-               :person/email email
-               :fiddle/link {:db/id "-2"
-                             :link/rel :some-link}}]]
-      (testing "appends owner only to parent entity"
-        (is (= (conj tx [:db/add "-1" :hyperfiddle/owners db-owner])
-               (transact/process-tx fixtures/test-domains-uri db-owner fixtures/test-uri tx))))
-      (transact/transact! fixtures/test-domains-uri db-owner {fixtures/test-uri tx}))
+(deftest test-components []
+  (letfn [(f [tx]
+            (testing "appends owner only to parent entity"
+              (is (= (conj tx [:db/add "-1" :hyperfiddle/owners db-owner])
+                     (transact/process-tx fixtures/test-domains-uri db-owner fixtures/test-uri tx)))))]
+    (let [email "asdf@example.com"
+          list-tx [[:db/add "-1" :fiddle/link "-2"]
+                   [:db/add "-1" :person/email email]
+                   [:db/add "-2" :link/rel :some-link]]
+          map-tx [{:db/id "-1"
+                   :person/email email
+                   :fiddle/link {:db/id "-2"
+                                 :link/rel :some-link}}]]
+      (f list-tx)
+      (f map-tx)
+      ; just transact once
+      (transact/transact! fixtures/test-domains-uri db-owner {fixtures/test-uri list-tx})))
 
-    (let [link-id (d/q '[:find ?e . :where [?e :link/rel :some-link]] (d/db (d/connect (str fixtures/test-uri))))]
-      (testing "update component"
-        (let [tx [{:db/id link-id :person/name "Asdf"}]]
-          (testing "fails for non-owner"
-            (is (thrown-with-msg?
-                  RuntimeException #"user tx failed validation"
-                  (transact/process-tx fixtures/test-domains-uri "someone-else" fixtures/test-uri tx))))
+  (let [link-id (d/q '[:find ?e . :where [?e :link/rel :some-link]] (d/db (d/connect (str fixtures/test-uri))))]
+    (testing "update component"
+      (letfn [(f [tx]
+                (testing "fails for non-owner"
+                  (is (thrown-with-msg?
+                        RuntimeException #"user tx failed validation"
+                        (transact/process-tx fixtures/test-domains-uri "someone-else" fixtures/test-uri tx))))
 
-          (testing "succeeds for owner, and no additional statements added"
-            (is (= tx (transact/process-tx fixtures/test-domains-uri db-owner fixtures/test-uri tx))))))
+                (testing "succeeds for owner, and no additional statements added"
+                  (is (= tx (transact/process-tx fixtures/test-domains-uri db-owner fixtures/test-uri tx)))))]
+        (f [[:db/add link-id :person/name "Asdf"]])
+        (f [{:db/id link-id :person/name "Asdf"}])))
 
-      (testing "multiple component"
-        (let [tx [{:db/id link-id
-                   :fiddle/link {:db/id "-1"
-                                 :person/name "Qwerty"
-                                 :fiddle/link {:db/id "-2"
-                                               :person/name "3rd child"}}}]]
-          (testing "fails for non-owner"
-            (is (thrown-with-msg?
-                  RuntimeException #"user tx failed validation"
-                  (transact/process-tx fixtures/test-domains-uri "someone-else" fixtures/test-uri tx))))
+    (testing "multiple component"
+      (letfn [(f [tx]
+                (testing "fails for non-owner"
+                  (is (thrown-with-msg?
+                        RuntimeException #"user tx failed validation"
+                        (transact/process-tx fixtures/test-domains-uri "someone-else" fixtures/test-uri tx))))
 
-          (testing "succeeds for owner, and no additional statements added"
-            (is (= tx (transact/process-tx fixtures/test-domains-uri db-owner fixtures/test-uri tx))))))
+                (testing "succeeds for owner, and no additional statements added"
+                  (is (= tx (transact/process-tx fixtures/test-domains-uri db-owner fixtures/test-uri tx)))))]
+        (f [[:db/add link-id :fiddle/link "-1"]
+            [:db/add "-1" :person/name "Qwerty"]
+            [:db/add "-1" :fiddle/link "-2"]
+            [:db/add "-2" :person/name "3rd child"]])
+        (f [{:db/id link-id
+             :fiddle/link {:db/id "-1"
+                           :person/name "Qwerty"
+                           :fiddle/link {:db/id "-2"
+                                         :person/name "3rd child"}}}])))
 
-      (testing "retract component"
-        (let [tx [[:db/retractEntity link-id]]]
-          (testing "fails for non-owner"
-            (is (thrown-with-msg?
-                  RuntimeException #"user tx failed validation"
-                  (transact/process-tx fixtures/test-domains-uri "someone-else" fixtures/test-uri tx))))
+    (testing "retract component"
+      (let [tx [[:db/retractEntity link-id]]]
+        (testing "fails for non-owner"
+          (is (thrown-with-msg?
+                RuntimeException #"user tx failed validation"
+                (transact/process-tx fixtures/test-domains-uri "someone-else" fixtures/test-uri tx))))
 
-          (testing "succeeds for owner, and no additional statements added"
-            (is (= tx (transact/process-tx fixtures/test-domains-uri db-owner fixtures/test-uri tx)))))))))
+        (testing "succeeds for owner, and no additional statements added"
+          (is (= tx (transact/process-tx fixtures/test-domains-uri db-owner fixtures/test-uri tx))))))))
