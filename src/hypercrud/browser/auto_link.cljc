@@ -26,12 +26,11 @@
           "identity"
           "(constantly nil)")))))
 
-(def parent-child-txfn (-> (template/load-resource "auto-txfn/mt-fet-at.edn") string/trim))
-(def new-child-formula "(partial hyperfiddle.api/tempid-child ctx)")
-(def new-formula "(constantly (hyperfiddle.api/tempid-detached ctx))")
-(def retract-formula
-  "(fn [ctx multi-color-tx modal-route]
-  {:tx {(hypercrud.browser.context/uri ctx) [[:db.fn/retractEntity @(contrib.reactive/cursor (:hypercrud.browser/data ctx) [:db/id])]]}})")
+(def attach (-> (template/load-resource "auto-txfn/attach.edn") string/trim))
+(def detach (-> (template/load-resource "auto-txfn/detach.edn") string/trim))
+(def retract (-> (template/load-resource "auto-txfn/retract.edn") string/trim))
+(def child-tempid "(partial hyperfiddle.api/tempid-child ctx)")
+(def detached-tempid "(constantly (hyperfiddle.api/tempid-detached ctx))")
 
 (defn auto-link [ctx {:keys [:link/rel :link/fiddle] :as link}]
   (let [path (-> link :link/path link/read-path)
@@ -39,11 +38,13 @@
         is-root (::field/source-symbol field)]
     ; Don't crash if we don't understand the rel
     (let [a (case rel
-              :hf/new {:link/formula (if is-root new-formula new-child-formula)
-                       :link/tx-fn parent-child-txfn}
-              :hf/remove {:link/tx-fn retract-formula}
+              :hf/new {:link/formula (if is-root detached-tempid child-tempid)
+                       :link/tx-fn (if-not is-root attach)}
+              :hf/remove {:link/tx-fn retract}              ; hf/delete
+              :hf/detach {:link/tx-fn detach}
               :hf/edit {}                                   ; We know this is an anchor, otherwise pull deeper instead
               :hf/iframe {}                                 ; iframe is always a query, otherwise pull deeper instead. Today this defaults in the add-fiddle txfn
+              :hf/rel {}
               nil)
 
           ; apply userland tweaks
@@ -51,20 +52,24 @@
 
           ; Shadow the fiddle
           c (condp contains? rel
-              #{:hf/edit :hf/new :hf/iframe} (update-existing b :link/fiddle #(fiddle/data-defaults (into {} %))) ; default form and title
+              #{:hf/rel :hf/edit :hf/new :hf/iframe} (update-existing b :link/fiddle #(fiddle/data-defaults (into {} %))) ; default form and title
               b)
 
           ; Formula inference needs known query value
           d (let [{{query :fiddle/query :as fiddle} :link/fiddle} c]
               (condp contains? rel
-                #{:hf/iframe} (update c :link/formula or-str (cond
-                                                               query (infer-query-formula query)
-                                                               fiddle "(constantly nil)"
-                                                               :else nil))
-                #{:hf/edit} (update c :link/formula or-str (cond
-                                                             query (infer-query-formula query)
-                                                             fiddle "identity"
-                                                             :else nil))
+
+                #{:hf/iframe}
+                (update c :link/formula or-str (cond
+                                                 query (infer-query-formula query)
+                                                 fiddle "(constantly nil)" ; why?
+                                                 :else nil))
+
+                #{:hf/rel :hf/edit}
+                (update c :link/formula or-str (cond
+                                                 query (infer-query-formula query)
+                                                 fiddle "identity"
+                                                 :else nil))
                 c))]
       d)))
 

@@ -10,29 +10,29 @@
     [hyperfiddle.data :as data]
     #_[hyperfiddle.ui]
     [hyperfiddle.ui.util :refer [readonly->disabled writable-entity?]]
-    [hyperfiddle.ui.docstring :refer [semantic-docstring]]))
+    [hyperfiddle.ui.docstring :refer [semantic-docstring]]
+    [hypercrud.browser.link :as link]))
 
 
 (defn attribute-label [_ ctx & [props]]
   (when-let [label (some->> (:hypercrud.browser/field ctx)
                             (r/fmap ::field/label)
                             deref)]
-    (let [help-md (semantic-docstring ctx)
-          label-props (select-keys props [:class])]         ; https://github.com/hyperfiddle/hyperfiddle/issues/511
+    (let [help-md (semantic-docstring ctx)]         ; https://github.com/hyperfiddle/hyperfiddle/issues/511
       [tooltip-thick (if help-md
                        [:div.hyperfiddle.docstring [contrib.ui/markdown help-md]])
-       [:label label-props label (if help-md [:sup "†"])]])))
+       [:label (select-keys props [:class]) label (if help-md [:sup "†"])]])))
 
 (defn entity-label [_ ctx & [props]]
-  [:div #_(fragment)
-   [attribute-label _ props ctx]
-   (->> (data/select-all ctx :hf/new)
-        (r/track identity)
-        (r/unsequence :db/id)
-        (map (fn [[rv k]]
-               ^{:key k}
-               [hyperfiddle.ui/ui-from-link rv ctx props]))
-        doall)])
+  (let [help-md (semantic-docstring ctx)]
+    [tooltip-thick (if help-md
+                     [:div.hyperfiddle.docstring [contrib.ui/markdown help-md]])
+     [:label (select-keys props [:class]) "*self*"]
+     (let [new (-> (data/select-all ctx :hf/new)
+                    (->> (filter (comp (partial = (:hypercrud.browser/path ctx)) link/read-path :link/path)))
+                    first)]
+       (if new                                              ; Not working yet
+         [hyperfiddle.ui/ui-from-link (r/track identity new) ctx props "new"]))]))
 
 (defn magic-new-head [_ ctx & [props]]
   (let [state (r/cursor (:hyperfiddle.ui.form/state ctx) [:hyperfiddle.ui.form/magic-new-a])]

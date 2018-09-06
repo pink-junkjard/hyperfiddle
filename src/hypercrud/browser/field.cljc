@@ -34,7 +34,7 @@
 (defn- attr-with-opts-or-expr [schema source-symbol list-or-vec]
   (if (#{'default 'limit} (first list-or-vec))
     (let [attr (second list-or-vec)]
-      {::cardinality (get-in schema [attr :db/cardinality :db/ident])
+      {::cardinality (get-in schema [attr :db/cardinality :db/ident] :db.cardinality/one)
        ::children nil
        ::data-has-id? (is-ref? schema attr)
        ::label (keyword->label attr)
@@ -44,7 +44,7 @@
     ; otherwise attr-with-opts
     (let [[attr & {:as opts}] list-or-vec]
       {::-alias (:as opts)
-       ::cardinality (get-in schema [attr :db/cardinality :db/ident])
+       ::cardinality (get-in schema [attr :db/cardinality :db/ident] :db.cardinality/one)
        ::children nil
        ::data-has-id? (is-ref? schema attr)
        ::label (if-let [alias (:as opts)]
@@ -89,7 +89,7 @@
                                                     (map (fn [[k v]]
                                                            (let [field (if (or (vector? k) (seq? k))
                                                                          (attr-with-opts-or-expr schema source-symbol k)
-                                                                         {::cardinality (get-in schema [k :db/cardinality :db/ident])
+                                                                         {::cardinality (get-in schema [k :db/cardinality :db/ident] :db.cardinality/one)
                                                                           ::label (keyword->label k)
                                                                           ::get-value k
                                                                           ::path-segment k
@@ -108,7 +108,7 @@
                                     (= '* sym) (conj acc sym)
                                     (= ::implicit-splat sym) (conj acc sym)
                                     :else (conj acc
-                                                {::cardinality (get-in schema [sym :db/cardinality :db/ident])
+                                                {::cardinality (get-in schema [sym :db/cardinality :db/ident] :db.cardinality/one)
                                                  ::children (when (is-component? schema sym)
                                                               (pull->fields schema source-symbol [::implicit-splat] data (conj get-values sym)))
                                                  ::data-has-id? (is-ref? schema sym)
@@ -128,7 +128,7 @@
                          (->> (set/difference (infer-attrs data get-values) (set explicit-attrs))
                               (sort)
                               (map (fn [attr]
-                                     {::cardinality (get-in schema [attr :db/cardinality :db/ident])
+                                     {::cardinality (get-in schema [attr :db/cardinality :db/ident] :db.cardinality/one)
                                       ::children (when (is-component? schema attr)
                                                    (pull->fields schema source-symbol [::implicit-splat] data (conj get-values attr)))
                                       ::data-has-id? (is-ref? schema attr)
@@ -145,7 +145,6 @@
                              ::path-segment '*              ; does this even make sense?
                              ::source-symbol source-symbol}])))
                      [field-or-wildcard])))
-         (remove #(= :db/id (::path-segment %)))
          vec)))
 
 (defn- pull-one [schemas cell source-symbol label pull-pattern]

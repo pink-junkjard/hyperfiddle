@@ -10,7 +10,8 @@
     [hypercrud.browser.context :as context]
     [hyperfiddle.data :as data]
     [hyperfiddle.ui.select$ :refer [select]]
-    [hyperfiddle.ui.util :refer [entity-props readonly->disabled on-change->tx writable-entity?]]))
+    [hyperfiddle.ui.util :refer [entity-props readonly->disabled on-change->tx writable-entity?]]
+    [hypercrud.browser.link :as link]))
 
 
 (defn ^:export keyword [val ctx & [props]]
@@ -58,18 +59,53 @@
 (defn ^:export ref [val ctx & [props]]
   (cond
     (:options props) [select val ctx props]
-    :else (let [label (pr-str (or (:db/ident val) (:db/id val)))
-                attr (last (:hypercrud.browser/path ctx))]
-            (branch
-              (data/select+ ctx :hf/edit #{:hf.ide/console attr})
-              #(vector :div label)
-              (fn [link-ref]
-                [hyperfiddle.ui/ui-from-link link-ref ctx props label])))))
+    :else [:div
+           (if-let [self (-> (data/select-all ctx :hf/edit)
+                             (->> (filter (comp (partial = (:hypercrud.browser/path ctx)) link/read-path :link/path)))
+                             first)]
+             [hyperfiddle.ui/ui-from-link (r/track identity self) ctx props (pr-str (or (:db/ident val) (:db/id val)))]
+             (pr-str (or (:db/ident val) (:db/id val))))
 
-(defn ^:export dbid [val ctx & [props]]
-  (let [props (-> (entity-props (:db/id val) props ctx)
-                  readonly->disabled)]
-    [optimistic-updates props debounced input/edn]))
+           ; remove is not generated in console mode, but if it is present, render it here?
+           (if-let [remove (-> (data/select-all ctx :hf/remove) ; (last (:hypercrud.browser/path ctx))
+                               (->> (filter (comp (partial = (:hypercrud.browser/path ctx)) link/read-path :link/path)))
+                               first)]
+             [hyperfiddle.ui/ui-from-link (r/track identity remove) ctx props "remove"])
+
+           (if-let [detach (-> (data/select-all ctx :hf/detach) ; (last (:hypercrud.browser/path ctx))
+                               (->> (filter (comp (partial = (:hypercrud.browser/path ctx)) link/read-path :link/path)))
+                               first)]
+             ; To retract, navigate there and retract. (Though, the link can be modeled?)
+             [hyperfiddle.ui/ui-from-link (r/track identity detach) ctx props "detach"])]))
+
+
+(defn ^:export dbid [val ctx & [props]]                     ; When you pulled db/id or db/ident
+  [:div
+   (let [label (str val)
+         self (-> (data/select-all ctx :hf/edit)            ; (last (:hypercrud.browser/path ctx))
+                  (->> (filter (comp (partial = (:hypercrud.browser/path ctx)) link/read-path :link/path)))
+                  first)]
+     (if self
+       [hyperfiddle.ui/ui-from-link (r/track identity self) ctx props label]
+       label))
+
+   (if-let [remove (-> (data/select-all ctx :hf/remove)     ; (last (:hypercrud.browser/path ctx))
+                       (->> (filter (comp (partial = (:hypercrud.browser/path ctx)) link/read-path :link/path)))
+                       first)]
+     [hyperfiddle.ui/ui-from-link (r/track identity remove) ctx props "remove"])
+
+   (if-let [detach (-> (data/select-all ctx :hf/detach)     ; (last (:hypercrud.browser/path ctx))
+                       (->> (filter (comp (partial = (:hypercrud.browser/path ctx)) link/read-path :link/path)))
+                       first)]
+     [hyperfiddle.ui/ui-from-link (r/track identity detach) ctx props "detach"])
+
+   (let [related (data/select-all ctx :hf/rel)]
+     (->> (r/track identity related)
+          (r/unsequence :db/id)
+          (map (fn [[rv k]]
+                 ^{:key k}                                  ; Use the userland class as the label (ignore hf/rel)
+                 [hyperfiddle.ui/ui-from-link rv ctx props]))
+          doall))])
 
 (defn ^:export instant [val ctx & [props]]
   (let [props (-> (entity-props val props ctx)
@@ -92,7 +128,7 @@
                   (update :mode #(or % "css")))]
     [optimistic-updates props debounced (code-comp ctx)]))
 
-(defn ^:export markdown-editor [val ctx & [props]]              ; This is legacy; :mode=markdown should be bound in userland
+(defn ^:export markdown-editor [val ctx & [props]]          ; This is legacy; :mode=markdown should be bound in userland
   (let [props (-> (entity-props val props ctx)
                   (assoc :mode "markdown"
                          :lineWrapping true))]

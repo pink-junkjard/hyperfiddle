@@ -2,7 +2,7 @@
   (:require-macros [hyperfiddle.ui :refer [-build-fiddle]])
   (:require
     [cats.core :as cats :refer [fmap mlet]]
-    [cats.monad.either :as either]
+    [cats.monad.either :as either :refer [branch]]
     [clojure.core.match :refer [match match*]]
     [clojure.string :as string]
     [contrib.ct :refer [unwrap]]
@@ -75,18 +75,35 @@
                 [ui-from-link rv ctx props]))
          doall)))
 
-(defn entity-links [val ctx & [props]]
-  (fragment
-    (->> (concat
-           (data/select-all ctx :hf/edit)
-           (data/select-all ctx :hf/remove))
-         (filter (comp (partial = (:hypercrud.browser/path ctx)) link/read-path :link/path))
-         (r/track identity)
-         (r/unsequence :db/id)
-         (map (fn [[rv k]]
-                ^{:key k}
-                [ui-from-link rv ctx props]))
-         doall)))
+(defn display-mode-console? [ctx]
+  (= :hypercrud.browser.browser-ui/xray @(:hypercrud.ui/display-mode ctx)))
+
+(defn entity-identity-label [val]
+  (pr-str (or (:db/ident val) (:db/id val))))
+
+(defn entity-links [val ctx & [props]]                      ; rename to entity-identity
+  ; What about aggregate etc?
+  [:div
+   ; Self link
+   (case @(:hypercrud.ui/display-mode ctx)
+     :hypercrud.browser.browser-ui/xray (-> (data/select-all ctx :hf/edit #{:hf.ide/console})
+                                            (as-> links (first (filter (comp (partial = (:hypercrud.browser/path ctx)) link/read-path :link/path) links)))
+                                            (as-> link [ui-from-link (r/track identity link) ctx props (entity-identity-label val)]))
+
+     ; This is wrong - must show user links in xray mode
+     :hypercrud.browser.browser-ui/user (let [self (-> (data/select-all ctx :hf/edit)
+                                                       (->> (filter (comp (partial = (:hypercrud.browser/path ctx)) link/read-path :link/path)))
+                                                       first)
+                                              label (entity-identity-label val)]
+                                          (if self
+                                            [ui-from-link (r/track identity self) ctx props label]
+                                            [:div label])))
+
+   ; Remove link
+   (if (display-mode-console? ctx)
+     (-> (data/select-all ctx :hf/remove #{:hf.ide/console})
+         (as-> links (first (filter (comp (partial = (:hypercrud.browser/path ctx)) link/read-path :link/path) links)))
+         (as-> link [ui-from-link (r/track identity link) ctx props "remove"])))])
 
 (defn control "this is a function, which returns component"
   [val ctx & [props]]                                       ; returns Func[(ref, props, ctx) => DOM]
@@ -98,6 +115,7 @@
       [:element _] controls/string                          ; FindRel-Variable
       #_#_[:aggregate _] controls/string                    ; entity, aggregate, what else?
       #_#_[:entity _] entity-links
+      [:attribute _] (r/constantly (str "no schema for attr: " segment))
 
       [:splat _] magic-new-body
       [:boolean :one] controls/boolean
@@ -113,6 +131,7 @@
 (defn children-identity-only? [field]
   (->> (::field/children field)
        (remove (comp (partial = :db/ident) ::field/path-segment))
+       (remove (comp (partial = :db/id) ::field/path-segment))
        empty?))
 
 (defn ^:export hyper-control [val ctx & [props]]
@@ -122,12 +141,13 @@
             segment (last (:hypercrud.browser/path ctx))]
         (cond                                               ; Duplicate options test to avoid circular dependency in controls/ref
           (:options props) [(control val ctx props) val ctx props]
-          (= segment :db/ident) [(control val ctx props) val ctx (assoc props :read-only true)] ; Never alter idents from userland.
+          (= segment :db/id) [controls/dbid val ctx props]
+          (= segment :db/ident) [controls/dbid val ctx props]
           (children-identity-only? -field) [(control val ctx props) val ctx props]
           (seq (::field/children -field)) (let [ctx (dissoc ctx ::layout)]
                                             (fragment
                                               [pull field val ctx props]
-                                              [field [] ctx entity-links-iframe props]))
+                                              [field [] ctx entity-links-iframe (assoc props :label-fn (r/constantly nil #_[:div "nested pull iframes"]))]))
           :else [(control val ctx props) val ctx props]))))
 
 (defn hyper-label [_ ctx & [props]]
@@ -137,12 +157,13 @@
         child-fields (not @(r/fmap (r/comp nil? ::field/children) (:hypercrud.browser/field ctx)))]
     (match* [level segment-type segment child-fields #_@user]
       [nil :splat _ _] magic-new-head
+      [nil :db/id _ _] attribute-label
       [nil :attribute _ _] attribute-label                  ; entity-[] ends up here
       [nil :element _ true] entity-label
       [nil :element _ false] attribute-label                ; preserve old behavior
-      [nil :naked-or-element _ _] entity-label #_(r/constantly [:span (str "naked entity head")]) ; Schema new attr, and fiddle-links new link - needs to be split
-      [:relation :naked-or-element _ _] (r/constantly nil)
-      [:tuple :naked-or-element _ _] (r/constantly nil)
+      [nil :naked-or-element _ _] entity-label              ; Schema new attr, and fiddle-links new link - needs to be split
+      [:relation :naked-or-element _ _] (r/constantly [:label "*relation*"])
+      [:tuple :naked-or-element _ _] (r/constantly [:label "*tuple*"])
       )))
 
 (defn auto-link-css [link]                                  ; semantic-css
@@ -266,9 +287,9 @@ User renderers should not be exposed to the reaction."
           r+route (r/fmap (r/partial routing/build-route' ctx) link-ref) ; need to re-focus from the top
           link-props @(r/track routing/build-link-props @r+route ctx props)] ; handles :class and :tooltip props
       (when-not (:hidden link-props)
-        (let [style {:color (border-color ctx (cond
-                                                (system-link? (:db/id @link-ref)) 60
-                                                :else 40))}
+        (let [style {:color nil #_(border-color ctx (cond
+                                                      (system-link? (:db/id @link-ref)) 60
+                                                      :else 40))}
               props (-> link-props
                         (assoc :style style)
                         (update :class css (:class props))
@@ -324,8 +345,7 @@ User renderers should not be exposed to the reaction."
       (let [ctx (assoc ctx :hyperfiddle.ui.form/state state)]
         [:div {:class (css "field" (:class props))
                :style {:border-color (border-color ctx)}}
-         (when (seq relative-path)                          ; hack assume the user does NOT want a head when the user is NOT focusing #512
-           [Head nil (dissoc ctx :hypercrud.browser/data) props])
+         [Head nil (dissoc ctx :hypercrud.browser/data) props]
          [Body @(:hypercrud.browser/data ctx) ctx props]]))))
 
 (defn table-field "Form fields are label AND value. Table fields are label OR value."
@@ -394,10 +414,7 @@ User renderers should not be exposed to the reaction."
     (->> (-> ctx :hypercrud.browser/field deref ::field/children)
          (map (fn [{segment ::field/path-segment}]
                 ^{:key (str [segment])}
-                [field [segment] ctx hyper-control props])))
-    ; In both tables and forms, [] is meaningful for the edit link.
-    ; But iframes should be omitted, we draw those as if non-repeating.
-    [^{:key (str [])} [field [] ctx entity-links props]]))
+                [field [segment] ctx hyper-control props])))))
 
 (defn columns-relation-product [field ctx & [props]]
   (concat
@@ -410,12 +427,11 @@ User renderers should not be exposed to the reaction."
                             ^{:key (str [segment child-segment])}
                             [field [segment child-segment] ctx hyper-control props])
                           child-fields)
-                     (let [f (condp = el-type
-                               datascript.parser.Variable hyper-control
-                               datascript.parser.Aggregate hyper-control
-                               datascript.parser.Pull entity-links)]
-                       [^{:key (str [segment])} [field [segment] ctx f props]])))))
-    [^{:key (str [])} [field [] ctx entity-links props]]))
+                     (if-let [f (condp = el-type
+                                  datascript.parser.Variable hyper-control
+                                  datascript.parser.Aggregate hyper-control
+                                  datascript.parser.Pull nil #_entity-links)]
+                       [^{:key (str [segment])} [field [segment] ctx f props]])))))))
 
 (defn pull "handles any datomic result that isn't a relation, recursively"
   [field val ctx & [props]]
@@ -425,7 +441,7 @@ User renderers should not be exposed to the reaction."
       [:db.cardinality/many] [table (r/partial columns field) ctx props])))
 
 (defn ^:export result "Default result renderer. Invoked as fn, returns seq-hiccup, hiccup or
-nil. call site must wrap with a Reagent component"
+nil. call site must wrap with a Reagent component"          ; is this just hyper-control ?
   [val ctx & [props]]
   (fragment
     (hint val ctx props)
@@ -436,7 +452,9 @@ nil. call site must wrap with a Reagent component"
         [:query :relation] [table (r/partial columns-relation-product field) ctx props]
         [:query :tuple] [form (r/partial columns-relation-product field) val ctx props]
         [_ _] (pull field val ctx props)))
-    [field [] ctx entity-links-iframe props]))
+
+    ; Unify with pull? What about table iframes
+    [field [] ctx entity-links-iframe (assoc props :label-fn (r/constantly nil #_[:div "result iframes"]))]))
 
 (def ^:dynamic markdown)                                    ; this should be hf-contrib or something
 

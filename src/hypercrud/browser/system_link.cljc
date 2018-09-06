@@ -17,38 +17,34 @@
          path (or (some->> path-segment (conj path)) path)  ; fe wrapping causes spaces in paths
          ?spath (blank->nil (string/join " " path))]
      (-> (->> (::field/children field)
-              (filter ::field/data-has-id?)
+              #_(filter ::field/data-has-id?)
               (mapcat (fn [child-field]
                         (nested-links-for-field parent-fiddle dbname schema child-field path (::field/data-has-id? field)))))
          (cond->>
-           (and (::field/data-has-id? field)
+           (and #_(::field/data-has-id? field)
                 (not= '* path-segment))
            (cons {:db/id (keyword "hyperfiddle.browser.system-link" (str "remove-" (hash path)))
                   :hypercrud/sys? true
-                  :link/disabled? (context/attribute-segment? (::field/path-segment field))
-                  :link/rel :hf/remove
-                  :link/class #{:hf.ide/console}
+                  :link/rel (if (#{:db/id :db/ident} path-segment) :hf/remove :hf/detach)
                   :link/path ?spath})
 
-           (and (::field/data-has-id? field)
+           (and #_(::field/data-has-id? field)
                 (or (or (not (nil? path-segment))
                         (not= :entity (:fiddle/type parent-fiddle)))
                     (and (context/attribute-segment? path-segment)
                          (not= '* path-segment))))
            (cons {:db/id (keyword "hyperfiddle.browser.system-link" (str "edit-" (hash path)))
                   :hypercrud/sys? true
-                  ;:link/disabled? (context/attribute-segment? (::field/path-segment field))
                   :link/rel :hf/edit
-                  :link/class #{:hf.ide/console path-segment}
+                  :link/class #{path-segment}
                   :link/path ?spath
                   :link/fiddle (system-fiddle/fiddle-system-edit dbname)})
 
-           parent-has-id?
+           true #_parent-has-id?
            (cons {:db/id (keyword "hyperfiddle.browser.system-link" (str "new-" (hash path)))
                   :hypercrud/sys? true
                   ;:link/disabled? (context/attribute-segment? (::field/path-segment field))
                   :link/rel :hf/new
-                  :link/class #{:hf.ide/console}
                   :link/path ?spath}))))))
 
 (defn- system-links-impl [parent-fiddle fields schemas]     ; always the top - the root links, never parent-child
