@@ -47,7 +47,8 @@
                   ;:link/disabled? (context/attribute-segment? (::field/path-segment field))
                   :link/rel :hf/new
                   :link/class #{path-segment}
-                  :link/path ?spath}))))))
+                  :link/path ?spath
+                  :link/fiddle (system-fiddle/fiddle-system-edit dbname)}))))))
 
 (defn- system-links-impl [parent-fiddle fields schemas]     ; always the top - the root links, never parent-child
   (->> fields

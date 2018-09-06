@@ -6,7 +6,7 @@
             [contrib.template :as template]
             [contrib.uri :refer [->URI]]
             [hypercrud.browser.field :as field]
-            [hypercrud.browser.auto-link :refer [retract]]
+            [hypercrud.browser.auto-link :refer [txfn-remove]]
             [hypercrud.types.Entity :refer [->Entity]]))
 
 
@@ -14,21 +14,21 @@
 
 ; Fixing these needs proper context mocking
 (deftest txfn-entity-remove []
-  (let [f (eval/eval-string! retract)
+  (let [f (eval/eval-string! txfn-remove)
         uri #uri "test"
         ctx {:cell-data (r/atom (->Entity uri {:db/id "entity"}))}]
     #_(is (= (f ctx nil nil)
            {:tx {uri [[:db.fn/retractEntity "entity"]]}}))))
 
 (deftest txfn-value-remove-one []
-  (let [f (eval/eval-string! retract)
+  (let [f (eval/eval-string! txfn-remove)
         uri #uri "test"
         ctx {:value (r/atom (->Entity uri {:db/id "child"}))}]
     #_(is (= (f ctx nil nil)
            {:tx {uri [[:db.fn/retractEntity "child"]]}}))))
 
 (deftest txfn-value-remove-many []
-  (let [f (eval/eval-string! retract)
+  (let [f (eval/eval-string! txfn-remove)
         uri #uri "test"
         ctx {:value (r/atom [(->Entity uri {:db/id "child 1"})
                              (->Entity uri {:db/id "child 2"})])}]

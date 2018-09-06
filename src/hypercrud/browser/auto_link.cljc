@@ -26,22 +26,22 @@
           "identity"
           "(constantly nil)")))))
 
-(def attach (-> (template/load-resource "auto-txfn/attach.edn") string/trim))
-(def detach (-> (template/load-resource "auto-txfn/detach.edn") string/trim))
-(def retract (-> (template/load-resource "auto-txfn/retract.edn") string/trim))
-(def child-tempid "(partial hyperfiddle.api/tempid-child ctx)")
-(def detached-tempid "(constantly (hyperfiddle.api/tempid-detached ctx))")
+(def txfn-attach (-> (template/load-resource "auto-txfn/attach.edn") string/trim))
+(def txfn-detach (-> (template/load-resource "auto-txfn/detach.edn") string/trim))
+(def txfn-remove (-> (template/load-resource "auto-txfn/remove.edn") string/trim))
+(def tempid-child "(partial hyperfiddle.api/tempid-child ctx)")
+(def tempid-detached "(constantly (hyperfiddle.api/tempid-detached ctx))")
 
 (defn auto-link [ctx {:keys [:link/rel :link/fiddle] :as link}]
   (let [path (-> link :link/path link/read-path)
         field @(:hypercrud.browser/field (context/refocus ctx path)) ; can't focus without data
-        is-root (::field/source-symbol field)]
+        is-root (:hypercrud.browser/parent ctx)]
     ; Don't crash if we don't understand the rel
     (let [a (case rel
-              :hf/new {:link/formula (if is-root detached-tempid child-tempid)
-                       :link/tx-fn (if-not is-root attach)}
-              :hf/remove {:link/tx-fn retract}              ; hf/delete
-              :hf/detach {:link/tx-fn detach}
+              :hf/new {:link/formula (if is-root tempid-detached tempid-child)
+                       :link/tx-fn (if is-root "(constantly {:tx []})" txfn-attach)}
+              :hf/remove {:link/tx-fn txfn-remove}
+              :hf/detach {:link/tx-fn txfn-detach}
               :hf/edit {}                                   ; We know this is an anchor, otherwise pull deeper instead
               :hf/iframe {}                                 ; iframe is always a query, otherwise pull deeper instead. Today this defaults in the add-fiddle txfn
               :hf/rel {}
