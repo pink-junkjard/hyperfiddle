@@ -7,10 +7,10 @@
     [loom.graph :as graph]))
 
 
-(defn entid [db ident]
+(defn normalize-id [db ident]
   (if (tempid? ident)
     ident
-    (d/entid db ident)))
+    (or (d/entid db ident) ident)))
 
 (defn inject-tempids-map [db stmt identity-ids component-ids ref-ids schema-ids]
   (let [top-hash (hash stmt)
@@ -19,9 +19,10 @@
                               (let [[e stmt] (if-let [e (:db/id stmt)]
                                                [e stmt]
                                                (let [e (str "hyperfiddle.security." top-hash "." (swap! id-count inc))]
-                                                 [e (assoc stmt :db/id e)]))]
+                                                 [e (assoc stmt :db/id e)]))
+                                    e (normalize-id db e)]
                                 (reduce (fn [acc-map [a v :as kv]]
-                                          (let [a (or (entid db a) a)
+                                          (let [a (normalize-id db a)
                                                 [{:keys [attr-ids identity-graph component-edges statement]} v]
                                                 (if (and (map? v) (contains? ref-ids a))
                                                   (let [child-map (inject-tempids-map' v)]
@@ -79,7 +80,8 @@
                               (condp contains? op
                                 #{:db/add :db/retract}
                                 (let [[_ e a v] stmt
-                                      a (or (entid db a) a)]
+                                      e (normalize-id db e)
+                                      a (normalize-id db a)]
                                   {:attr-ids (cond-> attr-ids
                                                (contains? schema-ids a) (conj e))
                                    :identity-graph (if (contains? identity-ids a)
@@ -91,12 +93,15 @@
 
                                 #{:db/retractEntity :db.fn/retractEntity}
                                 {:attr-ids attr-ids
-                                 :identity-graph (graph/add-nodes identity-graph (second stmt))
+                                 :identity-graph (->> (second stmt)
+                                                      (normalize-id db)
+                                                      (graph/add-nodes identity-graph))
                                  :component-edges component-edges}
 
                                 #{:db/cas :db.fn/cas}
                                 (let [[_ e a ov nv] stmt
-                                      a (or (entid db a) a)]
+                                      e (normalize-id db e)
+                                      a (normalize-id db a)]
                                   {:attr-ids (cond-> attr-ids
                                                (contains? schema-ids a) (conj e))
                                    :identity-graph (if (contains? identity-ids a)
