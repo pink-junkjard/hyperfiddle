@@ -60,9 +60,10 @@
   (cond
     (:options props) [select val ctx props]
     :else [:div
-           (if-let [self (data/select-here ctx :hf/edit (last (:hypercrud.browser/path ctx)))]
-             [hyperfiddle.ui/ui-from-link self ctx props (pr-str (or (:db/ident val) (:db/id val)))]
-             (pr-str (or (:db/ident val) (:db/id val))))
+           [:div.input
+            (if-let [self (data/select-here ctx :hf/edit (last (:hypercrud.browser/path ctx)))]
+              [hyperfiddle.ui/ui-from-link self ctx props (pr-str (or (:db/ident val) (:db/id val)))]
+              (pr-str (or (:db/ident val) (:db/id val))))]
 
            ; remove is not generated in console mode, but if it is present, render it here?
            (if-let [remove (data/select-here ctx :hf/remove (last (:hypercrud.browser/path ctx)))]
@@ -72,12 +73,12 @@
              ; To retract, navigate there and retract. (Though, the link can be modeled?)
              [hyperfiddle.ui/ui-from-link detach ctx props "detach"])]))
 
-
 (defn ^:export dbid [val ctx & [props]]                     ; When you pulled db/id or db/ident
   [:div
-   (if-let [self (data/select-here ctx :hf/edit (last (:hypercrud.browser/path ctx)))]
-     [hyperfiddle.ui/ui-from-link self ctx props (str val)]
-     (str val))
+   [:div.input
+    (if-let [self (data/select-here ctx :hf/edit (last (:hypercrud.browser/path ctx)))]
+      [hyperfiddle.ui/ui-from-link self ctx props (str val)]
+      (str val))]
 
    (if-let [remove (data/select-here ctx :hf/remove (last (:hypercrud.browser/path ctx)))]
      [hyperfiddle.ui/ui-from-link remove ctx props "remove"])
