@@ -88,10 +88,7 @@
       (->> (filter (comp (partial = (:hypercrud.browser/path ctx)) link/read-path :link/path)))
       (->> (validate-one+r rel ?corcs))))
 
-(defn ^:export select-here [ctx rel & [?corcs]]
-  (->> (select-here+ ctx rel ?corcs) (unwrap (constantly nil))))
-
-(defn ^:export select+ "get a link for browsing later" [ctx rel & [?corcs]] ; Right[Reaction[Link]], Left[String]
+(defn ^:export select+ [ctx rel & [?corcs]] ; Right[Reaction[Link]], Left[String]
   (let [rlinks (r/track select-all ctx rel ?corcs)]
     @(r/fmap (r/partial validate-one+r rel ?corcs) rlinks)))
 
@@ -101,3 +98,9 @@
   ; No focusing, can select from root, and data-from-link manufactures a new context
   (>>= (select+ ctx rel ?class)
        #(base/data-from-link @% ctx)))
+
+(defn ^:export select-here [ctx rel & [?corcs]]
+  (->> (select-here+ ctx rel ?corcs) (unwrap (constantly nil))))
+
+(defn ^:export select [ctx rel & [?corcs]]
+  (->> (select+ ctx rel ?corcs) (unwrap (constantly nil))))
