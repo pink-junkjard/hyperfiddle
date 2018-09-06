@@ -12,7 +12,7 @@
     ident
     (d/entid db ident)))
 
-(defn inject-tempids-map [db stmt identity-ids component-ids ref-ids]
+(defn inject-tempids-map [db stmt identity-ids component-ids ref-ids schema-ids]
   (let [top-hash (hash stmt)
         id-count (atom 0)
         inject-tempids-map' (fn inject-tempids-map' [stmt]
@@ -22,22 +22,26 @@
                                                  [e (assoc stmt :db/id e)]))]
                                 (reduce (fn [acc-map [a v :as kv]]
                                           (let [a (or (entid db a) a)
-                                                [{:keys [identity-graph component-edges statement]} v]
+                                                [{:keys [attr-ids identity-graph component-edges statement]} v]
                                                 (if (and (map? v) (contains? ref-ids a))
                                                   (let [child-map (inject-tempids-map' v)]
-                                                    [{:identity-graph (graph/graph (:identity-graph acc-map) (:identity-graph child-map))
+                                                    [{:attr-ids (into (:attr-ids acc-map) (:attr-ids child-map))
+                                                      :identity-graph (graph/graph (:identity-graph acc-map) (:identity-graph child-map))
                                                       :component-edges (into (:component-edges acc-map) (:component-edges child-map))
                                                       :statement (:statement acc-map)}
                                                      (:statement child-map)])
                                                   [acc-map v])]
-                                            {:identity-graph (if (contains? identity-ids a)
+                                            {:attr-ids (cond-> attr-ids
+                                                         (contains? schema-ids a) (conj e))
+                                             :identity-graph (if (contains? identity-ids a)
                                                                (graph/add-edges identity-graph [e [a v]])
                                                                identity-graph)
                                              :component-edges (if (contains? component-ids a)
                                                                 (conj component-edges [e (:db/id v)])
                                                                 component-edges)
                                              :statement (assoc statement (first kv) v)}))
-                                        {:identity-graph (graph/graph e)
+                                        {:attr-ids #{}
+                                         :identity-graph (graph/graph e)
                                          :component-edges #{}
                                          :statement {}}
                                         stmt)))]
@@ -59,10 +63,14 @@
                                  [?e :db/ident]
                                  [?e :db/valueType :db.type/ref]]
                                db))
-        acc (reduce (fn [{:keys [component-edges identity-graph tx]} stmt]
+        schema-ids (->> [:db/cardinality :db/valueType]
+                        (map #(d/entid db %))
+                        (into #{}))
+        acc (reduce (fn [{:keys [attr-ids component-edges identity-graph tx]} stmt]
                       (cond
-                        (map? stmt) (let [sub (inject-tempids-map db stmt identity-ids component-ids ref-ids)]
-                                      {:identity-graph (graph/graph identity-graph (:identity-graph sub))
+                        (map? stmt) (let [sub (inject-tempids-map db stmt identity-ids component-ids ref-ids schema-ids)]
+                                      {:attr-ids (into attr-ids (:attr-ids sub))
+                                       :identity-graph (graph/graph identity-graph (:identity-graph sub))
                                        :component-edges (into component-edges (:component-edges sub))
                                        :tx (conj tx (:statement sub))})
 
@@ -72,7 +80,9 @@
                                 #{:db/add :db/retract}
                                 (let [[_ e a v] stmt
                                       a (or (entid db a) a)]
-                                  {:identity-graph (if (contains? identity-ids a)
+                                  {:attr-ids (cond-> attr-ids
+                                               (contains? schema-ids a) (conj e))
+                                   :identity-graph (if (contains? identity-ids a)
                                                      (graph/add-edges identity-graph [e [a v]])
                                                      (graph/add-nodes identity-graph e))
                                    :component-edges (if (contains? component-ids a)
@@ -80,24 +90,33 @@
                                                       component-edges)})
 
                                 #{:db/retractEntity :db.fn/retractEntity}
-                                {:identity-graph (graph/add-nodes identity-graph (second stmt))
+                                {:attr-ids attr-ids
+                                 :identity-graph (graph/add-nodes identity-graph (second stmt))
                                  :component-edges component-edges}
 
                                 #{:db/cas :db.fn/cas}
                                 (let [[_ e a ov nv] stmt
                                       a (or (entid db a) a)]
-                                  {:identity-graph (if (contains? identity-ids a)
+                                  {:attr-ids (cond-> attr-ids
+                                               (contains? schema-ids a) (conj e))
+                                   :identity-graph (if (contains? identity-ids a)
                                                      (graph/add-edges identity-graph [e [a ov]] [e [a nv]])
                                                      (graph/add-nodes identity-graph e))
                                    :component-edges (if (contains? component-ids a)
                                                       (conj component-edges [e nv] [e ov])
-                                                      component-edges)})))
-                            (assoc :tx (conj tx stmt)))))
-                    {:identity-graph (graph/graph)
+                                                      component-edges)})
+                                ; else
+                                (throw (ex-info "Unrecognized operation" {:statement stmt}))))
+                            (assoc :tx (conj tx stmt)))
+
+                        :else (throw (ex-info "Unrecognized statement type" {:statement stmt}))))
+                    {:attr-ids #{}
+                     :identity-graph (graph/graph)
                      :component-edges #{}
                      :tx []}
                     tx)]
-    {:component-graph (let [ig (:identity-graph acc)]
+    {:attr-ids (:attr-ids acc)
+     :component-graph (let [ig (:identity-graph acc)]
                         (->> (:component-edges acc)
                              (map (fn [[parent child]]
                                     [(set (alg/bf-traverse ig parent)) (set (alg/bf-traverse ig child))]))
@@ -119,7 +138,7 @@
              (every? #(contains? supported-ops (first %))))
         (assert "user declared db functions not yet supported")))
 
-  (let [{:keys [component-graph identity-graph tx-with-tempids]} (inject-tempids db tx)]
+  (let [{:keys [attr-ids component-graph identity-graph tx-with-tempids]} (inject-tempids db tx)]
     ; check permissions on existing entities
     (doseq [existing-eids (->> (alg/connected-components component-graph)
                                (mapcat (fn [list-of-sets-of-eids]
@@ -139,9 +158,13 @@
                      (when (and (empty? existing-eids)      ; only generate owner if ALL merged entities are new
                                 (= 0 (graph/in-degree component-graph (set eids)))) ; this entity is not a component of another new entity
                        ; doesn't matter which tempid has owner appended
-                       (let [tempid (some #(when (tempid? %) %) eids)]
+                       (let [tempid (some #(when (tempid? %) %) eids)
+                             db-part (cond
+                                       (some #(contains? attr-ids %) eids) :db.part/db
+                                       (contains? (set eids) "datomic.tx") :db.part/tx
+                                       :else :db.part/user)]
                          (assert tempid "no tempids or existing ids") ; this is probably a bad transaction; would fail with "Unable to resolve entity"
-                         ((:generate-owner config) tempid))))))
+                         ((:generate-owner config) tempid db-part))))))
          (into tx-with-tempids))))
 
 (defn build-parent-lookup [db]
@@ -173,19 +196,28 @@
     (throw (security/tx-validation-failure))
     (let [db (d/db (d/connect (str (:database/uri hf-db))))
           parent-lookup (build-parent-lookup db)
+          root-subjects (-> (into #{} (:hyperfiddle/owners hf-db))
+                            (conj security/root))
           owners (fn [eid]
                    (let [eid (or (parent-lookup eid) eid)
                          e (d/entity db eid)]
                      (into #{} (:hyperfiddle/owners e))))
-          has-permissions? (if (= security/root subject)
+          has-permissions? (if (contains? root-subjects subject)
                              (constantly true)
                              #(contains? % subject))
           config {:can-merge? (fn [eid & rest]
                                 (let [first-owners (owners eid)]
-                                  ; unless the perms are identical, the entities cannot be merged
                                   (and (has-permissions? first-owners)
+                                       ; unless the perms are identical, the entities cannot be merged
                                        (every? #(= first-owners (owners %)) rest))))
-                  :generate-owner (fn [e] [[:db/add e :hyperfiddle/owners subject]])}]
+                  :generate-owner (if (contains? root-subjects subject)
+                                    (fn [e db-part]
+                                      (when-not (contains? #{:db.part/db :db.part/tx} db-part)
+                                        [[:db/add e :hyperfiddle/owners subject]]))
+                                    (fn [e db-part]
+                                      (when (contains? #{:db.part/db :db.part/tx} db-part)
+                                        (throw (security/tx-validation-failure)))
+                                      [[:db/add e :hyperfiddle/owners subject]]))}]
       (validate-write-entity-ownership config db tx))))
 
 #_(defn write-entity-ownership [hf-db subject tx]
