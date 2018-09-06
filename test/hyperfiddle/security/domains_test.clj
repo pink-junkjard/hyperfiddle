@@ -81,7 +81,7 @@
            :db/doc "blah blah blah"}])
       (f [[:db/add :fiddle/link :db/doc "blah blah blah"]]))))
 
-(deftest non-component-refs []
+(deftest component-many []
   (let [person-a (UUID/randomUUID)
         person-b (UUID/randomUUID)]
     (transact/transact! fixtures/test-domains-uri person-a {fixtures/test-uri [{:person/name "person a"}]})
@@ -90,31 +90,102 @@
     (let [db (d/db (d/connect (str fixtures/test-uri)))
           a (d/q '[:find ?e . :where [?e :person/name "person a"]] db)
           b (d/q '[:find ?e . :where [?e :person/name "person b"]] db)]
-      (testing "add friend to person-a"
-        (let [tx [[:db/add a :person/friends b]]]
-          (testing "fails for person-b"
-            (is (thrown-with-msg?
-                  RuntimeException #"user tx failed validation"
-                  (transact/process-tx fixtures/test-domains-uri person-b fixtures/test-uri tx))))
+      (letfn [(f [tx]
+                (testing "fails for person-a"
+                  (is (thrown-with-msg?
+                        RuntimeException #"user tx failed validation"
+                        (transact/process-tx fixtures/test-domains-uri person-a fixtures/test-uri tx))))
 
-          (testing "succeeds for person-a"
-            (is (= tx (transact/process-tx fixtures/test-domains-uri person-a fixtures/test-uri tx))))
+                (testing "fails for person-b"
+                  (is (thrown-with-msg?
+                        RuntimeException #"user tx failed validation"
+                        (transact/process-tx fixtures/test-domains-uri person-b fixtures/test-uri tx))))
 
-          (testing "succeeds for owner"
-            (is (= tx (transact/process-tx fixtures/test-domains-uri db-owner fixtures/test-uri tx))))))
+                (testing "fails for owner"
+                  (is (thrown-with-msg?
+                        RuntimeException #"user tx failed validation"
+                        (transact/process-tx fixtures/test-domains-uri db-owner fixtures/test-uri tx)))))]
+        (testing "add link to person-a"
+          (f [[:db/add a :fiddle/link b]])
+          (f [{:db/id a :fiddle/link [b]}])
+          (f [{:db/id a :fiddle/link [{:db/id b}]}]))
 
-      (testing "add friend to person-b"
-        (let [tx [[:db/add b :person/friends a]]]
-          (testing "fails for person-a"
-            (is (thrown-with-msg?
-                  RuntimeException #"user tx failed validation"
-                  (transact/process-tx fixtures/test-domains-uri person-a fixtures/test-uri tx))))
+        (testing "add link to person-b"
+          (f [[:db/add b :fiddle/link a]])
+          (f [{:db/id b :fiddle/link [a]}])
+          (f [{:db/id b :fiddle/link [{:db/id a}]}]))))))
 
-          (testing "succeeds for person-b"
-            (is (= tx (transact/process-tx fixtures/test-domains-uri person-b fixtures/test-uri tx))))
+(deftest non-component-refs []
+  (testing "succeeds and adds owner to asdf and qwerty"
+    (letfn [(f [tx]
+              (is (= (into tx [[:db/add "-1" :hyperfiddle/owners db-owner]
+                               [:db/add "-2" :hyperfiddle/owners db-owner]])
+                     (transact/process-tx fixtures/test-domains-uri db-owner fixtures/test-uri tx))))]
+      (f [{:db/id "-1"
+           :person/name "asdf"
+           :person/friends [{:db/id "-2"
+                             :person/name "qwerty"}]}])
+      (f [[:db/add "-1" :person/name "asdf"]
+          [:db/add "-1" :person/friends "-2"]
+          [:db/add "-2" :person/name "qwerty"]])))
 
-          (testing "succeeds for owner"
-            (is (= tx (transact/process-tx fixtures/test-domains-uri db-owner fixtures/test-uri tx)))))))))
+  (let [person-a (UUID/randomUUID)
+        person-b (UUID/randomUUID)]
+    (transact/transact! fixtures/test-domains-uri person-a {fixtures/test-uri [{:person/name "person a"}]})
+    (transact/transact! fixtures/test-domains-uri person-b {fixtures/test-uri [{:person/name "person b"}]})
+
+    (let [db (d/db (d/connect (str fixtures/test-uri)))
+          a (d/q '[:find ?e . :where [?e :person/name "person a"]] db)
+          b (d/q '[:find ?e . :where [?e :person/name "person b"]] db)]
+      (letfn [(f [tx]
+                (testing "fails for person-a"
+                  (is (thrown-with-msg?
+                        RuntimeException #"user tx failed validation"
+                        (transact/process-tx fixtures/test-domains-uri person-a fixtures/test-uri tx))))
+
+                (testing "fails for person-b"
+                  (is (thrown-with-msg?
+                        RuntimeException #"user tx failed validation"
+                        (transact/process-tx fixtures/test-domains-uri person-b fixtures/test-uri tx))))
+
+                (testing "succeeds for db-owner"
+                  (is (= tx (transact/process-tx fixtures/test-domains-uri db-owner fixtures/test-uri tx)))))]
+        (testing "modifying child friend while adding to person-a"
+          (f [{:db/id a :person/friends [{:db/id b :person/name "person a+"}]}])))
+
+      (letfn [(f [tx]
+                (testing "fails for person-b"
+                  (is (thrown-with-msg?
+                        RuntimeException #"user tx failed validation"
+                        (transact/process-tx fixtures/test-domains-uri person-b fixtures/test-uri tx))))
+
+                (testing "succeeds for person-a"
+                  (is (= tx (transact/process-tx fixtures/test-domains-uri person-a fixtures/test-uri tx))))
+
+                (testing "succeeds for owner"
+                  (is (= tx (transact/process-tx fixtures/test-domains-uri db-owner fixtures/test-uri tx)))))]
+        (testing "add friend to person-a"
+          (f [[:db/add a :person/friends b]])
+          (f [{:db/id a :person/friends [b]}])
+          ;(f [{:db/id a :person/friends [{:db/id b}]}]) ;todo
+          ))
+
+      (letfn [(f [tx]
+                (testing "fails for person-a"
+                  (is (thrown-with-msg?
+                        RuntimeException #"user tx failed validation"
+                        (transact/process-tx fixtures/test-domains-uri person-a fixtures/test-uri tx))))
+
+                (testing "succeeds for person-b"
+                  (is (= tx (transact/process-tx fixtures/test-domains-uri person-b fixtures/test-uri tx))))
+
+                (testing "succeeds for owner"
+                  (is (= tx (transact/process-tx fixtures/test-domains-uri db-owner fixtures/test-uri tx)))))]
+        (testing "add friend to person-b"
+          (f [[:db/add b :person/friends a]])
+          (f [{:db/id b :person/friends [a]}])
+          ;(f [{:db/id b :person/friends [{:db/id a}]}]) ; todo
+          )))))
 
 (deftest sever-component-parent-child []
   (let [tx [{:person/name "parent"
@@ -134,21 +205,23 @@
              (transact/process-tx fixtures/test-domains-uri db-owner fixtures/test-uri tx))))))
 
 (deftest create-component-parent-child []
-  (let [tx [{:person/name "parent"}
-            {:person/name "child"}]]
-    (transact/transact! fixtures/test-domains-uri db-owner {fixtures/test-uri tx}))
+  (let [person-a (UUID/randomUUID)]
+    (let [tx [{:person/name "parent"}
+              {:person/name "child"
+               :person/email "asdf"}]]
+      (transact/transact! fixtures/test-domains-uri person-a {fixtures/test-uri tx}))
 
-  (let [parent-id (d/q '[:find ?e . :where [?e :person/name "parent"]] (d/db (d/connect (str fixtures/test-uri))))
-        child-id (d/q '[:find ?e . :where [?e :person/name "child"]] (d/db (d/connect (str fixtures/test-uri))))
-        tx [[:db/add parent-id :fiddle/link child-id]]]
-    (testing "fails for non-owner"
-      (is (thrown-with-msg?
-            RuntimeException #"user tx failed validation"
-            (transact/process-tx fixtures/test-domains-uri "someone-else" fixtures/test-uri tx))))
+    (let [parent-id (d/q '[:find ?e . :where [?e :person/name "parent"]] (d/db (d/connect (str fixtures/test-uri))))
+          child-id (d/q '[:find ?e . :where [?e :person/name "child"]] (d/db (d/connect (str fixtures/test-uri))))
+          tx [[:db/add parent-id :fiddle/link child-id]]]
+      (testing "fails for non-owner"
+        (is (thrown-with-msg?
+              RuntimeException #"user tx failed validation"
+              (transact/process-tx fixtures/test-domains-uri "someone-else" fixtures/test-uri tx))))
 
-    (testing "succeeds for owner, and owner is removed from child"
-      (is (= (conj tx [:db/retract child-id :hyperfiddle/owners db-owner])
-             (transact/process-tx fixtures/test-domains-uri db-owner fixtures/test-uri tx))))))
+      (testing "succeeds for owner, and owner is removed from child"
+        (is (= (conj tx [:db/retract child-id :hyperfiddle/owners person-a])
+               (transact/process-tx fixtures/test-domains-uri person-a fixtures/test-uri tx)))))))
 
 (defn infinite-component-loop []
   ; todo test create and sever parent/child loops
@@ -163,15 +236,25 @@
       (transact/transact! fixtures/test-domains-uri db-owner {fixtures/test-uri tx})))
 
 (deftest hybrid-relationships []
-  (testing "parent-:db.part/db child-:db.part/user"
+  (testing "parent-:db.part/db child-:db.part/user non-component"
     (let [tx [{:db/id "-1"
                :db/ident :attr
                :db/cardinality :db.cardinality/many
                :db/valueType :db.type/bigdec
-               :fiddle/links [{:db/id "-2" :fiddle/ident :child}]}]]
+               :person/friends [{:db/id "-2" :person/name "asdf"}]}]]
       (testing "succeeds and owner is added to child"
         (is (= (conj tx [:db/add "-2" :hyperfiddle/owners db-owner])
                (transact/process-tx fixtures/test-domains-uri db-owner fixtures/test-uri tx))))))
+
+  #_(testing "parent-:db.part/db child-:db.part/user component"
+      (let [tx [{:db/id "-1"
+                 :db/ident :attr
+                 :db/cardinality :db.cardinality/many
+                 :db/valueType :db.type/bigdec
+                 :fiddle/link [{:db/id "-2" :person/name "asdf"}]}]]
+        (testing "succeeds and owner is added to child"
+          (is (= (conj tx [:db/add "-2" :hyperfiddle/owners db-owner])
+                 (transact/process-tx fixtures/test-domains-uri db-owner fixtures/test-uri tx))))))
 
   (testing "merging two parents by child component"
     (let [email "asdf@example.com"]

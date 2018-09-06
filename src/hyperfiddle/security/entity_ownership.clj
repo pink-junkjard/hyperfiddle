@@ -12,6 +12,26 @@
     ident
     (or (d/entid db ident) ident)))
 
+(defn process-ref-v [db inject-tempids-map' identity-ids component-ids
+                     acc-map e a v]
+  (if (map? v)
+    ; nested map statement
+    (let [child-acc-map (inject-tempids-map' v)
+          v (:statement child-acc-map)]
+      [v (-> acc-map
+             (update :attr-ids into (:attr-ids child-acc-map))
+             (update :identity-graph graph/graph (:identity-graph child-acc-map))
+             (update :component-edges into (:component-edges child-acc-map))
+             (cond->
+               (contains? identity-ids a) (update :identity-graph graph/add-edges [e [a (:db/id v)]])
+               (contains? component-ids a) (update :component-edges conj [e (:db/id v)])))])
+
+    ; or just an id or lookup ref
+    (let [v' (normalize-id db v)]
+      [v (cond-> acc-map
+           (contains? identity-ids a) (update :identity-graph graph/add-edges [e [a v']])
+           (contains? component-ids a) (update :component-edges conj [e v']))])))
+
 (defn inject-tempids-map [db stmt identity-ids component-ids ref-ids schema-ids]
   (let [top-hash (hash stmt)
         id-count (atom 0)
@@ -22,25 +42,47 @@
                                                  [e (assoc stmt :db/id e)]))
                                     e (normalize-id db e)]
                                 (reduce (fn [acc-map [a v :as kv]]
-                                          (let [a (normalize-id db a)
-                                                [{:keys [attr-ids identity-graph component-edges statement]} v]
-                                                (if (and (map? v) (contains? ref-ids a))
-                                                  (let [child-map (inject-tempids-map' v)]
-                                                    [{:attr-ids (into (:attr-ids acc-map) (:attr-ids child-map))
-                                                      :identity-graph (graph/graph (:identity-graph acc-map) (:identity-graph child-map))
-                                                      :component-edges (into (:component-edges acc-map) (:component-edges child-map))
-                                                      :statement (:statement acc-map)}
-                                                     (:statement child-map)])
-                                                  [acc-map v])]
-                                            {:attr-ids (cond-> attr-ids
-                                                         (contains? schema-ids a) (conj e))
-                                             :identity-graph (if (contains? identity-ids a)
-                                                               (graph/add-edges identity-graph [e [a v]])
-                                                               identity-graph)
-                                             :component-edges (if (contains? component-ids a)
-                                                                (conj component-edges [e (:db/id v)])
-                                                                component-edges)
-                                             :statement (assoc statement (first kv) v)}))
+                                          (let [a (normalize-id db a)]
+                                            (-> (if (contains? ref-ids a)
+                                                  (case (:db/cardinality (d/entity db a))
+                                                    :db.cardinality/one
+                                                    (let [[v acc-map] (process-ref-v db inject-tempids-map' identity-ids component-ids
+                                                                                     acc-map e a v)]
+                                                      (assoc-in acc-map [:statement (first kv)] v))
+
+                                                    :db.cardinality/many
+                                                    ; datomic is super lenient for card/many. v can be a map or an identity (NOT lookup-ref) or
+                                                    ; a heterogeneous list of any combination of map, lookup ref, or identity
+                                                    ; e.g using this statement as a test  `(d/with (db! root-uri) [{:db/id "-1" :fiddle/links 'v}])`
+                                                    ; the following values for 'v are VALID:
+                                                    ;   [{:db/id 17592186061399}]
+                                                    ;   {:db/id 17592186061399}
+                                                    ;   [17592186061399]
+                                                    ;   17592186061399
+                                                    ;   :db/add
+                                                    ;   [{:fiddle/ident :databases}]
+                                                    ;   {:fiddle/ident :databases}
+                                                    ;   [[:fiddle/ident :databases]]
+                                                    ;   [[[:db/ident :fiddle/ident] :databases]]  ; extra spicy double lookup ref
+                                                    ; the following values are INVALID:
+                                                    ;   [:fiddle/ident :databases]
+                                                    ;   [[:db/ident :fiddle/ident] :databases]    ; extra spicy double lookup ref
+                                                    (if (or (list? v) (vector? v) (seq? v) (set? v))
+                                                      (reduce (fn [acc-map v]
+                                                                (let [[v acc-map] (process-ref-v db inject-tempids-map' identity-ids component-ids
+                                                                                                 acc-map e a v)]
+                                                                  (update-in acc-map [:statement (first kv)] conj v)))
+                                                              (assoc-in acc-map [:statement (first kv)] (empty v))
+                                                              v)
+                                                      (let [[v acc-map] (process-ref-v db inject-tempids-map' identity-ids component-ids
+                                                                                       acc-map e a v)]
+                                                        (assoc-in acc-map [:statement (first kv)] v))))
+
+                                                  (cond-> (assoc-in acc-map [:statement (first kv)] v)
+                                                    ; non-db.type/ref lookup ref
+                                                    (contains? identity-ids a) (update :identity-graph graph/add-edges [e [a v]])))
+                                                (cond->
+                                                  (contains? schema-ids a) (update :attr-ids conj e)))))
                                         {:attr-ids #{}
                                          :identity-graph (graph/graph e)
                                          :component-edges #{}
