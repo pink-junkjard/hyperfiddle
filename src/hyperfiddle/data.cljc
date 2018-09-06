@@ -2,6 +2,7 @@
   (:require
     [cats.core :refer [fmap >>=]]
     [cats.monad.either :refer [left right]]
+    [contrib.ct :refer [unwrap]]
     [contrib.reactive :as r]
     [cuerdas.core :as str]
     [hypercrud.browser.base :as base]
@@ -45,7 +46,7 @@
           (case (::field/cardinality child-field)
             :db.cardinality/one (recur child-field xs)
             :db.cardinality/many false)
-          false #_ "Nonsensical path - probably invalid links for this query, maybe they just changed the query and the links broke")))))
+          false #_"Nonsensical path - probably invalid links for this query, maybe they just changed the query and the links broke")))))
 
 (defn link-path-floor "Find the shortest path that has equal dimension" [ctx path]
   (loop [ctx (context/refocus ctx path)]                    ; we know we're at least satisfied so this is safe
@@ -75,13 +76,24 @@
                     (set (:link/class link))                ; add more stuff here
                     (contrib.data/xorxs ?corcs)))))))
 
+(defn validate-one+r [rel class links]
+  (let [n (count links)]
+    (condp = n
+      1 (right (r/track identity (first links)))            ; lol lift
+      0 (left (str/format "no match for rel: %s class: %s" (pr-str rel) (pr-str class)))
+      :else (left (str/format "Too many links matched (%s) for rel: %s class: %s" n (pr-str rel) (pr-str class))))))
+
+(defn ^:export select-here+ [ctx rel & [?corcs]]
+  (-> (select-all ctx rel ?corcs)
+      (->> (filter (comp (partial = (:hypercrud.browser/path ctx)) link/read-path :link/path)))
+      (->> (validate-one+r rel ?corcs))))
+
+(defn ^:export select-here [ctx rel & [?corcs]]
+  (->> (select-here+ ctx rel ?corcs) (unwrap (constantly nil))))
+
 (defn ^:export select+ "get a link for browsing later" [ctx rel & [?corcs]] ; Right[Reaction[Link]], Left[String]
-  (let [link?s (r/track select-all ctx rel ?corcs)
-        count @(r/fmap count link?s)]
-    (cond
-      (= 1 count) (right (r/fmap first link?s))
-      (= 0 count) (left (str/format "no match for rel: %s class: %s" (pr-str rel) (pr-str ?corcs)))
-      :else (left (str/format "Too many links matched (%s) for rel: %s class: %s" count (pr-str rel) (pr-str ?corcs))))))
+  (let [rlinks (r/track select-all ctx rel ?corcs)]
+    @(r/fmap (r/partial validate-one+r rel ?corcs) rlinks)))
 
 (defn ^:export browse+ "Navigate a link by hydrating its context accounting for dependencies in scope.
   returns Either[Loading|Error,ctx]."

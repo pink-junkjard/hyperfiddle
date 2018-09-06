@@ -60,44 +60,30 @@
   (cond
     (:options props) [select val ctx props]
     :else [:div
-           (if-let [self (-> (data/select-all ctx :hf/edit)
-                             (->> (filter (comp (partial = (:hypercrud.browser/path ctx)) link/read-path :link/path)))
-                             first)]
-             [hyperfiddle.ui/ui-from-link (r/track identity self) ctx props (pr-str (or (:db/ident val) (:db/id val)))]
+           (if-let [self (data/select-here ctx :hf/edit (last (:hypercrud.browser/path ctx)))]
+             [hyperfiddle.ui/ui-from-link self ctx props (pr-str (or (:db/ident val) (:db/id val)))]
              (pr-str (or (:db/ident val) (:db/id val))))
 
            ; remove is not generated in console mode, but if it is present, render it here?
-           (if-let [remove (-> (data/select-all ctx :hf/remove) ; (last (:hypercrud.browser/path ctx))
-                               (->> (filter (comp (partial = (:hypercrud.browser/path ctx)) link/read-path :link/path)))
-                               first)]
-             [hyperfiddle.ui/ui-from-link (r/track identity remove) ctx props "remove"])
+           (if-let [remove (data/select-here ctx :hf/remove (last (:hypercrud.browser/path ctx)))]
+             [hyperfiddle.ui/ui-from-link remove ctx props "remove"])
 
-           (if-let [detach (-> (data/select-all ctx :hf/detach) ; (last (:hypercrud.browser/path ctx))
-                               (->> (filter (comp (partial = (:hypercrud.browser/path ctx)) link/read-path :link/path)))
-                               first)]
+           (if-let [detach (data/select-here ctx :hf/detach (last (:hypercrud.browser/path ctx)))]
              ; To retract, navigate there and retract. (Though, the link can be modeled?)
-             [hyperfiddle.ui/ui-from-link (r/track identity detach) ctx props "detach"])]))
+             [hyperfiddle.ui/ui-from-link detach ctx props "detach"])]))
 
 
 (defn ^:export dbid [val ctx & [props]]                     ; When you pulled db/id or db/ident
   [:div
-   (let [label (str val)
-         self (-> (data/select-all ctx :hf/edit)            ; (last (:hypercrud.browser/path ctx))
-                  (->> (filter (comp (partial = (:hypercrud.browser/path ctx)) link/read-path :link/path)))
-                  first)]
-     (if self
-       [hyperfiddle.ui/ui-from-link (r/track identity self) ctx props label]
-       label))
+   (if-let [self (data/select-here ctx :hf/edit (last (:hypercrud.browser/path ctx)))]
+     [hyperfiddle.ui/ui-from-link self ctx props (str val)]
+     (str val))
 
-   (if-let [remove (-> (data/select-all ctx :hf/remove)     ; (last (:hypercrud.browser/path ctx))
-                       (->> (filter (comp (partial = (:hypercrud.browser/path ctx)) link/read-path :link/path)))
-                       first)]
-     [hyperfiddle.ui/ui-from-link (r/track identity remove) ctx props "remove"])
+   (if-let [remove (data/select-here ctx :hf/remove (last (:hypercrud.browser/path ctx)))]
+     [hyperfiddle.ui/ui-from-link remove ctx props "remove"])
 
-   (if-let [detach (-> (data/select-all ctx :hf/detach)     ; (last (:hypercrud.browser/path ctx))
-                       (->> (filter (comp (partial = (:hypercrud.browser/path ctx)) link/read-path :link/path)))
-                       first)]
-     [hyperfiddle.ui/ui-from-link (r/track identity detach) ctx props "detach"])
+   (if-let [detach (data/select-here ctx :hf/detach (last (:hypercrud.browser/path ctx)))]
+     [hyperfiddle.ui/ui-from-link detach ctx props "detach"])
 
    (let [related (data/select-all ctx :hf/rel)]
      (->> (r/track identity related)
