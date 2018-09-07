@@ -75,36 +75,6 @@
                 [ui-from-link rv ctx props]))
          doall)))
 
-(defn display-mode-console? [ctx]
-  (= :hypercrud.browser.browser-ui/xray @(:hypercrud.ui/display-mode ctx)))
-
-(defn entity-identity-label [val]
-  (pr-str (or (:db/ident val) (:db/id val))))
-
-(defn entity-links [val ctx & [props]]                      ; rename to entity-identity
-  ; What about aggregate etc?
-  [:div
-   ; Self link
-   (case @(:hypercrud.ui/display-mode ctx)
-     :hypercrud.browser.browser-ui/xray (-> (data/select-all ctx :hf/edit #{:hf.ide/console})
-                                            (as-> links (first (filter (comp (partial = (:hypercrud.browser/path ctx)) link/read-path :link/path) links)))
-                                            (as-> link [ui-from-link (r/track identity link) ctx props (entity-identity-label val)]))
-
-     ; This is wrong - must show user links in xray mode
-     :hypercrud.browser.browser-ui/user (let [self (-> (data/select-all ctx :hf/edit)
-                                                       (->> (filter (comp (partial = (:hypercrud.browser/path ctx)) link/read-path :link/path)))
-                                                       first)
-                                              label (entity-identity-label val)]
-                                          (if self
-                                            [ui-from-link (r/track identity self) ctx props label]
-                                            [:div label])))
-
-   ; Remove link
-   (if (display-mode-console? ctx)
-     (-> (data/select-all ctx :hf/remove #{:hf.ide/console})
-         (as-> links (first (filter (comp (partial = (:hypercrud.browser/path ctx)) link/read-path :link/path) links)))
-         (as-> link [ui-from-link (r/track identity link) ctx props "remove"])))])
-
 (defn control "this is a function, which returns component"
   [val ctx & [props]]                                       ; returns Func[(ref, props, ctx) => DOM]
   (let [segment (last (:hypercrud.browser/path ctx))
@@ -123,12 +93,10 @@
       [:string :one] controls/string
       [:long :one] controls/long
       [:instant :one] controls/instant
-      [:ref :one] controls/ref                              ; nested form - and causes recursion
-      [:ref :many] controls/edn-many                        ; multi select?
+      [:ref :one] controls/ref
+      [:ref :many] controls/edn-many                        ; multi select
       [_ :one] controls/edn
       [_ :many] controls/edn-many)))
-
-
 
 (defn ^:export hyper-control [val ctx & [props]]
   {:post [%]}

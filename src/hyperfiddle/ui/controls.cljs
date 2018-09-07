@@ -56,14 +56,17 @@
        [:option (assoc option-props :key false :value "false") "False"]
        [:option (assoc option-props :key :nil :value "") "--"]])))
 
+(defn id-label [val]
+  (pr-str (or (:db/ident val) (:db/id val))))
+
 (defn ^:export ref [val ctx & [props]]
   (cond
     (:options props) [select val ctx props]
     :else [:div
            [:div.input
             (if-let [self (data/select-here ctx :hf/edit)]
-              [hyperfiddle.ui/ui-from-link self ctx props (pr-str (or (:db/ident val) (:db/id val)))]
-              (pr-str (or (:db/ident val) (:db/id val))))]
+              [hyperfiddle.ui/ui-from-link self ctx props (id-label val)]
+              (id-label val))]
 
            (if-let [link (data/select-here ctx :hf/affix)]
              [hyperfiddle.ui/ui-from-link link ctx props "affix"])
