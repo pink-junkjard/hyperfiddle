@@ -30,7 +30,7 @@
     :db/valueType :db.type/ref
     :db/cardinality :db.cardinality/many}
 
-   {:db/ident :fiddle/link
+   {:db/ident :fiddle/links
     :db/valueType :db.type/ref
     :db/cardinality :db.cardinality/many
     :db/isComponent true}
@@ -77,9 +77,9 @@
               (testing "succeeds for owner, and no additional statements added"
                 (is (= tx (transact/process-tx fixtures/test-domains-uri db-owner fixtures/test-uri tx)))))]
       (f [{:db/id "-1"
-           :db/ident :fiddle/link
+           :db/ident :fiddle/links
            :db/doc "blah blah blah"}])
-      (f [[:db/add :fiddle/link :db/doc "blah blah blah"]]))))
+      (f [[:db/add :fiddle/links :db/doc "blah blah blah"]]))))
 
 (deftest component-many []
   (let [person-a (UUID/randomUUID)
@@ -106,14 +106,14 @@
                         RuntimeException #"user tx failed validation"
                         (transact/process-tx fixtures/test-domains-uri db-owner fixtures/test-uri tx)))))]
         (testing "add link to person-a"
-          (f [[:db/add a :fiddle/link b]])
-          (f [{:db/id a :fiddle/link [b]}])
-          (f [{:db/id a :fiddle/link [{:db/id b}]}]))
+          (f [[:db/add a :fiddle/links b]])
+          (f [{:db/id a :fiddle/links [b]}])
+          (f [{:db/id a :fiddle/links [{:db/id b}]}]))
 
         (testing "add link to person-b"
-          (f [[:db/add b :fiddle/link a]])
-          (f [{:db/id b :fiddle/link [a]}])
-          (f [{:db/id b :fiddle/link [{:db/id a}]}]))))))
+          (f [[:db/add b :fiddle/links a]])
+          (f [{:db/id b :fiddle/links [a]}])
+          (f [{:db/id b :fiddle/links [{:db/id a}]}]))))))
 
 (deftest non-component-refs []
   (testing "succeeds and adds owner to asdf and qwerty"
@@ -189,12 +189,12 @@
 
 ;(deftest sever-component-parent-child []
 ;  (let [tx [{:person/name "parent"
-;             :fiddle/link [{:person/name "child"}]}]]
+;             :fiddle/links [{:person/name "child"}]}]]
 ;    (transact/transact! fixtures/test-domains-uri db-owner {fixtures/test-uri tx}))
 ;
 ;  (let [parent-id (d/q '[:find ?e . :where [?e :person/name "parent"]] (d/db (d/connect (str fixtures/test-uri))))
 ;        child-id (d/q '[:find ?e . :where [?e :person/name "child"]] (d/db (d/connect (str fixtures/test-uri))))
-;        tx [[:db/retract parent-id :fiddle/link child-id]]]
+;        tx [[:db/retract parent-id :fiddle/links child-id]]]
 ;    (testing "fails for non-owner"
 ;      (is (thrown-with-msg?
 ;            RuntimeException #"user tx failed validation"
@@ -213,7 +213,7 @@
 ;
 ;    (let [parent-id (d/q '[:find ?e . :where [?e :person/name "parent"]] (d/db (d/connect (str fixtures/test-uri))))
 ;          child-id (d/q '[:find ?e . :where [?e :person/name "child"]] (d/db (d/connect (str fixtures/test-uri))))
-;          tx [[:db/add parent-id :fiddle/link child-id]]]
+;          tx [[:db/add parent-id :fiddle/links child-id]]]
 ;      (testing "fails for non-owner"
 ;        (is (thrown-with-msg?
 ;              RuntimeException #"user tx failed validation"
@@ -228,8 +228,8 @@
   ; this creates an unhydratable entity in datomic, we need to fail fast and not stack overflow
   #_(let [tx [[:db/add "-1" :person/name "person1"]
               [:db/add "-2" :person/name "person2"]
-              [:db/add "-1" :fiddle/link "-2"]
-              [:db/add "-2" :fiddle/link "-1"]]]
+              [:db/add "-1" :fiddle/links "-2"]
+              [:db/add "-2" :fiddle/links "-1"]]]
       (testing "appends owner only to parent entity"
         (is (= (conj tx [:db/add "-1" :hyperfiddle/owners db-owner])
                (transact/process-tx fixtures/test-domains-uri db-owner fixtures/test-uri tx))))
@@ -283,13 +283,13 @@
       (f [[:db/add "-1" :db/ident :attr]
           [:db/add "-1" :db/cardinality :db.cardinality/many]
           [:db/add "-1" :db/valueType :db.type/bigdec]
-          [:db/add "-1" :fiddle/link "-2"]
+          [:db/add "-1" :fiddle/links "-2"]
           [:db/add "-2" :person/name "asdf"]])
       (f [{:db/id "-1"
            :db/ident :attr
            :db/cardinality :db.cardinality/many
            :db/valueType :db.type/bigdec
-           :fiddle/link [{:db/id "-2" :person/name "asdf"}]}])))
+           :fiddle/links [{:db/id "-2" :person/name "asdf"}]}])))
 
   (testing "parent-:db.part/db child-:db.part/user component for existing attr"
     (letfn [(f [tx]
@@ -300,22 +300,22 @@
               (testing "succeeds and owner is added to child"
                 (is (= (conj tx [:db/add "-2" :hyperfiddle/owners db-owner])
                        (transact/process-tx fixtures/test-domains-uri db-owner fixtures/test-uri tx)))))]
-      (f [[:db/add :person/name :fiddle/link "-2"]
+      (f [[:db/add :person/name :fiddle/links "-2"]
           [:db/add "-2" :person/name "asdf"]])
       (f [{:db/id "-1"
            :db/ident :person/name
-           :fiddle/link [{:db/id "-2" :person/name "asdf"}]}])))
+           :fiddle/links [{:db/id "-2" :person/name "asdf"}]}])))
 
   (testing "merging two parents by child component"
     (let [email "asdf@example.com"]
       (let [tx [[:db/add "-1" :person/name "parent a"]
                 [:db/add "-2" :person/name "child"]
                 [:db/add "-2" :person/email email]
-                [:db/add "-1" :fiddle/link "-2"]]]
+                [:db/add "-1" :fiddle/links "-2"]]]
         (transact/transact! fixtures/test-domains-uri db-owner {fixtures/test-uri tx}))
 
       (let [tx [[:db/add "-1" :person/name "parent b"]
-                [:db/add "-1" :fiddle/link [:person/email email]]]]
+                [:db/add "-1" :fiddle/links [:person/email email]]]]
         (testing "fails for non-owner"
           (is (thrown-with-msg?
                 RuntimeException #"user tx failed validation"
@@ -382,7 +382,7 @@
 
 (deftest test-merging-components-statements []
   (let [email "asdf@example.com"]
-    (let [tx [[:db/add "-1" :fiddle/link "-2"]
+    (let [tx [[:db/add "-1" :fiddle/links "-2"]
               [:db/add "-2" :link/rel :some-link]
               [:db/add "-2" :person/email email]]]
       (testing "appends owner only to parent entity"
@@ -427,13 +427,13 @@
               (is (= (conj tx [:db/add "-1" :hyperfiddle/owners db-owner])
                      (transact/process-tx fixtures/test-domains-uri db-owner fixtures/test-uri tx)))))]
     (let [email "asdf@example.com"
-          list-tx [[:db/add "-1" :fiddle/link "-2"]
+          list-tx [[:db/add "-1" :fiddle/links "-2"]
                    [:db/add "-1" :person/email email]
                    [:db/add "-2" :link/rel :some-link]]
           map-tx [{:db/id "-1"
                    :person/email email
-                   :fiddle/link {:db/id "-2"
-                                 :link/rel :some-link}}]]
+                   :fiddle/links {:db/id "-2"
+                                  :link/rel :some-link}}]]
       (f list-tx)
       (f map-tx)
       ; just transact once
@@ -461,15 +461,15 @@
 
                 (testing "succeeds for owner, and no additional statements added"
                   (is (= tx (transact/process-tx fixtures/test-domains-uri db-owner fixtures/test-uri tx)))))]
-        (f [[:db/add link-id :fiddle/link "-1"]
+        (f [[:db/add link-id :fiddle/links "-1"]
             [:db/add "-1" :person/name "Qwerty"]
-            [:db/add "-1" :fiddle/link "-2"]
+            [:db/add "-1" :fiddle/links "-2"]
             [:db/add "-2" :person/name "3rd child"]])
         (f [{:db/id link-id
-             :fiddle/link {:db/id "-1"
-                           :person/name "Qwerty"
-                           :fiddle/link {:db/id "-2"
-                                         :person/name "3rd child"}}}])))
+             :fiddle/links {:db/id "-1"
+                            :person/name "Qwerty"
+                            :fiddle/links {:db/id "-2"
+                                           :person/name "3rd child"}}}])))
 
     (testing "retract component"
       (let [tx [[:db/retractEntity link-id]]]
