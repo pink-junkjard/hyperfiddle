@@ -38,8 +38,8 @@
 
 (deftest mt-fet-at
   []
-  ; otherwise pointless, this test serves one important use: evaling and invoking attach.edn in the build
-  (let [f (-> (template/load-resource "auto-txfn/attach.edn")
+  ; otherwise pointless, this test serves one important use: evaling and invoking affix.edn in the build
+  (let [f (-> (template/load-resource "auto-txfn/affix.edn")
               string/trim
               eval/eval-string!)
        uri (->URI "test")

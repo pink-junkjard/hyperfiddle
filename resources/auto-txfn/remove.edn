@@ -1,3 +1,3 @@
 (fn [ctx multi-color-tx modal-route]
   {:tx {(hypercrud.browser.context/uri ctx)
-        [[:db.fn/retractEntity (hypercrud.browser.context/identity ctx)]]}})
+        [[:db.fn/retractEntity (hypercrud.browser.context/id ctx)]]}})

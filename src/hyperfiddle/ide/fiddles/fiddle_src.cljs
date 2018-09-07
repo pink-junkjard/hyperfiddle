@@ -96,7 +96,7 @@
                          [:div.hf-underdoc [markdown (:fiddle/renderer underdocs)]])])
    :fiddle/links (fn [val ctx props]
                    [:div
-                    (link :hf/new :link ctx)
+                    (link :hf/affix :link ctx)
                     [:div [links-fiddle/renderer val ctx props]]
                     (when-not (:embed-mode props)
                       #_[:div.hf-underdoc [markdown (:fiddle/links underdocs)]])])

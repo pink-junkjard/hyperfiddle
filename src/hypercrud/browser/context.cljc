@@ -129,7 +129,7 @@
         common-ancestor-ctx ((apply comp (repeat unwind-offset :hypercrud.browser/parent)) ctx)]
     (focus common-ancestor-ctx (ancestry-divergence path current-path))))
 
-(defn identity [ctx]
+(defn id [ctx]
   ; When looking at an attr of type ref, figure out it's identity, based on all the ways it can be pulled.
   ; What if we pulled children without identity? Then we can't answer the question (should assert this)
   (or
