@@ -35,7 +35,7 @@
     [hyperfiddle.runtime :as runtime]
     [hyperfiddle.ui.api]
     [hyperfiddle.ui.controls :as controls]
-    [hyperfiddle.ui.hyper-controls :refer [attribute-label entity-label dbid-label magic-new-body magic-new-head]]
+    [hyperfiddle.ui.hyper-controls :refer [attribute-label relation-label tuple-label dbid-label magic-new-body magic-new-head]]
     [hyperfiddle.ui.popover :refer [popover-cmp]]
     [hyperfiddle.ui.select$]
     [hyperfiddle.ui.sort :as sort]
@@ -133,8 +133,7 @@
 (defn ^:export hyper-control [val ctx & [props]]
   {:post [%]}
   (or (attr-renderer-control val ctx props)
-      (let [-field @(:hypercrud.browser/field ctx)
-            segment (last (:hypercrud.browser/path ctx))]
+      (let [-field @(:hypercrud.browser/field ctx)]
         (cond                                               ; Duplicate options test to avoid circular dependency in controls/ref
           (:options props) [(control val ctx props) val ctx props]
           (field/identity-segment? -field) [controls/dbid val ctx props]
@@ -146,22 +145,23 @@
           :else [(control val ctx props) val ctx props]))))
 
 (defn hyper-label [_ ctx & [props]]
-  (let [level (-> ctx :hypercrud.browser/field deref ::field/level)
+  (let [field @(:hypercrud.browser/field ctx)
+        level (::field/level field)
         segment (last (:hypercrud.browser/path ctx))
         segment-type (context/segment-type-2 segment)       ; :element means :relation? no, naked. Relation is ortho
         child-fields (not @(r/fmap (r/comp nil? ::field/children) (:hypercrud.browser/field ctx)))]
     (cond
-      (#{:db/id :db/ident} segment) dbid-label
-      :else (match* [level segment-type segment child-fields #_@user]
+      (field/identity-segment? field) dbid-label
+      :else (match* [level segment-type segment child-fields]
               [nil :splat _ _] magic-new-head
-              [nil :attribute _ _] attribute-label          ; entity-[] ends up here
-              [nil :element _ true] entity-label
-              [nil :element _ false] attribute-label        ; preserve old behavior
-              [nil :naked-or-element _ _] entity-label      ; Schema new attr, and fiddle-links new link - needs to be split
-              [:relation :naked-or-element _ _] (r/constantly [:label "*relation*"])
-              [:tuple :naked-or-element _ _] (r/constantly [:label "*tuple*"])))))
+              [nil :attribute _ _] attribute-label
+              [nil :element _ true] relation-label
+              [nil :element _ false] attribute-label
+              [nil :naked-or-element _ _] relation-label    ; Schema new attr, and fiddle-links new link - needs to be split
+              [:relation :naked-or-element _ _] relation-label
+              [:tuple :naked-or-element _ _] tuple-label))))
 
-(defn auto-link-css [link]                                  ; semantic-css
+(defn auto-link-css [link]
   (->> (:link/class link)
        (interpose " ")
        (apply str)))

@@ -32,13 +32,15 @@
                        [:div.hyperfiddle.docstring [contrib.ui/markdown help-md]])
        [:label (select-keys props [:class]) label (if help-md [:sup "†"])]])))
 
-(defn entity-label [_ ctx & [props]]
-  (fragment
-    (let [help-md (semantic-docstring ctx)]
-      [tooltip-thick (if help-md [:div.hyperfiddle.docstring [contrib.ui/markdown help-md]])
-       [:label (select-keys props [:class]) "*self*"]])
-    (if-let [new (data/select-here ctx :hf/new)]
-      [hyperfiddle.ui/ui-from-link new ctx props "new"])))
+(defn relation-label [_ ctx & [props]]
+  (let [help-md (semantic-docstring ctx)]
+    [tooltip-thick (if help-md [:div.hyperfiddle.docstring [contrib.ui/markdown help-md]])
+     [:label (select-keys props [:class]) "*relation*"]]))
+
+(defn tuple-label [_ ctx & [props]]
+  (let [help-md (semantic-docstring ctx)]
+    [tooltip-thick (if help-md [:div.hyperfiddle.docstring [contrib.ui/markdown help-md]])
+     [:label (select-keys props [:class]) "*tuple*"]]))
 
 (defn magic-new-head [_ ctx & [props]]
   (let [state (r/cursor (:hyperfiddle.ui.form/state ctx) [:hyperfiddle.ui.form/magic-new-a])]
