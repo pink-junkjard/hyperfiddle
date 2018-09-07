@@ -187,8 +187,9 @@
                     pull-pattern @(r/cursor request [:pull-exp])]
                 (either/right (pull-one schemas @data source-symbol label pull-pattern)))
 
-      :query (mlet [{:keys [qfind]} (try-either (parser/parse-query @(r/cursor request [:query])))]
+      :query (mlet [{:keys [qfind] :as q} (try-either (parser/parse-query @(r/cursor request [:query])))]
                (cats/return
+                 (merge {::query q}
                  (condp = (type qfind)
                    datascript.parser.FindRel
                    (let [results-by-column (transpose @data)]
@@ -286,14 +287,14 @@
 
                      datascript.parser.Aggregate
                      (-> (aggregate (:element qfind))
-                         (assoc ::cardinality :db.cardinality/one))))))
+                         (assoc ::cardinality :db.cardinality/one)))))))
 
       :blank (either/right nil)
 
       (either/right nil))))
 
 (defn identity-segment? [field]
-  (#{:db/id :db/ident} (::path-segment field)))
+  (contains? #{:db/id :db/ident nil} (::path-segment field)))
 
 (defn children-identity-only? [field]
   (->> (::children field)

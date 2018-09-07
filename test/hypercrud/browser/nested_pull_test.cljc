@@ -114,7 +114,7 @@
                    (::field/children field))]
       (is (= expected actual)))
 
-    (let [links (console-links fiddle field @(:hypercrud.browser/schemas ctx))
+    (let [links (console-links field @(:hypercrud.browser/schemas ctx))
           expected #{{:link/path "0" :link/rel :hf/new}
                      {:link/path "0" :link/rel :hf/edit}
                      {:link/path "0" :link/rel :hf/remove}

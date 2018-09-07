@@ -457,7 +457,7 @@ nil. call site must wrap with a Reagent component"          ; is this just hyper
 
 (defn ^:export fiddle-xray [val ctx & [props]]
   (let [{:keys [:hypercrud.browser/fiddle]} ctx
-        console-links (->> (console-links @fiddle @(:hypercrud.browser/field ctx) @(:hypercrud.browser/schemas ctx))
+        console-links (->> (console-links @(:hypercrud.browser/field ctx) @(:hypercrud.browser/schemas ctx))
                            (map (partial auto-link ctx)))
         ctx (update ctx :hypercrud.browser/links (partial r/fmap (r/partial concat console-links)))]
     [:div (select-keys props [:class])
