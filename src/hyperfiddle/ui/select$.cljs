@@ -43,12 +43,12 @@
                   (update :disabled #(or % no-options?))
                   (update :class #(str % (if (:disabled option-props) " disabled"))))
         label-fn (contrib.eval/ensure-fn (:option-label props option-label))
-        id-fn (fn [relation]
-                (let [fe (first relation)]
-                  (if (or (entity? fe) (map? fe))           ; todo inspect datalog find-element
-                    (:db/id fe)
-                    fe)))]
-    [:select.ui (dissoc props :option-label)
+        id-fn (fn [row]
+                (let [element (if (vector? row) (first row) row)] ; inspect datalog
+                  (if (or (entity? element) (map? element))
+                    (:db/id element)
+                    element)))]
+    [:select.ui (dissoc props :option-label)                ; value
      ; .ui is because options are an iframe and need the pink box
      (conj
        (->> @(:hypercrud.browser/data ctx)
@@ -77,8 +77,7 @@
         @(r/fmap nil? entity)                               ; no value at all
         (not @(r/fmap writable-entity? entity)))))
 
-(let [dom-value (fn [value]                                 ; nil, kw or eid
-                  (if (nil? value) "" (str (:db/id value))))]
+(let []
   (defn select "This arity should take a selector string (class) instead of Right[Reaction[Link]], blocked on removing path backdoor"
     [val ctx props]
     {:pre [ctx]}
@@ -88,7 +87,7 @@
             (let [default-props {:on-change (r/comp (r/partial context/with-tx! ctx)
                                                     (r/partial entity-change->tx ctx))}
                   props (-> (merge default-props props)
-                            (assoc :value @(r/fmap dom-value (:hypercrud.browser/data ctx))))
+                            (assoc :value (str (context/id ctx))))
                   props (-> (select-keys props [:class])
                             (assoc :user-renderer (r/partial select-anchor-renderer props {:disabled (compute-disabled ctx props)})))
                   ctx (assoc ctx
