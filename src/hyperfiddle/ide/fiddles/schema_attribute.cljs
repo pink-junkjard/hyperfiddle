@@ -70,7 +70,7 @@
         reactive-merge #(merge-in-tx % @special-attrs-state ctx)
         ident-f (fn [val ctx props]
                   (let [on-change! (r/comp (r/partial ident-with-tx! special-attrs-state ctx)
-                                           (r/partial entity-change->tx ctx))
+                                           (r/partial on-change->tx ctx))
                         props (-> (assoc props :value @(:hypercrud.browser/data ctx)
                                                :on-change on-change!)
                                   readonly->disabled)]
