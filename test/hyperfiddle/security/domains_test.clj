@@ -187,41 +187,41 @@
           ;(f [{:db/id b :person/friends [{:db/id a}]}]) ; todo
           )))))
 
-(deftest sever-component-parent-child []
-  (let [tx [{:person/name "parent"
-             :fiddle/link [{:person/name "child"}]}]]
-    (transact/transact! fixtures/test-domains-uri db-owner {fixtures/test-uri tx}))
-
-  (let [parent-id (d/q '[:find ?e . :where [?e :person/name "parent"]] (d/db (d/connect (str fixtures/test-uri))))
-        child-id (d/q '[:find ?e . :where [?e :person/name "child"]] (d/db (d/connect (str fixtures/test-uri))))
-        tx [[:db/retract parent-id :fiddle/link child-id]]]
-    (testing "fails for non-owner"
-      (is (thrown-with-msg?
-            RuntimeException #"user tx failed validation"
-            (transact/process-tx fixtures/test-domains-uri "someone-else" fixtures/test-uri tx))))
-
-    (testing "succeeds for owner, and owner is assigned to child"
-      (is (= (conj tx [:db/add child-id :hyperfiddle/owners db-owner])
-             (transact/process-tx fixtures/test-domains-uri db-owner fixtures/test-uri tx))))))
-
-(deftest create-component-parent-child []
-  (let [person-a (UUID/randomUUID)]
-    (let [tx [{:person/name "parent"}
-              {:person/name "child"
-               :person/email "asdf"}]]
-      (transact/transact! fixtures/test-domains-uri person-a {fixtures/test-uri tx}))
-
-    (let [parent-id (d/q '[:find ?e . :where [?e :person/name "parent"]] (d/db (d/connect (str fixtures/test-uri))))
-          child-id (d/q '[:find ?e . :where [?e :person/name "child"]] (d/db (d/connect (str fixtures/test-uri))))
-          tx [[:db/add parent-id :fiddle/link child-id]]]
-      (testing "fails for non-owner"
-        (is (thrown-with-msg?
-              RuntimeException #"user tx failed validation"
-              (transact/process-tx fixtures/test-domains-uri "someone-else" fixtures/test-uri tx))))
-
-      (testing "succeeds for owner, and owner is removed from child"
-        (is (= (conj tx [:db/retract child-id :hyperfiddle/owners person-a])
-               (transact/process-tx fixtures/test-domains-uri person-a fixtures/test-uri tx)))))))
+;(deftest sever-component-parent-child []
+;  (let [tx [{:person/name "parent"
+;             :fiddle/link [{:person/name "child"}]}]]
+;    (transact/transact! fixtures/test-domains-uri db-owner {fixtures/test-uri tx}))
+;
+;  (let [parent-id (d/q '[:find ?e . :where [?e :person/name "parent"]] (d/db (d/connect (str fixtures/test-uri))))
+;        child-id (d/q '[:find ?e . :where [?e :person/name "child"]] (d/db (d/connect (str fixtures/test-uri))))
+;        tx [[:db/retract parent-id :fiddle/link child-id]]]
+;    (testing "fails for non-owner"
+;      (is (thrown-with-msg?
+;            RuntimeException #"user tx failed validation"
+;            (transact/process-tx fixtures/test-domains-uri "someone-else" fixtures/test-uri tx))))
+;
+;    (testing "succeeds for owner, and owner is assigned to child"
+;      (is (= (conj tx [:db/add child-id :hyperfiddle/owners db-owner])
+;             (transact/process-tx fixtures/test-domains-uri db-owner fixtures/test-uri tx))))))
+;
+;(deftest create-component-parent-child []
+;  (let [person-a (UUID/randomUUID)]
+;    (let [tx [{:person/name "parent"}
+;              {:person/name "child"
+;               :person/email "asdf"}]]
+;      (transact/transact! fixtures/test-domains-uri person-a {fixtures/test-uri tx}))
+;
+;    (let [parent-id (d/q '[:find ?e . :where [?e :person/name "parent"]] (d/db (d/connect (str fixtures/test-uri))))
+;          child-id (d/q '[:find ?e . :where [?e :person/name "child"]] (d/db (d/connect (str fixtures/test-uri))))
+;          tx [[:db/add parent-id :fiddle/link child-id]]]
+;      (testing "fails for non-owner"
+;        (is (thrown-with-msg?
+;              RuntimeException #"user tx failed validation"
+;              (transact/process-tx fixtures/test-domains-uri "someone-else" fixtures/test-uri tx))))
+;
+;      (testing "succeeds for owner, and owner is removed from child"
+;        (is (= (conj tx [:db/retract child-id :hyperfiddle/owners person-a])
+;               (transact/process-tx fixtures/test-domains-uri person-a fixtures/test-uri tx)))))))
 
 (defn infinite-component-loop []
   ; todo test create and sever parent/child loops
