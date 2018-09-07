@@ -81,7 +81,7 @@
     (condp = n
       1 (right (r/track identity (first links)))            ; lol lift
       0 (left (str/format "no match for rel: %s class: %s" (pr-str rel) (pr-str class)))
-      :else (left (str/format "Too many links matched (%s) for rel: %s class: %s" n (pr-str rel) (pr-str class))))))
+      (left (str/format "Too many links matched (%s) for rel: %s class: %s" n (pr-str rel) (pr-str class))))))
 
 (defn ^:export select-here+ [ctx rel & [?corcs]]
   (-> (select-all ctx rel ?corcs)
