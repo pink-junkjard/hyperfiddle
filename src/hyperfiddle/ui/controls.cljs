@@ -4,7 +4,7 @@
     [cats.monad.either :refer [branch]]
     [contrib.reactive :as r]
     [contrib.reagent :refer [fragment]]
-    [contrib.ui :refer [debounced optimistic-updates]]      ; avoid collisions
+    [contrib.ui :refer [debounced]]                         ; avoid collisions
     [contrib.ui.input :as input]
     [contrib.ui.recom-date :refer [recom-date]]
     [hypercrud.browser.context :as context]
@@ -17,17 +17,17 @@
 (defn ^:export keyword [val ctx & [props]]
   (let [props (-> (entity-props val props ctx)
                   readonly->disabled)]
-    [optimistic-updates props debounced input/keyword]))
+    [debounced props input/keyword]))
 
 (defn ^:export string [val ctx & [props]]
   (let [props (-> (entity-props val props ctx)
                   readonly->disabled)]
-    [optimistic-updates props debounced input/text #_contrib.ui/textarea]))
+    [debounced props input/text #_contrib.ui/textarea]))
 
 (defn ^:export long [val ctx & [props]]
   (let [props (-> (entity-props val props ctx)
                   readonly->disabled)]
-    [optimistic-updates props debounced input/long]))
+    [debounced props input/long]))
 
 (defn ^:export boolean [val ctx & [props]]
   [:div (let [props (readonly->disabled props)]
@@ -117,18 +117,18 @@
   (let [props (-> (entity-props val props ctx)
                   (update :mode #(or % "clojure"))
                   (assoc :parinfer @(r/fmap :hyperfiddle.ide/parinfer (:hyperfiddle.ide/user ctx))))]
-    [optimistic-updates props debounced (code-comp ctx)]))
+    [debounced props (code-comp ctx)]))
 
 (defn ^:export css [val ctx & [props]]
   (let [props (-> (entity-props val props ctx)
                   (update :mode #(or % "css")))]
-    [optimistic-updates props debounced (code-comp ctx)]))
+    [debounced props (code-comp ctx)]))
 
 (defn ^:export markdown-editor [val ctx & [props]]          ; This is legacy; :mode=markdown should be bound in userland
   (let [props (-> (entity-props val props ctx)
                   (assoc :mode "markdown"
                          :lineWrapping true))]
-    [optimistic-updates props debounced (code-comp ctx)]))
+    [debounced props (code-comp ctx)]))
 
 (defn- edn-comp [ctx]
   (case (:hyperfiddle.ui/layout ctx :hyperfiddle.ui.layout/block)
@@ -139,8 +139,8 @@
   (let [valueType @(context/hydrate-attribute ctx (last (:hypercrud.browser/path ctx)) :db/valueType :db/ident)
         val (set (if (= valueType :db.type/ref) (map :db/id val) val))
         props (entity-props val props ctx)]
-    [optimistic-updates props debounced (edn-comp ctx)]))
+    [debounced props (edn-comp ctx)]))
 
 (defn ^:export edn [val ctx & [props]]
   (let [props (entity-props val props ctx)]
-    [optimistic-updates props debounced (edn-comp ctx)]))
+    [debounced props (edn-comp ctx)]))

@@ -21,31 +21,41 @@
 (def default-debounce-ms 250)
 
 (let [debounce (memoize functions/debounce)
-      on-change (fn [state n]
-                  (reset! state n)
-                  n)
-      debounced-comp (fn [state props comp & args]
-                       (let [props (-> props
-                                       (assoc :value @state)
-                                       (dissoc :debounce/interval)
-                                       (update :on-change (fn [f]
-                                                            (let [f (if f
-                                                                      (debounce f (or (:debounce/interval props) default-debounce-ms))
-                                                                      identity)]
-                                                              (r/comp f (r/partial on-change state))))))]
-                         (into [comp props] args)))]
+      debounced-adapter (fn [os-ref f n]
+                          (let [o (last (:old-values @os-ref))]
+                            (swap! os-ref update :old-values conj n)
+                            (when f (f o n))))
+      on-change (fn [os-ref n]                              ; letfn not working #470
+                  (swap! os-ref assoc :value n)
+                  n)]
   (defn debounced [props comp & args]
-    (let [state (r/atom (:value props))]
+    (let [os-ref (r/atom {:value (:value props)
+                          :old-values [(:value props)]})]
       (reagent/create-class
         {:reagent-render
          (fn [props comp & args]
-           ; indirection so component-did-update does not fire after the state swap from on-change
-           (into [debounced-comp state props comp] args))
+           (let [props (-> props
+                           (dissoc :debounce/interval)
+                           (assoc :value @(r/cursor os-ref [:value]))
+                           (update :on-change (fn [f]
+                                                (let [f (debounce (r/partial debounced-adapter os-ref f)
+                                                                  (or (:debounce/interval props) default-debounce-ms))]
+                                                  (r/comp f (r/partial on-change os-ref))))))]
+             (into [comp props] args)))
          :component-did-update
          (fn [this]
-           (let [[_ props comp args] (reagent/argv this)]
-             (when-not (= @state (:value props))
-               (reset! state (:value props)))))}))))
+           (let [[_ props comp & args] (reagent/argv this)
+                 b (:value props)
+                 {os :old-values a :value} @os-ref]
+             (let [[_ [old-update :as rest]] (split-with #(not= % b) os)]
+               (if (= old-update b)                         ; careful do NOT nil pun
+                 (swap! os-ref assoc :old-values (vec rest))
+                 (when (not= a b)
+                   ; this is either not a big deal, e.g. default values have been applied
+                   ; or multiple users are editing the same value and changes are probably being lost
+                   (timbre/warn "Potential conflicting concurrent edits detected, discarding local state" {:a a :b b :os os})
+                   (reset! os-ref {:old-values [b]
+                                   :value b}))))))}))))
 
 (let [on-change (fn [os-ref f n]                            ; letfn not working #470
                   (let [o (last (:old-values @os-ref))]
@@ -68,19 +78,15 @@
            (let [[_ props comp & args] (reagent/argv this)
                  b (:value props)
                  {os :old-values a :value} @os-ref]
-             (if (= 1 (count os))
-               (when (not= a b)
-                 (reset! os-ref {:old-values [b]
-                                 :value b}))
-               (let [[_ [old-update :as rest]] (split-with #(not= % b) os)]
-                 (if (= old-update b)                       ; careful do NOT nil pun
-                   (swap! os-ref assoc :old-values (vec rest))
-                   (when (not= a b)
-                     ; this is either not a big deal, e.g. default values have been applied
-                     ; or multiple users are editing the same value and changes are probably being lost
-                     (timbre/warn "Potential conflicting concurrent edits detected, discarding local state" {:a a :b b :os os})
-                     (reset! os-ref {:old-values [b]
-                                     :value b})))))))}))))
+             (let [[_ [old-update :as rest]] (split-with #(not= % b) os)]
+               (if (= old-update b)                         ; careful do NOT nil pun
+                 (swap! os-ref assoc :old-values (vec rest))
+                 (when (not= a b)
+                   ; this is either not a big deal, e.g. default values have been applied
+                   ; or multiple users are editing the same value and changes are probably being lost
+                   (timbre/warn "Potential conflicting concurrent edits detected, discarding local state" {:a a :b b :os os})
+                   (reset! os-ref {:old-values [b]
+                                   :value b}))))))}))))
 
 (let [target-value (fn [e] (.. e -target -value))]          ; letfn not working #470
   (defn textarea [props]
