@@ -199,20 +199,35 @@
       (when-not (apply (:can-merge? config) existing-eids)
         (throw (security/tx-validation-failure))))
 
-    (->> (alg/connected-components identity-graph)
-         (mapcat (fn [eids]
-                   (let [existing-eids (->existing-eids db eids)]
-                     (when (and (empty? existing-eids)      ; only generate owner if ALL merged entities are new
-                                (= 0 (graph/in-degree component-graph (set eids)))) ; this entity is not a component of another new entity
-                       ; doesn't matter which tempid has owner appended
-                       (let [tempid (some #(when (tempid? %) %) eids)
-                             db-part (cond
-                                       (some #(contains? attr-ids %) eids) :db.part/db
-                                       (contains? (set eids) "datomic.tx") :db.part/tx
-                                       :else :db.part/user)]
-                         (assert tempid "no tempids or existing ids") ; this is probably a bad transaction; would fail with "Unable to resolve entity"
-                         ((:generate-owner config) tempid db-part))))))
-         (into tx-with-tempids))))
+    (let [db-part (fn [eids]
+                    (cond
+                      ; order is important, db.part/db wins when there are conflicts
+                      (some #(contains? attr-ids %) eids) :db.part/db
+                      (contains? (set eids) "datomic.tx") :db.part/tx
+                      :else (let [[part & rest] (->> eids
+                                                     (map #(normalize-id db %))
+                                                     (filter integer?)
+                                                     (map d/part)
+                                                     (map #(d/ident db %))
+                                                     distinct)]
+                              (assert (empty? rest) "multiple partitions found")
+                              (or part :db.part/user))))]
+      (->> (alg/connected-components identity-graph)
+           (mapcat (fn [eids]
+                     (let [existing-eids (->existing-eids db eids)]
+                       (when (empty? existing-eids)         ; only generate owner if ALL merged entities are new
+                         (let [my-part (db-part eids)
+                               parent-parts (->> (graph/in-edges component-graph (set eids))
+                                                 (map (comp db-part first))
+                                                 (distinct))]
+                           (assert (#{0 1} (count parent-parts)) "Entity is component child of multiple parent entities across multiple partitions")
+                           ; this entity is NOT a component child of another same partitioned new entity
+                           (when (not= (first parent-parts) my-part)
+                             ; doesn't matter which tempid has owner appended
+                             (let [tempid (some #(when (tempid? %) %) eids)]
+                               (assert tempid "no tempids or existing ids") ; this is probably a bad transaction; would fail with "Unable to resolve entity"
+                               ((:generate-owner config) tempid my-part))))))))
+           (into tx-with-tempids)))))
 
 (defn build-parent-lookup [db]
   (let [component-ids (into #{} (d/q '[:find [?e ...]
@@ -225,7 +240,6 @@
                 (let [parent-eids (->> (d/datoms db :vaet e)
                                        (filter #(contains? component-ids (.a %)))
                                        (map #(.e %)))]
-                  ; todo concat untransacted tempids
                   ; todo solve infinite loops
                   (->> parent-eids
                        (mapcat (fn [eid]

@@ -237,24 +237,74 @@
 
 (deftest hybrid-relationships []
   (testing "parent-:db.part/db child-:db.part/user non-component"
-    (let [tx [{:db/id "-1"
-               :db/ident :attr
-               :db/cardinality :db.cardinality/many
-               :db/valueType :db.type/bigdec
-               :person/friends [{:db/id "-2" :person/name "asdf"}]}]]
-      (testing "succeeds and owner is added to child"
-        (is (= (conj tx [:db/add "-2" :hyperfiddle/owners db-owner])
-               (transact/process-tx fixtures/test-domains-uri db-owner fixtures/test-uri tx))))))
+    (letfn [(f [tx]
+              (testing "fails for non-owner"
+                (is (thrown-with-msg?
+                      RuntimeException #"user tx failed validation"
+                      (transact/process-tx fixtures/test-domains-uri "someone-else" fixtures/test-uri tx))))
+              (testing "succeeds and owner is added to child"
+                (is (= (conj tx [:db/add "-2" :hyperfiddle/owners db-owner])
+                       (transact/process-tx fixtures/test-domains-uri db-owner fixtures/test-uri tx)))))]
+      (f [[:db/add "-1" :db/ident :attr]
+          [:db/add "-1" :db/cardinality :db.cardinality/many]
+          [:db/add "-1" :db/valueType :db.type/bigdec]
+          [:db/add "-1" :person/friends "-2"]
+          [:db/add "-2" :person/name "asdf"]])
+      (f [{:db/id "-1"
+           :db/ident :attr
+           :db/cardinality :db.cardinality/many
+           :db/valueType :db.type/bigdec
+           :person/friends [{:db/id "-2" :person/name "asdf"}]}])))
 
-  #_(testing "parent-:db.part/db child-:db.part/user component"
-      (let [tx [{:db/id "-1"
-                 :db/ident :attr
-                 :db/cardinality :db.cardinality/many
-                 :db/valueType :db.type/bigdec
-                 :fiddle/link [{:db/id "-2" :person/name "asdf"}]}]]
-        (testing "succeeds and owner is added to child"
-          (is (= (conj tx [:db/add "-2" :hyperfiddle/owners db-owner])
-                 (transact/process-tx fixtures/test-domains-uri db-owner fixtures/test-uri tx))))))
+  (testing "parent-:db.part/db child-:db.part/user non-component for existing attr"
+    (letfn [(f [tx]
+              (testing "fails for non-owner"
+                (is (thrown-with-msg?
+                      RuntimeException #"user tx failed validation"
+                      (transact/process-tx fixtures/test-domains-uri "someone-else" fixtures/test-uri tx))))
+              (testing "succeeds and owner is added to child"
+                (is (= (conj tx [:db/add "-2" :hyperfiddle/owners db-owner])
+                       (transact/process-tx fixtures/test-domains-uri db-owner fixtures/test-uri tx)))))]
+      (f [[:db/add :person/name :person/friends "-2"]
+          [:db/add "-2" :person/name "asdf"]])
+      (f [{:db/id "-1"
+           :db/ident :person/name
+           :person/friends [{:db/id "-2" :person/name "asdf"}]}])))
+
+  (testing "parent-:db.part/db child-:db.part/user component"
+    (letfn [(f [tx]
+              (testing "fails for non-owner"
+                (is (thrown-with-msg?
+                      RuntimeException #"user tx failed validation"
+                      (transact/process-tx fixtures/test-domains-uri "someone-else" fixtures/test-uri tx))))
+              (testing "succeeds and owner is added to child"
+                (is (= (conj tx [:db/add "-2" :hyperfiddle/owners db-owner])
+                       (transact/process-tx fixtures/test-domains-uri db-owner fixtures/test-uri tx)))))]
+      (f [[:db/add "-1" :db/ident :attr]
+          [:db/add "-1" :db/cardinality :db.cardinality/many]
+          [:db/add "-1" :db/valueType :db.type/bigdec]
+          [:db/add "-1" :fiddle/link "-2"]
+          [:db/add "-2" :person/name "asdf"]])
+      (f [{:db/id "-1"
+           :db/ident :attr
+           :db/cardinality :db.cardinality/many
+           :db/valueType :db.type/bigdec
+           :fiddle/link [{:db/id "-2" :person/name "asdf"}]}])))
+
+  (testing "parent-:db.part/db child-:db.part/user component for existing attr"
+    (letfn [(f [tx]
+              (testing "fails for non-owner"
+                (is (thrown-with-msg?
+                      RuntimeException #"user tx failed validation"
+                      (transact/process-tx fixtures/test-domains-uri "someone-else" fixtures/test-uri tx))))
+              (testing "succeeds and owner is added to child"
+                (is (= (conj tx [:db/add "-2" :hyperfiddle/owners db-owner])
+                       (transact/process-tx fixtures/test-domains-uri db-owner fixtures/test-uri tx)))))]
+      (f [[:db/add :person/name :fiddle/link "-2"]
+          [:db/add "-2" :person/name "asdf"]])
+      (f [{:db/id "-1"
+           :db/ident :person/name
+           :fiddle/link [{:db/id "-2" :person/name "asdf"}]}])))
 
   (testing "merging two parents by child component"
     (let [email "asdf@example.com"]
