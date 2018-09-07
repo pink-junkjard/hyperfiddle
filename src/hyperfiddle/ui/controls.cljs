@@ -61,38 +61,44 @@
     (:options props) [select val ctx props]
     :else [:div
            [:div.input
-            (if-let [self (data/select-here ctx :hf/edit (last (:hypercrud.browser/path ctx)))]
+            (if-let [self (data/select-here ctx :hf/edit)]
               [hyperfiddle.ui/ui-from-link self ctx props (pr-str (or (:db/ident val) (:db/id val)))]
               (pr-str (or (:db/ident val) (:db/id val))))]
 
-           ; remove is not generated in console mode, but if it is present, render it here?
-           (if-let [remove (data/select-here ctx :hf/remove (last (:hypercrud.browser/path ctx)))]
-             [hyperfiddle.ui/ui-from-link remove ctx props "remove"])
+           (if-let [link (data/select-here ctx :hf/affix)]
+             [hyperfiddle.ui/ui-from-link link ctx props "affix"])
 
-           (if-let [detach (data/select-here ctx :hf/detach (last (:hypercrud.browser/path ctx)))]
-             ; To retract, navigate there and retract. (Though, the link can be modeled?)
-             [hyperfiddle.ui/ui-from-link detach ctx props "detach"])]))
+           (if-let [link (data/select-here ctx :hf/remove)]
+             [hyperfiddle.ui/ui-from-link link ctx props "remove"])
+
+           (if-let [link (data/select-here ctx :hf/detach)]
+             [hyperfiddle.ui/ui-from-link link ctx props "detach"])]))
 
 (defn ^:export dbid [val ctx & [props]]                     ; When you pulled db/id or db/ident
-  [:div
-   [:div.input
-    (if-let [self (data/select-here ctx :hf/edit (last (:hypercrud.browser/path ctx)))]
-      [hyperfiddle.ui/ui-from-link self ctx props (str val)]
-      (str val))]
+  ; id control uses links from parent ctx (parent ref and parent path)
+  ; select-here does not match :hf/edit since it is in the parent ref position
+  (let [ctx (:hypercrud.browser/parent ctx)]
+    [:div
+     [:div.input
+      (if-let [self (data/select-here ctx :hf/edit)]
+        [hyperfiddle.ui/ui-from-link self ctx props (str val)]
+        (str val))]
+     (if-let [link (data/select-here ctx :hf/affix)]
+       [hyperfiddle.ui/ui-from-link link ctx props "affix"])
 
-   (if-let [remove (data/select-here ctx :hf/remove (last (:hypercrud.browser/path ctx)))]
-     [hyperfiddle.ui/ui-from-link remove ctx props "remove"])
+     (if-let [link (data/select-here ctx :hf/remove)]
+       [hyperfiddle.ui/ui-from-link link ctx props "remove"])
 
-   (if-let [detach (data/select-here ctx :hf/detach (last (:hypercrud.browser/path ctx)))]
-     [hyperfiddle.ui/ui-from-link detach ctx props "detach"])
+     (if-let [link (data/select-here ctx :hf/detach)]
+       [hyperfiddle.ui/ui-from-link link ctx props "detach"])
 
-   (let [related (data/select-all ctx :hf/rel)]
-     (->> (r/track identity related)
-          (r/unsequence :db/id)
-          (map (fn [[rv k]]
-                 ^{:key k}                                  ; Use the userland class as the label (ignore hf/rel)
-                 [hyperfiddle.ui/ui-from-link rv ctx props]))
-          doall))])
+     (let [related (data/select-all ctx :hf/rel)]
+       (->> (r/track identity related)
+            (r/unsequence :db/id)
+            (map (fn [[rv k]]
+                   ^{:key k}                                ; Use the userland class as the label (ignore hf/rel)
+                   [hyperfiddle.ui/ui-from-link rv ctx props]))
+            doall))]))
 
 (defn ^:export instant [val ctx & [props]]
   (let [props (-> (entity-props val props ctx)

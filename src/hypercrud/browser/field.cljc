@@ -291,3 +291,11 @@
       :blank (either/right nil)
 
       (either/right nil))))
+
+(defn identity-segment? [field]
+  (#{:db/id :db/ident} (::path-segment field)))
+
+(defn children-identity-only? [field]
+  (->> (::children field)
+       (remove identity-segment?)
+       empty?))

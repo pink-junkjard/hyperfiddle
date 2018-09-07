@@ -17,11 +17,13 @@
 (defn dbid-label [_ ctx & [props]]
   (fragment
     (when-let [label (some->> (:hypercrud.browser/field ctx) (r/fmap ::field/label) deref)]
-      (let [help-md (semantic-docstring ctx)]                 ; https://github.com/hyperfiddle/hyperfiddle/issues/511
+      (let [help-md (semantic-docstring ctx)]               ; https://github.com/hyperfiddle/hyperfiddle/issues/511
         [tooltip-thick (if help-md [:div.hyperfiddle.docstring [contrib.ui/markdown help-md]])
          [:label (select-keys props [:class]) label (if help-md [:sup "†"])]]))
-    (if-let [new (data/select-here ctx :hf/new (last (:hypercrud.browser/path ctx)))]
-      [hyperfiddle.ui/ui-from-link new ctx props "new"])))
+
+    (let [ctx (:hypercrud.browser/parent ctx)]              ; dbid links are at parent path
+      (if-let [new (data/select-here ctx :hf/new)]
+        [hyperfiddle.ui/ui-from-link new ctx props "new"]))))
 
 (defn attribute-label [_ ctx & [props]]
   (when-let [label (some->> (:hypercrud.browser/field ctx) (r/fmap ::field/label) deref)]
@@ -35,7 +37,7 @@
     (let [help-md (semantic-docstring ctx)]
       [tooltip-thick (if help-md [:div.hyperfiddle.docstring [contrib.ui/markdown help-md]])
        [:label (select-keys props [:class]) "*self*"]])
-    (if-let [new (data/select-here ctx :hf/new (last (:hypercrud.browser/path ctx)))]
+    (if-let [new (data/select-here ctx :hf/new)]
       [hyperfiddle.ui/ui-from-link new ctx props "new"])))
 
 (defn magic-new-head [_ ctx & [props]]

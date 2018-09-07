@@ -11,8 +11,9 @@
             [hypercrud.browser.context :as context]
             [hypercrud.browser.field :as field]
             [hypercrud.browser.fiddle :as fiddle]
-            [taoensso.timbre :as timbre]
-            [hypercrud.browser.link :as link]))
+            [hypercrud.browser.link :as link]
+            [hypercrud.browser.system-link :refer [console-links]]
+            [taoensso.timbre :as timbre]))
 
 
 (defn infer-query-formula [query]
@@ -26,7 +27,7 @@
           "identity"
           "(constantly nil)")))))
 
-(def txfn-attach (-> (template/load-resource "auto-txfn/attach.edn") string/trim))
+(def txfn-affix (-> (template/load-resource "auto-txfn/attach.edn") string/trim))
 (def txfn-detach (-> (template/load-resource "auto-txfn/detach.edn") string/trim))
 (def txfn-remove (-> (template/load-resource "auto-txfn/remove.edn") string/trim))
 (def tempid-child "(partial hyperfiddle.api/tempid-child ctx)")
@@ -38,9 +39,9 @@
         is-root (:hypercrud.browser/parent ctx)]
     ; Don't crash if we don't understand the rel
     (let [a (case rel
-              :hf/new {:link/formula (if is-root tempid-detached tempid-child)
-                       :link/tx-fn (if is-root "(constantly {:tx []})" txfn-attach)}
+              :hf/new {:link/formula tempid-detached :link/tx-fn "(constantly {:tx []})"} ; hack to draw as popover
               :hf/remove {:link/tx-fn txfn-remove}
+              :hf/affix {:link/formula tempid-child :link/tx-fn txfn-affix}
               :hf/detach {:link/tx-fn txfn-detach}
               :hf/edit {}                                   ; We know this is an anchor, otherwise pull deeper instead
               :hf/iframe {}                                 ; iframe is always a query, otherwise pull deeper instead. Today this defaults in the add-fiddle txfn

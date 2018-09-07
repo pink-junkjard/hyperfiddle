@@ -23,6 +23,16 @@
    :fiddle/type :entity
    :fiddle/pull-database dbname})
 
+(defn fiddle-system-new [dbname]
+  {:fiddle/ident (keyword "hyperfiddle.system" (str "new-" dbname))
+   :fiddle/type :entity
+   :fiddle/pull-database dbname})
+
+(defn fiddle-system-affix [dbname]
+  {:fiddle/ident (keyword "hyperfiddle.system" (str "affix-" dbname))
+   :fiddle/type :entity
+   :fiddle/pull-database dbname})
+
 (def fiddle-blank-system-remove
   {:fiddle/ident :hyperfiddle.system/remove
    :fiddle/type :blank
@@ -41,7 +51,9 @@
                                (= name' "not-found") errors/not-found
                                (= name' "unauthorized") errors/unauthorized
                                (= name' "live") hf-live
-                               (str/starts-with? name' "edit-") (fiddle-system-edit (str/strip-prefix name' "edit-")))
+                               (str/starts-with? name' "edit-") (fiddle-system-edit (str/strip-prefix name' "edit-"))
+                               (str/starts-with? name' "new-") (fiddle-system-new (str/strip-prefix name' "new-"))
+                               (str/starts-with? name' "affix-") (fiddle-system-affix (str/strip-prefix name' "affix-")))
         "hyperfiddle.schema" (schema/schema name')
         "hyperfiddle.schema.db-cardinality-options" (schema/db-cardinality-options name')
         "hyperfiddle.schema.db-unique-options" (schema/db-unique-options name')

@@ -128,11 +128,7 @@
       [_ :one] controls/edn
       [_ :many] controls/edn-many)))
 
-(defn children-identity-only? [field]
-  (->> (::field/children field)
-       (remove (comp (partial = :db/ident) ::field/path-segment))
-       (remove (comp (partial = :db/id) ::field/path-segment))
-       empty?))
+
 
 (defn ^:export hyper-control [val ctx & [props]]
   {:post [%]}
@@ -141,8 +137,8 @@
             segment (last (:hypercrud.browser/path ctx))]
         (cond                                               ; Duplicate options test to avoid circular dependency in controls/ref
           (:options props) [(control val ctx props) val ctx props]
-          (#{:db/id :db/ident} segment) [controls/dbid val ctx props]
-          (children-identity-only? -field) [(control val ctx props) val ctx props]
+          (field/identity-segment? -field) [controls/dbid val ctx props]
+          (field/children-identity-only? -field) [(control val ctx props) val ctx props]
           (seq (::field/children -field)) (let [ctx (dissoc ctx ::layout)]
                                             (fragment
                                               [pull field val ctx props]
