@@ -100,7 +100,7 @@
                                              (::field/children field#)
                                              [field#])))
                                  (mapv ::field/path-segment))]
-            (is (~'= [:a/a :a/j :a/k :a/v :a/t :a/u :a/x :a/y :a/z] attributes#)))))))
+            (is (~'= [:db/id :a/a :a/j :a/k :a/v :a/t :a/u :a/x :a/y :a/z] attributes#)))))))
 
 #?(:clj
    (defmacro test-splat [fiddle pull->request result-builder]
@@ -124,13 +124,13 @@
                                                   (::field/children field#)
                                                   [field#]))))]
           ; cant test order with splat
-          (is (~'= #{:a/x :a/y :a/z :a/comp-one :a/comp-many (symbol "*")}
+          (is (~'= #{:db/id :a/x :a/y :a/z :a/comp-one :a/comp-many (symbol "*")}
                 (->> attr-level-fields#
                      (mapv ::field/path-segment)
                      (into #{}))))
 
           ; ensure sure splat -> nested components works
-          (is (~'= #{:b/x :b/y}
+          (is (~'= #{:db/id :b/x :b/y}
                 (->> attr-level-fields#
                      (filter (comp #(= % :a/comp-one) ::field/path-segment))
                      first
@@ -139,7 +139,7 @@
                      (into #{}))))
 
           ; ensure sure splat -> nested component works
-          (is (~'= #{:a/j :b/x :b/y}
+          (is (~'= #{:db/id :a/j :b/x :b/y}
                 (->> attr-level-fields#
                      (filter (comp #(= % :a/comp-many) ::field/path-segment))
                      first
@@ -192,22 +192,22 @@
             (is (~'= :a/a (first attributes#)))
             (is (~'= :a/z (last attributes#)))
             (is (~'= (count attributes#) (count (into #{} attributes#))))
-            (is (~'= #{:a/a :a/j :a/k :a/s :a/t :a/u :a/v :a/x :a/z :a/comp-one :a/comp-many (symbol "*")} (into #{} attributes#)))
-            (is (~'= #{:b/x :b/y (symbol "*")}
+            (is (~'= #{:db/id :a/a :a/j :a/k :a/s :a/t :a/u :a/v :a/x :a/z :a/comp-one :a/comp-many (symbol "*")} (into #{} attributes#)))
+            (is (~'= #{:db/id :b/x :b/y (symbol "*")}
                   (->> attr-level-fields#
                        (filter (comp #(= % :a/t) ::field/path-segment))
                        first
                        ::field/children
                        (mapv ::field/path-segment)
                        (into #{}))))
-            (is (~'= #{:b/x :b/y}
+            (is (~'= #{:db/id :b/x :b/y}
                   (->> attr-level-fields#
                        (filter (comp #(= % :a/comp-one) ::field/path-segment))
                        first
                        ::field/children
                        (mapv ::field/path-segment)
                        (into #{}))))
-            (is (~'= #{:a/j :b/x :b/y}
+            (is (~'= #{:db/id :a/j :b/x :b/y}
                   (->> attr-level-fields#
                        (filter (comp #(= % :a/comp-many) ::field/path-segment))
                        first

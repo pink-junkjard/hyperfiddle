@@ -1,6 +1,5 @@
 (fn [ctx multi-color-tx modal-route]
-  (let [#_#_[_ [{entity-id :db/id}]] modal-route
-        entity-id (hypercrud.browser.context/id ctx)
+  (let [entity-id (hypercrud.browser.context/id ctx)
         parent-id (-> ctx :hypercrud.browser/parent hypercrud.browser.context/id)
         attr (last (:hypercrud.browser/path ctx))]
     {:tx {(hypercrud.browser.context/uri ctx)

@@ -52,54 +52,82 @@
         ctx (build-ctx fiddle result)
         field @(auto-field (r/atom request) ctx)]
 
-    (let [expected [{::field/data-has-id? true
-                     ::field/path-segment 0
-                     ::field/source-symbol '$
-                     ::field/children [{::field/data-has-id? false
-                                        ::field/path-segment :some-string
-                                        ::field/source-symbol '$}
-                                       {::field/data-has-id? true
-                                        ::field/path-segment :one-ref1
-                                        ::field/source-symbol '$}
-                                       {::field/data-has-id? true
-                                        ::field/path-segment :one-ref2
-                                        ::field/source-symbol '$
-                                        ::field/children [{::field/data-has-id? false
-                                                           ::field/path-segment :some-string
-                                                           ::field/source-symbol '$}
-                                                          {::field/data-has-id? true
-                                                           ::field/path-segment :one-ref1
-                                                           ::field/source-symbol '$
-                                                           ::field/children [{::field/data-has-id? false
-                                                                              ::field/path-segment :some-string
-                                                                              ::field/source-symbol '$}]}
-                                                          {::field/data-has-id? true
-                                                           ::field/path-segment :many-ref1
-                                                           ::field/source-symbol '$
-                                                           ::field/children [{::field/data-has-id? false
-                                                                              ::field/path-segment :some-string
-                                                                              ::field/source-symbol '$}]}]}
-                                       {::field/data-has-id? true
-                                        ::field/path-segment :many-ref1
-                                        ::field/source-symbol '$}
-                                       {::field/data-has-id? true
-                                        ::field/path-segment :many-ref2
-                                        ::field/source-symbol '$
-                                        ::field/children [{::field/data-has-id? false
-                                                           ::field/path-segment :some-string
-                                                           ::field/source-symbol '$}
-                                                          {::field/data-has-id? true
-                                                           ::field/path-segment :one-ref1
-                                                           ::field/source-symbol '$
-                                                           ::field/children [{::field/data-has-id? false
-                                                                              ::field/path-segment :some-string
-                                                                              ::field/source-symbol '$}]}
-                                                          {::field/data-has-id? true
-                                                           ::field/path-segment :many-ref1
-                                                           ::field/source-symbol '$
-                                                           ::field/children [{::field/data-has-id? false
-                                                                              ::field/path-segment :some-string
-                                                                              ::field/source-symbol '$}]}]}]}]
+    (let [expected [{:hypercrud.browser.field/data-has-id? true,
+                     :hypercrud.browser.field/path-segment 0,
+                     :hypercrud.browser.field/source-symbol '$,
+                     :hypercrud.browser.field/children
+                     [{:hypercrud.browser.field/data-has-id? false,
+                       :hypercrud.browser.field/path-segment :db/id,
+                       :hypercrud.browser.field/source-symbol '$}
+                      {:hypercrud.browser.field/data-has-id? false,
+                       :hypercrud.browser.field/path-segment :some-string,
+                       :hypercrud.browser.field/source-symbol '$}
+                      {:hypercrud.browser.field/data-has-id? true,
+                       :hypercrud.browser.field/path-segment :one-ref1,
+                       :hypercrud.browser.field/source-symbol '$}
+                      {:hypercrud.browser.field/data-has-id? true,
+                       :hypercrud.browser.field/path-segment :one-ref2,
+                       :hypercrud.browser.field/source-symbol '$,
+                       :hypercrud.browser.field/children
+                       [{:hypercrud.browser.field/data-has-id? false,
+                         :hypercrud.browser.field/path-segment :db/id,
+                         :hypercrud.browser.field/source-symbol '$}
+                        {:hypercrud.browser.field/data-has-id? false,
+                         :hypercrud.browser.field/path-segment :some-string,
+                         :hypercrud.browser.field/source-symbol '$}
+                        {:hypercrud.browser.field/data-has-id? true,
+                         :hypercrud.browser.field/path-segment :one-ref1,
+                         :hypercrud.browser.field/source-symbol '$,
+                         :hypercrud.browser.field/children
+                         [{:hypercrud.browser.field/data-has-id? false,
+                           :hypercrud.browser.field/path-segment :db/id,
+                           :hypercrud.browser.field/source-symbol '$}
+                          {:hypercrud.browser.field/data-has-id? false,
+                           :hypercrud.browser.field/path-segment :some-string,
+                           :hypercrud.browser.field/source-symbol '$}]}
+                        {:hypercrud.browser.field/data-has-id? true,
+                         :hypercrud.browser.field/path-segment :many-ref1,
+                         :hypercrud.browser.field/source-symbol '$,
+                         :hypercrud.browser.field/children
+                         [{:hypercrud.browser.field/data-has-id? false,
+                           :hypercrud.browser.field/path-segment :db/id,
+                           :hypercrud.browser.field/source-symbol '$}
+                          {:hypercrud.browser.field/data-has-id? false,
+                           :hypercrud.browser.field/path-segment :some-string,
+                           :hypercrud.browser.field/source-symbol '$}]}]}
+                      {:hypercrud.browser.field/data-has-id? true,
+                       :hypercrud.browser.field/path-segment :many-ref1,
+                       :hypercrud.browser.field/source-symbol '$}
+                      {:hypercrud.browser.field/data-has-id? true,
+                       :hypercrud.browser.field/path-segment :many-ref2,
+                       :hypercrud.browser.field/source-symbol '$,
+                       :hypercrud.browser.field/children
+                       [{:hypercrud.browser.field/data-has-id? false,
+                         :hypercrud.browser.field/path-segment :db/id,
+                         :hypercrud.browser.field/source-symbol '$}
+                        {:hypercrud.browser.field/data-has-id? false,
+                         :hypercrud.browser.field/path-segment :some-string,
+                         :hypercrud.browser.field/source-symbol '$}
+                        {:hypercrud.browser.field/data-has-id? true,
+                         :hypercrud.browser.field/path-segment :one-ref1,
+                         :hypercrud.browser.field/source-symbol '$,
+                         :hypercrud.browser.field/children
+                         [{:hypercrud.browser.field/data-has-id? false,
+                           :hypercrud.browser.field/path-segment :db/id,
+                           :hypercrud.browser.field/source-symbol '$}
+                          {:hypercrud.browser.field/data-has-id? false,
+                           :hypercrud.browser.field/path-segment :some-string,
+                           :hypercrud.browser.field/source-symbol '$}]}
+                        {:hypercrud.browser.field/data-has-id? true,
+                         :hypercrud.browser.field/path-segment :many-ref1,
+                         :hypercrud.browser.field/source-symbol '$,
+                         :hypercrud.browser.field/children
+                         [{:hypercrud.browser.field/data-has-id? false,
+                           :hypercrud.browser.field/path-segment :db/id,
+                           :hypercrud.browser.field/source-symbol '$}
+                          {:hypercrud.browser.field/data-has-id? false,
+                           :hypercrud.browser.field/path-segment :some-string,
+                           :hypercrud.browser.field/source-symbol '$}]}]}]}]
           actual (walk/prewalk
                    (fn [x]
                      (if (map? x)
@@ -115,41 +143,32 @@
       (is (= expected actual)))
 
     (let [links (console-links field @(:hypercrud.browser/schemas ctx))
-          expected #{{:link/path "0" :link/rel :hf/new}
-                     {:link/path "0" :link/rel :hf/edit}
-                     {:link/path "0" :link/rel :hf/remove}
-
-                     {:link/path "0 :one-ref1" :link/rel :hf/new}
-                     {:link/path "0 :one-ref1" :link/rel :hf/edit}
-                     {:link/path "0 :one-ref1" :link/rel :hf/remove}
-
-                     {:link/path "0 :one-ref2" :link/rel :hf/new}
-                     {:link/path "0 :one-ref2" :link/rel :hf/edit}
-                     {:link/path "0 :one-ref2" :link/rel :hf/remove}
-
-                     {:link/path "0 :one-ref2 :one-ref1" :link/rel :hf/new}
-                     {:link/path "0 :one-ref2 :one-ref1" :link/rel :hf/edit}
-                     {:link/path "0 :one-ref2 :one-ref1" :link/rel :hf/remove}
-
-                     {:link/path "0 :one-ref2 :many-ref1" :link/rel :hf/new}
-                     {:link/path "0 :one-ref2 :many-ref1" :link/rel :hf/edit}
-                     {:link/path "0 :one-ref2 :many-ref1" :link/rel :hf/remove}
-
-                     {:link/path "0 :many-ref1" :link/rel :hf/new}
-                     {:link/path "0 :many-ref1" :link/rel :hf/edit}
-                     {:link/path "0 :many-ref1" :link/rel :hf/remove}
-
-                     {:link/path "0 :many-ref2" :link/rel :hf/new}
-                     {:link/path "0 :many-ref2" :link/rel :hf/edit}
-                     {:link/path "0 :many-ref2" :link/rel :hf/remove}
-
-                     {:link/path "0 :many-ref2 :one-ref1" :link/rel :hf/new}
-                     {:link/path "0 :many-ref2 :one-ref1" :link/rel :hf/edit}
-                     {:link/path "0 :many-ref2 :one-ref1" :link/rel :hf/remove}
-
-                     {:link/path "0 :many-ref2 :many-ref1" :link/rel :hf/new}
-                     {:link/path "0 :many-ref2 :many-ref1" :link/rel :hf/edit}
-                     {:link/path "0 :many-ref2 :many-ref1" :link/rel :hf/remove}}
+          expected #{{:link/path "0", :link/rel :hf/detach}
+                     {:link/path "0 :one-ref1", :link/rel :hf/edit}
+                     {:link/path "0 :one-ref2 :many-ref1", :link/rel :hf/edit}
+                     {:link/path "0 :many-ref2 :one-ref1", :link/rel :hf/detach}
+                     {:link/path "0 :one-ref1", :link/rel :hf/affix}
+                     {:link/path "0 :many-ref1", :link/rel :hf/detach}
+                     {:link/path "0 :many-ref2", :link/rel :hf/edit}
+                     {:link/path "0 :many-ref2", :link/rel :hf/affix}
+                     {:link/path "0 :many-ref2 :many-ref1", :link/rel :hf/edit}
+                     {:link/path "0 :many-ref2 :many-ref1", :link/rel :hf/affix}
+                     {:link/path "0 :many-ref2", :link/rel :hf/detach}
+                     {:link/path "0", :link/rel :hf/edit}
+                     {:link/path "0 :many-ref1", :link/rel :hf/edit}
+                     {:link/path "0 :one-ref2", :link/rel :hf/detach}
+                     {:link/path "0 :one-ref1", :link/rel :hf/detach}
+                     {:link/path "0 :one-ref2 :many-ref1", :link/rel :hf/affix}
+                     {:link/path "0 :many-ref2 :one-ref1", :link/rel :hf/affix}
+                     {:link/path "0 :many-ref1", :link/rel :hf/affix}
+                     {:link/path "0 :one-ref2 :many-ref1", :link/rel :hf/detach}
+                     {:link/path "0 :many-ref2 :one-ref1", :link/rel :hf/edit}
+                     {:link/path "0 :one-ref2 :one-ref1", :link/rel :hf/detach}
+                     {:link/path "0 :many-ref2 :many-ref1", :link/rel :hf/detach}
+                     {:link/path "0 :one-ref2 :one-ref1", :link/rel :hf/edit}
+                     {:link/path "0 :one-ref2", :link/rel :hf/edit}
+                     {:link/path "0 :one-ref2 :one-ref1", :link/rel :hf/affix}
+                     {:link/path "0 :one-ref2", :link/rel :hf/affix}}
           actual (->> links
                       (walk/prewalk (fn [x]
                                       (if (map? x)

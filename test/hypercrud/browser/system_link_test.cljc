@@ -47,6 +47,7 @@
                                                             :domain.database/record {:database/uri uri}}}}
             :hypercrud.browser/field (r/atom {::field/source-symbol "$"})
             :hypercrud.browser/path [:parent/child]
+            :hypercrud.browser/data (r/atom (->Entity uri {:db/id "child"}))
             :hypercrud.browser/parent {:hypercrud.browser/data (r/atom (->Entity uri {:db/id "parent"}))}}
        modal-route [nil [{:db/id "child"}]]]
    (is (= (f ctx nil modal-route)
