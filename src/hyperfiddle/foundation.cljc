@@ -151,6 +151,7 @@
              (let [props {:value (pprint-datoms-str @stage)
                           :readOnly @(runtime/state (:peer ctx) [::runtime/auto-transact @selected-uri])
                           :on-change #(runtime/dispatch! (:peer ctx) (actions/reset-stage-uri (:peer ctx) (:branch ctx) @selected-uri (read-edn-string %)))}]
+               ^{:key (str @selected-uri)}
                [debounced props code])
              (when child [child selected-uri stage ctx])
              [markdown "Hyperfiddle always generates valid transactions, if it doesn't, please file a bug.
