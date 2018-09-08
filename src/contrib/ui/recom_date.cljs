@@ -3,7 +3,7 @@
     [clojure.set :refer [rename-keys]]
     [contrib.data :refer [update-existing]]
     [contrib.reactive :as r]
-    [contrib.ui.input :as input]
+    [contrib.ui :refer [validated-cmp]]
     [goog.date.UtcDateTime]
     [re-com.core :as re-com]))
 
@@ -16,7 +16,7 @@
                                  (js/Date. ms))))
       to-string (fn [v] (some-> v .toISOString))]           ; letfn .toISOString throws in browser? #470
   (defn iso8601-string [props]
-    [input/text-adapter parse-iso8601-string to-string props]))
+    [validated-cmp props parse-iso8601-string to-string contrib.ui/text]))
 
 (let [on-change (fn [v] (.-date v))]
   (defn recom-date [props]

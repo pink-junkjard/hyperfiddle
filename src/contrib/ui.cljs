@@ -1,13 +1,13 @@
 (ns contrib.ui
+  (:refer-clojure :exclude [boolean keyword long])
   (:require
-    [clojure.set :refer [rename-keys]]
     [contrib.cljs-platform :refer [global!]]
+    [contrib.css :refer [css]]
     [contrib.data :refer [update-existing]]
     [contrib.pprint :refer [pprint-str]]
     [contrib.reactive :as r]
     [contrib.reader]
     [contrib.string :refer [blank->nil]]
-    [contrib.ui.input :as input]
     [contrib.ui.codemirror :refer [-codemirror]]
     [contrib.ui.tooltip :refer [tooltip]]
     [contrib.ui.remark :as remark]
@@ -88,12 +88,72 @@
                    (reset! os-ref {:old-values [b]
                                    :value b}))))))}))))
 
+(let [on-change (fn [state parse-string new-s-value]
+                  (swap! state assoc :s-value new-s-value)
+                  (let [new-value (parse-string new-s-value)] ; todo this should be atomic, but we still want to throw
+                    (swap! state assoc :last-valid-value new-value)
+                    new-value))
+      initial-state-val (fn [to-string props]
+                          {:s-value (to-string (:value props))
+                           :last-valid-value (:value props)})]
+  (defn validated-cmp [props parse-string to-string cmp & args]
+    (let [state (r/atom (initial-state-val to-string props))]
+      (reagent/create-class
+        {:reagent-render
+         (fn [props parse-string to-string cmp & args]
+           (let [s-value @(r/cursor state [:s-value])
+                 props (-> (assoc props :value s-value)
+                           (update :class css (let [valid? (try (parse-string s-value) true
+                                                                (catch :default e false))]
+                                                (when-not valid? "invalid")))
+                           (update :on-change (fn [f]
+                                                (r/comp
+                                                  (or f identity)
+                                                  (r/partial on-change state parse-string)))))]
+             (into [cmp props] args)))
+         :component-did-update
+         (fn [this]
+           (let [[_ props parse-string to-string cmp & args] (reagent/argv this)]
+             (when-not (= (:last-valid-value @state) (:value props))
+               (reset! state (initial-state-val to-string props)))))}))))
+
 (let [target-value (fn [e] (.. e -target -value))]          ; letfn not working #470
   (defn textarea [props]
     [:textarea (update-existing props :on-change r/comp target-value)]))
 
+(let [checked (fn [e] (.. e -target -checked))]             ; letfn not working #470
+  (defn checkbox [props]
+    [:input (-> (assoc props :type "checkbox")
+                (update-existing :on-change r/comp checked))]))
+
+(let [target-value (fn [e] (.. e -target -value))]          ; letfn not working #470
+  (defn text [props]
+    [:input (-> (assoc props :type "text")
+                (update-existing :on-change r/comp target-value))]))
+
+(let [parse-string (fn [s]                                  ; letfn not working #470
+                     (let [v (some-> s contrib.reader/read-edn-string)]
+                       (assert (or (nil? v) (keyword? v)))
+                       v))
+      to-string (fn [v] (some-> v pr-str))]
+  (defn keyword [props]
+    [validated-cmp props parse-string to-string text]))
+
+(let [parse-string (fn [s] (some-> s contrib.reader/read-edn-string)) ; letfn not working #470
+      to-string (fn [v] (some-> v pr-str))]
+  (defn edn [props]
+    [validated-cmp props parse-string to-string text]))
+
+(let [parse-string (fn [s]                                  ; letfn not working #470
+                     (when-let [s (blank->nil s)]
+                       (let [v (js/parseInt s 10)]
+                         (assert (integer? v))
+                         v)))]
+  (defn long [props]
+    [validated-cmp props parse-string str text]))
+
 (defn easy-checkbox [props & [label]]
-  (let [control [input/checkbox props]]
+  (let [control [checkbox props]]
     (if (blank->nil label)
       [:label (-> props
                   (assoc :style {:font-weight "400"})
@@ -145,9 +205,9 @@
         (update :value pprint-str)
         (update-existing :on-change r/comp read-edn-string))))
 
-(defn ^:export edn [props] [code (adapt-edn-props props)])
+(defn ^:export cm-edn [props] [code (adapt-edn-props props)])
 
-(defn ^:export edn-inline-block [props] [code-inline-block (adapt-edn-props props)])
+(defn ^:export cm-edn-inline-block [props] [code-inline-block (adapt-edn-props props)])
 
 (def ^:export ReactSlickSlider
   ; Prevents failure in tests, this is omitted from test preamble

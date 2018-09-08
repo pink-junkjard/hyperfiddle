@@ -6,7 +6,6 @@
     [contrib.reactive :as r]
     [contrib.reagent :refer [fragment]]
     [contrib.ui :refer [debounced]]                         ; avoid collisions
-    [contrib.ui.input :as input]
     [contrib.ui.recom-date :refer [recom-date]]
     [hypercrud.browser.context :as context]
     [hyperfiddle.data :as data]
@@ -17,17 +16,17 @@
 (defn ^:export keyword [val ctx & [props]]
   (let [props (-> (entity-props val props ctx)
                   readonly->disabled)]
-    [debounced props input/keyword]))
+    [debounced props contrib.ui/keyword]))
 
 (defn ^:export string [val ctx & [props]]
   (let [props (-> (entity-props val props ctx)
                   readonly->disabled)]
-    [debounced props input/text #_contrib.ui/textarea]))
+    [debounced props contrib.ui/text #_contrib.ui/textarea]))
 
 (defn ^:export long [val ctx & [props]]
   (let [props (-> (entity-props val props ctx)
                   readonly->disabled)]
-    [debounced props input/long]))
+    [debounced props contrib.ui/long]))
 
 (defn ^:export boolean [val ctx & [props]]
   [:div (let [props (readonly->disabled props)]
@@ -132,8 +131,8 @@
 
 (defn- edn-comp [ctx]
   (case (:hyperfiddle.ui/layout ctx :hyperfiddle.ui.layout/block)
-    :hyperfiddle.ui.layout/block contrib.ui/edn
-    :hyperfiddle.ui.layout/table contrib.ui/edn-inline-block))
+    :hyperfiddle.ui.layout/block contrib.ui/cm-edn
+    :hyperfiddle.ui.layout/table contrib.ui/cm-edn-inline-block))
 
 (defn ^:export edn-many [val ctx & [props]]
   (let [valueType @(context/hydrate-attribute ctx (last (:hypercrud.browser/path ctx)) :db/valueType :db/ident)

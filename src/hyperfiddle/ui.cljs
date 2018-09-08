@@ -15,7 +15,6 @@
     [contrib.reagent-native-events :refer [native-click-listener]]
     [contrib.string :refer [blank->nil]]
     [contrib.ui]
-    [contrib.ui.input]
     [contrib.ui.safe-render :refer [user-portal]]
     [contrib.ui.tooltip :refer [tooltip tooltip-props]]
     [datascript.parser]

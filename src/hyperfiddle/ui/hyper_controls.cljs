@@ -3,7 +3,6 @@
     [contrib.reactive :as r]
     [contrib.reagent :refer [fragment]]
     [contrib.ui :refer [debounced]]
-    [contrib.ui.input :as input]
     [contrib.ui.tooltip :refer [tooltip-thick]]
     [hypercrud.browser.context :as context]
     [hypercrud.browser.field :as field]
@@ -45,11 +44,11 @@
 (defn magic-new-head [_ ctx & [props]]
   (let [state (r/cursor (:hyperfiddle.ui.form/state ctx) [:hyperfiddle.ui.form/magic-new-a])]
     ;(println (str/format "magic-new-head: %s , %s , %s" @state (pr-str @entity)))
-    [input/keyword (-> (assoc props
-                         :placeholder ":task/title"
-                         :value @state
-                         :on-change (r/partial reset! state))
-                       readonly->disabled)]))
+    [contrib.ui/keyword (-> (assoc props
+                              :placeholder ":task/title"
+                              :value @state
+                              :on-change (r/partial reset! state))
+                            readonly->disabled)]))
 
 (letfn [(change! [ctx state ov nv]
           (context/with-tx! ctx [[:db/add @(r/fmap :db/id (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data])) @state nv]]))]
@@ -66,4 +65,4 @@
       ; Uncontrolled widget on purpose i think
       ; Cardinality many is not needed, because as soon as we assoc one value,
       ; we dispatch through a proper typed control
-      [debounced props input/edn])))
+      [debounced props contrib.ui/edn])))
