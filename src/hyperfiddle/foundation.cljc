@@ -150,7 +150,7 @@
               :on-change change-tab]
              (let [props {:value (pprint-datoms-str @stage)
                           :readOnly @(runtime/state (:peer ctx) [::runtime/auto-transact @selected-uri])
-                          :on-change #(runtime/dispatch! (:peer ctx) (actions/reset-stage-uri (:peer ctx) (:branch ctx) @selected-uri (read-edn-string %)))}]
+                          :on-change #(runtime/dispatch! (:peer ctx) (actions/reset-stage-uri (:peer ctx) (:branch ctx) @selected-uri (read-edn-string %2)))}]
                ^{:key (str @selected-uri)}
                [debounced props code])
              (when child [child selected-uri stage ctx])

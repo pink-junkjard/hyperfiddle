@@ -51,8 +51,8 @@
                          :on-change (r/partial reset! state))
                        readonly->disabled)]))
 
-(letfn [(change! [ctx state v]
-          (context/with-tx! ctx [[:db/add @(r/fmap :db/id (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data])) @state v]]))]
+(letfn [(change! [ctx state ov nv]
+          (context/with-tx! ctx [[:db/add @(r/fmap :db/id (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data])) @state nv]]))]
   (defn magic-new-body [val ctx & [props]]
     (let [read-only (r/fmap (comp not writable-entity?) (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data]))
           state (r/cursor (:hyperfiddle.ui.form/state ctx) [:hyperfiddle.ui.form/magic-new-a])
