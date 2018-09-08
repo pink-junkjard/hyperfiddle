@@ -107,9 +107,9 @@
           (field/identity-segment? -field) [controls/dbid val ctx props]
           (field/children-identity-only? -field) [(control val ctx props) val ctx props]
           (seq (::field/children -field)) (let [ctx (dissoc ctx ::layout)]
-                                            (fragment
-                                              [pull field val ctx props]
-                                              [field [] ctx entity-links-iframe (assoc props :label-fn (r/constantly nil #_[:div "nested pull iframes"]))]))
+                                            [:div           ; wrapper div: https://github.com/hyperfiddle/hyperfiddle/issues/541
+                                             [pull field val ctx props]
+                                             [field [] ctx entity-links-iframe (assoc props :label-fn (r/constantly nil #_[:div "nested pull iframes"]))]])
           :else [(control val ctx props) val ctx props]))))
 
 (defn hyper-label [_ ctx & [props]]
