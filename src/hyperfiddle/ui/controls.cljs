@@ -2,7 +2,7 @@
   (:refer-clojure :exclude [boolean keyword long])
   (:require
     [cats.monad.either :refer [branch]]
-    [contrib.datomic]
+    [contrib.datomic :refer [smart-identity]]
     [contrib.reactive :as r]
     [contrib.reagent :refer [fragment]]
     [contrib.ui :refer [debounced]]                         ; avoid collisions
@@ -57,7 +57,7 @@
        [:option (assoc option-props :key :nil :value "") "--"]])))
 
 (defn id-label [val]
-  (pr-str (contrib.datomic/smart-identity val)))
+  (pr-str (smart-identity val)))
 
 (defn ^:export ref [val ctx & [props]]
   (cond
