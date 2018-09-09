@@ -2,6 +2,7 @@
   (:refer-clojure :exclude [boolean keyword long])
   (:require
     [cats.monad.either :refer [branch]]
+    [contrib.datomic]
     [contrib.reactive :as r]
     [contrib.reagent :refer [fragment]]
     [contrib.ui :refer [debounced]]                         ; avoid collisions
@@ -10,8 +11,7 @@
     [hypercrud.browser.context :as context]
     [hyperfiddle.data :as data]
     [hyperfiddle.ui.select$ :refer [select]]
-    [hyperfiddle.ui.util :refer [entity-props readonly->disabled on-change->tx writable-entity?]]
-    [hypercrud.browser.link :as link]))
+    [hyperfiddle.ui.util :refer [entity-props readonly->disabled on-change->tx writable-entity?]]))
 
 
 (defn ^:export keyword [val ctx & [props]]
@@ -57,7 +57,7 @@
        [:option (assoc option-props :key :nil :value "") "--"]])))
 
 (defn id-label [val]
-  (pr-str (or (:db/ident val) (:db/id val))))
+  (pr-str (contrib.datomic/smart-identity val)))
 
 (defn ^:export ref [val ctx & [props]]
   (cond
@@ -97,7 +97,7 @@
 
      (let [related (data/select-all ctx :hf/rel)]
        (->> (r/track identity related)
-            (r/unsequence :db/id)
+            (r/unsequence smart-identity)
             (map (fn [[rv k]]
                    ^{:key k}                                ; Use the userland class as the label (ignore hf/rel)
                    [hyperfiddle.ui/ui-from-link rv ctx props]))
@@ -137,7 +137,7 @@
 
 (defn ^:export edn-many [val ctx & [props]]
   (let [valueType @(context/hydrate-attribute ctx (last (:hypercrud.browser/path ctx)) :db/valueType :db/ident)
-        val (set (if (= valueType :db.type/ref) (map :db/id val) val))
+        val (set (if (= valueType :db.type/ref) (map smart-identity val) val))
         props (entity-props val props ctx)]
     [debounced props (edn-comp ctx)]))
 

@@ -78,7 +78,7 @@
         valueType-and-cardinality-f (fn [val ctx props]
                                       (let [on-change! (r/comp (r/partial valueType-and-cardinality-with-tx! special-attrs-state ctx)
                                                                (r/partial entity-change->tx ctx))]
-                                        [hyperfiddle.ui/select val ctx (assoc props :on-change on-change!)]))]
+                                        [hyperfiddle.ui/hyper-control val ctx (assoc props :on-change on-change!)]))]
     (fn [val ctx props]
       (let [ctx (update ctx :hypercrud.browser/data (partial r/fmap reactive-merge))
             valid-attr? @(r/fmap completed? (:hypercrud.browser/data ctx))]
@@ -92,8 +92,8 @@
          ; So only the special attrs are editable at first.
          ; Once that is completed, the rest are editable.
          (field [:db/doc] ctx nil {:read-only (not valid-attr?)})
-         (field [:db/unique] ctx hyperfiddle.ui/select {:read-only (not valid-attr?)
-                                                        :options "unique-options"})
+         (field [:db/unique] ctx hyperfiddle.ui/hyper-control {:read-only (not valid-attr?)
+                                                               :options "unique-options"})
          [markdown "!block[Careful: below is not validated, don't stage invalid schema]{.alert .alert-warning style=\"margin-bottom: 0\"}"]
          (field [:db/isComponent] ctx nil {:read-only (not valid-attr?)})
          (field [:db/fulltext] ctx nil {:read-only (not valid-attr?)})

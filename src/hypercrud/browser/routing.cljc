@@ -6,6 +6,7 @@
     [clojure.walk :as walk]
     [contrib.ct :refer [unwrap]]
     [contrib.data :refer [xorxs]]
+    [contrib.datomic]
     [contrib.eval :as eval]
     [contrib.pprint :refer [pprint-str]]
     [contrib.reactive :as r]
@@ -118,7 +119,7 @@
          #?(:clj clojure.lang.PersistentArrayMap :cljs cljs.core.PersistentArrayMap)
          #?(:clj clojure.lang.PersistentHashMap :cljs cljs.core.PersistentHashMap)}
         (type v))
-    (->ThinEntity (context/dbname ctx) (or (:db/ident v) (:db/id v)))
+    (->ThinEntity (context/dbname ctx) (contrib.datomic/smart-identity v))
     v))
 
 (let [eval-string+ (memoize eval/safe-eval-string+)]

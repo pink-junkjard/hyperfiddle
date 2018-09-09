@@ -1,6 +1,7 @@
 (ns hyperfiddle.tempid
   (:require
     [contrib.data :refer [abs-normalized]]
+    [contrib.datomic :refer [smart-identity]]
     [contrib.reactive :as r]
     [hypercrud.browser.context :as context]
     [hypercrud.browser.field :as field]
@@ -12,8 +13,8 @@
 (defn hash-data [ctx]                                       ; todo there are collisions when two links share the same 'location'
   (when-let [data (:hypercrud.browser/data ctx)]
     (case @(r/fmap ::field/cardinality (:hypercrud.browser/field ctx))
-      :db.cardinality/one @(r/fmap :db/id data)
-      :db.cardinality/many (hash (into #{} @(r/fmap (partial mapv :db/id) data))) ; todo scalar
+      :db.cardinality/one @(r/fmap smart-identity data)
+      :db.cardinality/many (hash (into #{} @(r/fmap (partial mapv smart-identity) data))) ; todo scalar
       nil nil #_":db/id has a faked attribute with no cardinality, need more thought to make elegant")))
 
 (defn tempid-from-ctx "stable" [ctx]

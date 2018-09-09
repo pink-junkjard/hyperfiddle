@@ -8,6 +8,7 @@
     [contrib.ct :refer [unwrap]]
     [contrib.css :refer [css css-slugify]]
     [contrib.data :refer [take-to]]
+    [contrib.datomic :refer [smart-identity]]
     [contrib.pprint :refer [pprint-str]]
     [contrib.reactive :as r]
     [contrib.reagent :refer [fragment]]
@@ -53,7 +54,6 @@
 
 (declare result)
 (declare pull)
-(declare entity-links)
 (declare field)
 (declare hyper-control)
 (declare link)
@@ -61,15 +61,12 @@
 (declare fiddle-api)
 (declare fiddle-xray)
 
-(def select hyperfiddle.ui.controls/ref)                    ; legacy
-(def select+ hyperfiddle.ui.controls/ref)                   ; legacy
-
 (defn entity-links-iframe [val ctx & [props]]
   (fragment
     (->> (data/select-all ctx :hf/iframe)
          (remove (comp (partial data/deps-over-satisfied? ctx) link/read-path :link/path))
          (r/track identity)
-         (r/unsequence :db/id)
+         (r/unsequence smart-identity)
          (map (fn [[rv k]]
                 ^{:key k}
                 [ui-from-link rv ctx props]))
@@ -362,7 +359,7 @@ User renderers should not be exposed to the reaction."
 
 (defn hint [val {:keys [hypercrud.browser/fiddle]} props]
   (if (and (-> (:fiddle/type @fiddle) (= :entity))
-           (nil? (:db/id val)))
+           (nil? (smart-identity val)))
     [:div.alert.alert-warning "Warning: invalid route (d/pull requires an entity argument). To add a tempid entity to the URL, click here: "
      [:a {:href "~entity('$','tempid')"} [:code "~entity('$','tempid')"]] "."]))
 

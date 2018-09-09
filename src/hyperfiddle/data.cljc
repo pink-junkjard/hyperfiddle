@@ -3,6 +3,7 @@
     [cats.core :refer [fmap >>=]]
     [cats.monad.either :refer [left right]]
     [contrib.ct :refer [unwrap]]
+    [contrib.datomic :refer [smart-identity]]
     [contrib.reactive :as r]
     [cuerdas.core :as str]
     [hypercrud.browser.base :as base]
@@ -15,8 +16,8 @@
   {:pre [(not (r/reactive? row))]}
   ; This keyfn is very tricky, read https://github.com/hyperfiddle/hyperfiddle/issues/341
   (-> (if (or (vector? row) (seq? row))                     ; todo should probably inspect fields instead of seq
-        (map #(or (:db/id %) %) row)
-        (or (:db/id row) row))
+        (map #(or (smart-identity %) %) row)
+        (or (smart-identity row) row))
       hash))
 
 (defn form-with-naked-legacy "Field is invoked as fn"       ; because it unifies with request fn side

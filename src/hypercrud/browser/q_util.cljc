@@ -3,6 +3,7 @@
     [cats.core :refer [mlet]]
     [cats.monad.either :as either]
     [contrib.data :refer [parse-query-element]]
+    [contrib.datomic :refer [smart-identity]]
     [contrib.try$ :refer [try-either]]
     [hypercrud.client.core :as hc]
     [hypercrud.types.Entity :refer [#?(:cljs Entity)]]
@@ -22,8 +23,8 @@
 
 (defn- fix-param [param]
   (cond
-    (instance? Entity param) (:db/id param)
-    (instance? ThinEntity param) (:db/id param)
+    (instance? Entity param) (smart-identity param)
+    (instance? ThinEntity param) (smart-identity param)
     :else param))
 
 (defn validate-query-params+ [q args ctx]

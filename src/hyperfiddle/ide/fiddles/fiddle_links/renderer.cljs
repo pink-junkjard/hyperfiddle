@@ -8,7 +8,7 @@
     [hypercrud.browser.context :as context]
     [hypercrud.browser.system-link :refer [system-link?]]
     [hypercrud.client.core :as hc]
-    [hyperfiddle.ui :refer [hyper-control field table link select]]
+    [hyperfiddle.ui :refer [hyper-control field table link]]
     [hyperfiddle.ui.select$ :refer [select-error-cmp]]))
 
 
@@ -29,7 +29,7 @@
 
 (defn link-fiddle [val ctx props]
   (fragment
-    [select val ctx (assoc props :read-only (read-only? ctx))]
+    [hyper-control val ctx (assoc props :read-only (read-only? ctx))]
     (link :hf/affix :fiddle ctx "affix" {:disabled (system-link? @(r/fmap :db/id (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data])))})))
 
 (letfn [(remove-children [field] (dissoc field :hypercrud.browser.field/children))]
@@ -43,7 +43,7 @@
                  topnav-fiddle @(hc/hydrate (:peer ctx) nil req) #_"todo tighter reactivity"]
             (return
               (let [ctx (merge ctx {:hypercrud.browser/links (r/track identity (:fiddle/links topnav-fiddle))})]
-                [select val ctx props])))
+                [hyper-control val ctx props])))
           (either/branch select-error-cmp identity))
       )))
 
