@@ -81,10 +81,12 @@
 (defn- set-parent-data [ctx]
   (update ctx :hypercrud.browser/parent (fnil into {}) (select-keys ctx [:hypercrud.browser/data])))
 
-(defn find-child-field [path-segment field]
-  (->> (::field/children field)
-       (filter #(= (::field/path-segment %) path-segment))
-       first))
+(defn find-child-field [path-segment schemas field]
+  (or (->> (::field/children field)
+           (filter #(= (::field/path-segment %) path-segment))
+           first)
+      (when (keyword? path-segment)
+        (field/summon @(r/cursor schemas [(str (::field/source-symbol field))]) (::field/source-symbol field) path-segment))))
 
 (defn find-parent-field [ctx]
   (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/field]))
@@ -93,7 +95,7 @@
           #_(assert (or (not (:hypercrud.browser/data ctx))   ; head has no data, can focus without calling row
                       (not= :db.cardinality/many @(r/fmap ::field/cardinality (:hypercrud.browser/field ctx))))
                   (str "Cannot focus directly from a cardinality/many (do you need a table wrap?). current path: " (:hypercrud.browser/path ctx) ", attempted segment: " path-segment))
-          (let [field (r/fmap (r/partial find-child-field path-segment) (:hypercrud.browser/field ctx))
+          (let [field (r/fmap (r/partial find-child-field path-segment (:hypercrud.browser/schemas ctx)) (:hypercrud.browser/field ctx))
                 ctx (-> ctx
                         (set-parent)
                         (update :hypercrud.browser/path conj path-segment)

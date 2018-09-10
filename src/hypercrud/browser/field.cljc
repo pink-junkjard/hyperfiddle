@@ -31,6 +31,16 @@
    ::path-segment nil
    ::source-symbol nil})
 
+(defn summon [schema source-symbol attr]
+  {:pre [(keyword? attr)]}
+  {::cardinality (get-in schema [attr :db/cardinality :db/ident] :db.cardinality/one)
+   ::children nil
+   ::data-has-id? (is-ref? schema attr)
+   ::label (keyword->label attr)
+   ::get-value attr
+   ::path-segment attr
+   ::source-symbol source-symbol})
+
 (defn- attr-with-opts-or-expr [schema source-symbol list-or-vec]
   (if (#{'default 'limit} (first list-or-vec))
     (let [attr (second list-or-vec)]

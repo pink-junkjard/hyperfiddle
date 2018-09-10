@@ -39,15 +39,15 @@
   (let [this-path (:hypercrud.browser/path ctx)
         common-path (contrib.data/ancestry-common this-path target-path)
         common-ctx (context/refocus ctx common-path)]
-    (loop [field @(:hypercrud.browser/field common-ctx)
-           [x & xs] (contrib.data/ancestry-divergence target-path common-path)]
-      (if-not x
+    (loop [field (:hypercrud.browser/field common-ctx)
+           [segment & xs] (contrib.data/ancestry-divergence target-path common-path)]
+      (if-not segment
         true                                                ; finished
-        (if-let [child-field (context/find-child-field x field)]
-          (case (::field/cardinality child-field)
+        (let [child-field (r/fmap (r/partial context/find-child-field (:hypercrud.browser/schemas ctx) segment) field)]
+          (case @(r/fmap ::field/cardinality child-field)
             :db.cardinality/one (recur child-field xs)
-            :db.cardinality/many false)
-          false #_"Nonsensical path - probably invalid links for this query, maybe they just changed the query and the links broke")))))
+            :db.cardinality/many false
+            false) #_"Nonsensical path - probably invalid links for this query, maybe they just changed the query and the links broke")))))
 
 (defn link-path-floor "Find the shortest path that has equal dimension" [ctx path]
   (loop [ctx (context/refocus ctx path)]                    ; we know we're at least satisfied so this is safe
