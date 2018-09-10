@@ -26,7 +26,6 @@
    :fiddle/ident
    {:fiddle/links [:db/id
                    :link/class
-                   :link/disabled?
                    {:link/fiddle [:db/id
                                   :fiddle/ident             ; routing
                                   :fiddle/query             ; validation

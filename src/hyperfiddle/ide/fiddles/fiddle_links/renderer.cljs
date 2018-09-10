@@ -13,7 +13,7 @@
 
 
 (def editable-if-shadowed?
-  #{:link/class :link/disabled? :link/fiddle :link/formula :link/tx-fn})
+  #{:link/class :link/fiddle :link/formula :link/tx-fn})
 
 (defn read-only? [ctx]
   (if (:hypercrud.browser/data ctx)                         ; be robust to being called on labels
@@ -53,8 +53,7 @@
     [table
      #_(partial form (fn [path ctx ?f & args] (field path ctx ?f :read-only (read-only? ctx))))
      (fn [ctx]
-       [(when-not embed-mode (field [:link/disabled?] ctx read-only-cell))
-        (field [:link/rel] ctx read-only-cell)
+       [(field [:link/rel] ctx read-only-cell)
         (field [:link/class] ctx read-only-cell)
         (field [:link/fiddle] ctx (if embed-mode hf-live-link-fiddle link-fiddle) {:options "fiddle-options"
                                                                                    :option-label (r/comp pr-str :fiddle/ident first)})

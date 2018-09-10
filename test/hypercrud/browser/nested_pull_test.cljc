@@ -174,8 +174,7 @@
                                       (if (map? x)
                                         ; just testing the structural attributes
                                         (->> (select-keys x [:link/path
-                                                             :link/rel
-                                                             #_:link/disabled?])
+                                                             :link/rel])
                                              (remove (comp nil? second))
                                              (into {}))
                                         x)))

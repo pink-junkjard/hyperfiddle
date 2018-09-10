@@ -71,10 +71,7 @@
 
 ; todo tighter reactivity
 (defn auto-links [ctx]
-  (let [links (concat
-                #_(->> (console-links @(:hypercrud.browser/field ctx) @(:hypercrud.browser/schemas ctx))
-                     (map (partial auto-link ctx)))
-                (map (partial auto-link ctx) @(r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/links])))]
-    (if (:keep-disabled-anchors? ctx)
-      links
-      (remove :link/disabled? links))))
+  (concat
+    #_(->> (console-links @(:hypercrud.browser/field ctx) @(:hypercrud.browser/schemas ctx))
+           (map (partial auto-link ctx)))
+    (map (partial auto-link ctx) @(r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/links]))))

@@ -56,8 +56,7 @@
                     :link/rel :hf/iframe
                     :link/class #{:valueType-options}}
                    {:db/id :system-anchor-remove            ; XXX
-                    :link/rel :hf/remove
-                    :link/disabled? true}}})
+                    :link/rel :hf/remove}}})
 
 (defn schema [$db]
   {:fiddle/ident (keyword "hyperfiddle.schema" $db)
@@ -82,5 +81,4 @@
                     :link/rel :hf/new
                     :link/fiddle (db-attribute-edit $db)}
                    {:db/id :system-anchor-remove            ; XXX
-                    :link/rel :hf/remove
-                    :link/disabled? true}}})
+                    :link/rel :hf/remove}}})
