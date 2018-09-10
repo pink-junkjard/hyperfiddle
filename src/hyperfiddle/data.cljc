@@ -43,7 +43,7 @@
            [segment & xs] (contrib.data/ancestry-divergence target-path common-path)]
       (if-not segment
         true                                                ; finished
-        (let [child-field (r/fmap (r/partial context/find-child-field (:hypercrud.browser/schemas ctx) segment) field)]
+        (let [child-field (r/fmap (r/partial context/find-child-field segment (:hypercrud.browser/schemas ctx)) field)]
           (case @(r/fmap ::field/cardinality child-field)
             :db.cardinality/one (recur child-field xs)
             :db.cardinality/many false
