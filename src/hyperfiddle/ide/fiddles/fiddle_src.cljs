@@ -131,6 +131,7 @@
           ; todo tighter reactivity
           (map ::field/path-segment)
           (remove #(= (namespace %) "fiddle"))
+          (remove #(= :db/id %))
           (map (fn [segment]
                  ^{:key (str [segment])}
                  [field [segment] ctx nil]))
