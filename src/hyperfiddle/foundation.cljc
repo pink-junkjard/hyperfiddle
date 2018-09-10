@@ -7,7 +7,7 @@
             [contrib.data :refer [update-existing]]
             [contrib.eval :as eval]
             [contrib.reactive :as r]
-            [contrib.reader :refer [read-string read-edn-string]]
+            [contrib.reader :refer [read-string read-edn-string!]]
     #?(:cljs [contrib.reagent :refer [fragment]])
             [contrib.pprint :refer [pprint-datoms-str]]
     #?(:cljs [contrib.ui :refer [code debounced markdown]])
@@ -150,7 +150,7 @@
               :on-change change-tab]
              (let [props {:value (pprint-datoms-str @stage)
                           :readOnly @(runtime/state (:peer ctx) [::runtime/auto-transact @selected-uri])
-                          :on-change #(runtime/dispatch! (:peer ctx) (actions/reset-stage-uri (:peer ctx) (:branch ctx) @selected-uri (read-edn-string %2)))}]
+                          :on-change #(runtime/dispatch! (:peer ctx) (actions/reset-stage-uri (:peer ctx) (:branch ctx) @selected-uri (read-edn-string! %2)))}]
                ^{:key (str @selected-uri)}
                [debounced props code])
              (when child [child selected-uri stage ctx])

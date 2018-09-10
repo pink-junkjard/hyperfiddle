@@ -4,7 +4,7 @@
     [clojure.string :as string]
     [contrib.ct :refer [unwrap]]
     [contrib.reactive :as r]
-    [contrib.reader :refer [read-edn-string]]
+    [contrib.reader :refer [read-edn-string!]]
     [contrib.reagent :refer [fragment]]
     [contrib.rfc3986 :refer [encode-rfc3986-pchar]]
     [contrib.ednish :refer [encode-ednish]]
@@ -51,7 +51,7 @@
     [:div.display-inline-flex [re-com.core/throbber]]))
 
 (defn src-mode? [frag]
-  (= :src (some-> frag read-edn-string)))
+  (= :src (some-> frag read-edn-string!)))
 
 (defn- set-managed [link] (assoc link :link/tx-fn "(assert false \"Never called, triggers popover view, also this is the same bit of info as dont-branch\")"))
 

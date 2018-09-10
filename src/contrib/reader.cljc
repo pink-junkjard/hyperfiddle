@@ -1,8 +1,11 @@
 (ns contrib.reader
   (:refer-clojure :exclude [read-string])
-  (:require [clojure.tools.reader :as reader]
-            [clojure.tools.reader.edn :as edn-reader]
-            [hyperfiddle.hc_data_readers :refer [hc-data-readers]]))
+  (:require
+    [contrib.ct :refer [unwrap]]
+    [contrib.try$ :refer [try-either]]
+    [clojure.tools.reader :as reader]
+    [clojure.tools.reader.edn :as edn-reader]
+    [hyperfiddle.hc_data_readers :refer [hc-data-readers]]))
 
 ; cljs.tagged-literals is the cljs compile-time stuff, I chose
 ; not to call into that namespace, I don't understand the implications rn.
@@ -17,11 +20,15 @@
    (binding [reader/*data-readers* (merge hc-data-readers reader/*data-readers*)]
      (reader/read-string opts s))))
 
-(defn read-edn-string
-  ([s]
-   {:pre [s]}
-   (read-edn-string {:eof nil} s))
+(defn read-edn-string+
+  ([s] (read-edn-string+ {:eof nil} s))
   ([opts s]
    {:pre [s]}
-   (-> (update opts :readers merge hc-data-readers)
-       (edn-reader/read-string s))))
+   (try-either
+     (edn-reader/read-string
+       (update opts :readers merge hc-data-readers)
+       s))))
+
+(defn read-edn-string!
+  ([s] (unwrap #(throw %) (read-edn-string+ s)))
+  ([opts s] (unwrap #(throw %) (read-edn-string+ opts s))))

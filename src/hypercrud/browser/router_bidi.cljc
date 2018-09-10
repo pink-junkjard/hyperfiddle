@@ -1,7 +1,7 @@
 (ns hypercrud.browser.router-bidi
   (:require
     [bidi.bidi :as bidi]
-    [contrib.reader :refer [read-edn-string]]
+    [contrib.reader :refer [read-edn-string!]]
     [contrib.rfc3986 :refer [split-fragment]]
     [contrib.string :refer [abc split-first empty->nil]]
     [hypercrud.browser.router :refer [assoc-frag]]
@@ -31,7 +31,7 @@
   (transform-param [this]
     (fn [v]
       (let [$ (.-dbname this)                               ; the "$" is provided by entity placeholder in the route
-            e (read-edn-string v)]                          ; the reader will need to subs ! to /
+            e (read-edn-string! v)]                          ; the reader will need to subs ! to /
         (->ThinEntity $ e))))
   (matches? [this s]
     (let [r (re-pattern
@@ -46,7 +46,7 @@
   bidi/Pattern
   (match-pattern [this env]
     ; is this even in play? I don't think I ever hit this bp
-    (let [read (read-edn-string (:remainder env))]
+    (let [read (read-edn-string! (:remainder env))]
       (-> env
           (update-in [:route-params] assoc (.-id this) (->ThinEntity (.-dbname this) read))
           ; totally not legit to count read bc whitespace

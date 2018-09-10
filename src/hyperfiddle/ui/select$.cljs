@@ -38,7 +38,7 @@
                                        (fn [e]
                                          (let [select-value (blank->nil (.-target.value e))
                                                id (if select-value
-                                                    (let [v (contrib.reader/read-edn-string select-value)
+                                                    (let [v (contrib.reader/read-edn-string! select-value)
                                                           legacy-tempid (and (integer? v) (< v 0))]
                                                       (if legacy-tempid (str v) v)))]
                                            (on-change id)))))

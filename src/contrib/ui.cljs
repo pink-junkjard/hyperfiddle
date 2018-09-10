@@ -196,7 +196,7 @@
 (letfn [(read-edn-string [user-edn-str]
           ; parent on-change can catch exceptions if they care
           ; otherwise this will bubble up to the console appropriately
-          (some-> user-edn-str contrib.reader/read-edn-string))]
+          (some-> user-edn-str contrib.reader/read-edn-string!))]
   (defn- adapt-edn-props [props]
     ; Must validate since invalid edn means there's no value to stage.
     ; Code editors are different since you are permitted to stage broken code (and see the error and fix it)

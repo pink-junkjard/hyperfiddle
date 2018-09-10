@@ -1,7 +1,7 @@
 (ns hyperfiddle.readers-test
   (:require [clojure.test :refer [deftest is]]
             [contrib.eval :as eval]
-            [contrib.reader :as reader :refer [read-edn-string]]
+            [contrib.reader :as reader :refer [read-edn-string!]]
             [hypercrud.transit :as transit]
             [hypercrud.types.DbVal :refer [->DbVal]]
             [hypercrud.types.Entity :refer [->Entity]]
@@ -23,8 +23,8 @@
 
 (defn test-edn-read [control strd]
   (is (= control
-         (read-edn-string (pr-str control))
-         (read-edn-string strd))))
+         (read-edn-string! (pr-str control))
+         (read-edn-string! strd))))
 
 (defn test-eval [control strd]
   (is (= control
