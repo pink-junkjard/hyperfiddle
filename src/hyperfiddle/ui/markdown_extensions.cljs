@@ -121,7 +121,9 @@
        "field" (fn [content argument props ctx]
                  (let [path (unwrap #(timbre/warn %) (memoized-safe-read-edn-string (str "[" argument "]")))
                        ?f (some->> content memoized-safe-eval (unwrap #(timbre/warn %)))]
-                   (hyperfiddle.ui/field path ctx ?f (update props :class css "unp"))))
+                   (hyperfiddle.ui/field path ctx ?f (-> props
+                                                         (update :class css "unp")
+                                                         (update :label-fn contrib.eval/ensure-fn)))))
 
        "table" (letfn [(fields [content props ctx]
                          [[markdown content (assoc ctx ::unp true)]])]
