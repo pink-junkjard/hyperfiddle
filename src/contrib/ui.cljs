@@ -132,14 +132,14 @@
                 (update-existing :on-change r/comp target-value))]))
 
 (let [parse-string (fn [s]                                  ; letfn not working #470
-                     (let [v (some-> s contrib.reader/read-edn-string)]
+                     (let [v (some-> s contrib.reader/read-edn-string!)]
                        (assert (or (nil? v) (keyword? v)))
                        v))
       to-string (fn [v] (some-> v pr-str))]
   (defn keyword [props]
     [validated-cmp props parse-string to-string text]))
 
-(let [parse-string (fn [s] (some-> s contrib.reader/read-edn-string)) ; letfn not working #470
+(let [parse-string (fn [s] (some-> s contrib.reader/read-edn-string!)) ; letfn not working #470
       to-string (fn [v] (some-> v pr-str))]
   (defn edn [props]
     [validated-cmp props parse-string to-string text]))
