@@ -28,7 +28,7 @@
     [hypercrud.browser.routing :as routing]
     [hypercrud.browser.system-link :refer [console-links system-link?]]
     [hypercrud.types.ThinEntity :refer [->ThinEntity]]
-    [hypercrud.ui.connection-color :refer [border-color]]
+    [hypercrud.ui.connection-color :refer [connection-color]]
     [hypercrud.ui.error :as ui-error]
     [hypercrud.ui.stale :as stale]
     [hyperfiddle.data :as data]
@@ -246,9 +246,9 @@ User renderers should not be exposed to the reaction."
           r+route (r/fmap (r/partial routing/build-route' ctx) link-ref) ; need to re-focus from the top
           link-props @(r/track routing/build-link-props @r+route ctx props)] ; handles :class and :tooltip props
       (when-not (:hidden link-props)
-        (let [style {:color nil #_(border-color ctx (cond
-                                                      (system-link? (:db/id @link-ref)) 60
-                                                      :else 40))}
+        (let [style {:color nil #_(connection-color ctx (cond
+                                                          (system-link? (:db/id @link-ref)) 60
+                                                          :else 40))}
               props (-> link-props
                         (assoc :style style)
                         (update :class css (:class props))
@@ -303,7 +303,7 @@ User renderers should not be exposed to the reaction."
     (fn [relative-path ctx Body Head props]
       (let [ctx (assoc ctx :hyperfiddle.ui.form/state state)]
         [:div {:class (css "field" (:class props))
-               :style {:border-color (border-color ctx)}}
+               :style {:border-color (connection-color ctx)}}
          [Head nil (dissoc ctx :hypercrud.browser/data) props]
          [Body @(:hypercrud.browser/data ctx) ctx props]]))))
 
@@ -314,12 +314,12 @@ User renderers should not be exposed to the reaction."
     :head [:th {:class (css "field" (:class props)
                             (when (sort/sortable? ctx) "sortable") ; hoist
                             (some-> (sort/sort-direction relative-path ctx) name)) ; hoist
-                :style {:background-color (border-color ctx)}
+                :style {:background-color (connection-color ctx)}
                 :on-click (r/partial sort/toggle-sort! relative-path ctx)}
            [Head nil ctx props]]
     ; Field omits [] but table does not, because we use it to specifically draw repeating anchors with a field renderer.
     :body [:td {:class (css "field" (:class props))
-                :style {:border-color (border-color ctx)}}
+                :style {:border-color (connection-color ctx)}}
            [Body @(:hypercrud.browser/data ctx) ctx props]]))
 
 (defn ^:export field "Works in a form or table context. Draws label and/or value."
