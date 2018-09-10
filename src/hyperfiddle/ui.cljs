@@ -200,10 +200,10 @@ User renderers should not be exposed to the reaction."
           (mlet [:let [ctx (-> (context/clean ctx)
                                (routing/route route))]
                  request @(r/apply-inner-r (r/track base/meta-request-for-fiddle ctx))
-                 :let [fiddle (->> {:fiddle/type :entity
-                                    :fiddle/pull-database "$"} ; turns out we dont need fiddle for much if we already know the request
-                                   (fiddle/fiddle-defaults)
-                                   (r/track identity))
+                 :let [fiddle (-> {:fiddle/type :entity
+                                   :fiddle/pull-database "$"} ; turns out we dont need fiddle for much if we already know the request
+                                  (fiddle/fiddle-defaults route)
+                                  (->> (r/track identity)))
                        ctx (-> (context/source-mode ctx)
                                (context/clean)
                                (routing/route [nil [(->ThinEntity "$" [:fiddle/ident (first (:route ctx))])]]))]]

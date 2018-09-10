@@ -14,7 +14,7 @@
                                           (update :fiddle/pull-database or-str "$"))
     (nil? (:fiddle/type fiddle)) (assoc :fiddle/type :blank)))
 
-(defn fiddle-defaults [fiddle]
+(defn fiddle-defaults [fiddle route]
   (-> (data-defaults fiddle)
       (update :fiddle/markdown or-str (str/fmt "### %s" (some-> fiddle :fiddle/ident str)))
       (update :fiddle/renderer or-str #?(:clj nil :cljs (-> hyperfiddle.ui/fiddle meta :expr-str)))))

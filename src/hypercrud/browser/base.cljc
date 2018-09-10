@@ -74,13 +74,13 @@
     (either/right fiddle)))
 
 (defn hydrate-fiddle [meta-fiddle-request ctx]
-  (let [auto-fiddle (system-fiddle/system-fiddle? (get-in ctx [:route 0]))]
-    (mlet [fiddle (if auto-fiddle
-                    (system-fiddle/hydrate-system-fiddle (get-in ctx [:route 0]))
-                    (mlet [fiddle @(hc/hydrate (:peer ctx) (:branch ctx) @meta-fiddle-request)]
-                      (validate-fiddle (into {} fiddle))))]
-      (return
-        (fiddle/fiddle-defaults fiddle)))))
+  (mlet [:let [[arg1 :as route] (:route ctx)]
+         fiddle (if (system-fiddle/system-fiddle? arg1)
+                  (system-fiddle/hydrate-system-fiddle arg1)
+                  (mlet [fiddle @(hc/hydrate (:peer ctx) (:branch ctx) @meta-fiddle-request)]
+                    (validate-fiddle (into {} fiddle))))]
+    (return
+      (fiddle/fiddle-defaults fiddle route))))
 
 (defn request-for-fiddle [fiddle ctx]                       ; depends on route
   (case @(r/cursor fiddle [:fiddle/type])
