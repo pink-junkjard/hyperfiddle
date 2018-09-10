@@ -8,7 +8,6 @@
             [contrib.try$ :refer [try-either]]
             [contrib.reactive :as r]
             [datascript.parser]
-            [hypercrud.browser.context :as context]
             [hypercrud.browser.fiddle :as fiddle]
             [hypercrud.browser.link :as link]
             [hypercrud.browser.system-link :refer [console-links]]
