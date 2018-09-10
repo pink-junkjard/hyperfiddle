@@ -3,7 +3,7 @@
     [cats.core :refer [mlet]]
     [cats.monad.either :as either]
     [contrib.data :refer [parse-query-element]]
-    [contrib.datomic-tx :refer [smart-identity]]
+    [hyperfiddle.tempid :refer [smart-identity]]
     [contrib.try$ :refer [try-either]]
     [hypercrud.client.core :as hc]
     [hypercrud.types.Entity :refer [#?(:cljs Entity)]]
@@ -21,10 +21,10 @@
                                     ;; the string conversion should happen at the other side imo
                                     (mapv str elements)))
 
-(defn- fix-param [param]
+(defn- fix-param [ctx param]
   (cond
-    (instance? Entity param) (smart-identity param)
-    (instance? ThinEntity param) (smart-identity param)
+    (instance? Entity param) (smart-identity ctx param)
+    (instance? ThinEntity param) (smart-identity ctx param)
     :else param))
 
 (defn validate-query-params+ [q args ctx]
@@ -38,7 +38,7 @@
                                        [x & xs] query-holes]
                                   (let [is-db (.startsWith x "$")
                                         next-arg (if is-db (get db-lookup x)
-                                                           (fix-param (first args)))
+                                                           (fix-param ctx (first args)))
                                         args (if is-db args (rest args))
                                         acc (conj acc next-arg)]
                                     (if xs

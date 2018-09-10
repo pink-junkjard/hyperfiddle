@@ -8,7 +8,6 @@
     [contrib.ct :refer [unwrap]]
     [contrib.css :refer [css css-slugify]]
     [contrib.data :refer [take-to]]
-    [contrib.datomic-tx :refer [smart-identity]]
     [contrib.pprint :refer [pprint-str]]
     [contrib.reactive :as r]
     [contrib.reagent :refer [fragment]]
@@ -33,6 +32,7 @@
     [hypercrud.ui.stale :as stale]
     [hyperfiddle.data :as data]
     [hyperfiddle.runtime :as runtime]
+    [hyperfiddle.tempid :refer [smart-identity]]
     [hyperfiddle.ui.api]
     [hyperfiddle.ui.controls :as controls]
     [hyperfiddle.ui.hyper-controls :refer [attribute-label relation-label tuple-label dbid-label magic-new-body magic-new-head]]
@@ -65,7 +65,7 @@
     (->> (data/select-all ctx :hf/iframe)
          (remove (comp (partial data/deps-over-satisfied? ctx) link/read-path :link/path))
          (r/track identity)
-         (r/unsequence smart-identity)
+         (r/unsequence (r/partial smart-identity ctx))
          (map (fn [[rv k]]
                 ^{:key k}
                 [ui-from-link rv ctx props]))
@@ -350,22 +350,22 @@ User renderers should not be exposed to the reaction."
          [:thead (->> (columns (dissoc ctx :hypercrud.browser/data) props) (into [:tr]))] ; strict
          (->> (:hypercrud.browser/data ctx)
               (r/fmap sort)
-              (r/unsequence data/row-keyfn)
+              (r/unsequence (r/partial data/row-keyfn ctx))
               (map (fn [[row k]]
                      (->> (columns (context/row ctx row) props)
                           (into ^{:key k} [:tr]))))         ; strict
               (into [:tbody]))]))))
 
-(defn hint [val {:keys [hypercrud.browser/fiddle]} props]
+(defn hint [val {:keys [hypercrud.browser/fiddle] :as ctx} props]
   (if (and (-> (:fiddle/type @fiddle) (= :entity))
-           (nil? (smart-identity val)))
+           (nil? (smart-identity ctx val)))
     [:div.alert.alert-warning "Warning: invalid route (d/pull requires an entity argument). To add a tempid entity to the URL, click here: "
      [:a {:href "~entity('$','tempid')"} [:code "~entity('$','tempid')"]] "."]))
 
 (defn form "Not an abstraction." [fields val ctx & [props]]
   (apply
     fragment
-    (keyword (str (data/row-keyfn val)))
+    (keyword (str (data/row-keyfn ctx val)))
     (fields (assoc ctx ::layout :hyperfiddle.ui.layout/block))))
 
 (defn columns [field ctx & [props]]

@@ -133,7 +133,7 @@
        "list" (fn [content argument props ctx]
                 [:ul props
                  (->> (:hypercrud.browser/data ctx)
-                      (r/unsequence data/row-keyfn)
+                      (r/unsequence (r/partial data/row-keyfn ctx))
                       (map (fn [[row k]]
                              ^{:key k}
                              [:li [markdown content (context/row ctx row)]]))

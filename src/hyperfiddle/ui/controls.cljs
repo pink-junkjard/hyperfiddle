@@ -2,13 +2,13 @@
   (:refer-clojure :exclude [boolean keyword long])
   (:require
     [cats.monad.either :refer [branch]]
-    [contrib.datomic-tx :refer [smart-identity]]
     [contrib.reactive :as r]
     [contrib.reagent :refer [fragment]]
     [contrib.ui :refer [debounced]]                         ; avoid collisions
     [contrib.ui.recom-date :refer [recom-date]]
     [hypercrud.browser.context :as context]
     [hyperfiddle.data :as data]
+    [hyperfiddle.tempid :refer [smart-identity]]
     [hyperfiddle.ui.select$ :refer [select]]
     [hyperfiddle.ui.util :refer [entity-props readonly->disabled on-change->tx writable-entity?]]))
 
@@ -55,8 +55,8 @@
        [:option (assoc option-props :key false :value "false") "False"]
        [:option (assoc option-props :key :nil :value "") "--"]])))
 
-(defn id-label [val]
-  (pr-str (smart-identity val)))
+(defn id-label [ctx val]
+  (pr-str (or (smart-identity ctx val) val)))
 
 (defn ^:export ref [val ctx & [props]]
   (cond
@@ -64,8 +64,8 @@
     :else [:div
            [:div.input
             (if-let [self (data/select-here ctx :hf/edit)]
-              [hyperfiddle.ui/ui-from-link self ctx props (id-label val)]
-              (id-label val))]
+              [hyperfiddle.ui/ui-from-link self ctx props (id-label ctx val)]
+              (id-label ctx val))]
 
            (if-let [link (data/select-here ctx :hf/affix)]
              [hyperfiddle.ui/ui-from-link link ctx props "affix"])
@@ -96,7 +96,7 @@
 
      (let [related (data/select-all ctx :hf/rel)]
        (->> (r/track identity related)
-            (r/unsequence smart-identity)
+            (r/unsequence (r/partial smart-identity ctx))
             (map (fn [[rv k]]
                    ^{:key k}                                ; Use the userland class as the label (ignore hf/rel)
                    [hyperfiddle.ui/ui-from-link rv ctx props]))
@@ -136,7 +136,7 @@
 
 (defn ^:export edn-many [val ctx & [props]]
   (let [valueType @(context/hydrate-attribute ctx (last (:hypercrud.browser/path ctx)) :db/valueType :db/ident)
-        val (set (if (= valueType :db.type/ref) (map smart-identity val) val))
+        val (set (if (= valueType :db.type/ref) (map (r/partial smart-identity ctx) val) val))
         props (entity-props val props ctx)]
     [debounced props (edn-comp ctx)]))
 

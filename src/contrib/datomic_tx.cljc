@@ -1,11 +1,9 @@
 (ns contrib.datomic-tx
   (:require
+    [contrib.ct :refer [unwrap]]
     [clojure.set :as set]
     [clojure.walk :as walk]))
 
-
-(defn smart-identity [v]
-  (or (:db/ident v) (:db/id v) v))
 
 (defn edit-entity [id attribute o n]
   (let [{a :db/ident {cardinality :db/ident} :db/cardinality} attribute]

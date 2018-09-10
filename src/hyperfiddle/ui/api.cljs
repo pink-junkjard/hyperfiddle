@@ -45,7 +45,7 @@
                                       (body-field (context/focus ctx path)))))
                              (apply merge))
     :db.cardinality/many (->> (:hypercrud.browser/data ctx)
-                              (r/unsequence data/row-keyfn) ; the request side does NOT need the cursors to be equiv between loops
+                              (r/unsequence (r/partial data/row-keyfn ctx)) ; the request side does NOT need the cursors to be equiv between loops
                               (map (fn [[row k]]
                                      (let [ctx (context/row ctx row)]
                                        (->> (data/form-with-naked-legacy ctx)

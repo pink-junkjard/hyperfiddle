@@ -3,7 +3,6 @@
     [cats.core :refer [mlet return]]
     [cats.monad.either :as either]
     [contrib.ct :refer [unwrap]]
-    [contrib.datomic-tx]
     [contrib.eval]
     [contrib.reactive :as r]
     [contrib.reader]
@@ -13,6 +12,7 @@
     [hypercrud.browser.field :as field]
     [hypercrud.types.Entity :refer [entity?]]
     [hyperfiddle.data :as data]
+    [hyperfiddle.tempid :refer [smart-identity]]
     [hyperfiddle.ui.util :refer [writable-entity? entity-change->tx]]
     [taoensso.timbre :as timbre]))
 
@@ -71,7 +71,7 @@
         label-fn (contrib.eval/ensure-fn (:option-label props option-label))
         option-value-fn (fn [row]
                           (let [element (if (vector? row) (first row) row)] ; inspect datalog
-                            (pr-str (contrib.datomic-tx/smart-identity element))))]
+                            (pr-str (smart-identity ctx element))))]
     [:select.ui (dissoc props :option-label)                ; value
      ; .ui is because options are an iframe and need the pink box
      (conj

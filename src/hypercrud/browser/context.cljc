@@ -66,6 +66,12 @@
   ([ctx] (uri (dbname ctx) ctx))
   ([dbname ctx] (some-> dbname (domain/dbname->uri (:hypercrud.browser/domain ctx)))))
 
+(defn ctx->id-lookup
+  ([ctx] (ctx->id-lookup (uri ctx) ctx))
+  ([uri ctx]
+    ; todo what about if the tempid is on a higher branch in the uri?
+   @(runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :tempid-lookups uri])))
+
 (defn with-tx! [ctx tx]
   (let [uri (uri ctx)
         _ (assert uri)                                      ; todo downstream action should be validating this
@@ -92,9 +98,9 @@
   (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/field]))
 
 (letfn [(focus-segment [ctx path-segment]                   ; attribute or fe segment
-          #_(assert (or (not (:hypercrud.browser/data ctx))   ; head has no data, can focus without calling row
-                      (not= :db.cardinality/many @(r/fmap ::field/cardinality (:hypercrud.browser/field ctx))))
-                  (str "Cannot focus directly from a cardinality/many (do you need a table wrap?). current path: " (:hypercrud.browser/path ctx) ", attempted segment: " path-segment))
+          #_(assert (or (not (:hypercrud.browser/data ctx)) ; head has no data, can focus without calling row
+                        (not= :db.cardinality/many @(r/fmap ::field/cardinality (:hypercrud.browser/field ctx))))
+                    (str "Cannot focus directly from a cardinality/many (do you need a table wrap?). current path: " (:hypercrud.browser/path ctx) ", attempted segment: " path-segment))
           (let [field (r/fmap (r/partial find-child-field path-segment (:hypercrud.browser/schemas ctx)) (:hypercrud.browser/field ctx))
                 ctx (-> ctx
                         (set-parent)

@@ -1,11 +1,13 @@
 (ns hyperfiddle.ide.fiddles.schema-attribute
-  (:require [clojure.set :as set]
-            [contrib.datomic-tx :as tx]
-            [contrib.reactive :as r]
-            [contrib.ui :refer [debounced]]
-            [hypercrud.browser.context :as context]
-            [hyperfiddle.ui :refer [field markdown]]
-            [hyperfiddle.ui.util :refer [entity-props readonly->disabled on-change->tx writable-entity? entity-change->tx]]))
+  (:require
+    [clojure.set :as set]
+    [contrib.reactive :as r]
+    [contrib.datomic-tx :as tx]
+    [contrib.ui :refer [debounced]]
+    [hypercrud.browser.context :as context]
+    [hyperfiddle.tempid :refer [smart-identity]]
+    [hyperfiddle.ui :refer [field markdown]]
+    [hyperfiddle.ui.util :refer [entity-props readonly->disabled on-change->tx writable-entity? entity-change->tx]]))
 
 
 (def special-attrs #{:db/ident :db/cardinality :db/valueType})

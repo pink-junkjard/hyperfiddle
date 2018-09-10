@@ -6,7 +6,7 @@
     [clojure.walk :as walk]
     [contrib.ct :refer [unwrap]]
     [contrib.data :refer [xorxs]]
-    [contrib.datomic-tx]
+    [hyperfiddle.tempid :refer [smart-identity]]
     [contrib.eval :as eval]
     [contrib.pprint :refer [pprint-str]]
     [contrib.reactive :as r]
@@ -17,7 +17,6 @@
     [hypercrud.types.Entity :refer [#?(:cljs Entity)]]
     [hypercrud.types.ThinEntity :refer [->ThinEntity #?(:cljs ThinEntity)]]
     [hyperfiddle.domain :as domain]
-    [hyperfiddle.runtime :as runtime]
     [taoensso.timbre :as timbre]
     [hypercrud.browser.context :as context])
   #?(:clj
@@ -40,19 +39,15 @@
                   :request-params)]
     (assoc route 1 args)))
 
-(defn ctx->id-lookup [uri ctx]
-  ; todo what about if the tempid is on a higher branch in the uri?
-  @(runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :tempid-lookups uri]))
-
 (defn id->tempid [route ctx]
   (let [invert-id (fn [id uri]
-                    (let [id->tempid (ctx->id-lookup uri ctx)]
+                    (let [id->tempid (context/ctx->id-lookup uri ctx)]
                       (get id->tempid id id)))]
     (invert-route (:hypercrud.browser/domain ctx) route invert-id)))
 
 (defn tempid->id [route ctx]
   (let [invert-id (fn [temp-id uri]
-                    (let [tempid->id (-> (ctx->id-lookup uri ctx)
+                    (let [tempid->id (-> (context/ctx->id-lookup uri ctx)
                                          (set/map-invert))]
                       (get tempid->id temp-id temp-id)))]
     (invert-route (:hypercrud.browser/domain ctx) route invert-id)))
@@ -119,7 +114,7 @@
          #?(:clj clojure.lang.PersistentArrayMap :cljs cljs.core.PersistentArrayMap)
          #?(:clj clojure.lang.PersistentHashMap :cljs cljs.core.PersistentHashMap)}
         (type v))
-    (->ThinEntity (context/dbname ctx) (contrib.datomic-tx/smart-identity v))
+    (->ThinEntity (context/dbname ctx) (smart-identity ctx v))
     v))
 
 (let [eval-string+ (memoize eval/safe-eval-string+)]
