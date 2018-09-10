@@ -53,7 +53,6 @@
 (defn segment-type-2 [segment]
   (cond
     (= '* segment) :splat
-    (= :db/id segment) :db/id
     (keyword? segment) :attribute
     (integer? segment) :element                             ; can be a variable element, an aggregate element, etc
     ; it can also be entity-[], which has implied :element, this also happens in the query [?e ...] case
