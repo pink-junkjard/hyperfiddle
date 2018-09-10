@@ -1,7 +1,6 @@
 (ns hyperfiddle.service.jvm.service
   (:refer-clojure :exclude [sync])
-  (:require [contrib.reader :refer [read-edn-string]]
-            [hypercrud.transit :as hc-t]
+  (:require [hypercrud.transit :as hc-t]
             [hypercrud.types.Err :refer [->Err]]
             [hyperfiddle.foundation :as foundation]
             [hyperfiddle.io.bindings :refer [*subject*]]
