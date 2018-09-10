@@ -1,6 +1,5 @@
 (ns hyperfiddle.service.http
   (:require [contrib.reactive :as r]
-            [contrib.reader :refer [read-edn-string]]
             [hypercrud.browser.router :as router]
             [hypercrud.types.Err :refer [->Err]]
             [contrib.uri :refer [->URI]]
