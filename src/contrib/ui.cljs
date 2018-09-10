@@ -20,6 +20,24 @@
 
 (def default-debounce-ms 250)
 
+(comment
+  ; component-did-update
+  (for [[bs os] [[["aaa" nil "xxx"] ["aaa" nil]]
+                 [["aaa"] ["aaa"]]
+                 [["bbb"] ["aaa"]]]
+        b bs]
+    (let [[l r] (split-with #(not= % b) os)]
+      {:b b
+       :os os
+       :discards l
+       :rest r}))
+  ; =>
+  {:b "aaa", :os ["aaa" nil], :discards (), :rest ("aaa" nil)}
+  {:b nil, :os ["aaa" nil], :discards ("aaa"), :rest (nil)}
+  {:b "xxx", :os ["aaa" nil], :discards ("aaa" nil), :rest ()}
+  {:b "aaa", :os ["aaa"], :discards (), :rest ("aaa")}
+  {:b "bbb", :os ["aaa"], :discards ("aaa"), :rest ()})
+
 (let [debounce (memoize functions/debounce)
       debounced-adapter (fn [os-ref f n]
                           (let [o (last (:old-values @os-ref))]
@@ -47,15 +65,15 @@
            (let [[_ props comp & args] (reagent/argv this)
                  b (:value props)
                  {os :old-values a :value} @os-ref]
-             (let [[_ [old-update :as rest]] (split-with #(not= % b) os)]
-               (if (= old-update b)                         ; careful do NOT nil pun
-                 (swap! os-ref assoc :old-values (vec rest))
-                 (when (not= a b)
-                   ; this is either not a big deal, e.g. default values have been applied
-                   ; or multiple users are editing the same value and changes are probably being lost
-                   (timbre/warn "Potential conflicting concurrent edits detected, discarding local state" {:a a :b b :os os})
-                   (reset! os-ref {:old-values [b]
-                                   :value b}))))))}))))
+             (let [[discards rest] (split-with #(not= % b) os)]
+               (if (empty? rest)
+                 (do
+                   (when (< 1 (count discards))
+                     ; this is either not a big deal, e.g. default values have been applied
+                     ; or multiple users are editing the same value and changes are probably being lost
+                     (timbre/warn "Potential conflicting concurrent edits detected, discarding local state" {:a a :b b :os os}))
+                   (reset! os-ref {:old-values [b] :value b}))
+                 (swap! os-ref assoc :old-values (vec rest))))))}))))
 
 (let [on-change (fn [os-ref f n]                            ; letfn not working #470
                   (let [o (last (:old-values @os-ref))]
@@ -78,15 +96,15 @@
            (let [[_ props comp & args] (reagent/argv this)
                  b (:value props)
                  {os :old-values a :value} @os-ref]
-             (let [[_ [old-update :as rest]] (split-with #(not= % b) os)]
-               (if (= old-update b)                         ; careful do NOT nil pun
-                 (swap! os-ref assoc :old-values (vec rest))
-                 (when (not= a b)
-                   ; this is either not a big deal, e.g. default values have been applied
-                   ; or multiple users are editing the same value and changes are probably being lost
-                   (timbre/warn "Potential conflicting concurrent edits detected, discarding local state" {:a a :b b :os os})
-                   (reset! os-ref {:old-values [b]
-                                   :value b}))))))}))))
+             (let [[discards rest] (split-with #(not= % b) os)]
+               (if (empty? rest)
+                 (do
+                   (when (< 1 (count discards))
+                     ; this is either not a big deal, e.g. default values have been applied
+                     ; or multiple users are editing the same value and changes are probably being lost
+                     (timbre/warn "Potential conflicting concurrent edits detected, discarding local state" {:a a :b b :os os}))
+                   (reset! os-ref {:old-values [b] :value b}))
+                 (swap! os-ref assoc :old-values (vec rest))))))}))))
 
 (let [on-change (fn [state parse-string new-s-value]
                   (swap! state assoc :s-value new-s-value)
