@@ -1,17 +1,12 @@
 (ns hyperfiddle.ide.fiddles.fiddle-src
   (:require
-    [cats.core :as cats]
-    [cats.monad.either :as either]
     [clojure.pprint]
     [contrib.css :refer [css]]
     [contrib.pprint]
     [contrib.reactive :as r]
     [contrib.reagent :refer [fragment]]
     [contrib.ui]
-    [hypercrud.browser.base :as base]
-    [hypercrud.browser.context :as context]
     [hypercrud.browser.field :as field]
-    [hypercrud.browser.system-fiddle :as system-fiddle]
     [hypercrud.types.Entity :refer [->Entity shadow-entity]]
     [hypercrud.ui.error :as error]
     [hyperfiddle.ide.fiddles.topnav :refer [shadow-fiddle]]
@@ -20,30 +15,6 @@
     [hyperfiddle.runtime :as runtime]
     [hyperfiddle.ui :as ui :refer [anchor field hyper-control link markdown]]))
 
-
-(defn process-links [uri links]
-  (->> links
-       ;(sort-by (juxt :link/disabled :link/rel)
-       ;         (fn [[a b] [a' b']] (if (= a a') (< b b') (< a a'))))
-       (mapv (fn [link]
-               (->> (if (system-fiddle/system-fiddle? (get-in link [:link/fiddle :db/ident]))
-                      (dissoc link :link/fiddle)
-                      link)
-                    (->Entity uri))))))
-
-(defn inject-links [fiddle-ref links-ref]
-  (let [fiddle @fiddle-ref]
-    (shadow-entity fiddle #(assoc % :fiddle/links (process-links (some-> fiddle .-uri) @links-ref)))))
-
-; todo does this merge with shadow-fiddle?
-; not sure if other downstream consumers of shadow-fiddle can run data-from-route
-(defn shadow-links [ctx]
-  (->> (base/data-from-route (context/target-route ctx)
-                             (assoc ctx
-                               :hypercrud.browser/domain @(runtime/state (:peer ctx) [::runtime/domain])
-                               :keep-disabled-anchors? true))
-       (cats/fmap (fn [{:keys [:hypercrud.browser/links]}]
-                    (update ctx :hypercrud.browser/data #(r/track inject-links % links))))))
 
 (defn schema-links [ctx]
   (->> @(runtime/state (:peer ctx) [::runtime/domain :domain/databases])
@@ -103,10 +74,7 @@
    })
 
 (defn fiddle-src-renderer [val ctx props]
-  (let [ctx (shadow-fiddle ctx)
-        ; these two shadow calls are inefficient, throwing away work
-        ectx (shadow-links ctx)
-        ctx (either/branch ectx (constantly ctx) identity)]
+  (let [ctx (shadow-fiddle ctx)]
     [:div props
      [:h3 (str @(r/cursor (:hypercrud.browser/data ctx) [:fiddle/ident])) " source"]
      (field [:fiddle/ident] ctx nil)
@@ -120,10 +88,6 @@
      (field [:fiddle/renderer] ctx (controls :fiddle/renderer))
      (field [:fiddle/css] ctx (controls :fiddle/css))
      (field [:fiddle/markdown] ctx (controls :fiddle/markdown))
-     (when (either/left? ectx)
-       [:div
-        [:h5 "Unable to shadow links:"]
-        [error/error-block @ectx]])
      (field [:fiddle/links] ctx (controls :fiddle/links))
      (field [:fiddle/hydrate-result-as-fiddle] ctx nil)
      [:div.p "Additional attributes"]
