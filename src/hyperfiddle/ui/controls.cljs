@@ -2,7 +2,7 @@
   (:refer-clojure :exclude [boolean keyword long])
   (:require
     [cats.monad.either :refer [branch]]
-    [contrib.datomic :refer [smart-identity]]
+    [contrib.datomic-tx :refer [smart-identity]]
     [contrib.reactive :as r]
     [contrib.reagent :refer [fragment]]
     [contrib.ui :refer [debounced]]                         ; avoid collisions

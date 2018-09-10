@@ -2,6 +2,7 @@
   (:require
     [cats.core :refer [mlet return]]
     [cats.monad.either :as either]
+    [contrib.datomic-tx]
     [contrib.eval]
     [contrib.reactive :as r]
     [contrib.reader]
@@ -48,7 +49,7 @@
         label-fn (contrib.eval/ensure-fn (:option-label props option-label))
         option-value-fn (fn [row]
                           (let [element (if (vector? row) (first row) row)] ; inspect datalog
-                            (pr-str (contrib.datomic/smart-identity element))))]
+                            (pr-str (contrib.datomic-tx/smart-identity element))))]
     [:select.ui (dissoc props :option-label)                ; value
      ; .ui is because options are an iframe and need the pink box
      (conj

@@ -8,7 +8,7 @@
     [contrib.ct :refer [unwrap]]
     [contrib.css :refer [css css-slugify]]
     [contrib.data :refer [take-to]]
-    [contrib.datomic :refer [smart-identity]]
+    [contrib.datomic-tx :refer [smart-identity]]
     [contrib.pprint :refer [pprint-str]]
     [contrib.reactive :as r]
     [contrib.reagent :refer [fragment]]

@@ -1,7 +1,7 @@
 (ns hyperfiddle.tempid
   (:require
     [contrib.data :refer [abs-normalized]]
-    [contrib.datomic :refer [smart-identity]]
+    [contrib.datomic-tx :refer [smart-identity]]
     [contrib.reactive :as r]
     [hypercrud.browser.context :as context]
     [hypercrud.browser.field :as field]

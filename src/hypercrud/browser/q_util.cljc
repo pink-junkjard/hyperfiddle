@@ -3,7 +3,7 @@
     [cats.core :refer [mlet]]
     [cats.monad.either :as either]
     [contrib.data :refer [parse-query-element]]
-    [contrib.datomic :refer [smart-identity]]
+    [contrib.datomic-tx :refer [smart-identity]]
     [contrib.try$ :refer [try-either]]
     [hypercrud.client.core :as hc]
     [hypercrud.types.Entity :refer [#?(:cljs Entity)]]

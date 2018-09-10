@@ -3,7 +3,7 @@
     [cats.core :refer [fmap >>=]]
     [cats.monad.either :refer [left right]]
     [contrib.ct :refer [unwrap]]
-    [contrib.datomic :refer [smart-identity]]
+    [contrib.datomic-tx :refer [smart-identity]]
     [contrib.reactive :as r]
     [cuerdas.core :as str]
     [hypercrud.browser.base :as base]
