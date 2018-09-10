@@ -8,6 +8,7 @@
     [contrib.reactive :as r]
     [contrib.reader]
     [contrib.string :refer [blank->nil]]
+    [datascript.parser]
     [hypercrud.browser.context :as context]
     [hypercrud.browser.field :as field]
     [hypercrud.types.Entity :refer [entity?]]
@@ -20,17 +21,36 @@
     (name v)                                                ; A sensible default for userland whose idents usually share a long namespace.
     (str v)))
 
-(defn option-label [data ctx]
-  (->> (map (fn [data field]
-              (->> (::field/children field)
-                   (mapv (fn [{f ::field/get-value}]
-                           (field-label (f data))))))
-            data
-            @(r/fmap ::field/children (:hypercrud.browser/field ctx)))
-       (apply concat)
-       (interpose ", ")
-       (remove nil?)
-       (apply str)))
+(defn option-label [row ctx]
+  (let [field @(:hypercrud.browser/field ctx)
+        {{find :qfind} ::field/query} field]
+
+    ; This logic duplicates ui/columns-relation-product &co
+    (->>
+      (condp = (type find)
+        datascript.parser.FindRel
+        (mapcat (fn [element field relation]
+                  (condp = (type element)
+                    datascript.parser.Variable [relation]
+                    datascript.parser.Aggregate [relation]
+                    datascript.parser.Pull (mapv (fn [{f ::field/get-value}]
+                                                   (field-label (f relation)))
+                                                 (::field/children field))))
+                (:elements find)
+                (::field/children field)
+                row)
+        datascript.parser.FindColl
+        (condp = (type (:element find))
+          datascript.parser.Variable [row]
+          datascript.parser.Aggregate [row]
+          datascript.parser.Pull (mapv (fn [{f ::field/get-value}]
+                                         (field-label (f row)))
+                                       (::field/children field)))
+        datascript.parser.FindTuple [row]
+        datascript.parser.FindScalar [row])
+      (remove nil?)
+      (interpose ", ")
+      (apply str))))
 
 (defn select-anchor-renderer' [props option-props ctx]
   ; hack in the selected value if we don't have options hydrated?
