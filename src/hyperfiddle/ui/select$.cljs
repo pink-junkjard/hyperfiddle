@@ -2,6 +2,7 @@
   (:require
     [cats.core :refer [mlet return]]
     [cats.monad.either :as either]
+    [contrib.ct :refer [unwrap]]
     [contrib.datomic-tx]
     [contrib.eval]
     [contrib.reactive :as r]
@@ -11,7 +12,8 @@
     [hypercrud.browser.field :as field]
     [hypercrud.types.Entity :refer [entity?]]
     [hyperfiddle.data :as data]
-    [hyperfiddle.ui.util :refer [writable-entity? entity-change->tx]]))
+    [hyperfiddle.ui.util :refer [writable-entity? entity-change->tx]]
+    [taoensso.timbre :as timbre]))
 
 (defn field-label [v]
   (if (instance? cljs.core/Keyword v)
@@ -39,7 +41,7 @@
                                        (fn [e]
                                          (let [select-value (blank->nil (.-target.value e))
                                                id (if select-value
-                                                    (let [v (contrib.reader/read-edn-string! select-value)
+                                                    (let [v (unwrap #(timbre/warn %) (contrib.reader/read-edn-string+ select-value))
                                                           legacy-tempid (and (integer? v) (< v 0))]
                                                       (if legacy-tempid (str v) v)))]
                                            (on-change id)))))
