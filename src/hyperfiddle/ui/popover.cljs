@@ -2,7 +2,6 @@
   (:require
     [contrib.css :refer [css]]
     [contrib.data :refer [abs-normalized]]
-    [contrib.datomic-tx :refer [smart-identity]]
     [contrib.eval :as eval]
     [contrib.keypress :refer [with-keychord]]
     [contrib.reactive :as r]
@@ -14,7 +13,7 @@
     [hypercrud.util.branch :as branch]
     [hyperfiddle.actions :as actions]
     [hyperfiddle.runtime :as runtime]
-    [hyperfiddle.tempid :as tempid]
+    [hyperfiddle.tempid :as tempid :refer [smart-identity]]
     [promesa.core :as p]
     [re-com.core :as re-com]
     [taoensso.timbre :as timbre]))
