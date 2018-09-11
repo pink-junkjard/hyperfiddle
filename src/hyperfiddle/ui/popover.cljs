@@ -2,6 +2,7 @@
   (:require
     [contrib.css :refer [css]]
     [contrib.data :refer [abs-normalized]]
+    [contrib.datomic-tx :refer [smart-identity]]
     [contrib.eval :as eval]
     [contrib.keypress :refer [with-keychord]]
     [contrib.reactive :as r]
@@ -104,7 +105,8 @@
   ; - visual-ctx's data & path (where this popover is being drawn NOT its dependencies)
   (let [child-branch (let [child-id-str (-> [(tempid/tempid-from-ctx visual-ctx)
                                              @(r/fmap :db/id link-ref)
-                                             (:route props)]
+                                             (:route props)
+                                             @(r/fmap smart-identity (:hypercrud.browser/fiddle ctx))]
                                             hash abs-normalized - str)]
                        (branch/encode-branch-child (:branch ctx) child-id-str))
         popover-id child-branch                             ; just use child-branch as popover-id
