@@ -10,7 +10,7 @@
             [contrib.reader :refer [read-string read-edn-string!]]
     #?(:cljs [contrib.reagent :refer [fragment]])
             [contrib.pprint :refer [pprint-datoms-str]]
-    #?(:cljs [contrib.ui :refer [code debounced markdown]])
+    #?(:cljs [contrib.ui :refer [code debounced markdown validated-cmp]])
             [hypercrud.browser.context :as context]
             [hypercrud.browser.routing :as routing]
             [hypercrud.browser.router :as router]
@@ -116,6 +116,24 @@
                 (f ctx)))))))
 
 #?(:cljs
+   (let [parse-string (fn [s]
+                        (let [v (read-edn-string! s)]
+                          (assert (and (or (nil? v) (vector? v) (seq? v))
+                                       (every? (fn [v] (or (map? v) (vector? v) (seq? v))) v)))
+                          v))
+         to-string pprint-datoms-str
+         on-change (fn [peer branch uri-ref o n]
+                     (runtime/dispatch! peer (actions/reset-stage-uri peer branch @uri-ref n)))
+         code-wrapper (fn [props]
+                        [:div.staging-cm-wrapper (select-keys props [:class])
+                         [code props]])]
+     (defn staging-control [ctx uri-ref]
+       (let [props {:value @(runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :stage @uri-ref])
+                    :readOnly @(runtime/state (:peer ctx) [::runtime/auto-transact @uri-ref])
+                    :on-change (r/partial on-change (:peer ctx) (:branch ctx) uri-ref)}]
+         [debounced props validated-cmp parse-string to-string code-wrapper]))))
+
+#?(:cljs
    (defn ^:export staging [ctx & [child]]
      (let [source-uri (runtime/state (:peer ctx) [::runtime/domain :domain/fiddle-database :database/uri])
            selected-uri (r/atom @source-uri)
@@ -148,11 +166,8 @@
               :model selected-uri
               :tabs tabs-definition
               :on-change change-tab]
-             (let [props {:value (pprint-datoms-str @stage)
-                          :readOnly @(runtime/state (:peer ctx) [::runtime/auto-transact @selected-uri])
-                          :on-change #(runtime/dispatch! (:peer ctx) (actions/reset-stage-uri (:peer ctx) (:branch ctx) @selected-uri (read-edn-string! %2)))}]
-               ^{:key (str @selected-uri)}
-               [debounced props code])
+             ^{:key (str @selected-uri)}
+             [staging-control ctx selected-uri]
              (when child [child selected-uri stage ctx])
              [markdown "Hyperfiddle always generates valid transactions, if it doesn't, please file a bug.
 
