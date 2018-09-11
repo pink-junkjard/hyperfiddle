@@ -89,27 +89,18 @@
                  (apply str))}))
 
 (defn normalize-args [porps]
-  {:pre [(not (:entity porps)) #_"legacy"
-         ; There is some weird shit hitting this assert, like {:db/id nil}
-         #_(not (map? porps)) #_"legacy"]
+  ; There is some weird shit hitting this assert, like {:db/id nil}
+  {:pre [#_(not (map? porps)) #_"legacy"]
    :post [(vector? %) #_"route args are associative by position"]}
+  (vec (xorxs porps)))
 
-  ; careful here -
-  ; (seq [1]) - truthy
-  ; (seq? [1]) - false
-  ; (seq 1) - IllegalArgumentException
-  (cond (instance? Entity porps) [porps]                    ; entity is also a map so do this first
-        :else (vec (xorxs porps))))
-
-(defn fix-entity-types [ctx v]
+(defn pull->colored-eid [ctx v]
   ; Returns a datomic primitive suitable for passing to :in. In edge cases, this could be a composite.
-  ; In happy path, this can be a subpull, which needs to turn into entity.
-  (if (#{Entity
-         #?(:clj clojure.lang.PersistentArrayMap :cljs cljs.core.PersistentArrayMap)
-         #?(:clj clojure.lang.PersistentHashMap :cljs cljs.core.PersistentHashMap)}
-        (type v))
-    (->ThinEntity (context/dbname ctx) (smart-identity ctx v))
-    v))
+  (if-not (context/dbname ctx)
+    v                                                       ; colorless opaque value, don't interpret as entity
+    (if (map? v)
+      (->ThinEntity (context/dbname ctx) (smart-identity ctx v))
+      v)))
 
 (let [eval-string+ (memoize eval/safe-eval-string+)]
   (defn ^:export build-route' [ctx {:keys [:link/fiddle :link/tx-fn] :as link}]
@@ -122,9 +113,8 @@
                       (eval-string+ (str "(fn [ctx] \n" formula-str "\n)"))
                       (either/right (constantly (constantly nil))))
              f (try-either (f-wrap ctx))
-             args (try-either @(r/fmap f (or (:hypercrud.browser/data ctx) (r/track identity nil))))
-             :let [args (mapv (partial fix-entity-types ctx) (normalize-args args))
-                   route (id->tempid (router/canonicalize fiddle-id args) ctx)]]
+             colored-args (try-either @(r/fmap (r/comp f (r/partial pull->colored-eid ctx)) (or (:hypercrud.browser/data ctx) (r/track identity nil))))
+             :let [route (id->tempid (router/canonicalize fiddle-id (normalize-args colored-args)) ctx)]]
         (validated-route+ fiddle route ctx)))))
 
 (def encode router/encode)
