@@ -105,7 +105,7 @@
   (let [child-branch (let [child-id-str (-> [(tempid/tempid-from-ctx visual-ctx)
                                              @(r/fmap :db/id link-ref)
                                              (:route props)
-                                             @(r/fmap smart-identity (:hypercrud.browser/fiddle ctx))]
+                                             @(r/fmap (r/partial smart-identity ctx) (:hypercrud.browser/fiddle ctx))]
                                             hash abs-normalized - str)]
                        (branch/encode-branch-child (:branch ctx) child-id-str))
         popover-id child-branch                             ; just use child-branch as popover-id
