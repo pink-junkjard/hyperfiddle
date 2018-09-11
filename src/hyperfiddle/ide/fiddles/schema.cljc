@@ -8,7 +8,7 @@
   {:fiddle/ident (keyword "hyperfiddle.schema.db-cardinality-options" $db)
    :fiddle/type :query
    :fiddle/query (let [$db (symbol $db)]
-                   (str [:in $db :find (list 'pull $db '?e [:db/id :db/ident]) :where
+                   (str [:in $db :find [(list 'pull $db '?e [:db/ident]) '...] :where
                          [$db '?e :db/ident '?ident]
                          '[(namespace ?ident) ?ns]
                          '[(= ?ns "db.cardinality")]]))})
@@ -17,7 +17,7 @@
   {:fiddle/ident (keyword "hyperfiddle.schema.db-unique-options" $db)
    :fiddle/type :query
    :fiddle/query (let [$db (symbol $db)]
-                   (str [:in $db :find (list 'pull $db '?e [:db/id :db/ident]) :where
+                   (str [:in $db :find [(list 'pull $db '?e [:db/ident]) '...] :where
                          [$db '?e :db/ident '?ident]
                          '[(namespace ?ident) ?ns]
                          '[(= ?ns "db.unique")]]))})
@@ -26,17 +26,17 @@
   {:fiddle/ident (keyword "hyperfiddle.schema.db-valueType-options" $db)
    :fiddle/type :query
    :fiddle/query (let [$db (symbol $db)]
-                   (str [:in $db :find (list 'pull $db '?valueType [:db/id :db/ident]) :where
+                   (str [:in $db :find [(list 'pull $db '?valueType [:db/ident]) '...] :where
                          [$db '?db-part :db.install/valueType '?valueType]
                          [$db '?db-part :db/ident :db.part/db]]))})
 
 (defn db-attribute-edit [$db]
   {:fiddle/ident (keyword "hyperfiddle.schema.db-attribute-edit" $db)
    :fiddle/type :entity
-   :fiddle/pull (str [:db/id
+   :fiddle/pull (str [:db/id                                ; for smart-identity tempid stability
                       :db/ident
-                      :db/valueType
-                      :db/cardinality
+                      {:db/valueType [:db/ident]}
+                      {:db/cardinality [:db/ident]}
                       :db/doc
                       :db/unique
                       :db/isComponent

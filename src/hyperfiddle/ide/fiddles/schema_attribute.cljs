@@ -15,16 +15,11 @@
 (defn- completed? [entity] (set/subset? special-attrs (set (keys entity))))
 
 (defn- merge-in-tx [entity tx ctx]
+  ; this fn has bare minimum support for this page e.g. doesnt support card/many or nested modals
   (reduce (fn [entity [op e a v]]
-            ; todo this fn has bare minimum support for this page
-            ; e.g. doesnt support card/many or nested modals
-            (let [valueType @(r/cursor (:hypercrud.browser/schemas ctx) ["$" a :db/valueType :db/ident])
-                  v (if (= :db.type/ref valueType)
-                      {:db/id v}
-                      v)]
-              (case op
-                :db/add (assoc entity a v)
-                :db/retract (dissoc entity a))))
+            (case op
+              :db/add (assoc entity a v)                    ; these are lookup refs because of the options query
+              :db/retract (dissoc entity a)))
           (into {} entity)
           tx))
 
