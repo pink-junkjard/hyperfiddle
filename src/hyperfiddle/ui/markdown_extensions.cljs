@@ -6,7 +6,7 @@
     [contrib.ct :refer [unwrap]]
     [contrib.eval :as eval]
     [contrib.reactive :as r]
-    [contrib.string :refer [memoized-safe-read-edn-string or-str]]
+    [contrib.string :refer [blank->nil memoized-safe-read-edn-string or-str]]
     [contrib.ui.remark :as remark]
     [cuerdas.core :as str]
     [goog.object]
@@ -25,7 +25,10 @@
 ; mutual recursion, it would be letfn if wasn't react components
 (declare markdown)
 
-(let [memoized-safe-eval (memoize eval/safe-eval-string+)]
+(let [memoized-safe-eval (memoize (fn [code-str]
+                                    (if (blank->nil code-str)
+                                      (eval/safe-eval-string+ code-str)
+                                      (either/left nil))))]
   (def ^:export markdown
     (remark/remark!
 

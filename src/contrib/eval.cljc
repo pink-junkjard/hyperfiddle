@@ -5,7 +5,6 @@
                [cljs.tagged-literals :as tags]])
     [clojure.string :as string]
     [cats.monad.either :as either :refer [left right]]
-    [contrib.string :refer [blank->nil]]
     [contrib.try$ :refer [try-either]]
     ; This is contrib code, shouldn't be hyperfiddle deps
     [hyperfiddle.hc_data_readers :refer [hc-data-readers]]
@@ -35,9 +34,7 @@
                    :else value))))))
 
 (defn safe-eval-string+ [code-str]
-  (if (blank->nil code-str)
-    (try-either (eval-string! code-str))
-    (left nil)))
+  (try-either (eval-string! code-str)))
 
 (let [safe-eval-string #(try-either (when % (eval-string! %)))
       memoized-eval-string (memoize safe-eval-string)]
