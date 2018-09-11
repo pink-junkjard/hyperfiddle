@@ -4,7 +4,6 @@
             [contrib.reactive :as r]
             [contrib.string :refer [memoized-safe-read-edn-string]]
             [contrib.try$ :refer [try-either]]
-            [hypercrud.browser.auto-link :refer [auto-links]]
             [hypercrud.browser.context :as context]
             [hypercrud.browser.fiddle :as fiddle]
             [hypercrud.browser.field :as field]
@@ -118,7 +117,6 @@
                        :hypercrud.browser/schemas reactive-schemas)]
            reactive-field @(r/apply-inner-r (r/track field/auto-field request ctx))
            :let [ctx (assoc ctx :hypercrud.browser/field reactive-field)
-                 ctx (assoc ctx :hypercrud.browser/links (r/track auto-links ctx))
                  ctx (if (and (= :entity @(r/cursor fiddle [:fiddle/type]))
                               ; e is nil on the EntityRequest
                               (-> ctx :route second first nil?))

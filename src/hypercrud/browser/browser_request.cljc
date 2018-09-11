@@ -39,7 +39,7 @@
                                             (either/right (request-from-route route ctx))))))
 
 (defn body-field [ctx]
-  (->> @(:hypercrud.browser/links ctx)
+  (->> @(r/fmap :fiddle/links (:hypercrud.browser/fiddle ctx))
        (filter (partial link/same-path-as? (:hypercrud.browser/path ctx)))
        (mapcat #(request-from-link % ctx))
        (concat (let [child-fields? (not @(r/fmap (r/comp nil? ::field/children) (:hypercrud.browser/field ctx)))]
@@ -66,13 +66,13 @@
     ; blank fiddles
     nil))
 
-(defn filter-inline [links] (filter (comp (partial = :hf/iframe) :link/rel) links))
+(defn filter-inline-links [fiddle] (update fiddle :fiddle/links #(filter (comp (partial = :hf/iframe) :link/rel) %)))
 
 (defn requests [ctx]
   ; at this point we only care about inline links and popovers are hydrated on their on hydrate-route calls
-  (let [ctx (update ctx :hypercrud.browser/links (partial r/fmap filter-inline))]
+  (let [ctx (update ctx :hypercrud.browser/fiddle (partial r/fmap filter-inline-links))]
     (concat
-      (->> @(:hypercrud.browser/links ctx)
+      (->> @(r/fmap :fiddle/links (:hypercrud.browser/fiddle ctx))
            (filter (partial link/same-path-as? []))
            (mapcat #(request-from-link % ctx)))
       (with-result ctx)

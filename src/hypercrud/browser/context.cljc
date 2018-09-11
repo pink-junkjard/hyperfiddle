@@ -18,7 +18,6 @@
           :hypercrud.browser/data
           :hypercrud.browser/fiddle
           :hypercrud.browser/field
-          :hypercrud.browser/links
           :hypercrud.browser/parent
           :hypercrud.browser/path
           :hypercrud.browser/schemas))

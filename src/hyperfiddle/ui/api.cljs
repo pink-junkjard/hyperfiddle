@@ -28,7 +28,7 @@
        (unwrap #(timbre/warn %))))
 
 (defn body-field [ctx]
-  (->> @(:hypercrud.browser/links ctx)
+  (->> @(r/fmap :fiddle/links (:hypercrud.browser/fiddle ctx))
        (filter (partial link/same-path-as? (:hypercrud.browser/path ctx)))
        (map #(recurse-from-link % ctx))
        (apply merge)
@@ -60,8 +60,9 @@
 (defn api-data [ctx]
   ; at this point we only care about inline links
   ; also no popovers can be opened, so remove managed
-  (let [ctx (update ctx :hypercrud.browser/links (partial r/fmap hypercrud.browser.browser-request/filter-inline))
-        thing (->> (link/links-at (:hypercrud.browser/path ctx) (:hypercrud.browser/links ctx)) ; todo reactivity
+  (let [ctx (update ctx :hypercrud.browser/fiddle (partial r/fmap hypercrud.browser.browser-request/filter-inline-links))
+        thing (->> (r/fmap :fiddle/links (:hypercrud.browser/fiddle ctx))
+                   (link/links-at (:hypercrud.browser/path ctx)) ; todo reactivity
                    (map #(recurse-from-link % ctx))
                    (apply merge))
         thing3 (when @(r/fmap :fiddle/hydrate-result-as-fiddle (:hypercrud.browser/fiddle ctx))

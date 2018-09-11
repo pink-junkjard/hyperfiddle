@@ -32,7 +32,8 @@
     [hyper-control val ctx (assoc props :read-only (read-only? ctx))]
     (link :hf/affix :fiddle ctx "affix" {:disabled (system-link? @(r/fmap :db/id (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data])))})))
 
-(letfn [(remove-children [field] (dissoc field :hypercrud.browser.field/children))]
+(let [remove-children (fn [field] (dissoc field :hypercrud.browser.field/children))
+      inject-links (fn [topnav-links fiddle] (assoc fiddle :fiddle/links topnav-links))]
   (defn hf-live-link-fiddle [val ctx props]
     (let [ctx (update ctx :hypercrud.browser/field #(r/fmap remove-children %))
           props (assoc props :read-only (read-only? ctx))]
@@ -42,7 +43,7 @@
                                                      :branch nil))
                  topnav-fiddle @(hc/hydrate (:peer ctx) nil req) #_"todo tighter reactivity"]
             (return
-              (let [ctx (merge ctx {:hypercrud.browser/links (r/track identity (:fiddle/links topnav-fiddle))})]
+              (let [ctx (update ctx :hypercrud.browser/fiddle (partial r/fmap (r/partial inject-links (:fiddle/links topnav-fiddle))))]
                 [hyper-control val ctx props])))
           (either/branch select-error-cmp identity))
       )))

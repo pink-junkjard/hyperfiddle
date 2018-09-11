@@ -11,7 +11,6 @@
   (let [ctx {:cell (constantly [:pre])
              :hypercrud.browser/data (r/atom [])
              :hypercrud.browser/fiddle (r/atom nil)
-             :hypercrud.browser/links (r/atom nil)
              :hypercrud.browser/schemas (r/atom nil)}]
     ; just test it renderers something
     #_(is (not (nil? (dom-server/render-to-static-markup
@@ -21,7 +20,6 @@
   (let [ctx {:cell (constantly [:pre])
              :hypercrud.browser/data (r/atom nil)
              :hypercrud.browser/fiddle (r/atom nil)
-             :hypercrud.browser/links (r/atom nil)
              :hypercrud.browser/schemas (r/atom nil)}]
     ; just test it renderers something
     ; Working, but missing a find-element etc mock. We need actual context mocks.

@@ -17,7 +17,6 @@
     [contrib.ui.safe-render :refer [user-portal]]
     [contrib.ui.tooltip :refer [tooltip tooltip-props]]
     [datascript.parser]
-    [hypercrud.browser.auto-link :refer [auto-link]]
     [hypercrud.browser.context :as context]
     [hypercrud.browser.base :as base]
     [hypercrud.browser.fiddle :as fiddle]
@@ -419,14 +418,14 @@ nil. call site must wrap with a Reagent component"          ; is this just hyper
 
 (def ^:export fiddle (-build-fiddle))
 
-(defn ^:export fiddle-xray [val ctx & [props]]
-  (let [{:keys [:hypercrud.browser/fiddle]} ctx
-        console-links (->> (console-links @(:hypercrud.browser/field ctx) @(:hypercrud.browser/schemas ctx))
-                           (map (partial auto-link ctx)))
-        ctx (update ctx :hypercrud.browser/links (partial r/fmap (r/partial concat console-links)))]
-    [:div (select-keys props [:class])
-     [:h3 (pr-str (:route ctx))]
-     (result val ctx {})]))
+(let [inject-console-links (fn [console-links fiddle] (update fiddle :fiddle/links (partial concat console-links)))]
+  (defn ^:export fiddle-xray [val ctx & [props]]
+    (let [console-links (->> (console-links @(:hypercrud.browser/field ctx) @(:hypercrud.browser/schemas ctx))
+                             (map fiddle/auto-link))
+          ctx (update ctx :hypercrud.browser/fiddle (partial r/fmap (r/partial inject-console-links console-links)))]
+      [:div (select-keys props [:class])
+       [:h3 (pr-str (:route ctx))]
+       (result val ctx {})])))
 
 (letfn [(render-edn [data]
           (let [edn-str (pprint-str data 160)]

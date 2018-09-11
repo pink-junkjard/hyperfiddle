@@ -5,8 +5,8 @@
             [contrib.reactive :as r]
             [contrib.template :as template]
             [contrib.uri :refer [->URI]]
+            [hypercrud.browser.fiddle :refer [txfn-remove]]
             [hypercrud.browser.field :as field]
-            [hypercrud.browser.auto-link :refer [txfn-remove]]
             [hypercrud.types.Entity :refer [->Entity]]))
 
 
