@@ -9,7 +9,7 @@
     [hyperfiddle.runtime :as runtime]))
 
 
-(defn smart-identity "Generates a Datomic lookup ref. Reverses one layer of tempids to avoid "
+(defn smart-identity "Generates a Datomic lookup ref. Reverses top layer of tempids to stabilize view keys in branches."
   [ctx {:keys [:db/id :db/ident] :as v}]
   ; https://github.com/hyperfiddle/hyperfiddle/issues/563 - Form jank when tempid entity transitions to real entity
   ; https://github.com/hyperfiddle/hyperfiddle/issues/345 - Regression: Schema editor broken due to smart-id
