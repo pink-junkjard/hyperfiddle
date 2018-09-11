@@ -10,7 +10,6 @@
     [datascript.parser]
     [hypercrud.browser.context :as context]
     [hypercrud.browser.field :as field]
-    [hypercrud.types.Entity :refer [entity?]]
     [hyperfiddle.data :as data]
     [hyperfiddle.tempid :refer [smart-identity]]
     [hyperfiddle.ui.util :refer [writable-entity? entity-change->tx]]

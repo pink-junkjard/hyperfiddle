@@ -6,30 +6,29 @@
             [hypercrud.browser.context :as context]
             [hypercrud.browser.field :as field :refer [auto-field infer-attrs]]
             [hypercrud.types.DbVal :refer [->DbVal]]
-            [hypercrud.types.Entity :refer [->Entity]]
             [hypercrud.types.EntityRequest :refer [->EntityRequest]]
             [hypercrud.types.QueryRequest :refer [->QueryRequest]]
             [hypercrud.types.ThinEntity :refer [->ThinEntity]]))
 
 
 (deftest test-infer-attr []
-  (let [data (->Entity nil {:a/x 1
-                            :a/y [(->Entity nil {:b/x 2
-                                                 :b/y [{:asdf 1}
-                                                       {:qwerty 3}]
-                                                 :b/z {:c/a 1}})
-                                  (->Entity nil {:b/x 3
-                                                 :b/y [{:asdf2 1}]
-                                                 :b/z {:c/b 2}})]
-                            :a/z {:c/x 5}})]
-    (doseq [[get-values expected] [[[] #{:a/x :a/y :a/z}]
-                                   [[:a/y] #{:b/x :b/y :b/z}]
-                                   [[:a/y :b/y] #{:asdf :qwerty :asdf2}]
-                                   [[:a/y :b/z] #{:c/a :c/b}]
-                                   [[:a/z] #{:c/x}]]]
-      (is (= expected (infer-attrs data get-values)))
-      (is (= expected (infer-attrs [data data] get-values))) ; test resultsets
-      )))
+  (let [data {:a/x 1
+              :a/y [{:b/x 2
+                     :b/y [{:asdf 1}
+                           {:qwerty 3}]
+                     :b/z {:c/a 1}}
+                    {:b/x 3
+                     :b/y [{:asdf2 1}]
+                     :b/z {:c/b 2}}]
+              :a/z {:c/x 5}}]
+   (doseq [[get-values expected] [[[] #{:a/x :a/y :a/z}]
+                                  [[:a/y] #{:b/x :b/y :b/z}]
+                                  [[:a/y :b/y] #{:asdf :qwerty :asdf2}]
+                                  [[:a/y :b/z] #{:c/a :c/b}]
+                                  [[:a/z] #{:c/x}]]]
+     (is (= expected (infer-attrs data get-values)))
+     (is (= expected (infer-attrs [data data] get-values))) ; test resultsets
+     )))
 
 (def test-schema
   (->> [{:db/ident :a/j
@@ -251,9 +250,9 @@
                     identity))
 
 (deftest query-tuple []
-  (pull->attr-tests {:fiddle/type :query}
-                    #(->QueryRequest [:find [(list 'pull '?e %)] :in '$ '?e] {"$" nil "?e" 1})
-                    (comp vector merge-into-one)))
+                     (pull->attr-tests {:fiddle/type :query}
+                                       #(->QueryRequest [:find [(list 'pull '?e %)] :in '$ '?e] {"$" nil "?e" 1})
+                                       (comp vector merge-into-one)))
 
 (deftest query-scalar []
   (pull->attr-tests {:fiddle/type :query}

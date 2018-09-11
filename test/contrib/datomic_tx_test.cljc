@@ -1,8 +1,7 @@
 (ns contrib.datomic-tx-test
   (:require [clojure.test :refer [deftest is]]
             [clojure.set :refer [difference]]
-            [contrib.datomic-tx :refer [edit-entity into-tx]]
-            [hypercrud.types.Entity :refer [shadow-entity ->Entity]]))
+            [contrib.datomic-tx :refer [edit-entity into-tx]]))
 
 
 (defn check-tx [in expected-out]

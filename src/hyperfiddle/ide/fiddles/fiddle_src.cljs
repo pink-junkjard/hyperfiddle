@@ -7,7 +7,6 @@
     [contrib.reagent :refer [fragment]]
     [contrib.ui]
     [hypercrud.browser.field :as field]
-    [hypercrud.types.Entity :refer [->Entity shadow-entity]]
     [hypercrud.ui.error :as error]
     [hyperfiddle.ide.fiddles.topnav :refer [shadow-fiddle]]
     [hyperfiddle.ide.fiddles.fiddle-links.renderer :as links-fiddle]

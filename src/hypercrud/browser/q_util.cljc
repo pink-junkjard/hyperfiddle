@@ -6,11 +6,9 @@
     [hyperfiddle.tempid :refer [smart-identity]]
     [contrib.try$ :refer [try-either]]
     [hypercrud.client.core :as hc]
-    [hypercrud.types.Entity :refer [#?(:cljs Entity)]]
     [hypercrud.types.ThinEntity :refer [#?(:cljs ThinEntity)]])
   #?(:clj
-     (:import (hypercrud.types.Entity Entity)
-              (hypercrud.types.ThinEntity ThinEntity))))
+     (:import (hypercrud.types.ThinEntity ThinEntity))))
 
 
 (defn parse-holes [q]
@@ -22,10 +20,9 @@
                                     (mapv str elements)))
 
 (defn- fix-param [ctx param]
-  (cond
-    (instance? Entity param) (smart-identity ctx param)
-    (instance? ThinEntity param) (smart-identity ctx param)
-    :else param))
+  (if (instance? ThinEntity param)
+    (smart-identity ctx param)
+    param))
 
 (defn validate-query-params+ [q args ctx]
   (mlet [query-holes (try-either (parse-holes q)) #_"normalizes for :in $"

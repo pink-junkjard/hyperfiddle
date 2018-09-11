@@ -1,8 +1,7 @@
 (ns hypercrud.browser.fiddle-test
   (:require
     [clojure.test :refer [deftest is]]
-    [hypercrud.browser.fiddle :refer [data-defaults fiddle-defaults]]
-    [hypercrud.types.Entity :refer [->Entity]]))
+    [hypercrud.browser.fiddle :refer [data-defaults fiddle-defaults]]))
 
 
 (deftest test-data-defaults []
@@ -11,6 +10,6 @@
 
 #?(:cljs
    (deftest test-ui-defaults []
-     (let [fiddle-val (fiddle-defaults {})]
+     (let [fiddle-val (fiddle-defaults {} nil)]
        (is (not (nil? (:fiddle/markdown fiddle-val))))
        (is (not (nil? (:fiddle/renderer fiddle-val)))))))

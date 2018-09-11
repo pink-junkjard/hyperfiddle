@@ -1,12 +1,8 @@
 (ns hyperfiddle.io.datomic.hydrate-requests
   (:require [clojure.set :as set]
-            [clojure.walk :as walk]
             [cuerdas.core :as str]
-            [datascript.parser :as parser]
             [datomic.api :as d]
-            [hypercrud.browser.q-util :as q-util]
             [hypercrud.types.DbVal]
-            [hypercrud.types.Entity :refer [->Entity]]
             [hypercrud.types.EntityRequest]
             [hypercrud.types.Err :refer [->Err]]
             [hypercrud.types.QueryRequest]
@@ -28,56 +24,19 @@
 (defmethod parameter DbVal [dbval get-secure-db-with]
   (-> (get-secure-db-with (:uri dbval) (:branch dbval)) :db))
 
-(defn recursively-add-entity-types [pulled-tree dbval]
-  (walk/postwalk (fn [o]
-                   (if (:db/id o)
-                     (->Entity (:uri dbval) o)
-                     o))
-                 pulled-tree))
-
 (defmulti hydrate-request* (fn [this & args] (class this)))
 
 (defmethod hydrate-request* EntityRequest [{:keys [e db pull-exp]} get-secure-db-with]
-  (let [{pull-db :db} (get-secure-db-with (:uri db) (:branch db))
-        pulled-tree (if (tempid? e)
-                      {:db/id e}
-                      (d/pull pull-db pull-exp e))]
-    (recursively-add-entity-types pulled-tree db)))
-
-(defn process-result [user-params fe result]
-  (condp = (type fe)
-    datascript.parser.Variable result
-    datascript.parser.Pull (let [sym (get-in fe [:source :symbol])
-                                 dbval (get user-params (str sym))]
-                             ; unfortunately user may have written valid datomic datalog, but invalid datascript datalog
-                             ; see: hyperfiddle/hyperfiddle.net#70
-                             (when-not dbval
-                               (throw (Exception. (str "Unable to find dbval for '" sym "'. Please check your pull expression"))))
-                             (recursively-add-entity-types result dbval))
-    datascript.parser.Aggregate result))
-
-(defn process-scalar [user-params qfind result]
-  (process-result user-params (:element qfind) result))
-
-(defn process-tuple [user-params qfind result]
-  (mapv (partial process-result user-params)
-        (:elements qfind)
-        result))
+  (let [{pull-db :db} (get-secure-db-with (:uri db) (:branch db))]
+    (if (tempid? e)
+      {:db/id e}
+      (d/pull pull-db pull-exp e))))
 
 (defmethod hydrate-request* QueryRequest [{:keys [query params]} get-secure-db-with]
   (assert query "hydrate: missing query")
-  (let [{:keys [qfind]} (parser/parse-query query)
-        result (->> (map #(parameter % get-secure-db-with) params)
-                    ;todo gaping security hole
-                    (apply d/q query))
-        ; todo don't duplicate parsing the query
-        params-lookup (zipmap (q-util/parse-holes query) params)]
-    (condp = (type qfind)
-      ; todo preserve set results
-      datascript.parser.FindRel (mapv #(process-tuple params-lookup qfind %) result)
-      datascript.parser.FindColl (mapv #(process-scalar params-lookup qfind %) result)
-      datascript.parser.FindTuple (process-tuple params-lookup qfind result)
-      datascript.parser.FindScalar (process-scalar params-lookup qfind result))))
+  (->> (map #(parameter % get-secure-db-with) params)
+       ;todo gaping security hole
+       (apply d/q query)))
 
 ; todo i18n
 (def ERROR-BRANCH-PAST ":hyperfiddle.error/basis-stale Branching the past is currently unsupported, please refresh your basis by refreshing the page")

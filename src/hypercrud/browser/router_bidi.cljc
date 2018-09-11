@@ -8,8 +8,7 @@
     [hypercrud.browser.system-fiddle :refer [system-fiddle?]]
     [hypercrud.types.ThinEntity :refer [->ThinEntity #?(:cljs ThinEntity)]])
   #?(:clj
-     (:import (hypercrud.types.Entity Entity)
-              (hypercrud.types.ThinEntity ThinEntity))))
+     (:import (hypercrud.types.ThinEntity ThinEntity))))
 
 
 ; Bidi routing protocols

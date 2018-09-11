@@ -5,8 +5,7 @@
             [contrib.data :refer [transpose]]
             [contrib.reactive :as r]
             [contrib.try$ :refer [try-either]]
-            [datascript.parser :as parser]
-            [hypercrud.types.Entity :refer [entity?]]))
+            [datascript.parser :as parser]))
 
 
 (def keyword->label #(some-> % name str))
@@ -72,7 +71,7 @@
                     (comp
                       (fn [data]
                         (cond
-                          (or (map? data) (entity? data)) (get-value data)
+                          (map? data) (get-value data)
                           (or (vector? data) (seq? data)) (reduce (fn [acc data]
                                                                     (let [sub-data (get-value data)]
                                                                       (if (or (vector? sub-data) (seq? sub-data))
@@ -86,7 +85,7 @@
                   get-values)
         data-at-path (f data)]
     (->> (cond
-           (or (map? data-at-path) (entity? data-at-path)) [data-at-path]
+           (map? data-at-path) [data-at-path]
            (or (vector? data-at-path) (seq? data-at-path)) data-at-path
            :else nil)
          (mapcat keys)

@@ -4,8 +4,7 @@
     [contrib.try$ :refer [try-either]]
     [cuerdas.core :as str]
     [hyperfiddle.ide.fiddles.errors :as errors]
-    [hyperfiddle.ide.fiddles.schema :as schema]
-    [hypercrud.types.Entity :refer [->Entity]]))
+    [hyperfiddle.ide.fiddles.schema :as schema]))
 
 
 (defn system-fiddle? [fiddle-ident]

@@ -14,28 +14,22 @@
     [contrib.try$ :refer [try-either]]
     [hypercrud.browser.q-util :as q-util]
     [hypercrud.browser.router :as router]
-    [hypercrud.types.Entity :refer [#?(:cljs Entity)]]
     [hypercrud.types.ThinEntity :refer [->ThinEntity #?(:cljs ThinEntity)]]
     [hyperfiddle.domain :as domain]
     [taoensso.timbre :as timbre]
     [hypercrud.browser.context :as context])
   #?(:clj
-     (:import (hypercrud.types.Entity Entity)
-              (hypercrud.types.ThinEntity ThinEntity))))
+     (:import (hypercrud.types.ThinEntity ThinEntity))))
 
 
 (defn invert-route [domain [_ args :as route] invert-id]
   (let [args (->> {:request-params args}                    ; code compat
                   (walk/postwalk (fn [v]                    ; works on [args] instead of (:request-param args) ?
-                                   (cond
-                                     (instance? Entity v) (assert false "hyperfiddle/hyperfiddle.net#150")
-
-                                     (instance? ThinEntity v)
+                                   (if (instance? ThinEntity v)
                                      (let [uri (domain/dbname->uri (.-dbname v) domain)
                                            id (invert-id (.-id v) uri)]
                                        (->ThinEntity (.-dbname v) id))
-
-                                     :else v)))
+                                     v)))
                   :request-params)]
     (assoc route 1 args)))
 

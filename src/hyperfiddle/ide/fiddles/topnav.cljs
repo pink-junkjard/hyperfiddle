@@ -14,7 +14,6 @@
     [hypercrud.browser.fiddle :as fiddle]
     [hypercrud.browser.router :as router]
     [hypercrud.browser.system-fiddle :as system-fiddle]
-    [hypercrud.types.Entity :refer [->Entity shadow-entity]]
     [hyperfiddle.actions :as actions]
     [hyperfiddle.data]
     [hyperfiddle.domain :as domain]
@@ -30,12 +29,11 @@
 (letfn [(-shadow-fiddle [target-ident fiddle-val]
           (cond
             (system-fiddle/system-fiddle? target-ident) (->> (system-fiddle/hydrate-system-fiddle target-ident)
-                                                             (fmap fiddle/fiddle-defaults)
-                                                             (unwrap #(timbre/error %))
-                                                             (->Entity nil))
+                                                             (fmap #(fiddle/fiddle-defaults % nil))
+                                                             (unwrap #(timbre/error %)))
 
             (nil? (:db/id fiddle-val)) fiddle-val
-            :else (shadow-entity fiddle-val fiddle/fiddle-defaults)))]
+            :else (fiddle/fiddle-defaults fiddle-val nil)))]
   (defn shadow-fiddle [ctx]
     {:pre [(-> ctx :hypercrud.browser/data)]}
     (let [route (:route ctx)

@@ -6,8 +6,7 @@
             [contrib.template :as template]
             [contrib.uri :refer [->URI]]
             [hypercrud.browser.fiddle :refer [txfn-remove]]
-            [hypercrud.browser.field :as field]
-            [hypercrud.types.Entity :refer [->Entity]]))
+            [hypercrud.browser.field :as field]))
 
 
 ; todo collapse these 3 into one test
@@ -16,22 +15,22 @@
 (deftest txfn-entity-remove []
   (let [f (eval/eval-string! txfn-remove)
         uri #uri "test"
-        ctx {:cell-data (r/atom (->Entity uri {:db/id "entity"}))}]
+        ctx {:hypercrud.browser/data (r/atom {:db/id "entity"})}]
     #_(is (= (f ctx nil nil)
            {:tx {uri [[:db.fn/retractEntity "entity"]]}}))))
 
 (deftest txfn-value-remove-one []
   (let [f (eval/eval-string! txfn-remove)
         uri #uri "test"
-        ctx {:value (r/atom (->Entity uri {:db/id "child"}))}]
+        ctx {:hypercrud.browser/data (r/atom {:db/id "child"})}]
     #_(is (= (f ctx nil nil)
            {:tx {uri [[:db.fn/retractEntity "child"]]}}))))
 
 (deftest txfn-value-remove-many []
   (let [f (eval/eval-string! txfn-remove)
         uri #uri "test"
-        ctx {:value (r/atom [(->Entity uri {:db/id "child 1"})
-                             (->Entity uri {:db/id "child 2"})])}]
+        ctx {:hypercrud.browser/data (r/atom [{:db/id "child 1"}
+                                              {:db/id "child 2"}])}]
     #_(is (= (f ctx nil nil)
            {:tx {uri [[:db.fn/retractEntity "child 1"]
                       [:db.fn/retractEntity "child 2"]]}}))))
@@ -47,8 +46,8 @@
                                                             :domain.database/record {:database/uri uri}}}}
             :hypercrud.browser/field (r/atom {::field/source-symbol "$"})
             :hypercrud.browser/path [:parent/child]
-            :hypercrud.browser/data (r/atom (->Entity uri {:db/id "child"}))
-            :hypercrud.browser/parent {:hypercrud.browser/data (r/atom (->Entity uri {:db/id "parent"}))}}
+            :hypercrud.browser/data (r/atom {:db/id "child"})
+            :hypercrud.browser/parent {:hypercrud.browser/data (r/atom {:db/id "parent"})}}
        modal-route [nil [{:db/id "child"}]]]
    (is (= (f ctx nil modal-route)
           {:tx {uri [[:db/add "parent" :parent/child "child"]]}}))))
