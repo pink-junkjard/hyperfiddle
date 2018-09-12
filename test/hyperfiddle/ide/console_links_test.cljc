@@ -6,8 +6,8 @@
     [contrib.reactive :as r]
     [contrib.template :as template]
     [contrib.uri :refer [->URI]]
-    [hypercrud.browser.fiddle :refer [txfn-remove]]
-    [hypercrud.browser.field :as field]))
+    [hypercrud.browser.field :as field]
+    [hyperfiddle.fiddle :refer [txfn-remove]]))
 
 
 ; todo collapse these 3 into one test

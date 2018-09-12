@@ -1,4 +1,4 @@
-(ns hypercrud.browser.system-fiddle
+(ns hyperfiddle.ide.system-fiddle
   (:require
     [contrib.template :refer [load-resource]]
     [contrib.try$ :refer [try-either]]

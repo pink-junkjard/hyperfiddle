@@ -1,7 +1,7 @@
-(ns hypercrud.browser.fiddle-test
+(ns hyperfiddle.fiddle-test
   (:require
     [clojure.test :refer [deftest is]]
-    [hypercrud.browser.fiddle :refer [data-defaults fiddle-defaults]]))
+    [hyperfiddle.fiddle :refer [data-defaults fiddle-defaults]]))
 
 
 (deftest test-data-defaults []

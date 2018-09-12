@@ -2,9 +2,11 @@
   (:require
     [clojure.string :as string]
     [contrib.string :refer [blank->nil]]
+    [contrib.reactive :as r]
     [datascript.parser :refer []]
     [hypercrud.browser.field :as field]
-    [hypercrud.browser.system-fiddle :as system-fiddle]))
+    [hyperfiddle.ide.system-fiddle :as system-fiddle]
+    [hyperfiddle.fiddle :as fiddle]))
 
 
 (defn ^:export system-link? [link-id]

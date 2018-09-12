@@ -5,17 +5,17 @@
             [contrib.string :refer [memoized-safe-read-edn-string]]
             [contrib.try$ :refer [try-either]]
             [hypercrud.browser.context :as context]
-            [hypercrud.browser.fiddle :as fiddle]
             [hypercrud.browser.field :as field]
             [hypercrud.browser.link :as link]
             [hypercrud.browser.q-util :as q-util]
             [hypercrud.browser.routing :as routing]
-            [hypercrud.browser.system-fiddle :as system-fiddle]
+            [hyperfiddle.ide.system-fiddle :as system-fiddle]
             [hypercrud.client.core :as hc]
             [hypercrud.client.schema :as schema-util]
             [hypercrud.types.EntityRequest :refer [->EntityRequest]]
             [hypercrud.types.QueryRequest :refer [->QueryRequest]]
-            [hyperfiddle.domain :as domain]))
+            [hyperfiddle.domain :as domain]
+            [hyperfiddle.fiddle :as fiddle]))
 
 
 (def meta-pull-exp-for-link

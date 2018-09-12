@@ -5,7 +5,7 @@
     [contrib.rfc3986 :refer [split-fragment]]
     [contrib.string :refer [abc split-first empty->nil]]
     [hypercrud.browser.router :refer [assoc-frag]]
-    [hypercrud.browser.system-fiddle :refer [system-fiddle?]]
+    [hyperfiddle.ide.system-fiddle :refer [system-fiddle?]]
     [hypercrud.types.ThinEntity :refer [->ThinEntity #?(:cljs ThinEntity)]])
   #?(:clj
      (:import (hypercrud.types.ThinEntity ThinEntity))))

@@ -13,7 +13,7 @@
     contrib.reactive-test
     contrib.rfc3986-test
     contrib.string-test
-    hypercrud.browser.fiddle-test
+    hyperfiddle.fiddle-test
     hypercrud.browser.field-test
     hypercrud.browser.nested-pull-test
     hypercrud.browser.router-test
@@ -34,7 +34,6 @@
     'contrib.reactive-test
     'contrib.rfc3986-test
     'contrib.string-test
-    'hypercrud.browser.fiddle-test
     'hypercrud.browser.field-test
     'hypercrud.browser.nested-pull-test
     'hypercrud.browser.router-test
@@ -42,5 +41,6 @@
     'hyperfiddle.ide.fiddles.schema_test
     'hyperfiddle.ide-test
     'hyperfiddle.data-test
+    'hyperfiddle.fiddle-test
     'hyperfiddle.readers-test
     ))

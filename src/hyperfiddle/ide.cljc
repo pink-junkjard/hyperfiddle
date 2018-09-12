@@ -17,7 +17,7 @@
     [hypercrud.browser.routing :as routing]
     [hypercrud.browser.router :as router]
     [hypercrud.browser.router-bidi :as router-bidi]
-    [hypercrud.browser.system-fiddle :refer [system-fiddle?]]
+    [hyperfiddle.ide.system-fiddle :refer [system-fiddle?]]
     #?(:cljs [hyperfiddle.ui :as ui])
     #?(:cljs [hypercrud.ui.error :as ui-error])
     #?(:cljs [hypercrud.ui.stale :as stale])

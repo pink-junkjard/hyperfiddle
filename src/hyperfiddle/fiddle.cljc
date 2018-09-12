@@ -1,4 +1,4 @@
-(ns hypercrud.browser.fiddle
+(ns hyperfiddle.fiddle
   (:require
     [cats.core :refer [mlet return]]
     [clojure.string :as string]
