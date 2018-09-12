@@ -63,9 +63,10 @@
     (:options props) [select val ctx props]
     :else [:div
            [:div.input
-            (if-let [self (data/select-here ctx :hf/edit)]
-              [hyperfiddle.ui/ui-from-link self ctx props (id-label ctx val)]
-              (id-label ctx val))]
+            (or (if-let [self (data/select-here ctx :hf/edit)]
+                  (if val
+                    [hyperfiddle.ui/ui-from-link self ctx props (id-label ctx val)]))
+                (id-label ctx val))]
 
            (if-let [link (data/select-here ctx :hf/affix)]
              [hyperfiddle.ui/ui-from-link link ctx props "affix"])
@@ -82,9 +83,10 @@
   (let [ctx (:hypercrud.browser/parent ctx)]
     [:div
      [:div.input
-      (if-let [self (data/select-here ctx :hf/edit)]
-        [hyperfiddle.ui/ui-from-link self ctx props (str val)]
-        (str val))]
+      (or (if-let [self (data/select-here ctx :hf/edit)]
+            (if val
+              [hyperfiddle.ui/ui-from-link self ctx props (pr-str val)]))
+          (pr-str val))]
      (if-let [link (data/select-here ctx :hf/affix)]
        [hyperfiddle.ui/ui-from-link link ctx props "affix"])
 
