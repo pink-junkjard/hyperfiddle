@@ -17,7 +17,7 @@
     hypercrud.browser.field-test
     hypercrud.browser.nested-pull-test
     hypercrud.browser.router-test
-    hypercrud.browser.system-link-test
+    hyperfiddle.ide.console-links-test
     hyperfiddle.ide.fiddles.schema_test
     hyperfiddle.ide-test
     hyperfiddle.data-test
@@ -38,7 +38,7 @@
     'hypercrud.browser.field-test
     'hypercrud.browser.nested-pull-test
     'hypercrud.browser.router-test
-    'hypercrud.browser.system-link-test
+    'hyperfiddle.ide.console-links-test
     'hyperfiddle.ide.fiddles.schema_test
     'hyperfiddle.ide-test
     'hyperfiddle.data-test

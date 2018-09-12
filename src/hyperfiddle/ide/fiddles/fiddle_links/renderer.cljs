@@ -6,8 +6,8 @@
     [contrib.reagent :refer [fragment]]
     [hypercrud.browser.base :as base]
     [hypercrud.browser.context :as context]
-    [hypercrud.browser.system-link :refer [system-link?]]
     [hypercrud.client.core :as hc]
+    [hyperfiddle.ide.console-links :refer [system-link?]]
     [hyperfiddle.ui :refer [hyper-control field table link]]
     [hyperfiddle.ui.select$ :refer [select-error-cmp]]))
 

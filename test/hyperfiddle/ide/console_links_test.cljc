@@ -1,12 +1,13 @@
-(ns hypercrud.browser.system-link-test
-  (:require [clojure.string :as string]
-            [clojure.test :refer [deftest is]]
-            [contrib.eval :as eval]
-            [contrib.reactive :as r]
-            [contrib.template :as template]
-            [contrib.uri :refer [->URI]]
-            [hypercrud.browser.fiddle :refer [txfn-remove]]
-            [hypercrud.browser.field :as field]))
+(ns hyperfiddle.ide.console-links-test
+  (:require
+    [clojure.string :as string]
+    [clojure.test :refer [deftest is]]
+    [contrib.eval :as eval]
+    [contrib.reactive :as r]
+    [contrib.template :as template]
+    [contrib.uri :refer [->URI]]
+    [hypercrud.browser.fiddle :refer [txfn-remove]]
+    [hypercrud.browser.field :as field]))
 
 
 ; todo collapse these 3 into one test

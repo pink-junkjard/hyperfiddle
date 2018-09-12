@@ -4,7 +4,7 @@
             [contrib.data :as data]
             [contrib.reactive :as r]
             [hypercrud.browser.field :as field :refer [auto-field]]
-            [hypercrud.browser.system-link :refer [console-links]]
+            [hyperfiddle.ide.console-links :refer [console-links]]
             [hypercrud.types.QueryRequest :refer [->QueryRequest]]))
 
 

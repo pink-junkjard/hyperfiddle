@@ -1,4 +1,4 @@
-(ns hypercrud.browser.system-link
+(ns hyperfiddle.ide.console-links
   (:require
     [clojure.string :as string]
     [contrib.string :refer [blank->nil]]
