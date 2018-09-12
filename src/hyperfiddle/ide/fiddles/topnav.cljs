@@ -36,7 +36,7 @@
             :else (fiddle/fiddle-defaults fiddle-val nil)))]
   (defn shadow-fiddle [ctx]
     {:pre [(-> ctx :hypercrud.browser/data)]}
-    (let [route (:route ctx)
+    (let [route @(:hypercrud.browser/route ctx)
           [_ [e]] route                                     ; [:hyperfiddle/topnav [#entity["$" [:fiddle/ident :hyperfiddle.system/remove]]]]
           [_ target-fiddle-ident] (:db/id e)]
       (update ctx :hypercrud.browser/data (partial r/fmap (r/partial -shadow-fiddle target-fiddle-ident))))))

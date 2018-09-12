@@ -204,7 +204,7 @@ User renderers should not be exposed to the reaction."
                                   (->> (r/track identity)))
                        ctx (-> (context/source-mode ctx)
                                (context/clean)
-                               (routing/route [nil [(->ThinEntity "$" [:fiddle/ident (first (:route ctx))])]]))]]
+                               (routing/route [nil [(->ThinEntity "$" [:fiddle/ident @(r/fmap first (:hypercrud.browser/route ctx))])]]))]]
             (base/process-results fiddle request ctx)))]
   (defn ^:export iframe [ctx {:keys [route] :as props}]     ; :: [route ctx & [?f props]]
     (let [click-fn (or (:hyperfiddle.ui/iframe-on-click ctx) (constantly nil)) ; parent ctx receives click event, not child frame
@@ -220,13 +220,13 @@ User renderers should not be exposed to the reaction."
            [native-click-listener {:on-click on-click}
             [error-comp e (css "hyperfiddle-error" (:class props) "ui")]]))
        (fn [ctx]                                            ; fresh clean ctx
-         (let [on-click (r/partial click-fn (:route ctx))]
+         (let [on-click (r/partial click-fn @(:hypercrud.browser/route ctx))]
            [native-click-listener {:on-click on-click}
             (fragment
               [ui-comp ctx (update props :class css "ui")]
               [fiddle-css-renderer (r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/css])])]))
        (fn [ctx]
-         (let [on-click (r/partial click-fn (:route ctx))]
+         (let [on-click (r/partial click-fn @(:hypercrud.browser/route ctx))]
            ; use the stale ctx's route, otherwise alt clicking while loading could take you to the new route, which is jarring
            [native-click-listener {:on-click on-click}
             (fragment
@@ -423,7 +423,7 @@ nil. call site must wrap with a Reagent component"          ; is this just hyper
                              (map fiddle/auto-link))
           ctx (update ctx :hypercrud.browser/fiddle (partial r/fmap (r/partial inject-console-links console-links)))]
       [:div (select-keys props [:class])
-       [:h3 (pr-str (:route ctx))]
+       [:h3 (pr-str @(:hypercrud.browser/route ctx))]
        (result val ctx {})])))
 
 (letfn [(render-edn [data]
@@ -434,9 +434,9 @@ nil. call site must wrap with a Reagent component"          ; is this just hyper
       [:div.hyperfiddle.display-mode-api (select-keys props [:class])
        [:h3
         [:dl
-         [:dt "route"] [:dd (pr-str (:route ctx))]]]
-       (render-edn (get data (:route ctx)))
-       (->> (dissoc data (:route ctx))
+         [:dt "route"] [:dd (pr-str @(:hypercrud.browser/route ctx))]]]
+       (render-edn (get data @(:hypercrud.browser/route ctx)))
+       (->> (dissoc data @(:hypercrud.browser/route ctx))
             (map (fn [[route result]]
                    ^{:key (str (hash route))}
                    [:div

@@ -49,7 +49,11 @@
 (defn route [ctx route]                                     ; circular, this can be done sooner
   {:pre [(if-let [params (second route)] (vector? params) true) ; validate normalized already
          (some-> ctx :hypercrud.browser/domain :domain/fiddle-database :database/uri)]}
-  (assoc ctx :route (tempid->id route ctx)))
+  (assoc ctx :hypercrud.browser/route
+             ; route should be a ref, provided by the caller, that we fmap over
+             ; because it is not, this is obviously fragile and will break on any change to the route
+             ; this is acceptable today (Sep-2018) because changing a route in ANY way assumes the entire iframe will be re-rendered
+             (r/track tempid->id route ctx)))
 
 (defn validated-route+ [fiddle route ctx]
   {:pre [route]}

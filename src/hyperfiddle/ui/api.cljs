@@ -68,7 +68,7 @@
         thing3 (when @(r/fmap :fiddle/hydrate-result-as-fiddle (:hypercrud.browser/fiddle ctx))
                  ; This only makes sense on :fiddle/type :query because it has arbitrary arguments
                  ; EntityRequest args are too structured.
-                 (let [[_ [inner-fiddle & inner-args]] (:route ctx)]
+                 (let [[_ [inner-fiddle & inner-args]] @(:hypercrud.browser/route ctx)]
                    (recurse-from-route [inner-fiddle (vec inner-args)] ctx)))]
     (merge (with-result ctx)
            thing

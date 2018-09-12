@@ -9,9 +9,7 @@
 
 
 (defn clean [ctx]
-  ; why not code-database-uri and all the custom ui/render fns?
   (dissoc ctx
-          :route                                            ; Route is unrelated to the hyper-control ontology
           :hypercrud.ui/error
           :hyperfiddle.ui/layout
 
@@ -20,6 +18,7 @@
           :hypercrud.browser/field
           :hypercrud.browser/parent
           :hypercrud.browser/path
+          :hypercrud.browser/route
           :hypercrud.browser/schemas))
 
 (defn source-mode [ctx]

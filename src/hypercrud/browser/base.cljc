@@ -54,10 +54,10 @@
     fiddle))
 
 (defn meta-request-for-fiddle [ctx]
-  (if (system-fiddle/system-fiddle? (get-in ctx [:route 0]))
+  (if @(r/fmap (r/comp system-fiddle/system-fiddle? first) (:hypercrud.browser/route ctx))
     (either/right nil)
     (try-either
-      (let [[fiddle] (get-in ctx [:route])
+      (let [fiddle @(r/fmap first (:hypercrud.browser/route ctx))
             _ (assert fiddle "missing fiddle-id")
             _ (assert (:hypercrud.browser/domain ctx) "missing domain")
             dbval (hc/db (:peer ctx) (get-in ctx [:hypercrud.browser/domain :domain/fiddle-database :database/uri]) (:branch ctx))]
@@ -72,7 +72,7 @@
     (either/right fiddle)))
 
 (defn hydrate-fiddle [meta-fiddle-request ctx]
-  (mlet [:let [[arg1 :as route] (:route ctx)]
+  (mlet [:let [[arg1 :as route] @(:hypercrud.browser/route ctx)]
          fiddle (if (system-fiddle/system-fiddle? arg1)
                   (system-fiddle/hydrate-system-fiddle arg1)
                   (mlet [fiddle @(hc/hydrate (:peer ctx) (:branch ctx) @meta-fiddle-request)]
@@ -83,13 +83,13 @@
 (defn request-for-fiddle [fiddle ctx]                       ; depends on route
   (case @(r/cursor fiddle [:fiddle/type])
     :query (mlet [q (memoized-safe-read-edn-string @(r/cursor fiddle [:fiddle/query]))
-                  args (q-util/validate-query-params+ q (get-in ctx [:route 1]) ctx)]
+                  args (q-util/validate-query-params+ q @(r/fmap second (:hypercrud.browser/route ctx)) ctx)]
              (return (->QueryRequest q args)))
 
     :entity
     (if-let [dbname @(r/cursor fiddle [:fiddle/pull-database])]
       (if-let [uri (domain/dbname->uri dbname (:hypercrud.browser/domain ctx))]
-        (let [[_ [?e :as args]] (get-in ctx [:route])       ; Missing entity param is valid state now https://github.com/hyperfiddle/hyperfiddle/issues/268
+        (let [[_ [?e :as args]] @(:hypercrud.browser/route ctx) ; Missing entity param is valid state now https://github.com/hyperfiddle/hyperfiddle/issues/268
               db (hc/db (:peer ctx) uri (:branch ctx))
               pull-exp (or (-> (memoized-safe-read-edn-string @(r/cursor fiddle [:fiddle/pull]))
                                (either/branch (constantly nil) identity))
@@ -115,14 +115,8 @@
                        :hypercrud.browser/path []
                        ; For tx/entity->statements in userland.
                        :hypercrud.browser/schemas reactive-schemas)]
-           reactive-field @(r/apply-inner-r (r/track field/auto-field request ctx))
-           :let [ctx (assoc ctx :hypercrud.browser/field reactive-field)
-                 ctx (if (and (= :entity @(r/cursor fiddle [:fiddle/type]))
-                              ; e is nil on the EntityRequest
-                              (-> ctx :route second first nil?))
-                       (assoc ctx :read-only (r/constantly true))
-                       ctx)]]
-      (return ctx))))
+           reactive-field @(r/apply-inner-r (r/track field/auto-field request ctx))]
+      (return (assoc ctx :hypercrud.browser/field reactive-field)))))
 
 (defn data-from-route [route ctx]                           ; todo rename
   (let [ctx (-> (context/clean ctx)

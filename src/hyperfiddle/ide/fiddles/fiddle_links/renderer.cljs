@@ -33,13 +33,14 @@
     (link :hf/affix :fiddle ctx "affix" {:disabled (system-link? @(r/fmap :db/id (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data])))})))
 
 (let [remove-children (fn [field] (dissoc field :hypercrud.browser.field/children))
+      target-ide-route (fn [ctx] (hyperfiddle.ide/ide-fiddle-route (context/target-route ctx) ctx))
       inject-links (fn [topnav-links fiddle] (assoc fiddle :fiddle/links topnav-links))]
   (defn hf-live-link-fiddle [val ctx props]
     (let [ctx (update ctx :hypercrud.browser/field #(r/fmap remove-children %))
           props (assoc props :read-only (read-only? ctx))]
       ; Hacks because hf-live is not yet modeled in the fiddle-graph, we hardcode knowledge of the IDE fiddle-graph instead
       (-> (mlet [req (base/meta-request-for-fiddle (assoc ctx
-                                                     :route (hyperfiddle.ide/ide-fiddle-route (context/target-route ctx) ctx)
+                                                     :hypercrud.browser/route (r/track target-ide-route ctx)
                                                      :branch nil))
                  topnav-fiddle @(hc/hydrate (:peer ctx) nil req) #_"todo tighter reactivity"]
             (return
