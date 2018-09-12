@@ -9,8 +9,7 @@
     [hyperfiddle.data :as data]
     #_[hyperfiddle.ui]
     [hyperfiddle.ui.util :refer [readonly->disabled writable-entity?]]
-    [hyperfiddle.ui.docstring :refer [semantic-docstring]]
-    [hypercrud.browser.link :as link]))
+    [hyperfiddle.ui.docstring :refer [semantic-docstring]]))
 
 
 (defn dbid-label [_ ctx & [props]]
@@ -18,7 +17,7 @@
     (when-let [label (some->> (:hypercrud.browser/field ctx) (r/fmap ::field/label) deref)]
       (let [help-md (semantic-docstring ctx)]               ; https://github.com/hyperfiddle/hyperfiddle/issues/511
         [tooltip-thick (if help-md [:div.hyperfiddle.docstring [contrib.ui/markdown help-md]])
-         [:label (select-keys props [:class]) label (if help-md [:sup "†"])]]))
+         [:label.hyperfiddle (select-keys props [:on-click :class]) label (if help-md [:sup "†"])]]))
 
     (let [ctx (:hypercrud.browser/parent ctx)]              ; dbid links are at parent path
       (if-let [new (data/select-here ctx :hf/new)]
@@ -29,17 +28,17 @@
     (let [help-md (semantic-docstring ctx)]                 ; https://github.com/hyperfiddle/hyperfiddle/issues/511
       [tooltip-thick (if help-md
                        [:div.hyperfiddle.docstring [contrib.ui/markdown help-md]])
-       [:label (select-keys props [:class]) label (if help-md [:sup "†"])]])))
+       [:label (select-keys props [:on-click :class]) label (if help-md [:sup "†"])]])))
 
 (defn relation-label [_ ctx & [props]]
   (let [help-md (semantic-docstring ctx)]
     [tooltip-thick (if help-md [:div.hyperfiddle.docstring [contrib.ui/markdown help-md]])
-     [:label (select-keys props [:class]) "*relation*"]]))
+     [:label (select-keys props [:on-click :class]) "*relation*"]]))
 
 (defn tuple-label [_ ctx & [props]]
   (let [help-md (semantic-docstring ctx)]
     [tooltip-thick (if help-md [:div.hyperfiddle.docstring [contrib.ui/markdown help-md]])
-     [:label (select-keys props [:class]) "*tuple*"]]))
+     [:label (select-keys props [:on-click :class]) "*tuple*"]]))
 
 (defn magic-new-head [_ ctx & [props]]
   (let [state (r/cursor (:hyperfiddle.ui.form/state ctx) [:hyperfiddle.ui.form/magic-new-a])]

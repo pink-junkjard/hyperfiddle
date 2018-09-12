@@ -310,12 +310,11 @@ User renderers should not be exposed to the reaction."
   [relative-path ctx Body Head props]                       ; Body :: (val props ctx) => DOM, invoked as component
   ; Presence of data to detect head vs body? Kind of dumb
   (case (if (:hypercrud.browser/data ctx) :body :head)      ; this is ugly and not uniform with form-field NOTE: NO DEREF ON THIS NIL CHECK
-    :head [:th {:class (css "field" (:class props)
-                            (when (sort/sortable? ctx) "sortable") ; hoist
-                            (some-> (sort/sort-direction relative-path ctx) name)) ; hoist
-                :style {:background-color (connection-color ctx)}
-                :on-click (r/partial sort/toggle-sort! relative-path ctx)}
-           [Head nil ctx props]]
+    :head [:th {:class (css "field" (:class props))         ; hoist
+                :style {:background-color (connection-color ctx)}}
+           [Head nil ctx (-> props
+                             (update :class css (when (sort/sortable? ctx) "sortable") (some-> (sort/sort-direction relative-path ctx) name))
+                             (assoc :on-click (r/partial sort/toggle-sort! relative-path ctx)))]]
     ; Field omits [] but table does not, because we use it to specifically draw repeating anchors with a field renderer.
     :body [:td {:class (css "field" (:class props))
                 :style {:border-color (connection-color ctx)}}
