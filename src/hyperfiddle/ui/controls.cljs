@@ -83,6 +83,7 @@
   (let [ctx (:hypercrud.browser/parent ctx)]
     [:div
      [:div.input
+      ; pr-str here to disambiguate `"tempid"` from `17592186046396` and `:gender/male`
       (or (if-let [self (data/select-here ctx :hf/edit)]
             (if val
               [hyperfiddle.ui/ui-from-link self ctx props (pr-str val)]))
