@@ -6,18 +6,18 @@
     [clojure.walk :as walk]
     [contrib.ct :refer [unwrap]]
     [contrib.data :refer [xorxs]]
-    [hyperfiddle.tempid :refer [smart-identity]]
     [contrib.eval :as eval]
     [contrib.pprint :refer [pprint-str]]
     [contrib.reactive :as r]
     [contrib.string :refer [memoized-safe-read-edn-string blank->nil]]
     [contrib.try$ :refer [try-either]]
+    [hypercrud.browser.context :as context]
     [hypercrud.browser.q-util :as q-util]
     [hypercrud.browser.router :as router]
     [hypercrud.types.ThinEntity :refer [->ThinEntity #?(:cljs ThinEntity)]]
     [hyperfiddle.domain :as domain]
-    [taoensso.timbre :as timbre]
-    [hypercrud.browser.context :as context])
+    [hyperfiddle.tempid :refer [smart-entity-identifier]]
+    [taoensso.timbre :as timbre])
   #?(:clj
      (:import (hypercrud.types.ThinEntity ThinEntity))))
 
@@ -94,13 +94,10 @@
    :post [(vector? %) #_"route args are associative by position"]}
   (vec (xorxs porps)))
 
-(defn pull->colored-eid [ctx v]
-  ; Returns a datomic primitive suitable for passing to :in. In edge cases, this could be a composite.
-  (if-not (context/dbname ctx)
-    v                                                       ; colorless opaque value, don't interpret as entity
-    (if (map? v)
-      (->ThinEntity (context/dbname ctx) (smart-identity ctx v))
-      v)))
+(defn pull->colored-eid "Adapt pull to a datomic primitive suitable for :in" [ctx v]
+  (if-not (context/has-entity-identity? ctx)                ; maybe a ref but you didn't pull an identity? Can't do much for that (we can't generate links there and neither should userland try)
+    v                                                       ; In edge cases, this could be a colorless opaque value (composite or scalar)
+    (->ThinEntity (context/dbname ctx) (smart-entity-identifier ctx v))))
 
 (let [eval-string+ (memoize eval/safe-eval-string+)]
   (defn ^:export build-route' [ctx {:keys [:link/fiddle :link/tx-fn] :as link}]

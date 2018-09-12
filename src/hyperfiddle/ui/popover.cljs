@@ -13,7 +13,7 @@
     [hypercrud.util.branch :as branch]
     [hyperfiddle.actions :as actions]
     [hyperfiddle.runtime :as runtime]
-    [hyperfiddle.tempid :as tempid :refer [smart-identity]]
+    [hyperfiddle.tempid :as tempid :refer [stable-entity-key]]
     [promesa.core :as p]
     [re-com.core :as re-com]
     [taoensso.timbre :as timbre]))
@@ -105,7 +105,7 @@
   (let [child-branch (let [child-id-str (-> [(tempid/tempid-from-ctx visual-ctx)
                                              @(r/fmap :db/id link-ref)
                                              (:route props)
-                                             @(r/fmap (r/partial smart-identity ctx) (:hypercrud.browser/fiddle ctx))]
+                                             @(r/fmap (r/partial stable-entity-key ctx) (:hypercrud.browser/fiddle ctx))]
                                             hash abs-normalized - str)]
                        (branch/encode-branch-child (:branch ctx) child-id-str))
         popover-id child-branch                             ; just use child-branch as popover-id

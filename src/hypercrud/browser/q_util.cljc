@@ -3,7 +3,7 @@
     [cats.core :refer [mlet]]
     [cats.monad.either :as either]
     [contrib.data :refer [parse-query-element]]
-    [hyperfiddle.tempid :refer [smart-identity]]
+    [hyperfiddle.tempid :refer [smart-entity-identifier]]
     [contrib.try$ :refer [try-either]]
     [hypercrud.client.core :as hc]
     [hypercrud.types.ThinEntity :refer [#?(:cljs ThinEntity)]])
@@ -21,7 +21,7 @@
 
 (defn- fix-param [ctx param]
   (if (instance? ThinEntity param)
-    (smart-identity ctx param)
+    (smart-entity-identifier ctx param)
     param))
 
 (defn validate-query-params+ [q args ctx]

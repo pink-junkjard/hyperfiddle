@@ -142,3 +142,7 @@
     @(contrib.reactive/cursor (:hypercrud.browser/data ctx) [:db/ident])
     @(contrib.reactive/cursor (:hypercrud.browser/data ctx) [:db/id])
     @(:hypercrud.browser/data ctx)))
+
+(defn has-entity-identity? [ctx]
+  (::field/data-has-id? @(:hypercrud.browser/field ctx))
+  #_(and (context/dbname ctx) (last (:hypercrud.browser/path ctx))))

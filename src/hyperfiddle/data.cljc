@@ -6,18 +6,19 @@
     [contrib.reactive :as r]
     [cuerdas.core :as str]
     [hypercrud.browser.base :as base]
+    [hypercrud.browser.context :as context]
     [hypercrud.browser.field :as field]
     [hypercrud.browser.link :as link]
     [hypercrud.browser.context :as context]
-    [hyperfiddle.tempid :refer [smart-identity]]))
+    [hyperfiddle.tempid :refer [stable-relation-key]]))
 
 
 (defn row-keyfn [ctx row]
   {:pre [(not (r/reactive? row))]}
   ; This keyfn is very tricky, read https://github.com/hyperfiddle/hyperfiddle/issues/341
   (-> (if (or (vector? row) (seq? row))                     ; todo should probably inspect fields instead of seq
-        (map #(or (smart-identity ctx %) %) row)
-        (or (smart-identity ctx row) row))
+        (map #(partial stable-relation-key ctx) row)
+        (stable-relation-key ctx row))
       hash))
 
 (defn form-with-naked-legacy "Field is invoked as fn"       ; because it unifies with request fn side

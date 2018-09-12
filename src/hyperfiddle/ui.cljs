@@ -31,7 +31,7 @@
     [hypercrud.ui.stale :as stale]
     [hyperfiddle.data :as data]
     [hyperfiddle.runtime :as runtime]
-    [hyperfiddle.tempid :refer [smart-identity]]
+    [hyperfiddle.tempid :refer [smart-entity-identifier stable-relation-key]]
     [hyperfiddle.ui.api]
     [hyperfiddle.ui.controls :as controls]
     [hyperfiddle.ui.hyper-controls :refer [attribute-label relation-label tuple-label dbid-label magic-new-body magic-new-head]]
@@ -64,7 +64,7 @@
     (->> (data/select-all ctx :hf/iframe)
          (remove (comp (partial data/deps-over-satisfied? ctx) link/read-path :link/path))
          (r/track identity)
-         (r/unsequence (r/partial smart-identity ctx))
+         (r/unsequence (r/partial stable-relation-key ctx))
          (map (fn [[rv k]]
                 ^{:key k}
                 [ui-from-link rv ctx props]))
@@ -99,7 +99,7 @@
       (let [-field @(:hypercrud.browser/field ctx)]
         (cond                                               ; Duplicate options test to avoid circular dependency in controls/ref
           (:options props) [(control val ctx props) val ctx props]
-          (field/identity-segment? -field) [controls/dbid val ctx props]
+          (field/identity-segment? -field) [controls/id-or-ident val ctx props]
           (field/children-identity-only? -field) [(control val ctx props) val ctx props]
           (seq (::field/children -field)) (let [ctx (dissoc ctx ::layout)]
                                             [:div           ; wrapper div: https://github.com/hyperfiddle/hyperfiddle/issues/541
@@ -357,7 +357,7 @@ User renderers should not be exposed to the reaction."
 
 (defn hint [val {:keys [hypercrud.browser/fiddle] :as ctx} props]
   (if (and (-> (:fiddle/type @fiddle) (= :entity))
-           (nil? (smart-identity ctx val)))
+           (nil? (smart-entity-identifier ctx val)))
     [:div.alert.alert-warning "Warning: invalid route (d/pull requires an entity argument). To add a tempid entity to the URL, click here: "
      [:a {:href "~entity('$','tempid')"} [:code "~entity('$','tempid')"]] "."]))
 

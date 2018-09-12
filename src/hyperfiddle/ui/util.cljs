@@ -9,7 +9,7 @@
     [contrib.string :refer [empty->nil]]
     [contrib.try$ :refer [try-either]]
     [hypercrud.browser.context :as context]
-    [hyperfiddle.tempid :refer [smart-identity]]))
+    [hyperfiddle.tempid :refer [smart-entity-identifier]]))
 
 
 ; defer eval until render cycle inside userportal
@@ -31,7 +31,7 @@
   (rename-keys props {:read-only :disabled}))
 
 (defn on-change->tx [ctx o n]
-  (let [id @(r/fmap (r/partial smart-identity ctx) (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data]))
+  (let [id @(r/fmap (r/partial smart-entity-identifier ctx) (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data]))
         attribute @(context/hydrate-attribute ctx (last (:hypercrud.browser/path ctx)))]
     (tx/edit-entity id attribute o (empty->nil n))))
 
@@ -42,8 +42,8 @@
         o (if (not= (:db/ident valueType) :db.type/ref)
             (get entity attr-ident)
             (case (:db/ident cardinality)
-              :db.cardinality/one (smart-identity ctx (get entity attr-ident))
-              :db.cardinality/many (map (partial smart-identity ctx) (get entity attr-ident))))]
+              :db.cardinality/one (smart-entity-identifier ctx (get entity attr-ident))
+              :db.cardinality/many (map (partial smart-entity-identifier ctx) (get entity attr-ident))))]
     (on-change->tx ctx o new-val)))
 
 (defn writable-entity? [entity-val]

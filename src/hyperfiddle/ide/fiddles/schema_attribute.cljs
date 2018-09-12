@@ -5,7 +5,6 @@
     [contrib.datomic-tx :as tx]
     [contrib.ui :refer [debounced]]
     [hypercrud.browser.context :as context]
-    [hyperfiddle.tempid :refer [smart-identity]]
     [hyperfiddle.ui :refer [field markdown]]
     [hyperfiddle.ui.util :refer [entity-props readonly->disabled on-change->tx writable-entity? entity-change->tx]]))
 

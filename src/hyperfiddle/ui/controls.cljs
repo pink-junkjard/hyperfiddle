@@ -8,7 +8,7 @@
     [contrib.ui.recom-date :refer [recom-date]]
     [hypercrud.browser.context :as context]
     [hyperfiddle.data :as data]
-    [hyperfiddle.tempid :refer [smart-identity]]
+    [hyperfiddle.tempid :refer [stable-relation-key smart-entity-identifier]]
     [hyperfiddle.ui.select$ :refer [select]]
     [hyperfiddle.ui.util :refer [entity-props readonly->disabled on-change->tx writable-entity?]]))
 
@@ -56,7 +56,7 @@
        [:option (assoc option-props :key :nil :value "") "--"]])))
 
 (defn id-label [ctx val]
-  (pr-str (or (smart-identity ctx val) val)))
+  (pr-str (smart-entity-identifier ctx val)))
 
 (defn ^:export ref [val ctx & [props]]
   (cond
@@ -76,7 +76,7 @@
            (if-let [link (data/select-here ctx :hf/detach)]
              [hyperfiddle.ui/ui-from-link link ctx props "detach"])]))
 
-(defn ^:export dbid [val ctx & [props]]                     ; When you pulled db/id or db/ident
+(defn ^:export id-or-ident [val ctx & [props]]
   ; id control uses links from parent ctx (parent ref and parent path)
   ; select-here does not match :hf/edit since it is in the parent ref position
   (let [ctx (:hypercrud.browser/parent ctx)]
@@ -96,7 +96,7 @@
 
      (let [related (data/select-all ctx :hf/rel)]
        (->> (r/track identity related)
-            (r/unsequence (r/partial smart-identity ctx))
+            (r/unsequence (r/partial stable-relation-key ctx))
             (map (fn [[rv k]]
                    ^{:key k}                                ; Use the userland class as the label (ignore hf/rel)
                    [hyperfiddle.ui/ui-from-link rv ctx props]))
@@ -136,7 +136,7 @@
 
 (defn ^:export edn-many [val ctx & [props]]
   (let [valueType @(context/hydrate-attribute ctx (last (:hypercrud.browser/path ctx)) :db/valueType :db/ident)
-        val (set (if (= valueType :db.type/ref) (map (r/partial smart-identity ctx) val) val))
+        val (set (if (= valueType :db.type/ref) (map (r/partial smart-entity-identifier ctx) val) val))
         props (entity-props val props ctx)]
     [debounced props (edn-comp ctx)]))
 
