@@ -32,11 +32,6 @@
    :fiddle/type :entity
    :fiddle/pull-database dbname})
 
-(def fiddle-blank-system-remove
-  {:fiddle/ident :hyperfiddle.system/remove
-   :fiddle/type :blank
-   :fiddle/renderer (str '[:p "Retract entity?"])})
-
 (def hf-live
   {:fiddle/ident :hyperfiddle.system/hf-live
    :fiddle/hydrate-result-as-fiddle true
