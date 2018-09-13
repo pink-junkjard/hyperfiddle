@@ -2,11 +2,12 @@
   (:require
     [cats.core :refer [mlet]]
     [cats.monad.either :as either]
+    [clojure.string]
     [contrib.data :refer [parse-query-element]]
-    [hyperfiddle.tempid :refer [smart-entity-identifier]]
     [contrib.try$ :refer [try-either]]
     [hypercrud.client.core :as hc]
-    [hypercrud.types.ThinEntity :refer [#?(:cljs ThinEntity)]])
+    [hypercrud.types.ThinEntity :refer [#?(:cljs ThinEntity)]]
+    [hyperfiddle.tempid :refer [smart-entity-identifier]])
   #?(:clj
      (:import (hypercrud.types.ThinEntity ThinEntity))))
 
@@ -33,7 +34,7 @@
                [params' unused] (loop [acc []
                                        args args
                                        [x & xs] query-holes]
-                                  (let [is-db (.startsWith x "$")
+                                  (let [is-db (clojure.string/starts-with? x "$")
                                         next-arg (if is-db (get db-lookup x)
                                                            (fix-param ctx (first args)))
                                         args (if is-db args (rest args))
