@@ -20,17 +20,20 @@
 (defn fiddle-system-edit [dbname]
   {:fiddle/ident (keyword "hyperfiddle.system" (str "edit-" dbname))
    :fiddle/type :entity
-   :fiddle/pull-database dbname})
+   :fiddle/pull-database dbname
+   :fiddle/renderer (load-resource "ide/console_renderer.cljs")})
 
 (defn fiddle-system-new [dbname]
   {:fiddle/ident (keyword "hyperfiddle.system" (str "new-" dbname))
    :fiddle/type :entity
-   :fiddle/pull-database dbname})
+   :fiddle/pull-database dbname
+   :fiddle/renderer (load-resource "ide/console_renderer.cljs")})
 
 (defn fiddle-system-affix [dbname]
   {:fiddle/ident (keyword "hyperfiddle.system" (str "affix-" dbname))
    :fiddle/type :entity
-   :fiddle/pull-database dbname})
+   :fiddle/pull-database dbname
+   :fiddle/renderer (load-resource "ide/console_renderer.cljs")})
 
 (def hf-live
   {:fiddle/ident :hyperfiddle.system/hf-live
