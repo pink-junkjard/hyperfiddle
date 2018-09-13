@@ -111,3 +111,23 @@
     (if missing-fe-wrapper
       (system-links-impl q [field] schemas)     ; wrapper for FindColl, FindTuple, etc? weird.
       (system-links-impl q (::field/children field) schemas))))
+
+(defn merge-links [as bs]
+  (->> (merge
+         (group-by (juxt :link/rel (comp blank->nil :link/path)) as)
+         (group-by (juxt :link/rel (comp blank->nil :link/path)) bs))
+       vals
+       (apply concat)))
+
+(comment
+  (merge-links [{:link/rel :hf/edit :link/path nil}
+                {:link/rel :hf/edit :link/path ":reg/gender"}
+                {:link/rel :hf/edit :link/path ":reg/gender :reg/shirt-size"}]
+               [{:link/rel :hf/edit :link/path ":reg/gender" :extra-stuff true}]))
+
+(let [f (fn [new-links fiddle]
+          (update fiddle :fiddle/links (partial merge-links new-links)))]
+  (defn inject-console-links [ctx]
+    (let [console-links (->> (console-links @(:hypercrud.browser/field ctx) @(:hypercrud.browser/schemas ctx))
+                             (map fiddle/auto-link))]
+      (update ctx :hypercrud.browser/fiddle (partial r/fmap (r/partial f console-links))))))

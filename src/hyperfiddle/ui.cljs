@@ -29,7 +29,7 @@
     [hypercrud.ui.stale :as stale]
     [hyperfiddle.data :as data]
     [hyperfiddle.fiddle :as fiddle]
-    [hyperfiddle.ide.console-links :refer [console-links system-link?]]
+    [hyperfiddle.ide.console-links :refer [inject-console-links system-link?]]
     [hyperfiddle.runtime :as runtime]
     [hyperfiddle.tempid :refer [smart-entity-identifier stable-relation-key]]
     [hyperfiddle.ui.api]
@@ -417,14 +417,11 @@ nil. call site must wrap with a Reagent component"          ; is this just hyper
 
 (def ^:export fiddle (-build-fiddle))
 
-(let [inject-console-links (fn [console-links fiddle] (update fiddle :fiddle/links (partial concat console-links)))]
-  (defn ^:export fiddle-xray [val ctx & [props]]
-    (let [console-links (->> (console-links @(:hypercrud.browser/field ctx) @(:hypercrud.browser/schemas ctx))
-                             (map fiddle/auto-link))
-          ctx (update ctx :hypercrud.browser/fiddle (partial r/fmap (r/partial inject-console-links console-links)))]
-      [:div (select-keys props [:class])
-       [:h3 (pr-str @(:hypercrud.browser/route ctx))]
-       (result val ctx {})])))
+(defn ^:export fiddle-xray [val ctx & [props]]
+  (let [ctx (inject-console-links ctx)]
+    [:div (select-keys props [:class])
+     [:h3 (pr-str @(:hypercrud.browser/route ctx))]
+     (result val ctx {})]))
 
 (letfn [(render-edn [data]
           (let [edn-str (pprint-str data 160)]
