@@ -243,7 +243,7 @@ User renderers should not be exposed to the reaction."
           ctx (context/refocus ctx (link/read-path @(r/fmap :link/path link-ref)))
           error-comp (ui-error/error-comp ctx)
           r+route (r/fmap (r/partial routing/build-route' ctx) link-ref) ; need to re-focus from the top
-          link-props @(r/track routing/build-link-props @r+route ctx props)] ; handles :class and :tooltip props
+          link-props @(r/track routing/build-link-props @r+route @link-ref ctx props)] ; handles :class and :tooltip props
       (let [style {:color nil #_(connection-color ctx (cond (system-link? (:db/id @link-ref)) 60 :else 40))}
             props (-> link-props
                       (assoc :style style)
