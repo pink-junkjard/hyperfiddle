@@ -2,7 +2,7 @@
       hide-archived (contrib.reactive/atom true)
       needle (contrib.reactive/atom nil)
       db-attr? #(<= (:db/id %) 62)
-      archived? #(cuerdas.core/starts-with? (namespace (:db/ident %)) "zzz") ; "zzz/" and "zzz.", we are inconsistent. It should be modeled and queried and never shown
+      archived? #(cuerdas.core/starts-with? (namespace (:db/ident %)) "zzz") ; "zzz/" and "zzz.", we are inconsistent
       do-filter-reactive (fn [xs]                           ; perf sensitive
                            (as-> xs xs
                              (if @hide-datomic (remove db-attr? xs) xs)

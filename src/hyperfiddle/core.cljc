@@ -6,7 +6,9 @@
     #?(:cljs [hyperfiddle.ui])
 
     ; Optional helpers
-    #?(:clj [contrib.datomic])                              ; fiddle/query
+    #?(:clj [contrib.datomic])
+    #?(:clj [hyperfiddle.query])
+
     #?(:cljs [contrib.reagent])
     #?(:cljs [contrib.ui])
 

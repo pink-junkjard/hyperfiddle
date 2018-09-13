@@ -27,13 +27,10 @@
 (def code-form
   '(fn [ctx]
      (let [hide-datomic (reagent.core/atom true)
-           hide-archived (reagent.core/atom true)
            db-attr? #(<= (:db/id %) 62)
-           archived? #(cuerdas.core/starts-with? (namespace (:db/ident %)) "zzz") ; "zzz/" and "zzz.", we are inconsistent. It should be modeled and queried and never shown
            do-filter-reactive (fn [xs]                      ; perf sensitive
                                 (as-> xs xs
-                                      (if @hide-datomic (remove db-attr? xs) xs)
-                                      (if @hide-archived (remove archived? xs) xs)))]
+                                      (if @hide-datomic (remove db-attr? xs) xs)))]
        (fn [ctx]
          [:div.hyperfiddle-schema
           [hyperfiddle.ui/markdown (-> ctx :hypercrud.browser/fiddle deref :db/doc)]

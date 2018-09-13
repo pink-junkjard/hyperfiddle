@@ -1,9 +1,10 @@
 (ns hypercrud.client.schema
-  (:require [cats.core :as cats]
-            [hypercrud.client.core :as hc]
-            [hypercrud.types.QueryRequest :refer [->QueryRequest]]
-            [contrib.data :refer [group-by-assume-unique map-values]]
-            [contrib.reactive :as r]))
+  (:require
+    [cats.core :as cats]
+    [contrib.data :refer [group-by-assume-unique map-values]]
+    [contrib.reactive :as r]
+    [hypercrud.client.core :as hc]
+    [hypercrud.types.QueryRequest :refer [->QueryRequest]]))
 
 
 (defn hc-attr-request [ctx]
@@ -12,11 +13,13 @@
                   [(hc/db (:peer ctx) (get-in ctx [:hypercrud.browser/domain :domain/fiddle-database :database/uri]) (:branch ctx))]))
 
 (defn schema-request [dbval]
-  (->QueryRequest '[:find [(pull ?attr [*
+  (->QueryRequest '[:in $ :find [(pull ?attr [*
                                         {:db/valueType [:db/ident]
                                          :db/cardinality [:db/ident]
                                          :db/unique [:db/ident]}]) ...]
-                    :where [:db.part/db :db.install/attribute ?attr]]
+                    :where
+                    [:db.part/db :db.install/attribute ?attr]
+                    [(hyperfiddle.query/attr-not-archived? $ ?attr)]]
                   [dbval]))
 
 (defn schema-requests-for-link [ctx]
