@@ -25,6 +25,13 @@
                    (conj acc kv)))
                {})))
 
+(defn merge-by [f as bs]
+  (->> (merge
+         (group-by f as)
+         (group-by f bs))
+       vals
+       (apply concat)))
+
 (defn update-existing [m k f & args]
   (if (get m k)
     (apply update m k f args)

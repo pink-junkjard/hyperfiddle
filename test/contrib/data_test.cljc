@@ -1,7 +1,9 @@
 (ns contrib.data-test
-  (:require [clojure.test :refer [deftest is]]
-            [contrib.data :refer [cond-let map-pad pad rtrim-coll fix-arity fvor take-to
-                                  compare-by-index ancestry-common ancestry-divergence]]))
+  (:require
+    [clojure.test :refer [deftest is]]
+    [contrib.string :refer [blank->nil]]
+    [contrib.data :refer [cond-let map-pad pad rtrim-coll fix-arity fvor take-to
+                          compare-by-index ancestry-common ancestry-divergence merge-by]]))
 
 
 (comment
@@ -78,3 +80,14 @@
   (is (= (ancestry-divergence [0 :fiddle/links :link/fiddle] [0]) '(:fiddle/links :link/fiddle)))
   (is (= (ancestry-divergence [0 :fiddle/links :link/fiddle] []) '(0 :fiddle/links :link/fiddle)))
   )
+
+(deftest merge-by-1
+  []
+  (is (= (merge-by (juxt :link/rel (comp blank->nil :link/path))
+                   [{:link/rel :hf/edit :link/path nil}
+                    {:link/rel :hf/edit :link/path ":reg/gender"}
+                    {:link/rel :hf/edit :link/path ":reg/gender :reg/shirt-size"}]
+                   [{:link/rel :hf/edit :link/path ":reg/gender" :link/extra-stuff true}])
+         '({:link/rel :hf/edit, :link/path nil}
+            {:link/rel :hf/edit, :link/path ":reg/gender", :link/extra-stuff true}
+            {:link/rel :hf/edit, :link/path ":reg/gender :reg/shirt-size"}))))
