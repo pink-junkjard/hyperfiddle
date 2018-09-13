@@ -64,11 +64,11 @@
 
 (defn ^:export select-all "List[Link]. Find the closest match."
   ; Not reactive! Track it outside. (r/track data/select-all ctx rel ?class)
-  ([ctx]
+  ([ctx] {:pre [ctx]}
    (->> @(r/fmap :fiddle/links (:hypercrud.browser/fiddle ctx)) ; Reaction deref is why this belongs in a track
         (filter (comp (partial deps-satisfied? ctx)
                       link/read-path :link/path))))
-  ([ctx rel] {:pre [rel]}
+  ([ctx rel] {:pre [ctx rel]}
    (->> (select-all ctx)
         (filter #(= rel (:link/rel %)))))
   ([ctx rel ?corcs]
@@ -86,6 +86,7 @@
       (left (str/format "Too many links matched (%s) for rel: %s class: %s" n (pr-str rel) (pr-str class))))))
 
 (defn ^:export select-here+ [ctx rel & [?corcs]]
+  {:pre [ctx]}
   (-> (select-all ctx rel ?corcs)
       (->> (filter (comp (partial = (:hypercrud.browser/path ctx)) link/read-path :link/path)))
       (->> (validate-one+r rel ?corcs))))

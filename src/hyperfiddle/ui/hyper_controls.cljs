@@ -19,8 +19,10 @@
         [tooltip-thick (if help-md [:div.hyperfiddle.docstring [contrib.ui/markdown help-md]])
          [:label.hyperfiddle (select-keys props [:on-click :class]) label (if help-md [:sup "†"])]]))
 
-    (let [ctx (:hypercrud.browser/parent ctx)]              ; dbid links are at parent path
-      (if-let [new (data/select-here ctx :hf/new)]
+    ; dbid links are at parent path, but we don't always have a parent #543
+    (let [ctx (:hypercrud.browser/parent ctx)
+          new (some-> ctx (data/select-here :hf/new))]
+      (if new
         [hyperfiddle.ui/ui-from-link new ctx props "new"]))))
 
 (defn attribute-label [_ ctx & [props]]
