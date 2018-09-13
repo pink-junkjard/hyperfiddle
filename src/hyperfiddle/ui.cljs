@@ -244,37 +244,33 @@ User renderers should not be exposed to the reaction."
           error-comp (ui-error/error-comp ctx)
           r+route (r/fmap (r/partial routing/build-route' ctx) link-ref) ; need to re-focus from the top
           link-props @(r/track routing/build-link-props @r+route ctx props)] ; handles :class and :tooltip props
-      (when-not (:hidden link-props)
-        (let [style {:color nil #_(connection-color ctx (cond
-                                                          (system-link? (:db/id @link-ref)) 60
-                                                          :else 40))}
-              props (-> link-props
-                        (assoc :style style)
-                        (update :class css (:class props))
-                        (merge (dissoc props :class :tooltip))
-                        (dissoc :hidden))]
-          (cond
-            @(r/fmap (comp boolean :link/tx-fn) link-ref)
-            (let [props (update props :class css "hf-auto-nav")] ; should this be in popover-cmp? what is this class? – unify with semantic css
-              [popover-cmp link-ref ctx visual-ctx props @(r/track prompt link-ref ?label)])
+      (let [style {:color nil #_(connection-color ctx (cond (system-link? (:db/id @link-ref)) 60 :else 40))}
+            props (-> link-props
+                      (assoc :style style)
+                      (update :class css (:class props))
+                      (merge (dissoc props :class :tooltip)))]
+        (cond
+          @(r/fmap (comp boolean :link/tx-fn) link-ref)
+          (let [props (update props :class css "hf-auto-nav")] ; should this be in popover-cmp? what is this class? – unify with semantic css
+            [popover-cmp link-ref ctx visual-ctx props @(r/track prompt link-ref ?label)])
 
-            @(r/fmap (r/comp (r/partial = :hf/iframe) :link/rel) link-ref)
-            ; link-props swallows bad routes (shorts them to nil),
-            ; all errors will always route through as (either/right nil)
-            [stale/loading (stale/can-be-loading? ctx) (fmap #(router/assoc-frag % (:frag props)) @r+route) ; what is this frag noise?
-             (fn [e] [error-comp e])
-             (fn [route]
-               (let [iframe (or (::custom-iframe props) iframe)]
-                 [iframe ctx (-> props                      ; flagged - :class
-                                 (assoc :route route)
-                                 (dissoc props :tooltip ::custom-iframe)
-                                 (update :class css (css-slugify @(r/fmap auto-link-css link-ref))))]))]
+          @(r/fmap (r/comp (r/partial = :hf/iframe) :link/rel) link-ref)
+          ; link-props swallows bad routes (shorts them to nil),
+          ; all errors will always route through as (either/right nil)
+          [stale/loading (stale/can-be-loading? ctx) (fmap #(router/assoc-frag % (:frag props)) @r+route) ; what is this frag noise?
+           (fn [e] [error-comp e])
+           (fn [route]
+             (let [iframe (or (::custom-iframe props) iframe)]
+               [iframe ctx (-> props                        ; flagged - :class
+                               (assoc :route route)
+                               (dissoc props :tooltip ::custom-iframe)
+                               (update :class css (css-slugify @(r/fmap auto-link-css link-ref))))]))]
 
-            :else [tooltip (tooltip-props (:tooltip props))
-                   (let [props (dissoc props :tooltip)]
-                     ; what about class - flagged
-                     [anchor ctx props @(r/track prompt link-ref ?label)])]
-            ))))))
+          :else [tooltip (tooltip-props (:tooltip props))
+                 (let [props (dissoc props :tooltip)]
+                   ; what about class - flagged
+                   [anchor ctx props @(r/track prompt link-ref ?label)])]
+          )))))
 
 (defn ^:export link "Relation level link renderer. Works in forms and lists but not tables." ; this is dumb, use a field renderer
   [rel class ctx & [?label props]]                          ; path should be optional, for disambiguation only. Naked can be hard-linked in markdown?
