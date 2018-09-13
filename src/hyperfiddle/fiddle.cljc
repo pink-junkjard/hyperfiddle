@@ -45,7 +45,7 @@
             nil)
 
         ; apply userland tweaks
-        b (merge-with #(or (blank->nil %1) %2) a link)
+        b (merge-with #(or %2 (blank->nil %1)) a link)
 
         ; Shadow the fiddle
         c (condp contains? rel
