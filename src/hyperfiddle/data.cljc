@@ -17,7 +17,7 @@
   {:pre [(not (r/reactive? row))]}
   ; This keyfn is very tricky, read https://github.com/hyperfiddle/hyperfiddle/issues/341
   (-> (if (or (vector? row) (seq? row))                     ; todo should probably inspect fields instead of seq
-        (map #(partial stable-relation-key ctx) row)
+        (map (partial stable-relation-key ctx) row)
         (stable-relation-key ctx row))
       hash))
 
