@@ -9,6 +9,9 @@
     [contrib.string :refer [empty->nil]]
     [contrib.try$ :refer [try-either]]
     [hypercrud.browser.context :as context]
+    [hyperfiddle.domain :as domain]
+    [hyperfiddle.runtime :as runtime]
+    [hyperfiddle.security :as security]
     [hyperfiddle.tempid :refer [smart-entity-identifier]]))
 
 
@@ -46,9 +49,15 @@
               :db.cardinality/many (map (partial smart-entity-identifier ctx) (get entity attr-ident))))]
     (on-change->tx ctx o new-val)))
 
-(defn writable-entity? [entity-val]
-  ; If the db/id was not pulled, we cannot write through to the entity
-  (cljs.core/boolean (:db/id entity-val)))
+(defn writable-entity? [ctx]
+  (let [m @(get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data])]
+    (and
+      ; If the db/id was not pulled, we cannot write through to the entity
+      (boolean (:db/id m))
+      (let [dbname (context/dbname ctx)
+            hf-db (domain/dbname->hfdb dbname (:hypercrud.browser/domain ctx))
+            subject @(runtime/state (:peer ctx) [::runtime/user-id])]
+        (security/writable-entity? hf-db subject m)))))
 
 (let [on-change (fn [ctx o n]
                   (->> (on-change->tx ctx o n)
@@ -56,6 +65,6 @@
   (defn entity-props
     ([props ctx]
      (-> (assoc props :on-change (r/partial on-change ctx))
-         (update :read-only #(or % (not @(r/fmap writable-entity? (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data])))))))
+         (update :read-only #(or % (not @(r/track writable-entity? ctx))))))
     ; val is complected convenience arity, coincidentally most consumers need to assoc :value
     ([val props ctx] (entity-props (assoc props :value val) ctx))))

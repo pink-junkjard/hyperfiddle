@@ -6,7 +6,7 @@
     [contrib.ui :refer [debounced]]
     [hypercrud.browser.context :as context]
     [hyperfiddle.ui :refer [field markdown]]
-    [hyperfiddle.ui.util :refer [entity-props readonly->disabled on-change->tx writable-entity? entity-change->tx]]))
+    [hyperfiddle.ui.util :refer [readonly->disabled on-change->tx entity-change->tx]]))
 
 
 (def special-attrs #{:db/ident :db/cardinality :db/valueType})

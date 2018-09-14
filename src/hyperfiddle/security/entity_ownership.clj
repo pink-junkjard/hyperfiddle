@@ -281,16 +281,29 @@
                                       [[:db/add e :hyperfiddle/owners subject]]))}]
       (validate-write-entity-ownership config db tx))))
 
-#_(defn write-entity-ownership [hf-db subject tx]
-    (build-write-entity-ownership
-      {:can-merge? (fn [& es]
-                     (->> es
-                          (map :hyperfiddle/owners)
-                          (into #{})
-                          (count)
-                          (= 1)))
-       :can-write? (fn [hf-db db subject e]
-                     (and (not (nil? subject))
-                          (or (nil? e)                      ; entity is new
-                              (= subject (:hypercrud.security/owner e)))))
-       :generate-owner (fn [hf-db db subject e] [[:db/add e :hyperfiddle/owners subject]])}))
+(defn write-entity-ownership [hf-db subject tx]
+  (let [db (d/db (d/connect (str (:database/uri hf-db))))
+        parent-lookup (build-parent-lookup db)
+        root-subjects (-> (into #{} (:hyperfiddle/owners hf-db))
+                          (conj security/root))
+        owners (fn [eid]
+                 (let [eid (or (parent-lookup eid) eid)
+                       e (d/entity db eid)]
+                   (into #{} (:hyperfiddle/owners e))))
+        has-permissions? (if (contains? root-subjects subject)
+                           (constantly true)
+                           #(contains? % subject))
+        config {:can-merge? (fn [eid & rest]
+                              (let [first-owners (owners eid)]
+                                (and (has-permissions? first-owners)
+                                     ; unless the perms are identical, the entities cannot be merged
+                                     (every? #(= first-owners (owners %)) rest))))
+                :generate-owner (if (contains? root-subjects subject)
+                                  (fn [e db-part]
+                                    (when-not (contains? #{:db.part/tx} db-part)
+                                      [[:db/add e :hyperfiddle/owners subject]]))
+                                  (fn [e db-part]
+                                    (when (contains? #{:db.part/tx} db-part)
+                                      (throw (security/tx-validation-failure)))
+                                    [[:db/add e :hyperfiddle/owners subject]]))}]
+    (validate-write-entity-ownership config db tx)))

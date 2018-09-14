@@ -51,7 +51,7 @@
 (defn magic-new [val ctx props]
   (let [state (r/atom nil)]
     (fn [val ctx props]
-      (let [read-only (r/fmap (r/comp not writable-entity?) (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data]))]
+      (let [read-only (not @(r/track writable-entity? ctx))]
         [:div
          [contrib.ui/keyword (-> (assoc props
                                    :placeholder ":db/ident"
@@ -61,8 +61,8 @@
          (let [props (-> (assoc props
                            :magic-new-mode true
                            :on-blur (r/partial -change! state ctx)
-                           :read-only (let [_ [@state @read-only]] ; force reactions
-                                        (or (nil? @state) @read-only))
+                           :read-only (let [_ [@state]] ; force reactions
+                                        (or (nil? @state) read-only))
                            :placeholder (pr-str :gender/female))
                          readonly->disabled)]
            ; Uncontrolled widget on purpose i think

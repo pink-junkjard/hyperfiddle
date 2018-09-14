@@ -21,6 +21,7 @@
             [hyperfiddle.actions :as actions]
             [hyperfiddle.domain]
             [hyperfiddle.runtime :as runtime]
+            [hyperfiddle.security.domains]
             [promesa.core :as p]
     #?(:cljs [re-com.tabs :refer [horizontal-tabs]])))
 
@@ -47,9 +48,11 @@
                     :domain/aliases
                     {:domain/databases [:domain.database/name
                                         {:domain.database/record [:database/uri
+                                                                  :database.custom-security/client
                                                                   {:database/write-security [:db/ident]}
                                                                   :hyperfiddle/owners]}]
                      :domain/fiddle-database [:database/uri
+                                              :database.custom-security/client
                                               {:database/write-security [:db/ident]}
                                               :hyperfiddle/owners]}
                     :domain/disable-javascript

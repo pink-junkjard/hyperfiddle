@@ -1,6 +1,7 @@
 (ns hyperfiddle.ide.fiddles.topnav
   (:require
     [cats.core :refer [fmap]]
+    [cats.monad.either :as either]
     [clojure.string :as string]
     [contrib.ct :refer [unwrap]]
     [contrib.reactive :as r]
@@ -115,11 +116,15 @@
         (fake-managed-anchor :hf/iframe :stage ctx "stage" {:tooltip [nil tooltip] :class (when dirty? "stage-dirty")}))
       (ui/link :hf/edit :new-fiddle ctx "new-fiddle" (let [hf-db @(hyperfiddle.runtime/state (:peer ctx) [:hyperfiddle.runtime/domain :domain/fiddle-database])
                                                            subject @(hyperfiddle.runtime/state (:peer ctx) [:hyperfiddle.runtime/user-id])
-                                                           writes-allowed? (hyperfiddle.security/attempt-to-transact? hf-db subject)
+                                                           writes-allowed?+ (security/attempt-to-transact? hf-db subject)
                                                            anonymous? (nil? subject)]
-                                                       {:disabled #_false (not writes-allowed?)
-                                                        :tooltip (cond (and anonymous? (not writes-allowed?)) [:warning "Please login"]
-                                                                       (not writes-allowed?) [:warning "Writes restricted"])}))
+                                                       {:disabled (either/branch writes-allowed?+ (constantly true) not) ; todo this logic could be factored out into ui-from-link
+                                                        :tooltip (either/branch
+                                                                   writes-allowed?+
+                                                                   (fn [e] [:warning "Misconfigured db security"])
+                                                                   (fn [writes-allowed?]
+                                                                     (cond (and anonymous? (not writes-allowed?)) [:warning "Please login"]
+                                                                           (not writes-allowed?) [:warning "Writes restricted"])))}))
       [tooltip {:label "Domain administration"} (ui/link :hf/edit :domain ctx "domain")]
       (if @(runtime/state (:peer ctx) [::runtime/user-id])
         (let [{:keys [:hypercrud.browser/data]} @(hyperfiddle.data/browse+ ctx :hf/iframe :account)]
@@ -141,15 +146,22 @@
 (letfn [(toggle-auto-transact! [ctx selected-uri]
           (runtime/dispatch! (:peer ctx) [:toggle-auto-transact @selected-uri]))]
   (defn ^:export stage-ui-buttons [selected-uri stage ctx]
-    (let [writes-allowed? (let [hf-db (domain/db-for-uri @selected-uri @(runtime/state (:peer ctx) [::runtime/domain]))
-                                subject @(runtime/state (:peer ctx) [::runtime/user-id])]
-                            (security/attempt-to-transact? hf-db subject))
+    (let [writes-allowed?+ (let [hf-db (domain/uri->hfdb @selected-uri @(runtime/state (:peer ctx) [::runtime/domain]))
+                                 subject @(runtime/state (:peer ctx) [::runtime/user-id])]
+                             (security/attempt-to-transact? hf-db subject))
           anonymous? (nil? @(runtime/state (:peer ctx) [::runtime/user-id]))]
       (fragment
-        [tooltip (cond (and (not writes-allowed?) anonymous?) {:status :warning :label "Please login"}
-                       (not writes-allowed?) {:status :warning :label "Writes restricted"}
-                       (empty? @stage) {:status :warning :label "no changes"})
-         (let [disabled? (or (not writes-allowed?) (empty? @stage))]
+        [tooltip (either/branch
+                   writes-allowed?+
+                   (fn [e] {:status :warning :label "Misconfigured db security"})
+                   (fn [writes-allowed?]
+                     (cond (and (not writes-allowed?) anonymous?) {:status :warning :label "Please login"}
+                           (not writes-allowed?) {:status :warning :label "Writes restricted"}
+                           (empty? @stage) {:status :warning :label "no changes"})))
+         (let [disabled? (either/branch
+                           writes-allowed?+
+                           (constantly true)
+                           (fn [writes-allowed?] (or (not writes-allowed?) (empty? @stage))))]
            [:button {:disabled disabled?
                      :style (if disabled? {:pointer-events "none"})
                      :on-click (fn []
@@ -160,10 +172,18 @@
                                    (runtime/dispatch! (:peer ctx) action)))}
             "transact!"])]
         " "
-        [tooltip (cond (and anonymous? (not writes-allowed?)) {:status :warning :label "Please login"}
-                       (not writes-allowed?) {:status :warning :label "Writes restricted"}
-                       (not (empty? @stage)) {:status :warning :label "please transact! all changes first"})
-         (let [is-disabled (or (not writes-allowed?) (not (empty? @stage)))
+        [tooltip (either/branch
+                   writes-allowed?+
+                   (fn [e] {:status :warning :label "Misconfigured db security"})
+                   (fn [writes-allowed?]
+                     (cond (and anonymous? (not writes-allowed?)) {:status :warning :label "Please login"}
+                           (not writes-allowed?) {:status :warning :label "Writes restricted"}
+                           (not (empty? @stage)) {:status :warning :label "please transact! all changes first"})))
+         (let [is-disabled (either/branch
+                             writes-allowed?+
+                             (constantly true)
+                             (fn [writes-allowed?]
+                               (or (not writes-allowed?) (not (empty? @stage)))))
                is-auto-transact @(runtime/state (:peer ctx) [::runtime/auto-transact @selected-uri])]
            [easy-checkbox {:disabled is-disabled
                            :style (if is-disabled {:pointer-events "none"})

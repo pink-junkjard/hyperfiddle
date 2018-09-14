@@ -148,8 +148,13 @@
 
 (defn should-transact!? [uri get-state]
   (and (get-in (get-state) [::runtime/auto-transact uri])
-       (let [hf-db (domain/db-for-uri uri (::runtime/domain (get-state)))]
-         (security/attempt-to-transact? hf-db (get-in (get-state) [::runtime/user-id])))))
+       (let [hf-db (domain/uri->hfdb uri (::runtime/domain (get-state)))] ; todo this needs sourced from context domain for topnav
+         (either/branch
+           (security/attempt-to-transact? hf-db (get-in (get-state) [::runtime/user-id]))
+           #(do
+              (timbre/error %)
+              false)
+           identity))))
 
 (defn with [rt invert-route branch uri tx]
   (fn [dispatch! get-state]

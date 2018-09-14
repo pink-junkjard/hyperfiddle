@@ -2,7 +2,7 @@
   (:require [datomic.api :as d]
             [hyperfiddle.io.transact :as transact]
             [hyperfiddle.security :as security]
-            [hyperfiddle.security.entity-ownership :as entity-ownership]))
+            [hyperfiddle.security.domains]))
 
 
 (defn provision! [uri owners domains-uri subject]
@@ -16,8 +16,9 @@
 ; todo drive both this AND prod from the same source, otherwise they will diverge over time
 (def domains-schema
   [{:db/ident :database/uri :db/valueType :db.type/uri :db/cardinality :db.cardinality/one :db/unique :db.unique/identity}
-   {:db/ident :database/custom-write-sec :db/valueType :db.type/string :db/cardinality :db.cardinality/one}
    {:db/ident :database/write-security :db/valueType :db.type/ref :db/cardinality :db.cardinality/one}
+   {:db/ident :database.custom-security/client :db/valueType :db.type/string :db/cardinality :db.cardinality/one}
+   {:db/ident :database.custom-security/server :db/valueType :db.type/string :db/cardinality :db.cardinality/one}
 
    {:db/ident :hyperfiddle.security/owner-only}
    {:db/ident :hyperfiddle.security/authenticated-users-only}
@@ -45,7 +46,8 @@
     @(d/transact conn domains-schema)
     @(d/transact conn [{:database/uri uri
                         :database/write-security ::security/custom
-                        :database/custom-write-sec (str `entity-ownership/write-domains)
+                        :database.custom-security/client (str `hyperfiddle.security.domains/client)
+                        :database.custom-security/server (str `hyperfiddle.security.domains/server)
                         :hyperfiddle/owners owners}])))
 
 (defn deprovision! [uri domains-uri subject]

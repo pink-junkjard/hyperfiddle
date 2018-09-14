@@ -4,7 +4,7 @@
             [hyperfiddle.integration-fixtures :as fixtures]
             [hyperfiddle.io.transact :as transact]
             [hyperfiddle.security :as security]
-            [hyperfiddle.security.entity-ownership :as entity-ownership])
+            [hyperfiddle.security.domains])
   (:import (java.util UUID)))
 
 
@@ -47,7 +47,7 @@
      (fixtures/db-fixture fixtures/test-uri #{db-owner} db-owner
                           :schema schema
                           :security ::security/custom
-                          :custom-write-sec (str `entity-ownership/write-domains))]))
+                          :custom-security {:server (str `hyperfiddle.security.domains/server)})]))
 
 (deftest test-schema-changes []
   (testing "installing new attribute"

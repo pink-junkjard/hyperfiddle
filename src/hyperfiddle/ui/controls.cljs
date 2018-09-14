@@ -44,7 +44,7 @@
                   "false" false))]
   (defn ^:export tristate-boolean [val ctx & [props]]
     (let [option-props (-> (readonly->disabled props)
-                           (update :disabled #(or % (not @(r/fmap writable-entity? (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data]))))))]
+                           (update :disabled #(or % (not @(r/track writable-entity? ctx)))))]
       [:select (-> (dissoc props :label-fn)
                    (assoc :value (if (nil? val) "" (str val))
                           :on-change (r/comp

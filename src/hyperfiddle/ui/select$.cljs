@@ -98,7 +98,7 @@
   (let [entity (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data])] ; how can this be loading??
     (or (boolean (:read-only props))
         @(r/fmap nil? entity)                               ; no value at all
-        (not @(r/fmap writable-entity? entity)))))
+        (not @(r/track writable-entity? ctx)))))
 
 (let []
   (defn select "This arity should take a selector string (class) instead of Right[Reaction[Link]], blocked on removing path backdoor"

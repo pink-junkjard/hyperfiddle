@@ -4,8 +4,7 @@
     #?(:clj
             [datomic.api :as d])
             [hyperfiddle.io.http.core :refer [http-request!]]
-    #?(:clj
-            [hyperfiddle.security :as security])
+            [hyperfiddle.security :as security]
             [promesa.core :as p]
             [taoensso.timbre :as timbre]))
 
@@ -18,14 +17,14 @@
                  :hyperfiddle.security/owner-only security/write-owner-only
                  :hyperfiddle.security/authenticated-users-only security/write-authenticated-users-only
                  :hyperfiddle.security/allow-anonymous security/write-allow-anonymous
-                 :hyperfiddle.security/custom (-> (memoized-safe-eval-string (:database/custom-write-sec hf-db))
+                 :hyperfiddle.security/custom (-> (memoized-safe-eval-string (:database.custom-security/server hf-db))
                                                   (either/branch
                                                     (fn [e]
                                                       (timbre/error e)
                                                       (throw (ex-info "Misconfigured database security" {:hyperfiddle.io/http-status-code 500
                                                                                                          :uri uri
                                                                                                          :additional-info (.getMessage e)})))
-                                                    identity)))]
+                                                    ::security/process-tx)))]
          (f hf-db subject tx)))))
 
 #?(:clj
