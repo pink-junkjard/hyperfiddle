@@ -2,7 +2,7 @@
   (:require
     [datomic.api :as d]
     [hyperfiddle.security :as security]
-    [hypercrud.util.identity :refer [tempid?]]
+    [hyperfiddle.tempid :refer [tempid?]]
     [loom.alg :as alg]
     [loom.graph :as graph]))
 

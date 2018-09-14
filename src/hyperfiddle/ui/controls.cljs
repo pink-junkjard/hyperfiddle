@@ -8,7 +8,7 @@
     [contrib.ui.recom-date :refer [recom-date]]
     [hypercrud.browser.context :as context]
     [hyperfiddle.data :as data]
-    [hyperfiddle.tempid :refer [stable-relation-key smart-entity-identifier]]
+    [hyperfiddle.tempid :refer [tempid? underlying-tempid stable-relation-key smart-entity-identifier]]
     [hyperfiddle.ui.select$ :refer [select]]
     [hyperfiddle.ui.util :refer [entity-props readonly->disabled on-change->tx writable-entity?]]))
 
@@ -91,8 +91,9 @@
      (if-let [link (data/select-here ctx :hf/affix)]
        [hyperfiddle.ui/ui-from-link link ctx props "affix"])
 
-     (if-let [link (data/select-here ctx :hf/remove)]
-       [hyperfiddle.ui/ui-from-link link ctx props "remove"])
+     (if-not (underlying-tempid ctx val)
+       (if-let [link (data/select-here ctx :hf/remove)]
+         [hyperfiddle.ui/ui-from-link link ctx props "remove"]))
 
      (if-let [link (data/select-here ctx :hf/detach)]
        [hyperfiddle.ui/ui-from-link link ctx props "detach"])

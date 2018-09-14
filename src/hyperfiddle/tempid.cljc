@@ -9,8 +9,14 @@
     [hyperfiddle.runtime :as runtime]))
 
 
-(defn underlying-tempid [ctx {:keys [:db/id :db/ident]}]
-  (get (hypercrud.browser.context/ctx->id-lookup ctx) id))
+(defn tempid? [id]
+  (string? id))
+
+(defn underlying-tempid [ctx id]
+  ; This muddled thinking is because datomic doesn't pull tempids, see hack in hydrate-request*
+  (cond
+    (tempid? id) id
+    :else (get (hypercrud.browser.context/ctx->id-lookup ctx) id)))
 
 (defn smart-entity-identifier "Generates the best Datomic lookup ref for a given pull."
   [ctx {:keys [:db/id :db/ident] :as v}]                    ; v can be a ThinEntity or a pull i guess
@@ -21,7 +27,7 @@
   ;(assert (::field/data-has-id? @(:hypercrud.browser/field ctx)) "smart-identity works only on refs")
 
   (let [identity-lookup nil]
-    (or (if (underlying-tempid ctx v) id)                   ; the lookups are no good yet, must use the dbid (not the tempid, actions/with will handle that reversal)
+    (or (if (underlying-tempid ctx id) id)                  ; the lookups are no good yet, must use the dbid (not the tempid, actions/with will handle that reversal)
         ident
         identity-lookup
         id
@@ -34,7 +40,7 @@
   [ctx {:keys [:db/id :db/ident] :as v}]
   ; https://github.com/hyperfiddle/hyperfiddle/issues/563 - Regression: Schema editor broken due to smart-id
   ; https://github.com/hyperfiddle/hyperfiddle/issues/345 - Form jank when tempid entity transitions to real entity
-  (or (underlying-tempid ctx v)                             ; prefer the tempid for stability
+  (or (underlying-tempid ctx id)                            ; prefer the tempid for stability
       (smart-entity-identifier ctx v)))
 
 (defn stable-relation-key "Stable key that works on scalars too." [ctx v]

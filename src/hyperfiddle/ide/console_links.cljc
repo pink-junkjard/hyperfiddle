@@ -34,21 +34,21 @@
    :hypercrud/sys? true
    :link/rel :hf/edit
    :link/path (path->str path)
-   :link/fiddle (system-fiddle/fiddle-system-edit dbname)})
+   :link/fiddle (system-fiddle/console-edit dbname)})
 
 (defn hf-new [path dbname]
   {:db/id (keyword "hyperfiddle.browser.system-link" (str "new-" (hash path)))
    :hypercrud/sys? true
    :link/rel :hf/new
    :link/path (blank->nil path)
-   :link/fiddle (system-fiddle/fiddle-system-new dbname)})
+   :link/fiddle (system-fiddle/console-new dbname)})
 
 (defn hf-affix [path dbname]
   {:db/id (keyword "hyperfiddle.browser.system-link" (str "affix-" (hash path)))
    :hypercrud/sys? true
    :link/rel :hf/affix
    :link/path (path->str path)
-   :link/fiddle (system-fiddle/fiddle-system-affix dbname)})
+   :link/fiddle (system-fiddle/console-affix dbname)})
 
 ; These are all ref:    :reg/gender, {:reg/gender [:db/id]}, {:reg/gender [:db/ident]}
 ; These are all id:     :db/id, :db/ident
@@ -59,6 +59,21 @@
 ; hf/edit     id, ref
 ; hf/detach   ref
 ; hf/remove   id
+
+
+(defn hf-remove? [id parent-path]
+  ;
+
+  ; remove-[] is allowed in edit entity
+  ; in hf/new, it is not. (If it is a tempid, it is not – better way) - discard button is the same effect.
+  ; But we don't know yet, because we are an empty form sometimes.
+  ; So we can't simply generate links by the field, do we need to know the context?
+  ; Tempid detection works in inline-branch cases, but do we have an id?
+  ; If we don't have an id, the link isn't even valid ... what do we see?
+  ; Any given fiddle can be passed a tempid, or not, so we can't know here if we need remove or not.
+  ; We should just give it, and the link should not be satisfied or something. Its just not valid on tempids
+  ; The control can just not show it in that case i guess.
+  (and id (empty? parent-path)))
 
 (defn nested-links-for-field
   ([q dbname schema field parent-path parent-has-id]
@@ -73,17 +88,17 @@
      ; editable-ref, really. If we don't know identity we can't edit or link to it.
 
      (let [fc (= datascript.parser.FindColl (type (:qfind q)))
-           id (field/identity-segment? field)
+           id-field (field/identity-segment? field)
            ref (::field/data-has-id? field)
-           id-under-ref (and id parent-has-id)
+           id-under-ref (and id-field parent-has-id)
            ref-under-ref (and ref parent-has-id)]
        (->> [(if ref (hf-edit child-path dbname))
              ;(if (and id (seq parent-path)) (hf-edit parent-path dbname)) ; parent ref already did it
-             (if (and ref (not id)) (hf-detach child-path))
-             (if (and id (empty? parent-path)) (hf-remove parent-path)) ; remove-[] is allowed
+             (if (and ref (not id-field)) (hf-detach child-path))
+             (if (hf-remove? id-field parent-path) (hf-remove parent-path))
              (if ref-under-ref (hf-affix child-path dbname))
              ;(if (and id-under-ref (seq parent-path)) (hf-affix parent-path dbname)) ; parent ref already did it
-             (if (and id (empty? parent-path) (not parent-has-id) fc) (hf-new parent-path dbname)) ; Insufficient condition to distinguish from scalar and entity
+             (if (and id-field (empty? parent-path) (not parent-has-id) fc) (hf-new parent-path dbname)) ; Insufficient condition to distinguish from scalar and entity
              ]
             (concat
               (if-not (field/children-identity-only? field)

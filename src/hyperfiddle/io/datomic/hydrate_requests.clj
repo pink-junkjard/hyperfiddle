@@ -7,7 +7,7 @@
             [hypercrud.types.Err :refer [->Err]]
             [hypercrud.types.QueryRequest]
             [hypercrud.util.branch :as branch]
-            [hypercrud.util.identity :refer [tempid?]]
+            [hyperfiddle.tempid :refer [tempid?]]
             [hyperfiddle.io.bindings]                       ; userland
             [taoensso.timbre :as timbre])
   (:import (hypercrud.types.DbVal DbVal)

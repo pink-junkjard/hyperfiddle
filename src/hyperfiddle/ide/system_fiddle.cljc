@@ -17,19 +17,19 @@
 ; these need to be thick/hydrated params bc we are manufacturing a pulled tree here.
 
 ; TODO: manufacture pull from parent pull
-(defn fiddle-system-edit [dbname]
+(defn console-edit [dbname]
   {:fiddle/ident (keyword "hyperfiddle.system" (str "edit-" dbname))
    :fiddle/type :entity
    :fiddle/pull-database dbname
    :fiddle/renderer (load-resource "ide/console_renderer.cljs")})
 
-(defn fiddle-system-new [dbname]
+(defn console-new [dbname]
   {:fiddle/ident (keyword "hyperfiddle.system" (str "new-" dbname))
    :fiddle/type :entity
    :fiddle/pull-database dbname
    :fiddle/renderer (load-resource "ide/console_renderer.cljs")})
 
-(defn fiddle-system-affix [dbname]
+(defn console-affix [dbname]
   {:fiddle/ident (keyword "hyperfiddle.system" (str "affix-" dbname))
    :fiddle/type :entity
    :fiddle/pull-database dbname
@@ -48,9 +48,9 @@
                                (= name' "not-found") errors/not-found
                                (= name' "unauthorized") errors/unauthorized
                                (= name' "live") hf-live
-                               (str/starts-with? name' "edit-") (fiddle-system-edit (str/strip-prefix name' "edit-"))
-                               (str/starts-with? name' "new-") (fiddle-system-new (str/strip-prefix name' "new-"))
-                               (str/starts-with? name' "affix-") (fiddle-system-affix (str/strip-prefix name' "affix-")))
+                               (str/starts-with? name' "edit-") (console-edit (str/strip-prefix name' "edit-"))
+                               (str/starts-with? name' "new-") (console-new (str/strip-prefix name' "new-"))
+                               (str/starts-with? name' "affix-") (console-affix (str/strip-prefix name' "affix-")))
         "hyperfiddle.schema" (schema/schema name')
         "hyperfiddle.schema.db-cardinality-options" (schema/db-cardinality-options name')
         "hyperfiddle.schema.db-unique-options" (schema/db-unique-options name')
