@@ -19,6 +19,7 @@
             [hypercrud.types.Err :as Err]
     #?(:cljs [hypercrud.ui.stale :as stale])
             [hyperfiddle.actions :as actions]
+            [hyperfiddle.domain]
             [hyperfiddle.runtime :as runtime]
             [promesa.core :as p]
     #?(:cljs [re-com.tabs :refer [horizontal-tabs]])))
@@ -136,7 +137,7 @@
 #?(:cljs
    (defn ^:export staging [ctx & [child]]
      (let [source-uri (runtime/state (:peer ctx) [::runtime/domain :domain/fiddle-database :database/uri])
-           selected-uri (r/atom @source-uri)
+           selected-uri (r/atom (hyperfiddle.domain/dbname->uri "$" @(runtime/state (:peer ctx) [::runtime/domain])))
            change-tab #(reset! selected-uri %)]
        (fn [ctx & [child]]
          (let [non-empty-uris (->> @(runtime/state (:peer ctx) [::runtime/partitions nil :stage])
