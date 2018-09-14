@@ -79,6 +79,4 @@
                     :link/fiddle (db-attribute-edit $db)}
                    {:db/id :system-anchor-new               ; XXX
                     :link/rel :hf/new
-                    :link/fiddle (db-attribute-edit $db)}
-                   {:db/id :system-anchor-remove            ; XXX
-                    :link/rel :hf/remove}}})
+                    :link/fiddle (db-attribute-edit $db)}}})
