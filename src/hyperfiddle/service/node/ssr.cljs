@@ -1,5 +1,6 @@
 (ns hyperfiddle.service.node.ssr
   (:require
+    [cats.monad.either :as either]
     [contrib.ct :refer [unwrap]]
     [contrib.data :refer [map-values]]
     [contrib.reactive :as r]
@@ -155,7 +156,11 @@
         (p/then (fn []
                   (let [auto-transact (->> @(runtime/state rt [::runtime/domain :domain/databases])
                                            (map :domain.database/record)
-                                           (map (juxt :database/uri #(security/attempt-to-transact? % @(runtime/state rt [::runtime/user-id]))))
+                                           (map (juxt :database/uri (fn [hf-db]
+                                                                      (either/branch
+                                                                        (security/attempt-to-transact? hf-db @(runtime/state rt [::runtime/user-id]))
+                                                                        (constantly false)
+                                                                        identity))))
                                            ; todo domain-uri is an ugly hack
                                            ; we are assuming the security. also users should not need this db all the time
                                            (into {foundation/domain-uri (boolean @(runtime/state rt [::runtime/user-id]))}))]
