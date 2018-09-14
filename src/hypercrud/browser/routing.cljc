@@ -1,6 +1,6 @@
 (ns hypercrud.browser.routing
   (:require
-    [cats.core :as cats :refer [mlet]]
+    [cats.core :as cats :refer [mlet return >>=]]
     [cats.monad.either :as either :refer [left right]]
     [clojure.set :as set]
     [clojure.walk :as walk]
@@ -55,30 +55,30 @@
              ; this is acceptable today (Sep-2018) because changing a route in ANY way assumes the entire iframe will be re-rendered
              (r/track tempid->id route ctx)))
 
-(defn validated-route+ [fiddle route ctx]
-  {:pre [route]}
+(defn validated-route+ [?fiddle ?route ctx]                   ; can validate with link, not just fiddle
   ; We specifically hydrate this deep just so we can validate anchors like this.
-  (let [[_ [$1 :as params]] route]
-    (case (:fiddle/type fiddle)
+  (let [[_ [$1 :as params]] ?route]
+    (case (:fiddle/type ?fiddle)
       :query (let [q (unwrap                                ; todo whats the point of this monad?
                        #(timbre/warn %)
-                       (mlet [q (memoized-safe-read-edn-string (:fiddle/query fiddle))]
+                       (mlet [q (memoized-safe-read-edn-string (:fiddle/query ?fiddle))]
                          (if (vector? q)
                            (cats/return q)
                            (either/left {:message (str "Invalid query '" (pr-str q) "', only vectors supported")}))))]
                (mlet [q-params (q-util/validate-query-params+ q params ctx)]
                  ; Ignore the params, just care that they validated.
-                 (right route)))
+                 (right ?route)))
       :entity (if (not= nil $1)                             ; todo check conn
-                (right route)
+                (right ?route)
                 (left {:message "malformed entity param" :data {:params params}}))
       ; nil means :blank
-      (either/right route))))
+      (either/right ?route))))
 
-(defn build-link-props [+route ctx props]                   ; todo this function needs untangling; iframe ignores most of this
+(defn build-link-props [+?route link ctx props]              ; link is for validation
   ; this is a fine place to eval, put error message in the tooltip prop
   ; each prop might have special rules about his default, for example :visible is default true, does this get handled here?
-  (let [[_ args :as ?route] (unwrap (constantly nil) +route)
+  (let [+route (>>= +?route #(validated-route+ (:link/fiddle link) % ctx))
+        [_ args :as ?route] (unwrap (constantly nil) +route)
         errors (->> [+route] (filter either/left?) (map cats/extract) (into #{}))]
     ; doesn't handle tx-fn - meant for the self-link. Weird and prob bad.
     {:route ?route                                          ; nil means no popover body
@@ -104,7 +104,8 @@
     (->ThinEntity (context/dbname ctx) (smart-entity-identifier ctx v))))
 
 (let [eval-string+ (memoize eval/safe-eval-string+)]
-  (defn ^:export build-route' [ctx {:keys [:link/fiddle :link/tx-fn] :as link}]
+  (defn ^:export build-route' "There may not be a route! Fiddle is sometimes optional"
+    [ctx {:keys [:link/fiddle :link/tx-fn] :as link}]
     (if (and (not fiddle) tx-fn)
       (right nil)                                           ; :hf/remove doesn't have one by default, :hf/new does, both can be customized
       (mlet [fiddle-id (if fiddle
@@ -116,7 +117,7 @@
              f (try-either (f-wrap ctx))
              colored-args (try-either @(r/fmap (r/comp f (r/partial pull->colored-eid ctx)) (or (:hypercrud.browser/data ctx) (r/track identity nil))))
              :let [route (id->tempid (router/canonicalize fiddle-id (normalize-args colored-args)) ctx)]]
-        (validated-route+ fiddle route ctx)))))
+        (return route)))))
 
 (def encode router/encode)
 (def decode router/decode)
