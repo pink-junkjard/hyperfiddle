@@ -1,6 +1,6 @@
 (ns hypercrud.browser.routing
   (:require
-    [cats.core :as cats :refer [mlet return >>=]]
+    [cats.core :as cats :refer [mlet]]
     [cats.monad.either :as either :refer [left right]]
     [clojure.set :as set]
     [clojure.walk :as walk]
@@ -55,7 +55,7 @@
              ; this is acceptable today (Sep-2018) because changing a route in ANY way assumes the entire iframe will be re-rendered
              (r/track tempid->id route ctx)))
 
-(defn validated-route+ [fiddle route ctx]                   ; can validate with link, not just fiddle
+(defn validated-route+ [fiddle route ctx]
   {:pre [route]}
   ; We specifically hydrate this deep just so we can validate anchors like this.
   (let [[_ [$1 :as params]] route]
@@ -75,11 +75,10 @@
       ; nil means :blank
       (either/right route))))
 
-(defn build-link-props [+route link ctx props]              ; link is for validation
+(defn build-link-props [+route ctx props]                   ; todo this function needs untangling; iframe ignores most of this
   ; this is a fine place to eval, put error message in the tooltip prop
   ; each prop might have special rules about his default, for example :visible is default true, does this get handled here?
-  (let [+route (>>= +route #(validated-route+ (:link/fiddle link) % ctx))
-        [_ args :as ?route] (unwrap (constantly nil) +route)
+  (let [[_ args :as ?route] (unwrap (constantly nil) +route)
         errors (->> [+route] (filter either/left?) (map cats/extract) (into #{}))]
     ; doesn't handle tx-fn - meant for the self-link. Weird and prob bad.
     {:route ?route                                          ; nil means no popover body
@@ -117,7 +116,7 @@
              f (try-either (f-wrap ctx))
              colored-args (try-either @(r/fmap (r/comp f (r/partial pull->colored-eid ctx)) (or (:hypercrud.browser/data ctx) (r/track identity nil))))
              :let [route (id->tempid (router/canonicalize fiddle-id (normalize-args colored-args)) ctx)]]
-        (return route)))))
+        (validated-route+ fiddle route ctx)))))
 
 (def encode router/encode)
 (def decode router/decode)
