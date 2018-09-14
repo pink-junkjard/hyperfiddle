@@ -43,12 +43,13 @@
   (when-let [label (some->> (:hypercrud.browser/field ctx) (r/fmap ::field/label) deref)]
     (label-with-docs label (semantic-docstring ctx "Free-hand attribute entry") props)))
 
+(defn -change! [state ctx #_ov v]
+  (let [e @(r/fmap (r/partial smart-entity-identifier ctx)
+                   (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data]))]
+    (context/with-tx! ctx [[:db/add e @state v]])))
+
 (defn magic-new [val ctx props]
-  (let [state (r/atom nil)
-        change! (fn [ctx ov v]
-                  (let [e @(r/fmap (r/partial smart-entity-identifier ctx)
-                                   (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data]))]
-                    (context/with-tx! ctx [[:db/add e @state v]])))]
+  (let [state (r/atom nil)]
     (fn [val ctx props]
       (let [read-only (r/fmap (r/comp not writable-entity?) (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data]))]
         [:div
@@ -58,12 +59,12 @@
                                    :on-change (r/partial reset! state))
                                  readonly->disabled)]
          (let [props (-> (assoc props
-                           :on-change (r/partial change! ctx)
+                           :magic-new-mode true
+                           :on-blur (r/partial -change! state ctx)
                            :read-only (let [_ [@state @read-only]] ; force reactions
                                         (or (nil? @state) @read-only))
                            :placeholder (pr-str :gender/female))
                          readonly->disabled)]
            ; Uncontrolled widget on purpose i think
-           ; Cardinality many is not needed, because as soon as we assoc one value,
-           ; we dispatch through a proper typed control
-           [debounced props contrib.ui/edn])]))))
+           ; Cardinality :many not needed, because as soon as we assoc one value, we rehydrate typed
+           [contrib.ui/edn props])]))))

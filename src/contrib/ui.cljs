@@ -113,7 +113,9 @@
                     new-value))
       initial-state-val (fn [to-string props]
                           {:s-value (to-string (:value props))
-                           :last-valid-value (:value props)})]
+                           :last-valid-value (:value props)})
+      on-blur (fn [state f e]
+                (f (:last-valid-value @state)))]
   (defn validated-cmp [props parse-string to-string cmp & args]
     (let [state (r/atom (initial-state-val to-string props))]
       (reagent/create-class
@@ -124,6 +126,8 @@
                            (update :class css (let [valid? (try (parse-string s-value) true
                                                                 (catch :default e false))]
                                                 (when-not valid? "invalid")))
+                           (update-existing :on-blur (fn [f]
+                                                       (r/partial on-blur state f)))
                            (update :on-change (fn [f]
                                                 (r/comp
                                                   (or f identity)
@@ -132,8 +136,9 @@
          :component-did-update
          (fn [this]
            (let [[_ props parse-string to-string cmp & args] (reagent/argv this)]
-             (when-not (= (:last-valid-value @state) (:value props))
-               (reset! state (initial-state-val to-string props)))))}))))
+             (when-not (:magic-new-mode props)              ; https://github.com/hyperfiddle/hyperfiddle/issues/586
+               (when-not (= (:last-valid-value @state) (:value props))
+                 (reset! state (initial-state-val to-string props))))))}))))
 
 (let [target-value (fn [e] (.. e -target -value))]          ; letfn not working #470
   (defn textarea [props]
