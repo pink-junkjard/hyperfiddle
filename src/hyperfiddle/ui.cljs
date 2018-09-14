@@ -34,7 +34,7 @@
     [hyperfiddle.tempid :refer [smart-entity-identifier stable-relation-key]]
     [hyperfiddle.ui.api]
     [hyperfiddle.ui.controls :as controls]
-    [hyperfiddle.ui.hyper-controls :refer [attribute-label relation-label tuple-label dbid-label magic-new-body magic-new-head]]
+    [hyperfiddle.ui.hyper-controls :refer [attribute-label relation-label tuple-label dbid-label magic-new magic-new-label]]
     [hyperfiddle.ui.popover :refer [popover-cmp]]
     [hyperfiddle.ui.select$]
     [hyperfiddle.ui.sort :as sort]
@@ -82,7 +82,7 @@
       #_#_[:entity _] entity-links
       [:attribute _] (r/constantly (str "no schema for attr: " segment))
 
-      [:splat _] magic-new-body
+      [:splat _] magic-new
       [:boolean :one] controls/boolean
       [:keyword :one] controls/keyword
       [:string :one] controls/string
@@ -116,7 +116,7 @@
     (cond
       (field/identity-segment? field) dbid-label
       :else (match* [level segment-type segment child-fields]
-              [nil :splat _ _] magic-new-head
+              [nil :splat _ _] magic-new-label
               [nil :attribute _ _] attribute-label
               [nil :element _ true] relation-label
               [nil :element _ false] attribute-label
@@ -294,13 +294,14 @@ User renderers should not be exposed to the reaction."
 
 (defn form-field "Form fields are label AND value. Table fields are label OR value."
   [relative-path ctx Body Head props]
-  (let [state (r/atom {:hyperfiddle.ui.form/magic-new-a nil})]
-    (fn [relative-path ctx Body Head props]
-      (let [ctx (assoc ctx :hyperfiddle.ui.form/state state)]
-        [:div {:class (css "field" (:class props))
-               :style {:border-color (connection-color ctx)}}
-         [Head nil (dissoc ctx :hypercrud.browser/data) props]
-         [Body @(:hypercrud.browser/data ctx) ctx props]]))))
+  (with-meta
+    [:div {:class (css "field" (:class props))
+           :style {:border-color (connection-color ctx)}}
+     [Head nil (dissoc ctx :hypercrud.browser/data) props]
+     [Body @(:hypercrud.browser/data ctx) ctx props]]
+    (when (= '* (last relative-path))                       ; :hypercrud.browser/path
+      ; guard against crashes for nil data
+      {:key (hash (some->> ctx :hypercrud.browser/parent :hypercrud.browser/data (r/fmap keys) deref))})))
 
 (defn table-field "Form fields are label AND value. Table fields are label OR value."
   [relative-path ctx Body Head props]                       ; Body :: (val props ctx) => DOM, invoked as component
@@ -327,11 +328,7 @@ User renderers should not be exposed to the reaction."
     (case (:hyperfiddle.ui/layout ctx)
       :hyperfiddle.ui.layout/table (when-not is-magic-new
                                      [table-field relative-path ctx Body Head props])
-      (with-meta
-        [form-field relative-path ctx Body Head props]
-        (when is-magic-new
-          ; guard against crashes for nil data
-          {:key (hash (some->> ctx :hypercrud.browser/parent :hypercrud.browser/data (r/fmap keys) deref))})))))
+      [form-field relative-path ctx Body Head props])))
 
 (defn ^:export table "Semantic table; columns driven externally" ; this is just a widget
   [columns ctx & [props]]
