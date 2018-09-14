@@ -13,7 +13,7 @@
   (string? id))
 
 (defn underlying-tempid [ctx id]
-  ; This muddled thinking is because datomic doesn't pull tempids, see hack in hydrate-request*
+  ; This muddled thinking is caused by https://github.com/hyperfiddle/hyperfiddle/issues/584
   (cond
     (tempid? id) id
     :else (get (hypercrud.browser.context/ctx->id-lookup ctx) id)))

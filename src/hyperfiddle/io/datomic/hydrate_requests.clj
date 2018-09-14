@@ -29,7 +29,7 @@
 (defmethod hydrate-request* EntityRequest [{:keys [e db pull-exp]} get-secure-db-with]
   (let [{pull-db :db} (get-secure-db-with (:uri db) (:branch db))]
     (if (tempid? e)
-      {:db/id e}
+      {:db/id e}                                            ; https://github.com/hyperfiddle/hyperfiddle/issues/584
       (d/pull pull-db pull-exp e))))
 
 (defmethod hydrate-request* QueryRequest [{:keys [query params]} get-secure-db-with]
