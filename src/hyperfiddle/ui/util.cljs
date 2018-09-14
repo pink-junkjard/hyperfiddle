@@ -16,12 +16,12 @@
 (let [safe-eval-string #(try-either (when % (eval/eval-string! %))) ; don't actually need to safely eval, just want to memoize exceptions
       memoized-eval-string (memoize safe-eval-string)]
   (defn eval-renderer-comp [?fiddle-cljs-ns-str fiddle-renderer-str & args]
-    (let [result (>>= (memoized-eval-string ?fiddle-cljs-ns-str)
+    (let [+result (>>= (memoized-eval-string ?fiddle-cljs-ns-str)
                       (r/constantly
                         ; eval ns for the effect on the cljs namespaces
                         (memoized-eval-string fiddle-renderer-str)))]
       (either/branch
-        result
+        +result
         (fn [e]
           (throw e))
         (fn [f] (into [f] args))))))

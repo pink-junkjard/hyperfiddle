@@ -153,9 +153,9 @@
      (let [src-mode (let [[_ _ _ frag] route] (topnav/src-mode? frag)) ; Immoral - :src bit is tunneled in userland fragment space
            ide-ctx (page-ide-context ctx)
            ide-route (ide-fiddle-route route ctx)
-           topnav-ctx (base/data-from-route ide-route ide-ctx)
-           account-ctx (>>= topnav-ctx #(hyperfiddle.data/browse+ % :hf/iframe :account))
-           r?user (branch account-ctx (constantly (r/track identity nil)) :hypercrud.browser/data)
+           +topnav-ctx (base/data-from-route ide-route ide-ctx)
+           +account-ctx (>>= +topnav-ctx #(hyperfiddle.data/browse+ % :hf/iframe :account))
+           r?user (branch +account-ctx (constantly (r/track identity nil)) :hypercrud.browser/data)
            ; Feature flags are needed in IDE and userland (for widgets)
            ide-ctx (assoc ide-ctx ::user r?user)
            ctx (assoc ctx ::user r?user)
