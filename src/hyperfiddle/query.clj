@@ -8,7 +8,7 @@
 (defn attr-archived? [$ e-attr]
   (let [{a :db/ident} (d/pull $ [:db/ident] e-attr)]
     ; "zzz." and "zzz/"
-    (clojure.string/starts-with? (namespace a) "zzz")))
+    (some-> (namespace a) (clojure.string/starts-with? "zzz"))))
 
 ; https://forum.datomic.com/t/is-this-a-bug-in-datalog-symbol-resolution-with-not/613
 (def attr-not-archived? (complement attr-archived?))
