@@ -2,7 +2,7 @@
 
 
 (defn uri->hfdb [uri domain]
-  {:post [%]}
+  ;{:post [%]}
   (if (= uri (get-in domain [:domain/fiddle-database :database/uri]))
     (:domain/fiddle-database domain)
     (->> (:domain/databases domain)
@@ -10,7 +10,7 @@
          (some #(when (= uri (:database/uri %)) %)))))
 
 (defn dbname->hfdb [dbname domain]
-  {:post [%]}
+  ;{:post [%]}
   (->> (:domain/databases domain)
        (some #(when (= dbname (:domain.database/name %)) %))
        :domain.database/record))
