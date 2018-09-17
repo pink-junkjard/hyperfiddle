@@ -46,9 +46,13 @@
                        [hyper-control val ctx (dissoc props :embed-mode)]
                        ])
    :fiddle/links (fn [val ctx props]
-                   [:div
-                    (link :hf/affix :link ctx)
-                    [:div [links-fiddle/renderer val ctx props]]])
+                   (let [ctx (if (:embed-mode props)
+                               (links-fiddle/inject-topnav-links+ ctx)
+                               ctx)]
+                     [:div
+                      (if-not (:embed-mode props)           ; more work to be done to get this popover hydrating
+                        (link :hf/affix :link ctx))
+                      [:div [links-fiddle/renderer val ctx props]]]))
    })
 
 (defn fiddle-src-renderer [val ctx props]
