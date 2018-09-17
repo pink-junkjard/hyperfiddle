@@ -114,7 +114,7 @@
                       {:hyperfiddle.ui.markdown-extensions/unp true}]]
             dirty? (not @(r/fmap empty? (runtime/state (:peer ctx) [::runtime/partitions nil :stage])))]
         (fake-managed-anchor :hf/iframe :stage ctx "stage" {:tooltip [nil tooltip] :class (when dirty? "stage-dirty")}))
-      (ui/link :hf/edit :new-fiddle ctx "new-fiddle" (let [hf-db @(hyperfiddle.runtime/state (:peer ctx) [:hyperfiddle.runtime/domain :domain/fiddle-database])
+      (ui/link :hf/self :new-fiddle ctx "new-fiddle" (let [hf-db @(hyperfiddle.runtime/state (:peer ctx) [:hyperfiddle.runtime/domain :domain/fiddle-database])
                                                            subject @(hyperfiddle.runtime/state (:peer ctx) [:hyperfiddle.runtime/user-id])
                                                            writes-allowed?+ (security/attempt-to-transact? hf-db subject)
                                                            anonymous? (nil? subject)]
@@ -125,7 +125,7 @@
                                                                    (fn [writes-allowed?]
                                                                      (cond (and anonymous? (not writes-allowed?)) [:warning "Please login"]
                                                                            (not writes-allowed?) [:warning "Writes restricted"])))}))
-      [tooltip {:label "Domain administration"} (ui/link :hf/edit :domain ctx "domain")]
+      [tooltip {:label "Domain administration"} (ui/link :hf/self :domain ctx "domain")]
       (if @(runtime/state (:peer ctx) [::runtime/user-id])
         (let [{:keys [:hypercrud.browser/data]} (hyperfiddle.data/browse ctx :hf/iframe :account)]
           (fake-managed-anchor :hf/iframe :account ctx @(r/fmap :user/name data)

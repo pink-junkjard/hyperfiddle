@@ -32,7 +32,7 @@
 (defn hf-edit [path dbname]
   {:db/id (keyword "hyperfiddle.browser.system-link" (str "edit-" (hash path)))
    :hypercrud/sys? true
-   :link/rel :hf/edit
+   :link/rel :hf/self
    :link/path (path->str path)
    :link/fiddle (system-fiddle/console-edit dbname)})
 
@@ -56,7 +56,7 @@
 ; hf/new      id under FindColl, ref under FindColl if identity?
 ; hf/affix    id under ref, ref under ref? Specifically not just id
 
-; hf/edit     id, ref
+; hf/self     id, ref
 ; hf/detach   ref
 ; hf/remove   id
 

@@ -75,7 +75,7 @@
    :fiddle/type :query
    :fiddle/renderer (load-resource "ide/schema_renderer.cljs")
    :fiddle/links #{{:db/id :system-anchor-edit              ; XXX
-                    :link/rel :hf/edit
+                    :link/rel :hf/self
                     :link/fiddle (db-attribute-edit $db)}
                    {:db/id :system-anchor-new               ; XXX
                     :link/rel :hf/new

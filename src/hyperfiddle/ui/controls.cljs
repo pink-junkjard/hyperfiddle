@@ -63,7 +63,7 @@
     (:options props) [select val ctx props]
     :else [:div
            [:div.input
-            (or (if-let [self (data/select-here ctx :hf/edit)]
+            (or (if-let [self (data/select-here ctx :hf/self)]
                   (if val
                     [hyperfiddle.ui/ui-from-link self ctx props (id-label ctx val)]))
                 (id-label ctx val))]
@@ -79,12 +79,12 @@
 
 (defn ^:export id-or-ident [val ctx & [props]]
   ; id control uses links from parent ctx (parent ref and parent path)
-  ; select-here does not match :hf/edit since it is in the parent ref position
+  ; select-here does not match :hf/self since it is in the parent ref position
   (let [ctx (:hypercrud.browser/parent ctx)]
     [:div
      [:div.input
       ; pr-str here to disambiguate `"tempid"` from `17592186046396` and `:gender/male`
-      (or (if-let [self (data/select-here ctx :hf/edit)]
+      (or (if-let [self (data/select-here ctx :hf/self)]
             (if val
               [hyperfiddle.ui/ui-from-link self ctx props (pr-str val)]))
           (pr-str val))]

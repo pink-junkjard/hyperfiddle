@@ -39,7 +39,7 @@
             :hf/remove {:link/tx-fn txfn-remove}
             :hf/affix {:link/formula tempid-child :link/tx-fn txfn-affix}
             :hf/detach {:link/tx-fn txfn-detach}
-            :hf/edit {}                                     ; We know this is an anchor, otherwise pull deeper instead
+            :hf/self {}                                     ; We know this is an anchor, otherwise pull deeper instead
             :hf/iframe {}                                   ; iframe is always a query, otherwise pull deeper instead. Today this defaults in the add-fiddle txfn
             :hf/rel {}
             nil)
@@ -49,7 +49,7 @@
 
         ; Shadow the fiddle
         c (condp contains? rel
-            #{:hf/rel :hf/edit :hf/new :hf/iframe} (update-existing b :link/fiddle #(data-defaults (into {} %))) ; default form and title
+            #{:hf/rel :hf/self :hf/new :hf/iframe} (update-existing b :link/fiddle #(data-defaults (into {} %))) ; default form and title
             b)
 
         ; Formula inference needs known query value
@@ -62,7 +62,7 @@
                                                fiddle "(constantly nil)" ; why?
                                                :else nil))
 
-              #{:hf/rel :hf/edit}
+              #{:hf/rel :hf/self}
               (update c :link/formula or-str (cond
                                                query (infer-query-formula query)
                                                fiddle "identity"
