@@ -51,8 +51,7 @@
            (let [[uris] args]
              (-> partitions
                  (assoc-in [nil :hydrate-id] "hack; dont flicker while page rebuilds")
-                 (update-in [nil :stage] #(apply dissoc % uris))
-                 (->> (map-values #(dissoc % :stage)))))
+                 (update-in [nil :stage] #(apply dissoc % uris))))
 
            :add-partition (let [[branch route branch-aux] args]
                             (update partitions branch
