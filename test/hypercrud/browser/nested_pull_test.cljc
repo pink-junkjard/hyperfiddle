@@ -144,29 +144,29 @@
 
     (let [links (console-links field @(:hypercrud.browser/schemas ctx))
           expected #{{:link/path "0", :link/rel :hf/detach}
-                     {:link/path "0 :one-ref1", :link/rel :hf/edit}
-                     {:link/path "0 :one-ref2 :many-ref1", :link/rel :hf/edit}
+                     {:link/path "0 :one-ref1", :link/rel :hf/self}
+                     {:link/path "0 :one-ref2 :many-ref1", :link/rel :hf/self}
                      {:link/path "0 :many-ref2 :one-ref1", :link/rel :hf/detach}
                      {:link/path "0 :one-ref1", :link/rel :hf/affix}
                      {:link/path "0 :many-ref1", :link/rel :hf/detach}
-                     {:link/path "0 :many-ref2", :link/rel :hf/edit}
+                     {:link/path "0 :many-ref2", :link/rel :hf/self}
                      {:link/path "0 :many-ref2", :link/rel :hf/affix}
-                     {:link/path "0 :many-ref2 :many-ref1", :link/rel :hf/edit}
+                     {:link/path "0 :many-ref2 :many-ref1", :link/rel :hf/self}
                      {:link/path "0 :many-ref2 :many-ref1", :link/rel :hf/affix}
                      {:link/path "0 :many-ref2", :link/rel :hf/detach}
-                     {:link/path "0", :link/rel :hf/edit}
-                     {:link/path "0 :many-ref1", :link/rel :hf/edit}
+                     {:link/path "0", :link/rel :hf/self}
+                     {:link/path "0 :many-ref1", :link/rel :hf/self}
                      {:link/path "0 :one-ref2", :link/rel :hf/detach}
                      {:link/path "0 :one-ref1", :link/rel :hf/detach}
                      {:link/path "0 :one-ref2 :many-ref1", :link/rel :hf/affix}
                      {:link/path "0 :many-ref2 :one-ref1", :link/rel :hf/affix}
                      {:link/path "0 :many-ref1", :link/rel :hf/affix}
                      {:link/path "0 :one-ref2 :many-ref1", :link/rel :hf/detach}
-                     {:link/path "0 :many-ref2 :one-ref1", :link/rel :hf/edit}
+                     {:link/path "0 :many-ref2 :one-ref1", :link/rel :hf/self}
                      {:link/path "0 :one-ref2 :one-ref1", :link/rel :hf/detach}
                      {:link/path "0 :many-ref2 :many-ref1", :link/rel :hf/detach}
-                     {:link/path "0 :one-ref2 :one-ref1", :link/rel :hf/edit}
-                     {:link/path "0 :one-ref2", :link/rel :hf/edit}
+                     {:link/path "0 :one-ref2 :one-ref1", :link/rel :hf/self}
+                     {:link/path "0 :one-ref2", :link/rel :hf/self}
                      {:link/path "0 :one-ref2 :one-ref1", :link/rel :hf/affix}
                      {:link/path "0 :one-ref2", :link/rel :hf/affix}}
           actual (->> links
