@@ -4,6 +4,7 @@
     [cats.monad.either :as either :refer [left right]]
     [clojure.set :as set]
     [clojure.walk :as walk]
+    [cuerdas.core :as str]
     [contrib.ct :refer [unwrap]]
     [contrib.data :refer [xorxs]]
     [contrib.eval :as eval]
@@ -74,18 +75,23 @@
       ; nil means :blank
       (either/right ?route))))
 
+(defn link-tooltip [{:keys [:link/rel :link/class]} ?route]
+  (if ?route
+    (let [[_ args] ?route]
+      (->> (concat class [rel] args) (map pr-str) (interpose " ") (apply str)))))
+
 (defn build-link-props [+?route link ctx props]              ; link is for validation
   ; this is a fine place to eval, put error message in the tooltip prop
   ; each prop might have special rules about his default, for example :visible is default true, does this get handled here?
   (let [+route (>>= +?route #(validated-route+ (:link/fiddle link) % ctx))
-        [_ args :as ?route] (unwrap (constantly nil) +route)
-        errors (->> [+route] (filter either/left?) (map cats/extract) (into #{}))]
+        errors (->> [+route] (filter either/left?) (map cats/extract) (into #{}))
+        ?route (unwrap (constantly nil) +route)]
     ; doesn't handle tx-fn - meant for the self-link. Weird and prob bad.
     {:route ?route                                          ; nil means no popover body
      :tooltip (if-not (empty? errors)
                 [:warning (pprint-str errors)]
                 (if (:hyperfiddle.ui/debug-tooltips ctx)
-                  [nil (pr-str args)]
+                  [nil (link-tooltip link ?route)]
                   (:tooltip props)))
      :class (->> [(if-not (empty? errors) "invalid")]
                  (remove nil?)
