@@ -83,7 +83,7 @@
        "f" (fn [content argument props ctx]
              (let [f (some->> content memoized-safe-eval (unwrap #(timbre/warn %)))
                    val (some->> argument memoized-safe-eval (unwrap #(timbre/warn %)))]
-               (when f [f val props ctx])))
+               (when f [f val ctx props])))
 
        "browse" (fn [content argument props ctx]
                   (let [[_ srel sclass] (re-find #"([^ ]*) ?(.*)" argument)
