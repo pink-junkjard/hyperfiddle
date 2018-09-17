@@ -91,15 +91,15 @@
       (->> (filter (comp (partial = (:hypercrud.browser/path ctx)) link/read-path :link/path)))
       (->> (validate-one+r rel ?corcs))))
 
-(defn ^:export select+ [ctx rel & [?corcs]] ; Right[Reaction[Link]], Left[String]
+(defn ^:export select+ [ctx rel & [?corcs]]                 ; Right[Reaction[Link]], Left[String]
   (let [rlinks (r/track select-all ctx rel ?corcs)]
     @(r/fmap (r/partial validate-one+r rel ?corcs) rlinks)))
 
 (defn ^:export browse+ "Navigate a link by hydrating its context accounting for dependencies in scope.
   returns Either[Loading|Error,ctx]."
-  [ctx rel & [?class]]
+  [ctx rel & [?corcs]]
   ; No focusing, can select from root, and data-from-link manufactures a new context
-  (>>= (select+ ctx rel ?class)
+  (>>= (select+ ctx rel ?corcs)
        #(base/data-from-link @% ctx)))
 
 (defn ^:export select-here [ctx rel & [?corcs]]
@@ -107,3 +107,6 @@
 
 (defn ^:export select [ctx rel & [?corcs]]
   (->> (select+ ctx rel ?corcs) (unwrap (constantly nil))))
+
+(defn ^:export browse [ctx rel & [?corcs]]
+  (->> (browse+ ctx rel ?corcs) (unwrap (constantly nil))))
