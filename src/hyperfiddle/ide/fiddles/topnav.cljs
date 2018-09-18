@@ -65,8 +65,9 @@
     [:div props
      [:div.left-nav
       [tooltip {:label "Home"} [:a.hf-auto-nav {:href "/"} @(runtime/state (:peer ctx) [::runtime/domain :domain/ident])]]
-      [tooltip {:label "This fiddle"}                       ; also a good place for the route
-       [:span.hf-auto-nav (some-> @(r/cursor (:hypercrud.browser/data ctx) [:fiddle/ident]) str)]]
+      (let [fiddle-ident (some-> @(r/cursor (:hypercrud.browser/data ctx) [:fiddle/ident]))]
+        [tooltip {:label (str fiddle-ident)}
+         [:span.hf-auto-nav (some-> fiddle-ident name) #_ "domain editor doesn't target a fiddle"]])
       (fake-managed-anchor :hf/iframe :fiddle-shortcuts ctx "index" {:tooltip [nil "Fiddles in this domain"]})]
 
      [:div.right-nav {:key "right-nav"}                     ; CAREFUL; this key prevents popover flickering
@@ -125,7 +126,7 @@
                                                             (fn [writes-allowed?]
                                                               (cond (and anonymous? (not writes-allowed?)) [:warning "Please login"]
                                                                     (not writes-allowed?) [:warning "Writes restricted"])))}))
-      [tooltip {:label "Domain administration"} (ui/link :hf/self :domain ctx "domain")]
+      [tooltip {:label "Environment administration"} (ui/link :hf/self :domain ctx "env")]
       (if @(runtime/state (:peer ctx) [::runtime/user-id])
         (let [{:keys [:hypercrud.browser/data]} (hyperfiddle.data/browse ctx :hf/iframe :account)]
           (fake-managed-anchor :hf/iframe :account ctx @(r/fmap :user/name data)
