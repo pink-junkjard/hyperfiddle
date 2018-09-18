@@ -19,7 +19,7 @@
     [hyperfiddle.io.sync :refer [sync-rpc!]]
     [hyperfiddle.reducers :as reducers]
     [hyperfiddle.runtime :as runtime]
-    [hyperfiddle.security :as security]
+    [hyperfiddle.security.client :as security]
     [hyperfiddle.state :as state]
     [promesa.core :as p]
     [reagent.dom.server :as reagent-server]
@@ -158,7 +158,7 @@
                                            (map :domain.database/record)
                                            (map (juxt :database/uri (fn [hf-db]
                                                                       (either/branch
-                                                                        (security/attempt-to-transact? hf-db @(runtime/state rt [::runtime/user-id]))
+                                                                        (security/subject-can-transact? hf-db @(runtime/state rt [::runtime/user-id]))
                                                                         (constantly false)
                                                                         identity))))
                                            ; todo domain-uri is an ugly hack
