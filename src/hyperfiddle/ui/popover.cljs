@@ -101,6 +101,13 @@
                            (runtime/dispatch! (:peer ctx))))))]
     (with-swap-fn link-ref nil ctx f)))
 
+(defn affect-cmp [link-ref ctx props label]
+  (let [props (-> props
+                  (assoc :on-click (r/partial run-txfn! link-ref ctx))
+                  ; use twbs btn coloring but not "btn" itself
+                  (update :class css "btn-warning"))]
+    [:button props [:span (str label "!")]]))
+
 ; props = {
 ;   :route          [fiddle args]
 ;   :tooltip        String | [Keyword Hiccup]
@@ -124,23 +131,20 @@
                        (branch/encode-branch-child (:branch ctx) child-id-str))
         popover-id child-branch                             ; just use child-branch as popover-id
         child-branch (when-not (:dont-branch? props) child-branch)
-        button-effect! (if (:route props) open! (r/partial run-txfn! link-ref ctx))
         btn-props (-> props
                       (dissoc :route :tooltip :dont-branch?)
-                      (assoc :on-click (r/partial button-effect! (:route props) popover-id child-branch ctx))
+                      (assoc :on-click (r/partial open! (:route props) popover-id child-branch ctx))
                       ; use twbs btn coloring but not "btn" itself
-                      (update :class #(css % (if (:route props) "btn-default" "btn-warning"))))]
-    (if-not (:route props)
-      [:button btn-props [:span (str label "!")]]
-      [wrap-with-tooltip popover-id ctx props
-       [with-keychord
-        "esc" #(do (js/console.warn "esc") (if child-branch
-                                             (cancel! popover-id child-branch ctx)
-                                             (close! popover-id ctx)))
-        [re-com/popover-anchor-wrapper
-         :showing? (show-popover? popover-id ctx)
-         :position :below-center
-         :anchor [:button btn-props [:span (str label "▾")]]
-         :popover [re-com/popover-content-wrapper
-                   :no-clip? true
-                   :body [managed-popover-body (:route props) popover-id child-branch link-ref ctx]]]]])))
+                      (update :class css "btn-default"))]
+    [wrap-with-tooltip popover-id ctx props
+     [with-keychord
+      "esc" #(do (js/console.warn "esc") (if child-branch
+                                           (cancel! popover-id child-branch ctx)
+                                           (close! popover-id ctx)))
+      [re-com/popover-anchor-wrapper
+       :showing? (show-popover? popover-id ctx)
+       :position :below-center
+       :anchor [:button btn-props [:span (str label "▾")]]
+       :popover [re-com/popover-content-wrapper
+                 :no-clip? true
+                 :body [managed-popover-body (:route props) popover-id child-branch link-ref ctx]]]]]))

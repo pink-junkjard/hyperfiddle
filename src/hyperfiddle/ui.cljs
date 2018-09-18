@@ -1,7 +1,7 @@
 (ns hyperfiddle.ui
   (:require-macros [hyperfiddle.ui :refer [-build-fiddle]])
   (:require
-    [cats.core :as cats :refer [fmap mlet]]
+    [cats.core :as cats :refer [fmap mlet >>=]]
     [cats.monad.either :as either :refer [branch]]
     [clojure.core.match :refer [match match*]]
     [clojure.string :as string]
@@ -35,11 +35,10 @@
     [hyperfiddle.ui.api]
     [hyperfiddle.ui.controls :as controls]
     [hyperfiddle.ui.hyper-controls :refer [attribute-label relation-label tuple-label dbid-label magic-new magic-new-label]]
-    [hyperfiddle.ui.popover :refer [popover-cmp]]
+    [hyperfiddle.ui.popover :refer [affect-cmp popover-cmp]]
     [hyperfiddle.ui.select$]
     [hyperfiddle.ui.sort :as sort]
-    [hyperfiddle.ui.util :refer [eval-renderer-comp]]
-    [taoensso.timbre :as timbre]))
+    [hyperfiddle.ui.util :refer [eval-renderer-comp]]))
 
 
 (defn attr-renderer-control [val ctx & [props]]
@@ -236,41 +235,63 @@ User renderers should not be exposed to the reaction."
 (letfn [(prompt [link-ref ?label]
           (or ?label (->> (conj (set @(r/fmap :link/class link-ref))
                                 @(r/fmap :link/rel link-ref))
-                          (interpose " ") (apply str) blank->nil)))]
+                          (interpose " ") (apply str) blank->nil)))
+        (link-tooltip [{:keys [:link/rel :link/class]} ?route]
+          (if ?route
+            (let [[_ args] ?route]
+              (->> (concat class [rel] args) (map pr-str) (interpose " ") (apply str)))))
+        (validated-route-tooltip-props [r+?route link-ref ctx props] ; link is for validation
+          ; this is a fine place to eval, put error message in the tooltip prop
+          ; each prop might have special rules about his default, for example :visible is default true, does this get handled here?
+          (let [+route (>>= @r+?route #(routing/validated-route+ (:link/fiddle @link-ref) % ctx))
+                errors (->> [+route] (filter either/left?) (map cats/extract) (into #{}))
+                ?route (unwrap (constantly nil) +route)]
+            (-> props
+                (assoc :route ?route)
+                (update :tooltip (fn [existing-tooltip]
+                                   (if-not (empty? errors)
+                                     [:warning (pprint-str errors)]
+                                     (if (:hyperfiddle.ui/debug-tooltips ctx)
+                                       [nil (link-tooltip @link-ref ?route)]
+                                       existing-tooltip))))
+                (update :class css (when-not (empty? errors) "invalid")))))]
   (defn ui-from-link [link-ref ctx & [props ?label]]
     {:pre [link-ref]}
     (let [visual-ctx ctx
           ctx (context/refocus ctx (link/read-path @(r/fmap :link/path link-ref)))
           error-comp (ui-error/error-comp ctx)
-          r+route (r/fmap (r/partial routing/build-route' ctx) link-ref) ; need to re-focus from the top
-          link-props @(r/track routing/build-link-props @r+route @link-ref ctx props)] ; handles :class and :tooltip props
-      (let [style {:color nil #_(connection-color ctx (cond (system-link? (:db/id @link-ref)) 60 :else 40))}
-            props (-> link-props
-                      (assoc :style style)
-                      (update :class css (:class props))
-                      (merge (dissoc props :class :tooltip)))]
-        (cond
-          @(r/fmap (comp boolean :link/tx-fn) link-ref)
-          (let [props (update props :class css "hyperfiddle")] ; should this be in popover-cmp? what is this class? – unify with semantic css
-            [popover-cmp link-ref ctx visual-ctx props @(r/track prompt link-ref ?label)])
+          r+?route (r/fmap (r/partial routing/build-route' ctx) link-ref) ; need to re-focus from the top
+          style {:color nil #_(connection-color ctx (cond (system-link? (:db/id @link-ref)) 60 :else 40))}
+          props (update props :style #(or % style))
+          tx-fn? @(r/fmap (r/comp boolean blank->nil :link/tx-fn) link-ref)]
+      (cond
+        (and tx-fn? @(r/fmap (r/partial = (either/right nil)) r+?route))
+        (let [props (update props :class css "hyperfiddle")]
+          [affect-cmp link-ref ctx props @(r/track prompt link-ref ?label)])
 
-          @(r/fmap (r/comp (r/partial = :hf/iframe) :link/rel) link-ref)
-          ; link-props swallows bad routes (shorts them to nil),
-          ; all errors will always route through as (either/right nil)
-          [stale/loading (stale/can-be-loading? ctx) (fmap #(router/assoc-frag % (:frag props)) @r+route) ; what is this frag noise?
-           (fn [e] [error-comp e])
-           (fn [route]
-             (let [iframe (or (::custom-iframe props) iframe)]
-               [iframe ctx (-> props                        ; flagged - :class
-                               (assoc :route route)
-                               (dissoc props :tooltip ::custom-iframe)
-                               (update :class css (css-slugify @(r/fmap auto-link-css link-ref))))]))]
+        tx-fn?
+        (let [props (-> @(r/track validated-route-tooltip-props r+?route link-ref ctx props)
+                        (update :class css "hyperfiddle"))] ; should this be in popover-cmp? what is this class? – unify with semantic css
+          [popover-cmp link-ref ctx visual-ctx props @(r/track prompt link-ref ?label)])
 
-          :else [tooltip (tooltip-props (:tooltip props))
+        @(r/fmap (r/comp (r/partial = :hf/iframe) :link/rel) link-ref)
+        ; link-props swallows bad routes (shorts them to nil),
+        ; all errors will always route through as (either/right nil)
+        [stale/loading (stale/can-be-loading? ctx) (fmap #(router/assoc-frag % (:frag props)) @r+?route) ; what is this frag noise?
+         (fn [e] [error-comp e])
+         (fn [route]
+           (let [iframe (or (::custom-iframe props) iframe)]
+             [iframe ctx (-> props                          ; flagged - :class
+                             (assoc :route route)
+                             (dissoc props ::custom-iframe)
+                             (update :class css (css-slugify @(r/fmap auto-link-css link-ref))))]))]
+
+        :else (let [props @(r/track validated-route-tooltip-props r+?route link-ref ctx props)]
+                [tooltip (tooltip-props (:tooltip props))
                  (let [props (dissoc props :tooltip)]
                    ; what about class - flagged
-                   [anchor ctx props @(r/track prompt link-ref ?label)])]
-          )))))
+                   [anchor ctx props @(r/track prompt link-ref ?label)])])
+        ))))
 
 (defn ^:export link "Relation level link renderer. Works in forms and lists but not tables." ; this is dumb, use a field renderer
   [rel class ctx & [?label props]]                          ; path should be optional, for disambiguation only. Naked can be hard-linked in markdown?
