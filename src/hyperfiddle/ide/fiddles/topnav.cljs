@@ -64,10 +64,10 @@
                                 [ui-from-link link-ref ctx (assoc props :dont-branch? true) ?label]))]
     [:div props
      [:div.left-nav
-      [tooltip {:label "Home"} [:a.hf-auto-nav {:href "/"} @(runtime/state (:peer ctx) [::runtime/domain :domain/ident])]]
+      [tooltip {:label "Home"} [:a {:href "/"} @(runtime/state (:peer ctx) [::runtime/domain :domain/ident])]]
       (let [fiddle-ident (some-> @(r/cursor (:hypercrud.browser/data ctx) [:fiddle/ident]))]
         [tooltip {:label (str fiddle-ident)}
-         [:span.hf-auto-nav (some-> fiddle-ident name) #_ "domain editor doesn't target a fiddle"]])
+         [:span (some-> fiddle-ident name) #_ "domain editor doesn't target a fiddle"]])
       (fake-managed-anchor :hf/iframe :fiddle-shortcuts ctx "index" {:tooltip [nil "Fiddles in this domain"]})]
 
      [:div.right-nav {:key "right-nav"}                     ; CAREFUL; this key prevents popover flickering
