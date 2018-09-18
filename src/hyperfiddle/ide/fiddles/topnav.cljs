@@ -67,7 +67,7 @@
       [tooltip {:label "Home"} [:a.hf-auto-nav {:href "/"} @(runtime/state (:peer ctx) [::runtime/domain :domain/ident])]]
       [tooltip {:label "This fiddle"}                       ; also a good place for the route
        [:span.hf-auto-nav (some-> @(r/cursor (:hypercrud.browser/data ctx) [:fiddle/ident]) str)]]
-      (fake-managed-anchor :hf/iframe :fiddle-shortcuts ctx "shortcuts" {:tooltip [nil "Fiddles in this domain"]})]
+      (fake-managed-anchor :hf/iframe :fiddle-shortcuts ctx "index" {:tooltip [nil "Fiddles in this domain"]})]
 
      [:div.right-nav {:key "right-nav"}                     ; CAREFUL; this key prevents popover flickering
 
@@ -114,17 +114,17 @@
                       {:hyperfiddle.ui.markdown-extensions/unp true}]]
             dirty? (not @(r/fmap empty? (runtime/state (:peer ctx) [::runtime/partitions nil :stage])))]
         (fake-managed-anchor :hf/iframe :stage ctx "stage" {:tooltip [nil tooltip] :class (when dirty? "stage-dirty")}))
-      (ui/link :hf/self :new-fiddle ctx "new-fiddle" (let [hf-db @(hyperfiddle.runtime/state (:peer ctx) [:hyperfiddle.runtime/domain :domain/fiddle-database])
-                                                           subject @(hyperfiddle.runtime/state (:peer ctx) [:hyperfiddle.runtime/user-id])
-                                                           writes-allowed?+ (security/subject-can-transact? hf-db subject)
-                                                           anonymous? (nil? subject)]
-                                                       {:disabled (either/branch writes-allowed?+ (constantly true) not) ; todo this logic could be factored out into ui-from-link
-                                                        :tooltip (either/branch
-                                                                   writes-allowed?+
-                                                                   (fn [e] [:warning "Misconfigured db security"])
-                                                                   (fn [writes-allowed?]
-                                                                     (cond (and anonymous? (not writes-allowed?)) [:warning "Please login"]
-                                                                           (not writes-allowed?) [:warning "Writes restricted"])))}))
+      (ui/link :hf/self :new-fiddle ctx "new" (let [hf-db @(hyperfiddle.runtime/state (:peer ctx) [:hyperfiddle.runtime/domain :domain/fiddle-database])
+                                                    subject @(hyperfiddle.runtime/state (:peer ctx) [:hyperfiddle.runtime/user-id])
+                                                    writes-allowed?+ (security/subject-can-transact? hf-db subject)
+                                                    anonymous? (nil? subject)]
+                                                {:disabled (either/branch writes-allowed?+ (constantly true) not) ; todo this logic could be factored out into ui-from-link
+                                                 :tooltip (either/branch
+                                                            writes-allowed?+
+                                                            (fn [e] [:warning "Misconfigured db security"])
+                                                            (fn [writes-allowed?]
+                                                              (cond (and anonymous? (not writes-allowed?)) [:warning "Please login"]
+                                                                    (not writes-allowed?) [:warning "Writes restricted"])))}))
       [tooltip {:label "Domain administration"} (ui/link :hf/self :domain ctx "domain")]
       (if @(runtime/state (:peer ctx) [::runtime/user-id])
         (let [{:keys [:hypercrud.browser/data]} (hyperfiddle.data/browse ctx :hf/iframe :account)]
