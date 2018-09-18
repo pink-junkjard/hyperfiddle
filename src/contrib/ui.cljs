@@ -207,14 +207,15 @@
        [re-com/popover-anchor-wrapper
         :showing? showing?
         :position :below-center
-        :anchor [:a {:href "javascript:void 0;" :on-click (r/partial swap! showing? not)} "edit"]
+        :anchor [:a {:href "javascript:void 0;" :on-click (r/partial swap! showing? not)}
+                 [:code (or (blank->nil (:value props))
+                            "···" #_ "There might not be a visible value")]]
         :popover [re-com/popover-content-wrapper
                   :close-button? true
                   :on-cancel (r/partial reset! showing? false)
                   :no-clip? true
                   :width "600px"
-                  :body (code props)]]
-       " " [:code (:value props)]])))
+                  :body (code props)]]])))
 
 (letfn [(read-edn-string [user-edn-str]
           ; parent on-change can catch exceptions if they care
