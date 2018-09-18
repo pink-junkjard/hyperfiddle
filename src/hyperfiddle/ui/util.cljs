@@ -56,10 +56,9 @@
     (security/writable-entity? ctx)))
 
 (defn with-tx! [ctx tx]
-  (let [uri (context/uri ctx)
-        _ (assert uri)                                      ; todo downstream action should be validating this
-        invert-route (:hypercrud.browser/invert-route ctx)]
-    (runtime/dispatch! (:peer ctx) (actions/with (:peer ctx) invert-route (:branch ctx) uri tx))))
+  (let [uri (context/uri ctx)]
+    (->> (actions/with-groups (:peer ctx) (:hypercrud.browser/invert-route ctx) (:branch ctx) {uri tx})
+         (runtime/dispatch! (:peer ctx)))))
 
 (let [on-change (fn [ctx o n]
                   (->> (on-change->tx ctx o n)

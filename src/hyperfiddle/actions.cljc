@@ -110,11 +110,12 @@
 
 (defn update-to-tempids [get-state branch uri tx]
   (let [{:keys [tempid-lookups ptm]} (get-in (get-state) [::runtime/partitions branch])
-        +schema (peer/hydrate-val+ (schema/schema-request (->DbVal uri branch)) ptm)
-        ?schema (unwrap (constantly nil) +schema)]
-    (if-not ?schema                                         ; This means we never hydrated the branch, which means no popover body (otherwise how did they click stage?)
-      tx                                                    ; https://github.com/hyperfiddle/hyperfiddle/issues/522
-      (map (partial tx/stmt-id->tempid (get tempid-lookups uri) ?schema) tx))))
+        dbval (->DbVal uri branch)
+        schema (let [schema-request (schema/schema-request dbval)]
+                 (-> (peer/hydrate-val+ schema-request ptm)
+                     (either/branch (fn [e] (throw e)) identity)))
+        id->tempid (get tempid-lookups uri)]
+    (map (partial tx/stmt-id->tempid id->tempid schema) tx)))
 
 (defn transact! [rt invert-route tx-groups dispatch! get-state & {:keys [route post-tx]}]
   (dispatch! [:transact!-start])
@@ -156,19 +157,39 @@
               false)
            identity))))
 
-(defn with [rt invert-route branch uri tx]
+(defn with-groups [rt invert-route branch tx-groups & {:keys [route post-tx]}]
+  {:pre [(not-any? nil? (keys tx-groups))]}
   (fn [dispatch! get-state]
-    (let [tx (update-to-tempids get-state branch uri tx)]
-      (if (and (nil? branch) (should-transact!? uri get-state))
-        (transact! rt invert-route {uri tx} dispatch! get-state :post-tx [[:reset-stage-uri branch uri nil]])
-        (hydrate-partition rt branch [[:with branch uri tx]] dispatch! get-state)))))
+    (let [tx-groups (->> tx-groups
+                         (remove (fn [[uri tx]] (empty? tx)))
+                         (map (fn [[uri tx]] [uri (update-to-tempids get-state branch uri tx)]))
+                         (into {}))
+          transact-uris (->> (keys tx-groups)
+                             (filter (fn [uri] (should-transact!? uri get-state))))
+          transact-groups (select-keys tx-groups transact-uris)
+          with-actions (->> (apply dissoc tx-groups transact-uris)
+                            (mapv (fn [[uri tx]] [:with branch uri tx])))]
+      (if (and (nil? branch) (not (empty? transact-groups)))
+        ; todo what if transact throws?
+        (transact! rt invert-route transact-groups dispatch! get-state
+                   :post-tx (let [clear-uris (->> (keys transact-groups)
+                                                  (map (fn [uri] [:reset-stage-uri branch uri nil]))
+                                                  vec)]
+                              (concat clear-uris            ; clear the uris that were transacted
+                                      with-actions))
+                   :route route)
+        (if-let [e (some-> route router/invalid-route?)]
+          (dispatch! (apply batch (conj with-actions [:set-error e])))
+          (let [actions (cond-> with-actions
+                          ; what about local-basis? why not specify branch?
+                          route (conj [:partition-route nil route]))]
+            (hydrate-partition rt branch actions dispatch! get-state)))))))
 
 (defn open-popover [branch popover-id]
   [:open-popover branch popover-id])
 
-(defn stage-popover [rt invert-route branch link swap-fn-async & on-start]
+(defn stage-popover [rt invert-route branch swap-fn-async & on-start] ; todo rewrite in terms of with-groups
   (fn [dispatch! get-state]
-    (dispatch! [:txfn (:link/rel link) (:link/path link)])
     (p/then (swap-fn-async (get-in (get-state) [::runtime/partitions branch :stage] {}))
             (fn [{:keys [tx app-route]}]
               (let [with-actions (mapv (fn [[uri tx]]
@@ -178,6 +199,7 @@
                     parent-branch (branch/decode-parent-branch branch)]
                 ; should the tx fn not be withd? if the transact! fails, do we want to run it again?
                 (dispatch! (apply batch (concat with-actions on-start)))
+                ;(with-groups rt invert-route parent-branch tx-groups :route app-route :post-tx nil)
                 (let [tx-groups (->> (get-in (get-state) [::runtime/partitions branch :stage])
                                      (filter (fn [[uri tx]] (and (should-transact!? uri get-state) (not (empty? tx)))))
                                      (into {}))]

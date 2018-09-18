@@ -21,7 +21,7 @@
 
 (let [safe-eval-string #(try-promise (eval/eval-string! %))
       memoized-eval-string (memoize safe-eval-string)]
-  (defn stage! [link-ref route popover-id child-branch ctx]
+  (defn- with-swap-fn [link-ref ?route ctx f]
     (let [{:keys [:link/tx-fn] :as link} @link-ref]
       (-> (if (and (string? tx-fn) (not (string/blank? tx-fn)))
             (memoized-eval-string tx-fn)
@@ -30,26 +30,32 @@
             (fn [user-txfn]
               (p/promise
                 (fn [resolve! reject!]
-                  (let [swap-fn (fn [multi-color-tx]
-                                  (let [result (let [result (user-txfn ctx multi-color-tx route)]
-                                                 ; txfn may be sync or async
-                                                 (if-not (p/promise? result) (p/resolved result) result))]
-                                    ; let the caller of this :stage fn know the result
-                                    ; This is super funky, a swap-fn should not be effecting, but seems like it would work.
-                                    (p/branch result
-                                              (fn [v] (resolve! nil))
-                                              (fn [e]
-                                                (reject! e)
-                                                (timbre/warn e)))
+                  (let [swap-fn-async (fn [multi-color-tx]
+                                        (let [result (let [result (user-txfn ctx multi-color-tx ?route)]
+                                                       ; txfn may be sync or async
+                                                       (if-not (p/promise? result) (p/resolved result) result))]
+                                          ; let the caller of this :stage fn know the result
+                                          ; This is super funky, a swap-fn should not be effecting, but seems like it would work.
+                                          (p/branch result
+                                                    (fn [v] (resolve! nil))
+                                                    (fn [e]
+                                                      (reject! e)
+                                                      (timbre/warn e)))
 
-                                    ; return the result to the action, it could be a promise
-                                    result))]
-                    (runtime/dispatch! (:peer ctx)
-                                       (actions/stage-popover (:peer ctx) (:hypercrud.browser/invert-route ctx) child-branch
-                                                              link swap-fn ; the swap-fn could be determined via the link rel
-                                                              (actions/close-popover (:branch ctx) popover-id))))))))
+                                          ; return the result to the action, it could be a promise
+                                          result))]
+                    (runtime/dispatch! (:peer ctx) [:txfn (:link/rel link) (:link/path link)])
+                    (f swap-fn-async))))))
           ; todo something better with these exceptions (could be user error)
           (p/catch (fn [err] (js/alert (pprint-str err))))))))
+
+(defn stage! [link-ref route popover-id child-branch ctx]
+  (let [f (fn [swap-fn-async]
+            (->> (actions/stage-popover (:peer ctx) (:hypercrud.browser/invert-route ctx) child-branch
+                                        swap-fn-async       ; the swap-fn could be determined via the link rel
+                                        (actions/close-popover (:branch ctx) popover-id))
+                 (runtime/dispatch! (:peer ctx))))]
+    (with-swap-fn link-ref route ctx f)))
 
 (defn close! [popover-id ctx]
   (runtime/dispatch! (:peer ctx) (actions/close-popover (:branch ctx) popover-id)))
@@ -87,6 +93,14 @@
     child
     [tooltip (tooltip-props (:tooltip props)) child]))
 
+(defn run-txfn! [link-ref ctx]
+  (letfn [(f [swap-fn-async]
+            (p/then (swap-fn-async {})
+                    (fn [{:keys [tx app-route]}]
+                      (->> (actions/with-groups (:peer ctx) (:hypercrud.browser/invert-route ctx) (:branch ctx) tx :route app-route)
+                           (runtime/dispatch! (:peer ctx))))))]
+    (with-swap-fn link-ref nil ctx f)))
+
 ; props = {
 ;   :route          [fiddle args]
 ;   :tooltip        String | [Keyword Hiccup]
@@ -110,7 +124,7 @@
                        (branch/encode-branch-child (:branch ctx) child-id-str))
         popover-id child-branch                             ; just use child-branch as popover-id
         child-branch (when-not (:dont-branch? props) child-branch)
-        button-effect! (if (:route props) open! (r/partial stage! link-ref))
+        button-effect! (if (:route props) open! (r/partial run-txfn! link-ref ctx))
         btn-props (-> props
                       (dissoc :route :tooltip :dont-branch?)
                       (assoc :on-click (r/partial button-effect! (:route props) popover-id child-branch ctx))
