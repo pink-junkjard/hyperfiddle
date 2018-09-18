@@ -4,9 +4,8 @@
     [contrib.reactive :as r]
     [contrib.datomic-tx :as tx]
     [contrib.ui :refer [debounced]]
-    [hypercrud.browser.context :as context]
     [hyperfiddle.ui :refer [field markdown]]
-    [hyperfiddle.ui.util :refer [readonly->disabled on-change->tx entity-change->tx]]))
+    [hyperfiddle.ui.util :refer [readonly->disabled on-change->tx entity-change->tx with-tx!]]))
 
 
 (def special-attrs #{:db/ident :db/cardinality :db/valueType})
@@ -31,34 +30,34 @@
 
       [false true]
       (do
-        (context/with-tx! ctx (tx/into-tx @special-attrs-state tx))
+        (with-tx! ctx (tx/into-tx @special-attrs-state tx))
         (reset! special-attrs-state nil))
 
       [true false]
       ; todo this case WILL throw (going from a valid tx to invalid)
-      (context/with-tx! ctx tx)
+      (with-tx! ctx tx)
 
       [true true]
-      (context/with-tx! ctx tx))))
+      (with-tx! ctx tx))))
 
 (defn ident-with-tx! [special-attrs-state ctx tx]
   (let [entity @(get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data])
         new-entity (merge-in-tx entity tx ctx)]
     (case [(completed? entity) (completed? new-entity)]
       [false false]
-      (context/with-tx! ctx tx)
+      (with-tx! ctx tx)
 
       [false true]
       (do
-        (context/with-tx! ctx (tx/into-tx @special-attrs-state tx))
+        (with-tx! ctx (tx/into-tx @special-attrs-state tx))
         (reset! special-attrs-state nil))
 
       [true false]
       ; todo this case WILL throw (going from a valid tx to invalid)
-      (context/with-tx! ctx tx)
+      (with-tx! ctx tx)
 
       [true true]
-      (context/with-tx! ctx tx))))
+      (with-tx! ctx tx))))
 
 (defn renderer [val ctx props]
   (let [special-attrs-state (r/atom nil)

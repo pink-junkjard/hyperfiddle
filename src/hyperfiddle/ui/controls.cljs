@@ -10,7 +10,7 @@
     [hyperfiddle.data :as data]
     [hyperfiddle.tempid :refer [tempid? underlying-tempid stable-relation-key smart-entity-identifier]]
     [hyperfiddle.ui.select$ :refer [select]]
-    [hyperfiddle.ui.util :refer [entity-props readonly->disabled on-change->tx writable-entity?]]))
+    [hyperfiddle.ui.util :refer [entity-props readonly->disabled on-change->tx with-tx! writable-entity?]]))
 
 
 (defn ^:export keyword [val ctx & [props]]
@@ -48,7 +48,7 @@
       [:select (-> (dissoc props :label-fn)
                    (assoc :value (if (nil? val) "" (str val))
                           :on-change (r/comp
-                                       (r/partial context/with-tx! ctx)
+                                       (r/partial with-tx! ctx)
                                        (r/partial on-change->tx ctx val)
                                        adapter)))
        [:option (assoc option-props :key true :value "true") "True"]

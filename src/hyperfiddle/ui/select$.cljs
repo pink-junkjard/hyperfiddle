@@ -12,7 +12,7 @@
     [hypercrud.browser.field :as field]
     [hyperfiddle.data :as data]
     [hyperfiddle.tempid :refer [smart-entity-identifier]]
-    [hyperfiddle.ui.util :refer [writable-entity? entity-change->tx]]
+    [hyperfiddle.ui.util :refer [writable-entity? entity-change->tx with-tx!]]
     [taoensso.timbre :as timbre]))
 
 (defn field-label [v]
@@ -107,7 +107,7 @@
     (assert (:options props) "select: :options prop is required")
     (-> (mlet [options-ref (data/select+ ctx :hf/iframe (keyword (:options props)))] ; coerce somewhere else tho
           (return
-            (let [default-props {:on-change (r/comp (r/partial context/with-tx! ctx)
+            (let [default-props {:on-change (r/comp (r/partial with-tx! ctx)
                                                     (r/partial entity-change->tx ctx))}
                   props (-> (merge default-props props)
                             (assoc :value (str (context/id ctx))))

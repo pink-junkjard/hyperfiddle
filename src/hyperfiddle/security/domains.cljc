@@ -8,9 +8,4 @@
    (def server
      {::security/process-tx entity-ownership/write-domains}))
 
-(def client
-  {::security/subject-can-transact? (fn [hf-db subject] (not (nil? subject)))
-   ::security/writable-entity? (fn [hf-db subject m]
-                                 (and (not (nil? subject))
-                                      (or (contains? (set (:hyperfiddle/owners hf-db)) subject)
-                                          (contains? (set (:hyperfiddle/owners m)) subject))))})
+(def client hyperfiddle.security.client/entity-ownership)

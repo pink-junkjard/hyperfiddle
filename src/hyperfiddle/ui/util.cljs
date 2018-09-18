@@ -9,11 +9,10 @@
     [contrib.string :refer [empty->nil]]
     [contrib.try$ :refer [try-either]]
     [hypercrud.browser.context :as context]
-    [hypercrud.browser.field :as field]
-    [hyperfiddle.domain :as domain]
-    [hyperfiddle.runtime :as runtime]
-    [hyperfiddle.security :as security]
-    [hyperfiddle.tempid :refer [smart-entity-identifier]]))
+    [hyperfiddle.security.client :as security]
+    [hyperfiddle.tempid :refer [smart-entity-identifier]]
+    [hyperfiddle.actions :as actions]
+    [hyperfiddle.runtime :as runtime]))
 
 
 ; defer eval until render cycle inside userportal
@@ -21,9 +20,9 @@
       memoized-eval-string (memoize safe-eval-string)]
   (defn eval-renderer-comp [?fiddle-cljs-ns-str fiddle-renderer-str & args]
     (let [+result (>>= (memoized-eval-string ?fiddle-cljs-ns-str)
-                      (r/constantly
-                        ; eval ns for the effect on the cljs namespaces
-                        (memoized-eval-string fiddle-renderer-str)))]
+                       (r/constantly
+                         ; eval ns for the effect on the cljs namespaces
+                         (memoized-eval-string fiddle-renderer-str)))]
       (either/branch
         +result
         (fn [e]
@@ -50,28 +49,21 @@
               :db.cardinality/many (map (partial smart-entity-identifier ctx) (get entity attr-ident))))]
     (on-change->tx ctx o new-val)))
 
-(let [parent-m (fn parent-m [ctx]
-                 (when-let [ctx (:hypercrud.browser/parent ctx)]
-                   (let [ident @(r/cursor (:hypercrud.browser/field ctx) [::field/path-segment])
-                         isComponent @(context/hydrate-attribute ctx ident :db/isComponent)]
-                     (if isComponent
-                       (parent-m ctx)
-                       @(:hypercrud.browser/data ctx)))))]
-  (defn writable-entity? [ctx]
-    (and
-      ; If the db/id was not pulled, we cannot write through to the entity
-      (boolean @(r/fmap :db/id (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data])))
-      (if-let [m (parent-m ctx)]
-        (let [dbname (context/dbname ctx)
-              hf-db (domain/dbname->hfdb dbname (:hypercrud.browser/domain ctx))
-              subject @(runtime/state (:peer ctx) [::runtime/user-id])]
-          (security/writable-entity? hf-db subject m))
-        false                                               ; todo should client sec have control of this case?
-        ))))
+(defn writable-entity? [ctx]
+  (and
+    ; If the db/id was not pulled, we cannot write through to the entity
+    (boolean @(r/fmap :db/id (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data])))
+    (security/writable-entity? ctx)))
+
+(defn with-tx! [ctx tx]
+  (let [uri (context/uri ctx)
+        _ (assert uri)                                      ; todo downstream action should be validating this
+        invert-route (:hypercrud.browser/invert-route ctx)]
+    (runtime/dispatch! (:peer ctx) (actions/with (:peer ctx) invert-route (:branch ctx) uri tx))))
 
 (let [on-change (fn [ctx o n]
                   (->> (on-change->tx ctx o n)
-                       (context/with-tx! ctx)))]
+                       (with-tx! ctx)))]
   (defn entity-props
     ([props ctx]
      (-> (assoc props :on-change (r/partial on-change ctx))

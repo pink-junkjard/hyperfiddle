@@ -1,6 +1,5 @@
 (ns contrib.data
-  #?(:cljs (:require-macros [contrib.data]))
-  (:require [cats.monad.either :as either]))
+  #?(:cljs (:require-macros [contrib.data])))
 
 
 (defn map-values [f m]

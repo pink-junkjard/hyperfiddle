@@ -13,18 +13,18 @@
      (defn process-tx [domains-uri subject uri tx]
        (let [hf-db (-> (d/db (d/connect (str domains-uri)))
                        (d/entity [:database/uri uri]))
-             f (case (:database/write-security hf-db :hyperfiddle.security/allow-anonymous) ; todo yank this default
-                 :hyperfiddle.security/owner-only security/write-owner-only
-                 :hyperfiddle.security/authenticated-users-only security/write-authenticated-users-only
-                 :hyperfiddle.security/allow-anonymous security/write-allow-anonymous
-                 :hyperfiddle.security/custom (-> (memoized-safe-eval-string (:database.custom-security/server hf-db))
-                                                  (either/branch
-                                                    (fn [e]
-                                                      (timbre/error e)
-                                                      (throw (ex-info "Misconfigured database security" {:hyperfiddle.io/http-status-code 500
-                                                                                                         :uri uri
-                                                                                                         :additional-info (.getMessage e)})))
-                                                    ::security/process-tx)))]
+             f (case (:database/write-security hf-db ::security/allow-anonymous) ; todo yank this default
+                 ::security/owner-only security/write-owner-only
+                 ::security/authenticated-users-only security/write-authenticated-users-only
+                 ::security/allow-anonymous security/write-allow-anonymous
+                 ::security/custom (-> (memoized-safe-eval-string (:database.custom-security/server hf-db))
+                                       (either/branch
+                                         (fn [e]
+                                           (timbre/error e)
+                                           (throw (ex-info "Misconfigured database security" {:hyperfiddle.io/http-status-code 500
+                                                                                              :uri uri
+                                                                                              :additional-info (.getMessage e)})))
+                                         ::security/process-tx)))]
          (f hf-db subject tx)))))
 
 #?(:clj

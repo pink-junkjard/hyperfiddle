@@ -3,7 +3,6 @@
     [contrib.data :refer [ancestry-common ancestry-divergence]]
     [contrib.reactive :as r]
     [hypercrud.browser.field :as field]
-    [hyperfiddle.actions :as actions]
     [hyperfiddle.domain :as domain]
     [hyperfiddle.runtime :as runtime]))
 
@@ -69,12 +68,6 @@
   ([uri ctx]
     ; todo what about if the tempid is on a higher branch in the uri?
    @(runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :tempid-lookups uri])))
-
-(defn with-tx! [ctx tx]
-  (let [uri (uri ctx)
-        _ (assert uri)                                      ; todo downstream action should be validating this
-        invert-route (:hypercrud.browser/invert-route ctx)]
-    (runtime/dispatch! (:peer ctx) (actions/with (:peer ctx) invert-route (:branch ctx) uri tx))))
 
 (defn hydrate-attribute [ctx ident & ?more-path]
   (r/cursor (:hypercrud.browser/schemas ctx) (concat [(dbname ctx) ident] ?more-path)))

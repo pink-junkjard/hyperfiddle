@@ -13,7 +13,7 @@
             [hyperfiddle.io.util :refer [v-not-nil?]]
             [hyperfiddle.domain :as domain]
             [hyperfiddle.runtime :as runtime]
-            [hyperfiddle.security :as security]
+            [hyperfiddle.security.client :as security]
             [promesa.core :as p]
             [taoensso.timbre :as timbre]))
 
@@ -150,7 +150,7 @@
   (and (get-in (get-state) [::runtime/auto-transact uri])
        (let [hf-db (domain/uri->hfdb uri (::runtime/domain (get-state)))] ; todo this needs sourced from context domain for topnav
          (either/branch
-           (security/attempt-to-transact? hf-db (get-in (get-state) [::runtime/user-id]))
+           (security/subject-can-transact? hf-db (get-in (get-state) [::runtime/user-id]))
            #(do
               (timbre/error %)
               false)

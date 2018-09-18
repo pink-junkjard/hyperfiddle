@@ -20,9 +20,9 @@
     [hyperfiddle.fiddle :as fiddle]
     [hyperfiddle.foundation :as foundation]
     [hyperfiddle.runtime :as runtime]
-    [hyperfiddle.security :as security]
+    [hyperfiddle.security.client :as security]
     [hyperfiddle.ui :as ui :refer [ui-from-link markdown]]
-    [hyperfiddle.ui.util :refer [on-change->tx]]
+    [hyperfiddle.ui.util :refer [on-change->tx with-tx!]]
     [taoensso.timbre :as timbre]))
 
 
@@ -116,7 +116,7 @@
         (fake-managed-anchor :hf/iframe :stage ctx "stage" {:tooltip [nil tooltip] :class (when dirty? "stage-dirty")}))
       (ui/link :hf/self :new-fiddle ctx "new-fiddle" (let [hf-db @(hyperfiddle.runtime/state (:peer ctx) [:hyperfiddle.runtime/domain :domain/fiddle-database])
                                                            subject @(hyperfiddle.runtime/state (:peer ctx) [:hyperfiddle.runtime/user-id])
-                                                           writes-allowed?+ (security/attempt-to-transact? hf-db subject)
+                                                           writes-allowed?+ (security/subject-can-transact? hf-db subject)
                                                            anonymous? (nil? subject)]
                                                        {:disabled (either/branch writes-allowed?+ (constantly true) not) ; todo this logic could be factored out into ui-from-link
                                                         :tooltip (either/branch
@@ -138,7 +138,7 @@
                              {:label (case % :query "query" :entity "pull" :blank "blank")
                               :target %
                               :value val
-                              :change! (r/comp (r/partial context/with-tx! ctx)
+                              :change! (r/comp (r/partial with-tx! ctx)
                                                (r/partial on-change->tx ctx val))})))]
     [:span.qe.radio-group props
      (apply fragment options)]))
@@ -148,7 +148,7 @@
   (defn ^:export stage-ui-buttons [selected-uri stage ctx]
     (let [writes-allowed?+ (let [hf-db (domain/uri->hfdb @selected-uri @(runtime/state (:peer ctx) [::runtime/domain]))
                                  subject @(runtime/state (:peer ctx) [::runtime/user-id])]
-                             (security/attempt-to-transact? hf-db subject))
+                             (security/subject-can-transact? hf-db subject))
           anonymous? (nil? @(runtime/state (:peer ctx) [::runtime/user-id]))]
       (fragment
         [tooltip (either/branch

@@ -4,12 +4,11 @@
     [contrib.reagent :refer [fragment]]
     [contrib.ui :refer [debounced]]
     [contrib.ui.tooltip :refer [tooltip-thick]]
-    [hypercrud.browser.context :as context]
     [hypercrud.browser.field :as field]
     [hyperfiddle.data :as data]
     [hyperfiddle.tempid :refer [smart-entity-identifier]]
     #_[hyperfiddle.ui]
-    [hyperfiddle.ui.util :refer [readonly->disabled writable-entity?]]
+    [hyperfiddle.ui.util :refer [readonly->disabled with-tx! writable-entity?]]
     [hyperfiddle.ui.docstring :refer [semantic-docstring]]))
 
 
@@ -46,7 +45,7 @@
 (defn -change! [state ctx #_ov v]
   (let [e @(r/fmap (r/partial smart-entity-identifier ctx)
                    (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data]))]
-    (context/with-tx! ctx [[:db/add e @state v]])))
+    (with-tx! ctx [[:db/add e @state v]])))
 
 (defn magic-new [val ctx props]
   (let [state (r/atom nil)]
