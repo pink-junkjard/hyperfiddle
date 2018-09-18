@@ -11,6 +11,7 @@
 
     #?(:cljs [contrib.reagent])
     #?(:cljs [contrib.ui])
+    #?(:cljs [contrib.ui.loader])
 
     ; These things can hardcode hyperfiddle.ui, like userland
     #?(:cljs [hyperfiddle.ui.markdown-extensions])
