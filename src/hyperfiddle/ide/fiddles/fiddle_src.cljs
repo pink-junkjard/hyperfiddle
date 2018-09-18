@@ -13,7 +13,9 @@
     #_[hyperfiddle.ide.hf-live :as hf-live]                 ;cycle
     [hyperfiddle.runtime :as runtime]
     [hyperfiddle.ui :refer [anchor field hyper-control link markdown]]
-    [re-com.tabs :refer [horizontal-tabs]]))
+    [hyperfiddle.ui.hyper-controls :refer [label-with-docs]]
+    [re-com.tabs :refer [horizontal-tabs]]
+    [hypercrud.browser.context :as context]))
 
 
 (defn schema-links [ctx]
@@ -28,25 +30,7 @@
        (doall)))
 
 (def controls
-  {:fiddle/pull (fn [val ctx props]
-                  [:div
-                   [hyper-control val ctx (dissoc props :embed-mode)]
-                   [:span.schema "schema: " (schema-links ctx)]])
-   :fiddle/query (fn [val ctx props]
-                   [:div
-                    [hyper-control val ctx (dissoc props :embed-mode)]
-                    [:span.schema "schema: " (schema-links ctx)]])
-   :fiddle/markdown (fn [val ctx props]
-                      [:div
-                       [hyper-control val ctx (dissoc props :embed-mode)]])
-   :fiddle/css (fn [val ctx props]
-                 [:div
-                  [hyper-control val ctx (dissoc props :embed-mode)]])
-   :fiddle/renderer (fn [val ctx props]
-                      [:div
-                       [hyper-control val ctx (dissoc props :embed-mode)]
-                       ])
-   :fiddle/links (fn [val ctx props]
+  {:fiddle/links (fn [val ctx props]
                    (let [ctx (if (:embed-mode props)
                                (links-fiddle/inject-topnav-links+ ctx)
                                ctx)]
@@ -61,29 +45,32 @@
 (def tabs
   {:query (fn [val ctx]
             (fragment
-              :query
-              (field [:fiddle/type] ctx nil)
+              (field [:fiddle/type] ctx (fn [val ctx-fiddle-type props]
+                                          ; The divs are for styling
+                                          [:div
+                                           [hyper-control val ctx-fiddle-type props]
+                                           (if (= val :entity)
+                                             (let [ctx (context/focus ctx [:fiddle/pull-database])]
+                                               [:div [hyper-control @(:hypercrud.browser/data ctx) ctx {:class "pull-database"}]])
+                                             [:div])
+                                           [:span.schema "schema: " (schema-links ctx-fiddle-type)]]))
+
               (case @(r/cursor (:hypercrud.browser/data ctx) [:fiddle/type])
-                :entity (fragment (field [:fiddle/pull-database] ctx nil)
-                                  (field [:fiddle/pull] ctx (controls :fiddle/pull)))
-                :query (field [:fiddle/query] ctx (controls :fiddle/query))
-                :blank nil
-                nil nil)))
+                :entity (field [:fiddle/pull] ctx hyper-control #_{:label-fn (r/constantly nil)})
+                :query (field [:fiddle/query] ctx hyper-control #_{:label-fn (r/constantly nil)})
+                :blank nil)))
    :links (fn [val ctx]
             (field [:fiddle/links] ctx (controls :fiddle/links)))
    :view (fn [val ctx]
-           (fragment
-             :view
-             (field [:fiddle/markdown] ctx (controls :fiddle/markdown))
-             (field [:fiddle/renderer] ctx (controls :fiddle/renderer))))
+           (field [:fiddle/renderer] ctx hyper-control))
+   :markdown (fn [val ctx]
+               (field [:fiddle/markdown] ctx hyper-control))
    :css (fn [val ctx]
-          (field [:fiddle/css] ctx (controls :fiddle/css)))
-
+          (field [:fiddle/css] ctx hyper-control))
    :fiddle (fn [val ctx]
              (fragment
-               :fiddle
-               (field [:fiddle/ident] ctx nil)
-               (field [:fiddle/hydrate-result-as-fiddle] ctx nil)
+               (field [:fiddle/ident] ctx hyper-control)
+               (field [:fiddle/hydrate-result-as-fiddle] ctx hyper-control)
                #_[:div.p "Additional attributes"]
                (->> @(r/fmap ::field/children (:hypercrud.browser/field ctx))
                     ; todo tighter reactivity
@@ -94,7 +81,8 @@
                            ^{:key (str [segment])}
                            [field [segment] ctx nil]))
                     (doall))
-               (link :hf/remove :fiddle ctx "Remove fiddle" {:class "btn-outline-danger"})))})
+               (field [:db/id] ctx (fn [val ctx props]
+                                     [:div (link :hf/remove :fiddle ctx "Remove fiddle" {:class "btn-outline-danger"})]))))})
 
 (defn fiddle-src-renderer [val ctx props]
   (let [tab-state (r/atom :query)]
@@ -104,7 +92,7 @@
          [:h3 "Source: " (str @(r/cursor (:hypercrud.browser/data ctx) [:fiddle/ident]))]
          [horizontal-tabs
           ; F U recom: Validation failed: Expected 'vector of tabs | atom'. Got '[:query :links :view :css :fiddle]'
-          :tabs [{:id :query} {:id :links} {:id :view} {:id :css} {:id :fiddle}]
+          :tabs [{:id :query} {:id :links} {:id :markdown} {:id :view} {:id :css} {:id :fiddle}]
           :id-fn :id
           :label-fn (comp name :id)
           :model tab-state
