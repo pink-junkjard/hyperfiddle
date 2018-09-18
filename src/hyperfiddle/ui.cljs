@@ -162,7 +162,7 @@ User renderers should not be exposed to the reaction."
 
 (defn ^:export anchor [ctx props & children]
   (let [props (-> props
-                  (update :class css "hf-auto-nav")
+                  (update :class css "hyperfiddle")
                   (dissoc :route)
                   (assoc :href (some->> (:route props) (runtime/encode-route (:peer ctx)))))]
     (into [:a props] children)))
@@ -251,7 +251,7 @@ User renderers should not be exposed to the reaction."
                       (merge (dissoc props :class :tooltip)))]
         (cond
           @(r/fmap (comp boolean :link/tx-fn) link-ref)
-          (let [props (update props :class css "hf-auto-nav")] ; should this be in popover-cmp? what is this class? – unify with semantic css
+          (let [props (update props :class css "hyperfiddle")] ; should this be in popover-cmp? what is this class? – unify with semantic css
             [popover-cmp link-ref ctx visual-ctx props @(r/track prompt link-ref ?label)])
 
           @(r/fmap (r/comp (r/partial = :hf/iframe) :link/rel) link-ref)

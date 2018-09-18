@@ -30,7 +30,7 @@
         ;
         ; This css is helpful when udnerstanding:
         ;    .rc-popover-point { position: absolute !important; }
-        ;    a.hf-auto-nav {position: absolute; }
+        ;    a.hyperfiddle {position: absolute; }
         ;
         {:position :below-left :showing? rstate}
         t-props                                             ; label, status
