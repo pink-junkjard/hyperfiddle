@@ -1,6 +1,7 @@
 (ns hyperfiddle.security.domains
   (:require
     [hyperfiddle.security :as security]
+    [hyperfiddle.security.client :as client-sec]
     #?(:clj
     [hyperfiddle.security.entity-ownership :as entity-ownership])))
 
@@ -8,4 +9,4 @@
    (def server
      {::security/process-tx entity-ownership/write-domains}))
 
-(def client hyperfiddle.security.client/entity-ownership)
+(def client client-sec/entity-ownership)
