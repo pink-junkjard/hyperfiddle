@@ -332,10 +332,11 @@ User renderers should not be exposed to the reaction."
 
 (defn ^:export table "Semantic table; columns driven externally" ; this is just a widget
   [columns ctx & [props]]
-  (let [sort-col (r/atom nil)
+  (let [sort-col (r/atom (::sort/initial-sort props))
         sort (fn [v] (hyperfiddle.ui.sort/sort-fn v sort-col))]
     (fn [columns ctx & [props]]
-      (let [ctx (assoc ctx ::sort/sort-col sort-col
+      (let [props (dissoc props ::sort/initial-sort)
+            ctx (assoc ctx ::sort/sort-col sort-col
                            ::layout :hyperfiddle.ui.layout/table)]
         [:table (update props :class (fnil css "hyperfiddle") "unp") ; fnil case is iframe root (not a field :many)
          [:thead (->> (columns (dissoc ctx :hypercrud.browser/data) props) (into [:tr]))] ; strict
