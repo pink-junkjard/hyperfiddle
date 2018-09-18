@@ -12,7 +12,8 @@
     [hyperfiddle.ide.fiddles.fiddle-links.renderer :as links-fiddle]
     #_[hyperfiddle.ide.hf-live :as hf-live]                 ;cycle
     [hyperfiddle.runtime :as runtime]
-    [hyperfiddle.ui :as ui :refer [anchor field hyper-control link markdown]]))
+    [hyperfiddle.ui :refer [anchor field hyper-control link markdown]]
+    [re-com.tabs :refer [horizontal-tabs]]))
 
 
 (defn schema-links [ctx]
@@ -55,31 +56,57 @@
                       [:div [links-fiddle/renderer val ctx props]]]))
    })
 
+; Design wise, we only want one codemirror per tab, and it will be full-height.
+
+(def tabs
+  {:query (fn [val ctx]
+            (fragment
+              :query
+              (field [:fiddle/type] ctx nil)
+              (case @(r/cursor (:hypercrud.browser/data ctx) [:fiddle/type])
+                :entity (fragment (field [:fiddle/pull-database] ctx nil)
+                                  (field [:fiddle/pull] ctx (controls :fiddle/pull)))
+                :query (field [:fiddle/query] ctx (controls :fiddle/query))
+                :blank nil
+                nil nil)))
+   :links (fn [val ctx]
+            (field [:fiddle/links] ctx (controls :fiddle/links)))
+   :view (fn [val ctx]
+           (fragment
+             :view
+             (field [:fiddle/markdown] ctx (controls :fiddle/markdown))
+             (field [:fiddle/renderer] ctx (controls :fiddle/renderer))))
+   :css (fn [val ctx]
+          (field [:fiddle/css] ctx (controls :fiddle/css)))
+
+   :fiddle (fn [val ctx]
+             (fragment
+               :fiddle
+               (field [:fiddle/ident] ctx nil)
+               (field [:fiddle/hydrate-result-as-fiddle] ctx nil)
+               #_[:div.p "Additional attributes"]
+               (->> @(r/fmap ::field/children (:hypercrud.browser/field ctx))
+                    ; todo tighter reactivity
+                    (map ::field/path-segment)
+                    (remove #(= (namespace %) "fiddle"))
+                    (remove #(= :db/id %))
+                    (map (fn [segment]
+                           ^{:key (str [segment])}
+                           [field [segment] ctx nil]))
+                    (doall))
+               (link :hf/remove :fiddle ctx "Remove fiddle" {:class "btn-outline-danger"})))})
+
 (defn fiddle-src-renderer [val ctx props]
-  (let [ctx (shadow-fiddle ctx)]
-    [:div props
-     [:h3 (str @(r/cursor (:hypercrud.browser/data ctx) [:fiddle/ident])) " source"]
-     (field [:fiddle/ident] ctx nil)
-     (field [:fiddle/type] ctx nil)
-     (case @(r/cursor (:hypercrud.browser/data ctx) [:fiddle/type])
-       :entity (fragment (field [:fiddle/pull-database] ctx nil)
-                         (field [:fiddle/pull] ctx (controls :fiddle/pull)))
-       :query (field [:fiddle/query] ctx (controls :fiddle/query))
-       :blank nil
-       nil nil)
-     (field [:fiddle/renderer] ctx (controls :fiddle/renderer))
-     (field [:fiddle/css] ctx (controls :fiddle/css))
-     (field [:fiddle/markdown] ctx (controls :fiddle/markdown))
-     (field [:fiddle/links] ctx (controls :fiddle/links))
-     (field [:fiddle/hydrate-result-as-fiddle] ctx nil)
-     [:div.p "Additional attributes"]
-     (->> @(r/fmap ::field/children (:hypercrud.browser/field ctx))
-          ; todo tighter reactivity
-          (map ::field/path-segment)
-          (remove #(= (namespace %) "fiddle"))
-          (remove #(= :db/id %))
-          (map (fn [segment]
-                 ^{:key (str [segment])}
-                 [field [segment] ctx nil]))
-          (doall))
-     (link :hf/remove :fiddle ctx "Remove fiddle" {:class "btn-outline-danger"})]))
+  (let [tab-state (r/atom :query)]
+    (fn [val ctx props]
+      (let [ctx (shadow-fiddle ctx)]
+        [:div props
+         [:h3 "Source: " (str @(r/cursor (:hypercrud.browser/data ctx) [:fiddle/ident]))]
+         [horizontal-tabs
+          ; F U recom: Validation failed: Expected 'vector of tabs | atom'. Got '[:query :links :view :css :fiddle]'
+          :tabs [{:id :query} {:id :links} {:id :view} {:id :css} {:id :fiddle}]
+          :id-fn :id
+          :label-fn (comp name :id)
+          :model tab-state
+          :on-change (r/partial reset! tab-state)]
+         [(get tabs @tab-state) val ctx]]))))
