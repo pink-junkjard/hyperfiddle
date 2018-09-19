@@ -34,7 +34,7 @@
          reagent.ratom/Track (pprint-ratom o "Track:")
          reagent.ratom/RCursor (pprint-ratom o "Cursor:")
          reagent.ratom/Reaction (pprint-ratom o (str "Reaction " (hash o) ":"))
-         reagent.ratom/Wrapper (pprint-ratom o (str "Wrap:"))])
+         reagent.ratom/Wrapper (pprint-ratom o "Wrap:")])
     ThinEntity (pprint-simple-thinentity o)
     (clojure.pprint/simple-dispatch o)))
 
