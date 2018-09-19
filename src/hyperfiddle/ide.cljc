@@ -183,14 +183,14 @@
              (when (and active-ide? src-mode)               ; primary, blue background (IDE)   /:posts/:hello-world#:src
                [ui/iframe ide-ctx                           ; srcmode is equal to topnav route but a diff renderer
                 {:route (ide-fiddle-route route ctx)
-                 :class (css "container-fluid" "devsrc")
+                 :class (css "devsrc")
                  :user-renderer fiddle-src-renderer}])
 
              ; User content view in both prod and ide. What if src-mode and not-dev ? This draws nothing
              (when-not src-mode                             ; primary, white background (User)   /:posts/:hello-world
                (let [ctx (page-target-context ctx)]
                  [ui/iframe ctx {:route route
-                                 :class (css "container-fluid" "hyperfiddle-user"
+                                 :class (css "hyperfiddle-user"
                                              (when active-ide? "hyperfiddle-ide")
                                              (some-> ctx :hypercrud.ui/display-mode deref name (->> (str "display-mode-"))))}]))))))))
 
