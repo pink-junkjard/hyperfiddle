@@ -11,11 +11,9 @@
     "react": "16.2.0",
     "react-addons-create-fragment": "^15.6.2",
     "react-dom": "16.2.0",
-    "react-slick": "^0.23.1",
     "remark": "^8.0.0",
     "remark-react": "^4.0.1",
     "request": "2.81.0",
-    "slick-carousel": "^1.8.1",
     "websocket": "1.0.24"
   }
 }
