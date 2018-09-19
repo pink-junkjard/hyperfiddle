@@ -71,7 +71,7 @@
              (fragment
                (field [:fiddle/ident] ctx hyper-control)
                (field [:fiddle/hydrate-result-as-fiddle] ctx hyper-control)
-               #_[:div.p "Additional attributes"]
+               [:div.p "Additional attributes"]
                (->> @(r/fmap ::field/children (:hypercrud.browser/field ctx))
                     ; todo tighter reactivity
                     (map ::field/path-segment)
