@@ -443,7 +443,7 @@ nil. call site must wrap with a Reagent component"          ; is this just hyper
             [contrib.ui/code {:value edn-str :read-only true}]))]
   (defn ^:export fiddle-api [val ctx & [props]]
     (let [data (hyperfiddle.ui.api/api-data ctx)]
-      [:div.hyperfiddle.display-mode-api (select-keys props [:class])
+      [:div.hyperfiddle.display-mode-api.container-fluid (select-keys props [:class])
        [:h3
         [:dl
          [:dt "route"] [:dd (pr-str @(:hypercrud.browser/route ctx))]]]
