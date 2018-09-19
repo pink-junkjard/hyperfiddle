@@ -128,7 +128,7 @@
                                                                     (not writes-allowed?) [:warning "Writes restricted"])))}))
       [tooltip {:label "Environment administration"} (ui/link :hf/self :domain ctx "env")]
       (if @(runtime/state (:peer ctx) [::runtime/user-id])
-        (let [{:keys [:hypercrud.browser/data]} (hyperfiddle.data/browse ctx :hf/iframe :account)]
+        (if-let [{:keys [:hypercrud.browser/data]} (hyperfiddle.data/browse ctx :hf/iframe :account)]
           (fake-managed-anchor :hf/iframe :account ctx @(r/fmap :user/name data)
                                {:tooltip [nil @(r/fmap :user/email data)]}))
         [:a {:href (foundation/stateless-login-url ctx)} "login"])]]))
