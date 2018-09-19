@@ -61,8 +61,9 @@
 
 (defn ide-fiddle-route [[fiddle datomic-args service-args frag :as route] ctx]
   ; Don't impact the request! Topnav can always use :target-route
-  [:hyperfiddle/topnav (if-not (magic-ide-fiddle? fiddle (get-in ctx [:hypercrud.browser/domain :domain/ident]))
-                         [#entity["$" (base/legacy-fiddle-ident->lookup-ref fiddle)]])])
+  (let [ide-domain (magic-ide-fiddle? fiddle (get-in ctx [:hypercrud.browser/domain :domain/ident]))
+        ?target-fiddle (if-not ide-domain [#entity["$" (base/legacy-fiddle-ident->lookup-ref fiddle)]])]
+    [:hyperfiddle/topnav ?target-fiddle]))
 
 ; ide is overloaded, these ide-context functions are exclusive to (top)
 ; despite being in the namespace (hyperfiddle.ide) which encompasses the union of target/user (bottom) and ide (top)
