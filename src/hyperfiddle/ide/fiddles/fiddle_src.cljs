@@ -13,7 +13,7 @@
     #_[hyperfiddle.ide.hf-live :as hf-live]                 ;cycle
     [hyperfiddle.runtime :as runtime]
     [hyperfiddle.ui :refer [anchor field hyper-control link markdown]]
-    [hyperfiddle.ui.hyper-controls :refer [label-with-docs]]
+    [hyperfiddle.ui.controls :refer [label-with-docs]]
     [re-com.tabs :refer [horizontal-tabs]]
     [hypercrud.browser.context :as context]))
 

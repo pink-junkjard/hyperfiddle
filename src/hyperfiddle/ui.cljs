@@ -33,8 +33,8 @@
     [hyperfiddle.runtime :as runtime]
     [hyperfiddle.tempid :refer [smart-entity-identifier stable-relation-key]]
     [hyperfiddle.ui.api]
-    [hyperfiddle.ui.controls :as controls]
-    [hyperfiddle.ui.hyper-controls :refer [attribute-label relation-label tuple-label dbid-label magic-new magic-new-label]]
+    [hyperfiddle.ui.controls :as controls :refer [label-with-docs dbid-label magic-new]]
+    [hyperfiddle.ui.docstring :refer [semantic-docstring]]
     [hyperfiddle.ui.popover :refer [affect-cmp popover-cmp]]
     [hyperfiddle.ui.select$]
     [hyperfiddle.ui.sort :as sort]
@@ -106,22 +106,22 @@
                                              [field [] ctx entity-links-iframe (assoc props :label-fn (r/constantly nil #_[:div "nested pull iframes"]))]])
           :else [(control val ctx props) val ctx props]))))
 
-(defn hyper-label [_ ctx & [props]]
+(defn ^:export hyper-label [_ ctx & [props]]
   (let [field @(:hypercrud.browser/field ctx)
         level (::field/level field)
         segment (last (:hypercrud.browser/path ctx))
         segment-type (context/segment-type-2 segment)       ; :element means :relation? no, naked. Relation is ortho
         child-fields (not @(r/fmap (r/comp nil? ::field/children) (:hypercrud.browser/field ctx)))]
     (cond
-      (field/identity-segment? field) dbid-label
+      (field/identity-segment? field) (dbid-label _ ctx props)
       :else (match* [level segment-type segment child-fields]
-              [nil :splat _ _] magic-new-label
-              [nil :attribute _ _] attribute-label
-              [nil :element _ true] relation-label
-              [nil :element _ false] attribute-label
-              [nil :naked-or-element _ _] relation-label    ; Schema new attr, and fiddle-links new link - needs to be split
-              [:relation :naked-or-element _ _] relation-label
-              [:tuple :naked-or-element _ _] tuple-label))))
+              [nil :splat _ _] (label-with-docs (::field/label field) (semantic-docstring ctx "Free-hand attribute entry") props)
+              [nil :attribute _ _] (label-with-docs (::field/label field) (semantic-docstring ctx) props)
+              [nil :element _ true] (label-with-docs "*relation*" (semantic-docstring ctx) props)
+              [nil :element _ false] (label-with-docs (::field/label field) (semantic-docstring ctx) props)
+              [nil :naked-or-element _ _] (label-with-docs "*relation*" (semantic-docstring ctx) props) ; Schema new attr, and fiddle-links new link - needs to be split
+              [:relation :naked-or-element _ _] (label-with-docs "*relation*" (semantic-docstring ctx) props)
+              [:tuple :naked-or-element _ _] (label-with-docs "*tuple*" (semantic-docstring ctx) props)))))
 
 (defn auto-link-css [link]
   (->> (:link/class link)
