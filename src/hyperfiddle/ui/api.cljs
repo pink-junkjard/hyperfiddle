@@ -73,4 +73,4 @@
     (merge (with-result ctx)
            thing
            thing3
-           {(:route ctx) @(:hypercrud.browser/data ctx)})))
+           {@(:hypercrud.browser/route ctx) @(:hypercrud.browser/data ctx)})))
