@@ -29,4 +29,5 @@
            (hyperfiddle.ui/field [:db/isComponent] ctx)
            (hyperfiddle.ui/field [:db/fulltext] ctx nil {:read-only true})
            (hyperfiddle.ui/field [:db/doc] ctx)])
-        ctx])]))
+        ctx
+        {:hyperfiddle.ui.sort/initial-sort [[:db/ident] :asc]}])]))
