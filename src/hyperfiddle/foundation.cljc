@@ -1,29 +1,30 @@
 (ns hyperfiddle.foundation
   (:refer-clojure :exclude [read-string])
-  (:require [cats.monad.either :as either :refer [branch left right]]
-            [clojure.string :as string]
+  (:require
+    [cats.monad.either :as either :refer [branch left right]]
+    [clojure.string :as string]
     #?(:cljs [contrib.css :refer [css]])
-            [contrib.base-64-url-safe :as base64-url-safe]
-            [contrib.data :refer [update-existing]]
-            [contrib.eval :as eval]
-            [contrib.reactive :as r]
-            [contrib.reader :refer [read-string read-edn-string!]]
+    [contrib.base-64-url-safe :as base64-url-safe]
+    [contrib.data :refer [update-existing]]
+    [contrib.eval :as eval]
+    [contrib.reactive :as r]
+    [contrib.reader :refer [read-string read-edn-string!]]
     #?(:cljs [contrib.reagent :refer [fragment]])
-            [contrib.pprint :refer [pprint-datoms-str]]
-            [contrib.string :refer [or-str]]
+    [contrib.pprint :refer [pprint-datoms-str]]
+    [contrib.string :refer [or-str]]
     #?(:cljs [contrib.ui :refer [code debounced markdown validated-cmp]])
-            [hypercrud.browser.context :as context]
-            [hypercrud.browser.routing :as routing]
-            [hypercrud.browser.router :as router]
-            [hypercrud.client.core :as hc]
-            [hypercrud.types.EntityRequest :refer [->EntityRequest]]
-            [hypercrud.types.Err :as Err]
+    [hypercrud.browser.context :as context]
+    [hypercrud.browser.routing :as routing]
+    [hypercrud.browser.router :as router]
+    [hypercrud.client.core :as hc]
+    [hypercrud.types.EntityRequest :refer [->EntityRequest]]
+    [hypercrud.types.Err :as Err]
     #?(:cljs [hypercrud.ui.stale :as stale])
-            [hyperfiddle.actions :as actions]
-            [hyperfiddle.domain]
-            [hyperfiddle.runtime :as runtime]
-            [hyperfiddle.security.domains]
-            [promesa.core :as p]
+    [hyperfiddle.actions :as actions]
+    [hyperfiddle.domain]
+    [hyperfiddle.runtime :as runtime]
+    [hyperfiddle.security.domains]
+    [promesa.core :as p]
     #?(:cljs [re-com.tabs :refer [horizontal-tabs]])))
 
 
