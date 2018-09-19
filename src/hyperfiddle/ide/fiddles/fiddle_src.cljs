@@ -95,4 +95,4 @@
           :label-fn (comp name :id)
           :model tab-state
           :on-change (r/partial reset! tab-state)]
-         [(get tabs @tab-state) val ctx]]))))
+         [(get tabs @tab-state) val ctx (select-keys props [:embed-mode])]]))))
