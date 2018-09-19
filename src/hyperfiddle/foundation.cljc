@@ -93,18 +93,22 @@
          [:fieldset [:legend "(.-stack e)"]                 ; network error
           [:pre (.-stack e)]]])]))
 
-(defn process-domain [domain]
+(defn process-domain [domain]                               ; this should be memoized at the call site?
+  (-> (into {} domain)                                      ; why?
+      (update-existing :domain/environment read-string) #_"todo this can throw"))
+
+(defn shadow-domain [domain]
+  ; also called from the view, which wants database types, so separate from process-domain
   (-> (into {} domain)
-      (update-existing :domain/environment read-string) #_"todo this can throw"
       (update :domain/home-route or-str "[:hyperfiddle.ide/entry-point-fiddles]")))
 
 (defn context [ctx source-domain user-domain-insecure]
   ; Secure first, which is backwards, see `domain-request` comment
   (let [domain (into @(runtime/state (:peer ctx) [::runtime/domain]) user-domain-insecure)]
     (assoc ctx
-      :hypercrud.browser/domain domain
+      :hypercrud.browser/domain (shadow-domain domain)      ; should probably get process-domain, it just doesn't use it?
       :hypercrud.browser/invert-route (r/partial routing/invert-route domain)
-      :hypercrud.browser/source-domain (process-domain source-domain))))
+      :hypercrud.browser/source-domain (process-domain (shadow-domain source-domain)))))
 
 (defn local-basis [page-or-leaf global-basis route ctx f]
   (concat
