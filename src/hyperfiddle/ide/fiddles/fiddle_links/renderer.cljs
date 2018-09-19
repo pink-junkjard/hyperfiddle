@@ -50,7 +50,7 @@
                                                :options "fiddle-options"
                                                :option-label (r/comp pr-str :fiddle/ident first)})
         (field [:link/path] ctx hyper-control)
-        (field [:link/formula] ctx hyper-control)
+        (when-not embed-mode (field [:link/formula] ctx hyper-control)) ; this is kind of deprecated, so hiding in hf-live to save space
         (when-not embed-mode (field [:link/tx-fn] ctx hyper-control))
         (when-not embed-mode (field [] ctx empty-renderer))])
      ctx
