@@ -11,10 +11,11 @@
     [hyperfiddle.ui.select$ :refer [select-error-cmp]]))
 
 
-(defn link-fiddle [val ctx props]
+(defn link-fiddle [val ctx {:keys [:embed-mode] :as props}]
   (fragment
     [hyper-control val ctx props]
-    (link :hf/affix :fiddle ctx "affix" {:disabled (system-link? @(r/fmap :db/id (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data])))})))
+    (when-not embed-mode
+      (link :hf/affix :fiddle ctx "affix" {:disabled (system-link? @(r/fmap :db/id (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data])))}))))
 
 (defn- inject-links [topnav-links fiddle]
   (assoc fiddle :fiddle/links topnav-links))
@@ -45,7 +46,8 @@
      (fn [ctx]
        [(field [:link/rel] ctx hyper-control)
         (field [:link/class] ctx hyper-control)
-        (field [:link/fiddle] ctx link-fiddle {:options "fiddle-options"
+        (field [:link/fiddle] ctx link-fiddle {:embed-mode embed-mode
+                                               :options "fiddle-options"
                                                :option-label (r/comp pr-str :fiddle/ident first)})
         (field [:link/path] ctx hyper-control)
         (field [:link/formula] ctx hyper-control)

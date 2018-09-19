@@ -18,7 +18,7 @@
                  :fiddle/renderer :fiddle/css :fiddle/markdown :fiddle/links :fiddle/hydrate-result-as-fiddle])
 
 (defn fiddle-src [attrs val ctx-real props]
-  (fiddle-src/fiddle-src-renderer val ctx-real (merge props {:embed-mode true}))
+  [fiddle-src/fiddle-src-renderer val ctx-real (merge props {:embed-mode true})]
   #_(let [attrs (or (seq attrs)
                   (clojure.set/intersection
                     (-> @(:hypercrud.browser/data ctx-real)

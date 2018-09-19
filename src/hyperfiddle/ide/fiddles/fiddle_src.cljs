@@ -49,25 +49,26 @@
    [:span.schema "schema: " (schema-links ctx-fiddle-type)]])
 
 (def tabs
-  {:query (fn [val ctx]
+  {:query (fn [val ctx props]
             (fragment
-              (field [:fiddle/type] ctx (r/partial query-composite-stable ctx))
+              (field [:fiddle/type] ctx (r/partial query-composite-stable ctx) props)
               (case @(r/cursor (:hypercrud.browser/data ctx) [:fiddle/type])
-                :entity (field [:fiddle/pull] ctx hyper-control #_{:label-fn (r/constantly nil)})
-                :query (field [:fiddle/query] ctx hyper-control #_{:label-fn (r/constantly nil)})
+                :entity (field [:fiddle/pull] ctx hyper-control props)
+                :query (field [:fiddle/query] ctx hyper-control props)
                 :blank nil)))
-   :links (fn [val ctx]
-            (field [:fiddle/links] ctx links-composite-stable))
-   :view (fn [val ctx]
-           (field [:fiddle/renderer] ctx hyper-control))
-   :markdown (fn [val ctx]
-               (field [:fiddle/markdown] ctx hyper-control))
-   :css (fn [val ctx]
-          (field [:fiddle/css] ctx hyper-control))
-   :fiddle (fn [val ctx]
+   :links (fn [val ctx props]
+            ; Careful: pass through :embed-mode
+            (field [:fiddle/links] ctx links-composite-stable props))
+   :view (fn [val ctx props]
+           (field [:fiddle/renderer] ctx hyper-control props))
+   :markdown (fn [val ctx props]
+               (field [:fiddle/markdown] ctx hyper-control props))
+   :css (fn [val ctx props]
+          (field [:fiddle/css] ctx hyper-control props))
+   :fiddle (fn [val ctx props]
              (fragment
-               (field [:fiddle/ident] ctx hyper-control)
-               (field [:fiddle/hydrate-result-as-fiddle] ctx hyper-control)
+               (field [:fiddle/ident] ctx hyper-control props)
+               (field [:fiddle/hydrate-result-as-fiddle] ctx hyper-control props)
                [:div.p "Additional attributes"]
                (->> @(r/fmap ::field/children (:hypercrud.browser/field ctx))
                     ; todo tighter reactivity
@@ -83,10 +84,11 @@
 
 (defn fiddle-src-renderer [val ctx props]
   (let [tab-state (r/atom :query)]
-    (fn [val ctx props]
+    (fn [val ctx {:keys [:embed-mode] :as props}]
       (let [ctx (shadow-fiddle ctx)]
         [:div props
-         [:h3 "Source: " (str @(r/cursor (:hypercrud.browser/data ctx) [:fiddle/ident]))]
+         (if-not embed-mode
+           [:h3 "Source: " (str @(r/cursor (:hypercrud.browser/data ctx) [:fiddle/ident]))])
          ; Design constraint: one codemirror per tab, and it will expand to fill height.
          [horizontal-tabs
           ; F U recom: Validation failed: Expected 'vector of tabs | atom'. Got '[:query :links :view :css :fiddle]'
@@ -95,4 +97,4 @@
           :label-fn (comp name :id)
           :model tab-state
           :on-change (r/partial reset! tab-state)]
-         [(get tabs @tab-state) val ctx (select-keys props [:embed-mode])]]))))
+         [(get tabs @tab-state) val ctx {:embed-mode embed-mode}]]))))
