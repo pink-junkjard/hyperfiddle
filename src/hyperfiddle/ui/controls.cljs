@@ -65,19 +65,25 @@
    (let [label-props (select-keys props [:on-click :class])] ; https://github.com/hyperfiddle/hyperfiddle/issues/511
      [:label.hyperfiddle label-props label (if help-md [:sup "†"])])])
 
+(defn cardinality [ctx]
+  (let [segment (last (:hypercrud.browser/path ctx))
+        attr @(context/hydrate-attribute ctx segment)]
+    (some-> attr :db/cardinality :db/ident)))
+
 (defn dbid-label [_ ctx & [props]]
-  (fragment
-    (label-with-docs
-      (some->> (:hypercrud.browser/field ctx) (r/fmap ::field/label) deref)
-      (semantic-docstring ctx)
-      props)
+  (let [prompt (some->> (:hypercrud.browser/field ctx) (r/fmap ::field/label) deref)
+        parent-ctx (:hypercrud.browser/parent ctx)]
+    (apply fragment
+      (label-with-docs prompt (semantic-docstring ctx) props)
+      ; dbid links are at parent path, but we don't always have a parent #543
+      (if (some-> parent-ctx cardinality (= :db.cardinality/many))
+        ; cardinality/one is handled by the body
+        [(if-let [link (data/select-here parent-ctx :hf/affix)]
+           [hyperfiddle.ui/ui-from-link link parent-ctx props "affix"])
+         (if-let [link (data/select-here parent-ctx :hf/new)]
+           [hyperfiddle.ui/ui-from-link link parent-ctx props "new"])]))))
 
-    ; dbid links are at parent path, but we don't always have a parent #543
-    (if-let [ctx (:hypercrud.browser/parent ctx)]
-      (if-let [new (data/select-here ctx :hf/new)]
-        [hyperfiddle.ui/ui-from-link new ctx props "new"]))))
-
-(defn -id-label [ctx val]
+(defn id-prompt [ctx val]
   (pr-str (smart-entity-identifier ctx val)))
 
 (defn ^:export ref [val ctx & [props]]
@@ -87,8 +93,8 @@
            [:div.input
             (or (if-let [self (data/select-here ctx :hf/self)]
                   (if val
-                    [hyperfiddle.ui/ui-from-link self ctx props (-id-label ctx val)]))
-                (-id-label ctx val))]
+                    [hyperfiddle.ui/ui-from-link self ctx props (id-prompt ctx val)]))
+                (id-prompt ctx val))]
 
            (if-let [link (data/select-here ctx :hf/affix)]
              [hyperfiddle.ui/ui-from-link link ctx props "affix"])
@@ -110,8 +116,10 @@
             (if val
               [hyperfiddle.ui/ui-from-link self ctx props (pr-str val)]))
           (pr-str val))]
-     (if-let [link (data/select-here ctx :hf/affix)]
-       [hyperfiddle.ui/ui-from-link link ctx props "affix"])
+
+     (if (some-> ctx cardinality (= :db.cardinality/one))
+       (if-let [link (data/select-here ctx :hf/affix)]
+         [hyperfiddle.ui/ui-from-link link ctx props "affix"]))
 
      (if-not (underlying-tempid ctx val)
        (if-let [link (data/select-here ctx :hf/remove)]
@@ -188,7 +196,7 @@
          (let [props (-> (assoc props
                            :magic-new-mode true
                            :on-blur (r/partial -magic-new-change! state ctx)
-                           :read-only (let [_ [@state]] ; force reactions
+                           :read-only (let [_ [@state]]     ; force reactions
                                         (or (nil? @state) read-only))
                            :placeholder (pr-str :gender/female))
                          readonly->disabled)]
