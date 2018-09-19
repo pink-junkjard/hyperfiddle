@@ -29,38 +29,35 @@
                 [anchor ctx props $db])))
        (doall)))
 
-(def controls
-  {:fiddle/links (fn [val ctx props]
-                   (let [ctx (if (:embed-mode props)
-                               (links-fiddle/inject-topnav-links+ ctx)
-                               ctx)]
-                     [:div
-                      (if-not (:embed-mode props)           ; more work to be done to get this popover hydrating
-                        (link :hf/affix :link ctx))
-                      [:div [links-fiddle/renderer val ctx props]]]))
-   })
+(defn links-composite-stable [val ctx props]
+  (let [ctx (if (:embed-mode props)
+              (links-fiddle/inject-topnav-links+ ctx)
+              ctx)]
+    [:div
+     (if-not (:embed-mode props)           ; more work to be done to get this popover hydrating
+       (link :hf/affix :link ctx "affix"))
+     [links-fiddle/renderer val ctx props]]))
 
-; Design wise, we only want one codemirror per tab, and it will be full-height.
+(defn query-composite-stable [ctx-top val ctx-fiddle-type props]
+  ; The divs are for styling
+  [:div
+   [hyper-control val ctx-fiddle-type props]
+   (if (= val :entity)
+     (let [ctx (context/focus ctx-top [:fiddle/pull-database])]
+       [:div [hyper-control @(:hypercrud.browser/data ctx) ctx {:class "pull-database"}]])
+     [:div])
+   [:span.schema "schema: " (schema-links ctx-fiddle-type)]])
 
 (def tabs
   {:query (fn [val ctx]
             (fragment
-              (field [:fiddle/type] ctx (fn [val ctx-fiddle-type props]
-                                          ; The divs are for styling
-                                          [:div
-                                           [hyper-control val ctx-fiddle-type props]
-                                           (if (= val :entity)
-                                             (let [ctx (context/focus ctx [:fiddle/pull-database])]
-                                               [:div [hyper-control @(:hypercrud.browser/data ctx) ctx {:class "pull-database"}]])
-                                             [:div])
-                                           [:span.schema "schema: " (schema-links ctx-fiddle-type)]]))
-
+              (field [:fiddle/type] ctx (r/partial query-composite-stable ctx))
               (case @(r/cursor (:hypercrud.browser/data ctx) [:fiddle/type])
                 :entity (field [:fiddle/pull] ctx hyper-control #_{:label-fn (r/constantly nil)})
                 :query (field [:fiddle/query] ctx hyper-control #_{:label-fn (r/constantly nil)})
                 :blank nil)))
    :links (fn [val ctx]
-            (field [:fiddle/links] ctx (controls :fiddle/links)))
+            (field [:fiddle/links] ctx links-composite-stable))
    :view (fn [val ctx]
            (field [:fiddle/renderer] ctx hyper-control))
    :markdown (fn [val ctx]
@@ -90,6 +87,7 @@
       (let [ctx (shadow-fiddle ctx)]
         [:div props
          [:h3 "Source: " (str @(r/cursor (:hypercrud.browser/data ctx) [:fiddle/ident]))]
+         ; Design constraint: one codemirror per tab, and it will expand to fill height.
          [horizontal-tabs
           ; F U recom: Validation failed: Expected 'vector of tabs | atom'. Got '[:query :links :view :css :fiddle]'
           :tabs [{:id :query} {:id :links} {:id :markdown} {:id :view} {:id :css} {:id :fiddle}]
