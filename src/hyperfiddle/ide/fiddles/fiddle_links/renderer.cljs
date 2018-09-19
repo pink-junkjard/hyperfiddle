@@ -1,36 +1,19 @@
 (ns hyperfiddle.ide.fiddles.fiddle-links.renderer
   (:require
     [cats.core :refer [mlet return]]
-    [cats.monad.either :as either]
     [contrib.ct :refer [unwrap]]
     [contrib.reactive :as r]
     [contrib.reagent :refer [fragment]]
     [hypercrud.browser.base]
     [hypercrud.browser.context :as context]
-    [hypercrud.client.core :as hc]
     [hyperfiddle.ide.console-links :refer [system-link?]]
     [hyperfiddle.ui :refer [hyper-control field table link]]
     [hyperfiddle.ui.select$ :refer [select-error-cmp]]))
 
 
-(def editable-if-shadowed?
-  #{:link/class :link/fiddle :link/formula :link/tx-fn})
-
-(defn read-only? [ctx]
-  (if (:hypercrud.browser/data ctx)                         ; be robust to being called on labels
-    (let [entity (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data])
-          sys? (system-link? @(r/fmap :db/id entity))
-          shadow? @(r/fmap :hypercrud/sys? entity)]
-      (or sys? (and shadow? (not (editable-if-shadowed? (last (:hypercrud.browser/path ctx)))))))))
-
-(defn read-only-cell [val ctx props]
-  ; Need to delay until we have the value ctx to compute this, which means its a value renderer not a field prop
-  (let [props (assoc props :read-only (read-only? ctx))]
-    [hyper-control val ctx props]))
-
 (defn link-fiddle [val ctx props]
   (fragment
-    [hyper-control val ctx (assoc props :read-only (read-only? ctx))]
+    [hyper-control val ctx props]
     (link :hf/affix :fiddle ctx "affix" {:disabled (system-link? @(r/fmap :db/id (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data])))})))
 
 (defn- inject-links [topnav-links fiddle]
@@ -60,13 +43,13 @@
     [table
      #_(partial form (fn [path ctx ?f & args] (field path ctx ?f :read-only (read-only? ctx))))
      (fn [ctx]
-       [(field [:link/rel] ctx read-only-cell)
-        (field [:link/class] ctx read-only-cell)
-        (field [:link/fiddle] ctx read-only-cell {:options "fiddle-options"
-                                                  :option-label (r/comp pr-str :fiddle/ident first)})
-        (field [:link/path] ctx read-only-cell)
-        (field [:link/formula] ctx read-only-cell)
-        (when-not embed-mode (field [:link/tx-fn] ctx read-only-cell))
+       [(field [:link/rel] ctx hyper-control)
+        (field [:link/class] ctx hyper-control)
+        (field [:link/fiddle] ctx link-fiddle {:options "fiddle-options"
+                                               :option-label (r/comp pr-str :fiddle/ident first)})
+        (field [:link/path] ctx hyper-control)
+        (field [:link/formula] ctx hyper-control)
+        (when-not embed-mode (field [:link/tx-fn] ctx hyper-control))
         (when-not embed-mode (field [] ctx empty-renderer))])
      ctx
      props]))
