@@ -10,6 +10,7 @@
             [contrib.reader :refer [read-string read-edn-string!]]
     #?(:cljs [contrib.reagent :refer [fragment]])
             [contrib.pprint :refer [pprint-datoms-str]]
+            [contrib.string :refer [or-str]]
     #?(:cljs [contrib.ui :refer [code debounced markdown validated-cmp]])
             [hypercrud.browser.context :as context]
             [hypercrud.browser.routing :as routing]
@@ -93,7 +94,9 @@
           [:pre (.-stack e)]]])]))
 
 (defn process-domain [domain]
-  (-> (into {} domain) (update-existing :domain/environment read-string) #_"todo this can throw"))
+  (-> (into {} domain)
+      (update-existing :domain/environment read-string) #_"todo this can throw"
+      (update :domain/home-route or-str "[:hyperfiddle.ide/entry-point-fiddles]")))
 
 (defn context [ctx source-domain user-domain-insecure]
   ; Secure first, which is backwards, see `domain-request` comment
