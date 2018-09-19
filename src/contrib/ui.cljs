@@ -233,16 +233,6 @@
 
 (defn ^:export cm-edn-inline-block [props] [code-inline-block (adapt-edn-props props)])
 
-(def ^:export ReactSlickSlider
-  ; Prevents failure in tests, this is omitted from test preamble
-  ; We don't have a way to differentiate tests-node from runtime-node, so check presence
-  (if-let [reactSlickSlider (object/get (global!) "reactSlickSlider")]
-    (reagent/adapt-react-class reactSlickSlider)))
-
-(def ^:export ReactGifPlayer
-  (if-let [ReactGifPlayer (object/get (global!) "ReactGifPlayer")]
-    (reagent/adapt-react-class ReactGifPlayer)))
-
 (def ^:export markdown (remark/remark!))
 
 (defn radio-option [props]
