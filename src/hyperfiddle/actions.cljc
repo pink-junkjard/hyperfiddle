@@ -165,11 +165,11 @@
                          (map (fn [[uri tx]] [uri (update-to-tempids get-state branch uri tx)]))
                          (into {}))
           transact-uris (->> (keys tx-groups)
-                             (filter (fn [uri] (should-transact!? uri get-state))))
+                             (filter (fn [uri] (and (nil? branch) (should-transact!? uri get-state)))))
           transact-groups (select-keys tx-groups transact-uris)
           with-actions (->> (apply dissoc tx-groups transact-uris)
                             (mapv (fn [[uri tx]] [:with branch uri tx])))]
-      (if (and (nil? branch) (not (empty? transact-groups)))
+      (if (not (empty? transact-groups))
         ; todo what if transact throws?
         (transact! rt invert-route transact-groups dispatch! get-state
                    :post-tx (let [clear-uris (->> (keys transact-groups)
