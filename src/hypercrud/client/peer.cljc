@@ -21,10 +21,12 @@
   {:pre [uri (is-uri? uri)]}
   (->DbVal uri ?branch-name))
 
+(defn loading? [e] (= "Loading" (:message e)))
+
 (defn -quiet-unwrap [mv]
   (either/branch
     mv
     (fn [e]
-      (when-not (= "Loading" (:message e))
+      (when-not (loading? e)
         (timbre/warn e)))
     identity))

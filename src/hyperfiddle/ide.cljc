@@ -1,8 +1,8 @@
 (ns hyperfiddle.ide
   (:require
-    [cats.core :refer [mlet return >>=]]
+    [cats.core :as cats :refer [mlet return >>=]]
     [cats.labs.promise]
-    [cats.monad.either :refer [branch]]
+    [cats.monad.either :as either]
     [clojure.string :as str]
     #?(:cljs [contrib.css :refer [css]])
     [contrib.ct :refer [unwrap]]
@@ -17,6 +17,10 @@
     [hypercrud.browser.routing :as routing]
     [hypercrud.browser.router :as router]
     [hypercrud.browser.router-bidi :as router-bidi]
+    [hypercrud.client.core :as hc]
+    [hypercrud.client.peer :as peer]
+    [hypercrud.types.EntityRequest :refer [->EntityRequest]]
+    [hypercrud.types.QueryRequest :refer [->QueryRequest]]
     [hyperfiddle.ide.system-fiddle :refer [system-fiddle?]]
     #?(:cljs [hyperfiddle.ui :as ui])
     #?(:cljs [hypercrud.ui.error :as ui-error])
@@ -136,32 +140,53 @@
     #_(determine-local-basis (hydrate-route route ...))
     basis))
 
+(defn user-requests [ctx]                                   ; todo this is runtime parameterizable from domain
+  (let [user-id @(hyperfiddle.runtime/state (:peer ctx) [:hyperfiddle.runtime/user-id])
+        $users (hc/db (:peer ctx) (hyperfiddle.domain/dbname->uri "$users" (:hypercrud.browser/source-domain ctx)) (:branch ctx))]
+    (cond-> [(->EntityRequest [:user/user-id user-id] $users [:hyperfiddle.ide/parinfer])]
+      (#{"tank"} @(runtime/state (:peer ctx) [::runtime/domain :domain/ident]))
+      (conj
+        (let [$beta (hc/db (:peer ctx) (hyperfiddle.domain/dbname->uri "$beta" (:hypercrud.browser/source-domain ctx)) (:branch ctx))]
+          (->EntityRequest [:user/user-id user-id] $beta [:hfnet.beta/accepted-on]))))))
+
+(defn build-ide-user [peer branch user-reqs]                ; todo this is runtime parameterizable from domain
+  (->> user-reqs
+       (map #(hc/hydrate peer branch %))                    ; cannot hydrate-api, nil is an allowable response
+       (map deref)
+       (cats/sequence)
+       (cats/fmap #(apply merge {} %))))
+
 ; todo should summon route via context/target-route. but there is still tension in the data api for deferred popovers
 (defn api [[fiddle :as route] ctx]
   {:pre [route (not (string? route))]}
-  (case (get-in ctx [::runtime/branch-aux ::foo])
-    "page" (into
-             (when true #_(:active-ide? (runtime/host-env (:peer ctx))) ; true for embedded src mode
-               (request-from-route (ide-fiddle-route route ctx) (page-ide-context ctx)))
-             (if (magic-ide-fiddle? fiddle (get-in ctx [:hypercrud.browser/domain :domain/ident]))
-               (request-from-route route (page-ide-context ctx))
-               (request-from-route route (page-target-context ctx))))
-    "ide" (request-from-route route (leaf-ide-context ctx))
-    "user" (request-from-route route (leaf-target-context ctx))))
+  (let [user-reqs (user-requests ctx)]
+    (into user-reqs
+          (either/branch
+            (->> (user-requests ctx)
+                 (r/track build-ide-user (:peer ctx) (:branch ctx))
+                 (r/apply-inner-r)
+                 deref)
+            (fn [e]
+              (when-not (peer/loading? e)
+                (timbre/warn e)))
+            (fn [user]
+              (let [ctx (assoc ctx ::user user)]
+                (case (get-in ctx [::runtime/branch-aux ::foo])
+                  "page" (into
+                           (when true #_(:active-ide? (runtime/host-env (:peer ctx))) ; true for embedded src mode
+                             (request-from-route (ide-fiddle-route route ctx) (page-ide-context ctx)))
+                           (if (magic-ide-fiddle? fiddle (get-in ctx [:hypercrud.browser/domain :domain/ident]))
+                             (request-from-route route (page-ide-context ctx))
+                             (request-from-route route (page-target-context ctx))))
+                  "ide" (request-from-route route (leaf-ide-context ctx))
+                  "user" (request-from-route route (leaf-target-context ctx)))))))))
 
 #?(:cljs
    (defn view-page [[fiddle :as route] ctx]
      (let [src-mode (let [[_ _ _ frag] route] (topnav/src-mode? frag)) ; Immoral - :src bit is tunneled in userland fragment space
            ide-ctx (page-ide-context ctx)
            ide-route (ide-fiddle-route route ctx)
-           +topnav-ctx (base/data-from-route ide-route ide-ctx)
-           +account-ctx (>>= +topnav-ctx #(hyperfiddle.data/browse+ % :hf/iframe :account))
-           r?user (branch +account-ctx (constantly (r/track identity nil)) :hypercrud.browser/data)
-           ; Feature flags are needed in IDE and userland (for widgets)
-           ide-ctx (assoc ide-ctx ::user r?user)
-           ctx (assoc ctx ::user r?user)
            {:keys [:active-ide?]} (runtime/host-env (:peer ctx))]
-
        (fragment
          :view-page
 
@@ -197,11 +222,19 @@
 #?(:cljs
    ; todo should summon route via context/target-route. but there is still tension in the data api for deferred popovers
    (defn view [[fiddle :as route] ctx]                      ; pass most as ref for reactions
-     (case (namespace fiddle)
-       ;"hyperfiddle.ide" [ui/iframe (leaf-ide-context ctx) {:route route}]
-       (case (get-in ctx [::runtime/branch-aux ::foo])
-         "page" (view-page route ctx)                       ; component, seq-component or nil
-         ; On SSR side this is only ever called as "page", but it could be differently (e.g. turbolinks)
-         ; On Browser side, also only ever called as "page", but it could be configured differently (client side render the ide, server render userland...?)
-         "ide" [ui/iframe (leaf-ide-context ctx) {:route route}]
-         "user" [ui/iframe (leaf-target-context ctx) {:route route}]))))
+     (either/branch
+       (->> (user-requests ctx)
+            (r/track build-ide-user (:peer ctx) (:branch ctx))
+            (r/apply-inner-r)
+            deref)
+       (fn [e] [foundation/error-cmp e])
+       (fn [user]
+         (let [ctx (assoc ctx ::user user)]
+           (case (namespace fiddle)
+             ;"hyperfiddle.ide" [ui/iframe (leaf-ide-context ctx) {:route route}]
+             (case (get-in ctx [::runtime/branch-aux ::foo])
+               "page" (view-page route ctx)                 ; component, seq-component or nil
+               ; On SSR side this is only ever called as "page", but it could be differently (e.g. turbolinks)
+               ; On Browser side, also only ever called as "page", but it could be configured differently (client side render the ide, server render userland...?)
+               "ide" [ui/iframe (leaf-ide-context ctx) {:route route}]
+               "user" [ui/iframe (leaf-target-context ctx) {:route route}])))))))
