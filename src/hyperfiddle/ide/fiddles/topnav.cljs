@@ -190,6 +190,6 @@
                is-auto-transact @(runtime/state (:peer ctx) [::runtime/auto-transact @selected-uri])]
            [easy-checkbox {:disabled is-disabled
                            :style (if is-disabled {:pointer-events "none"})
-                           :checked is-auto-transact
+                           :checked (boolean is-auto-transact)
                            :on-change (r/partial toggle-auto-transact! ctx selected-uri)}
             "auto-transact"])]))))

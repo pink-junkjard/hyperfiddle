@@ -1,5 +1,5 @@
 (ns contrib.ui
-  (:refer-clojure :exclude [boolean keyword long])
+  (:refer-clojure :exclude [keyword long])
   (:require
     [contrib.cljs-platform :refer [global!]]
     [contrib.css :refer [css]]
@@ -186,7 +186,7 @@
 
 (defn ^:export easy-checkbox-boolean [label r & [props]]
   [easy-checkbox (assoc props
-                   :checked @r
+                   :checked (boolean @r)
                    :on-change (r/partial swap! r not))
    label])
 

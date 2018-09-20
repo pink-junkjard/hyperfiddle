@@ -38,7 +38,7 @@
    (let [props (-> (entity-props props ctx)
                    (readonly->disabled)
                    (update :on-change partial-change-with-old-val ctx)
-                   (assoc :checked val))]
+                   (assoc :checked (clojure.core/boolean val)))]
      [contrib.ui/easy-checkbox props])])
 
 (let [adapter (fn [e]
