@@ -31,6 +31,7 @@
     [hyperfiddle.fiddle :as fiddle]
     [hyperfiddle.ide.console-links :refer [inject-console-links system-link?]]
     [hyperfiddle.runtime :as runtime]
+    [hyperfiddle.security.client :as security]
     [hyperfiddle.tempid :refer [smart-entity-identifier stable-relation-key]]
     [hyperfiddle.ui.api]
     [hyperfiddle.ui.controls :as controls :refer [label-with-docs dbid-label magic-new]]
@@ -254,7 +255,18 @@ User renderers should not be exposed to the reaction."
                                      (if (:hyperfiddle.ui/debug-tooltips ctx)
                                        [nil (link-tooltip @link-ref ?route)]
                                        existing-tooltip))))
-                (update :class css (when-not (empty? errors) "invalid")))))]
+                (update :class css (when-not (empty? errors) "invalid")))))
+        (disabled? [link-ref ctx]
+          (case @(r/fmap :link/rel link-ref)
+            :hf/new nil #_(not @(r/track security/can-create? ctx))
+            :hf/remove (not @(r/track security/writable-entity? ctx))
+            :hf/affix (not @(r/track security/writable-entity? (:hypercrud.browser/parent ctx)))
+            :hf/detach (not @(r/track security/writable-entity? (:hypercrud.browser/parent ctx)))
+            :hf/self nil
+            :hf/iframe nil
+            :hf/rel nil
+            ; else we don't know the semantics, just nil out
+            nil))]
   (defn ui-from-link [link-ref ctx & [props ?label]]
     {:pre [link-ref]}
     (let [visual-ctx ctx
@@ -266,12 +278,15 @@ User renderers should not be exposed to the reaction."
           tx-fn? @(r/fmap (r/comp boolean blank->nil :link/tx-fn) link-ref)]
       (cond
         (and tx-fn? @(r/fmap (r/partial = (either/right nil)) r+?route))
-        (let [props (update props :class css "hyperfiddle")]
+        (let [props (-> props
+                        (update :class css "hyperfiddle")
+                        (update :disabled #(or % (disabled? link-ref ctx))))]
           [affect-cmp link-ref ctx props @(r/track prompt link-ref ?label)])
 
         tx-fn?
         (let [props (-> @(r/track validated-route-tooltip-props r+?route link-ref ctx props)
-                        (update :class css "hyperfiddle"))] ; should this be in popover-cmp? what is this class? – unify with semantic css
+                        (update :class css "hyperfiddle")   ; should this be in popover-cmp? what is this class? – unify with semantic css
+                        (update :disabled #(or % (disabled? link-ref ctx))))]
           [popover-cmp link-ref ctx visual-ctx props @(r/track prompt link-ref ?label)])
 
         @(r/fmap (r/comp (r/partial = :hf/iframe) :link/rel) link-ref)

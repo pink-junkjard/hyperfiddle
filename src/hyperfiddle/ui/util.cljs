@@ -53,7 +53,7 @@
   (and
     ; If the db/id was not pulled, we cannot write through to the entity
     (boolean @(r/fmap :db/id (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data])))
-    (security/writable-entity? ctx)))
+    @(r/track security/writable-entity? (:hypercrud.browser/parent ctx))))
 
 (defn with-tx! [ctx tx]
   (let [uri (context/uri ctx)]

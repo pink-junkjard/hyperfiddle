@@ -19,27 +19,27 @@
 
 (def allow-anonymous
   {::subject-can-transact? (constantly true)
+   :can-create? (constantly true)
    ::writable-entity? (constantly true)})
 
 (def authenticated-users-only
   {::subject-can-transact? (fn [hf-db subject user] (some? subject))
+   :can-create? (fn [hf-db subject ctx] (some? subject))
    ::writable-entity? (fn [hf-db subject ctx] (some? subject))})
 
-(def owner-only
-  {::subject-can-transact? (fn [hf-db subject user]
-                             (-> (into #{} (:hyperfiddle/owners hf-db))
-                                 (contains? subject)))
-   ::writable-entity? (fn [hf-db subject ctx]
-                        (-> (into #{} (:hyperfiddle/owners hf-db))
-                            (contains? subject)))})
+(let [owned-by? (fn [hf-db subject]
+                  (-> (into #{} (:hyperfiddle/owners hf-db))
+                      (contains? subject)))]
+  (def owner-only
+    {::subject-can-transact? (fn [hf-db subject user] (owned-by? hf-db subject))
+     :can-create? (fn [hf-db subject ctx] (owned-by? hf-db subject))
+     ::writable-entity? (fn [hf-db subject ctx] (owned-by? hf-db subject))}))
 
 (let [parent-m (fn parent-m [ctx]
-                 (when-let [ctx (:hypercrud.browser/parent ctx)]
-                   (let [ident @(r/cursor (:hypercrud.browser/field ctx) [::field/path-segment])
-                         isComponent @(context/hydrate-attribute ctx ident :db/isComponent)]
-                     (if isComponent
-                       (parent-m ctx)
-                       @(:hypercrud.browser/data ctx)))))
+                 (let [?ident (some-> (:hypercrud.browser/field ctx) (r/cursor [::field/path-segment]) deref)]
+                   (if @(context/hydrate-attribute ctx ?ident :db/isComponent)
+                     (parent-m (:hypercrud.browser/parent ctx))
+                     (some-> (:hypercrud.browser/data ctx) deref))))
       new-entity? (fn new-entity? [peer uri dbid branch]
                     (or (tempid? dbid)
                         (some? @(runtime/state peer [::runtime/partitions branch :tempid-lookups uri dbid]))
@@ -48,6 +48,7 @@
                           false)))]
   (def entity-ownership
     {::subject-can-transact? (fn [hf-db subject user] (some? subject))
+     :can-create? (fn [hf-db subject ctx] (some? subject))
      ::writable-entity? (fn [hf-db subject ctx]
                           (and (some? subject)
                                (or (contains? (set (:hyperfiddle/owners hf-db)) subject)
@@ -70,6 +71,19 @@
   (mlet [client-sec (eval-client-sec hf-db)
          :let [f (or (::subject-can-transact? client-sec) (constantly true))]]
     (try-either (f hf-db subject user))))
+
+(defn can-create? [ctx]
+  (-> (mlet [:let [dbname (context/dbname ctx)
+                   hf-db (domain/dbname->hfdb dbname (:hypercrud.browser/domain ctx))
+                   subject @(runtime/state (:peer ctx) [::runtime/user-id])]
+             client-sec (eval-client-sec hf-db)
+             :let [f (or (:can-create? client-sec) (constantly true))]]
+        (try-either (f hf-db subject ctx)))
+      (either/branch
+        (fn [e]
+          (timbre/error e)
+          false)
+        identity)))
 
 (defn writable-entity? [ctx]
   (-> (mlet [:let [dbname (context/dbname ctx)
