@@ -18,7 +18,7 @@
     [taoensso.timbre :as timbre]))
 
 
-(def default-debounce-ms 250)
+(def default-debounce-ms 350)
 
 (comment
   ; component-did-update
