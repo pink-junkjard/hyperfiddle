@@ -83,18 +83,21 @@
 
 (defn hydrate-route-rpc! [service-uri local-basis route branch branch-aux stage & [jwt]]
   ; matrix params instead of path params
-  (-> (merge {:url (str/format "%(service-uri)shydrate-route/$local-basis/$branch/$branch-aux$encoded-route"
-                               {:service-uri service-uri
-                                :local-basis (encode-basis local-basis)
-                                :encoded-route (router/encode route) ; includes "/"
-                                :branch (router/-encode-pchar branch)
-                                :branch-aux (router/-encode-pchar branch-aux)})
-              :accept :application/transit+json :as :auto}
-             (when jwt {:auth {:bearer jwt}})
-             (if (empty? stage)
-               {:method :get}                               ; Try to hit CDN
-               {:method :post
-                :form stage
-                :content-type :application/transit+json}))
-      (http-request!)
-      (p/then :body)))
+  (let [stage (->> stage
+                   (remove (comp empty? second))
+                   (into {}))]
+    (-> (merge {:url (str/format "%(service-uri)shydrate-route/$local-basis/$branch/$branch-aux$encoded-route"
+                                 {:service-uri service-uri
+                                  :local-basis (encode-basis local-basis)
+                                  :encoded-route (router/encode route) ; includes "/"
+                                  :branch (router/-encode-pchar branch)
+                                  :branch-aux (router/-encode-pchar branch-aux)})
+                :accept :application/transit+json :as :auto}
+               (when jwt {:auth {:bearer jwt}})
+               (if (empty? stage)
+                 {:method :get}                             ; Try to hit CDN
+                 {:method :post
+                  :form stage
+                  :content-type :application/transit+json}))
+        (http-request!)
+        (p/then :body))))
