@@ -38,16 +38,23 @@
         attribute @(context/hydrate-attribute ctx (last (:hypercrud.browser/path ctx)))]
     (tx/edit-entity id attribute o (empty->nil n))))
 
+(let [on-change (fn [ctx f n]
+                  (let [entity @(get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data])
+                        attr-ident (last (:hypercrud.browser/path ctx))
+                        {:keys [:db/cardinality :db/valueType]} @(context/hydrate-attribute ctx attr-ident)
+                        o (if (not= (:db/ident valueType) :db.type/ref)
+                            (get entity attr-ident)
+                            (case (:db/ident cardinality)
+                              :db.cardinality/one (smart-entity-identifier ctx (get entity attr-ident))
+                              :db.cardinality/many (map (partial smart-entity-identifier ctx) (get entity attr-ident))))]
+                    (f o n)))]
+  (defn partial-change-with-old-val
+    "adapts (fn [o n] ...) to (fn [n] ...)"
+    [f ctx]
+    (r/partial on-change ctx f)))
+
 (defn entity-change->tx [ctx new-val]                       ; legacy todo remove
-  (let [entity @(get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data])
-        attr-ident (last (:hypercrud.browser/path ctx))
-        {:keys [:db/cardinality :db/valueType]} @(context/hydrate-attribute ctx attr-ident)
-        o (if (not= (:db/ident valueType) :db.type/ref)
-            (get entity attr-ident)
-            (case (:db/ident cardinality)
-              :db.cardinality/one (smart-entity-identifier ctx (get entity attr-ident))
-              :db.cardinality/many (map (partial smart-entity-identifier ctx) (get entity attr-ident))))]
-    (on-change->tx ctx o new-val)))
+  ((partial-change-with-old-val (partial on-change->tx ctx) ctx) new-val))
 
 (defn writable-entity? [ctx]
   (and

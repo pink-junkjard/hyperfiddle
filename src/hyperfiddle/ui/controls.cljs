@@ -14,8 +14,7 @@
     #_[hyperfiddle.ui]
     [hyperfiddle.ui.docstring :refer [semantic-docstring]]
     [hyperfiddle.ui.select$ :refer [select]]
-    [hyperfiddle.ui.util :refer [readonly->disabled with-tx! writable-entity?]]
-    [hyperfiddle.ui.util :refer [entity-props readonly->disabled on-change->tx with-tx! writable-entity?]]))
+    [hyperfiddle.ui.util :refer [entity-props on-change->tx partial-change-with-old-val readonly->disabled with-tx! writable-entity?]]))
 
 
 (defn ^:export keyword [val ctx & [props]]
@@ -38,7 +37,7 @@
           (update props :class #(str % (if (:disabled props) " disabled"))))
    (let [props (-> (entity-props props ctx)
                    (readonly->disabled)
-                   (update :on-change #(r/partial % val))   ; need to adapt (fn [n]) to (fn [o n]) when no optimistic updates
+                   (update :on-change partial-change-with-old-val ctx)
                    (assoc :checked val))]
      [contrib.ui/easy-checkbox props])])
 
@@ -138,6 +137,7 @@
 
 (defn ^:export instant [val ctx & [props]]
   (let [props (-> (entity-props val props ctx)
+                  (update :on-change partial-change-with-old-val ctx)
                   readonly->disabled)]
     [recom-date props]))
 
