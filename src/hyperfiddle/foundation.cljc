@@ -107,7 +107,7 @@
   ; Secure first, which is backwards, see `domain-request` comment
   (let [domain (into @(runtime/state (:peer ctx) [::runtime/domain]) user-domain-insecure)]
     (assoc ctx
-      :hypercrud.browser/domain (shadow-domain domain)      ; should probably get process-domain, it just doesn't use it?
+      :hypercrud.browser/domain (shadow-domain domain)      ; already was processed during bootstrapping. shadow again for domain-insecure
       :hypercrud.browser/invert-route (r/partial routing/invert-route domain)
       :hypercrud.browser/source-domain (process-domain (shadow-domain source-domain)))))
 
