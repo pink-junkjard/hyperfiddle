@@ -117,7 +117,8 @@
         (fake-managed-anchor :hf/iframe :stage ctx "stage" {:tooltip [nil tooltip] :class (when dirty? "stage-dirty")}))
       (ui/link :hf/self :new-fiddle ctx "new" (let [hf-db @(hyperfiddle.runtime/state (:peer ctx) [:hyperfiddle.runtime/domain :domain/fiddle-database])
                                                     subject @(hyperfiddle.runtime/state (:peer ctx) [:hyperfiddle.runtime/user-id])
-                                                    writes-allowed?+ (security/subject-can-transact? hf-db subject)
+                                                    user @(:hyperfiddle.ide/user ctx)
+                                                    writes-allowed?+ (security/subject-can-transact? hf-db subject user)
                                                     anonymous? (nil? subject)]
                                                 {:disabled (either/branch writes-allowed?+ (constantly true) not) ; todo this logic could be factored out into ui-from-link
                                                  :tooltip (either/branch
@@ -148,8 +149,9 @@
           (runtime/dispatch! (:peer ctx) [:toggle-auto-transact @selected-uri]))]
   (defn ^:export stage-ui-buttons [selected-uri stage ctx]
     (let [writes-allowed?+ (let [hf-db (domain/uri->hfdb @selected-uri @(runtime/state (:peer ctx) [::runtime/domain]))
-                                 subject @(runtime/state (:peer ctx) [::runtime/user-id])]
-                             (security/subject-can-transact? hf-db subject))
+                                 subject @(runtime/state (:peer ctx) [::runtime/user-id])
+                                 user @(:hyperfiddle.ide/user ctx)]
+                             (security/subject-can-transact? hf-db subject user))
           anonymous? (nil? @(runtime/state (:peer ctx) [::runtime/user-id]))]
       (fragment
         [tooltip (either/branch

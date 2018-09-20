@@ -10,6 +10,7 @@
     #?(:cljs [contrib.reagent :refer [fragment]])
     [contrib.rfc3986 :refer [split-fragment]]
     [contrib.string :refer [safe-read-edn-string empty->nil]]
+    [contrib.uri :refer [->URI]]
     [hypercrud.browser.base :as base]
     [hypercrud.browser.browser-request :refer [request-from-route]]
     #?(:cljs [hypercrud.browser.browser-ui :as browser-ui])
@@ -140,14 +141,16 @@
     #_(determine-local-basis (hydrate-route route ...))
     basis))
 
-(defn user-requests [ctx]                                   ; todo this is runtime parameterizable from domain
-  (let [user-id @(hyperfiddle.runtime/state (:peer ctx) [:hyperfiddle.runtime/user-id])
-        $users (hc/db (:peer ctx) (hyperfiddle.domain/dbname->uri "$users" (:hypercrud.browser/source-domain ctx)) (:branch ctx))]
+(defn user-requests [rt branch]                             ; todo this is runtime parameterizable from domain
+  (let [user-id @(hyperfiddle.runtime/state rt [:hyperfiddle.runtime/user-id])
+        users-uri (->URI "datomic:free://datomic:4334/hyperfiddle-users")
+        $users (hc/db rt users-uri branch)]
     (cond-> [(->EntityRequest [:user/user-id user-id] $users [:hyperfiddle.ide/parinfer])]
-      (#{"tank"} @(runtime/state (:peer ctx) [::runtime/domain :domain/ident]))
+      (#{"tank"} @(runtime/state rt [::runtime/domain :domain/ident]))
       (conj
-        (let [$beta (hc/db (:peer ctx) (hyperfiddle.domain/dbname->uri "$beta" (:hypercrud.browser/source-domain ctx)) (:branch ctx))]
-          (->EntityRequest [:user/user-id user-id] $beta [:hfnet.beta/accepted-on]))))))
+        (let [beta-uri (->URI "datomic:free://datomic:4334/~dustin.getz@hyperfiddle.net+beta")
+              $beta (hc/db rt beta-uri branch)]
+          (->EntityRequest [:user/user-id user-id] $beta [:hfnet.beta/accepted-on :hfnet.beta/archived]))))))
 
 (defn build-ide-user [peer branch user-reqs]                ; todo this is runtime parameterizable from domain
   (->> user-reqs
@@ -159,11 +162,10 @@
 ; todo should summon route via context/target-route. but there is still tension in the data api for deferred popovers
 (defn api [[fiddle :as route] ctx]
   {:pre [route (not (string? route))]}
-  (let [user-reqs (user-requests ctx)]
+  (let [user-reqs (user-requests (:peer ctx) (:branch ctx))]
     (into user-reqs
           (either/branch
-            (->> (user-requests ctx)
-                 (r/track build-ide-user (:peer ctx) (:branch ctx))
+            (->> (r/track build-ide-user (:peer ctx) (:branch ctx) user-reqs)
                  (r/apply-inner-r)
                  deref)
             (fn [e]
@@ -223,7 +225,7 @@
    ; todo should summon route via context/target-route. but there is still tension in the data api for deferred popovers
    (defn view [[fiddle :as route] ctx]                      ; pass most as ref for reactions
      (either/branch
-       (->> (user-requests ctx)
+       (->> (user-requests (:peer ctx) (:branch ctx))
             (r/track build-ide-user (:peer ctx) (:branch ctx))
             (r/apply-inner-r)
             deref)

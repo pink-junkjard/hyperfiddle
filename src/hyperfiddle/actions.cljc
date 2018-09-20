@@ -147,17 +147,17 @@
                     ; currently this new route breaks the back button
                     (set-route rt route' nil keep-popovers? true dispatch! get-state)))))))
 
-(defn should-transact!? [uri get-state]
+(defn should-transact!? [user uri get-state]
   (and (get-in (get-state) [::runtime/auto-transact uri])
        (let [hf-db (domain/uri->hfdb uri (::runtime/domain (get-state)))] ; todo this needs sourced from context domain for topnav
          (either/branch
-           (security/subject-can-transact? hf-db (get-in (get-state) [::runtime/user-id]))
+           (security/subject-can-transact? hf-db (get-in (get-state) [::runtime/user-id]) user)
            #(do
               (timbre/error %)
               false)
            identity))))
 
-(defn with-groups [rt invert-route branch tx-groups & {:keys [route post-tx]}]
+(defn with-groups [rt user invert-route branch tx-groups & {:keys [route post-tx]}]
   {:pre [(not-any? nil? (keys tx-groups))]}
   (fn [dispatch! get-state]
     (let [tx-groups (->> tx-groups
@@ -165,7 +165,7 @@
                          (map (fn [[uri tx]] [uri (update-to-tempids get-state branch uri tx)]))
                          (into {}))
           transact-uris (->> (keys tx-groups)
-                             (filter (fn [uri] (and (nil? branch) (should-transact!? uri get-state)))))
+                             (filter (fn [uri] (and (nil? branch) (should-transact!? user uri get-state)))))
           transact-groups (select-keys tx-groups transact-uris)
           with-actions (->> (apply dissoc tx-groups transact-uris)
                             (mapv (fn [[uri tx]] [:with branch uri tx])))]
@@ -188,7 +188,7 @@
 (defn open-popover [branch popover-id]
   [:open-popover branch popover-id])
 
-(defn stage-popover [rt invert-route branch swap-fn-async & on-start] ; todo rewrite in terms of with-groups
+(defn stage-popover [rt user invert-route branch swap-fn-async & on-start] ; todo rewrite in terms of with-groups
   (fn [dispatch! get-state]
     (p/then (swap-fn-async (get-in (get-state) [::runtime/partitions branch :stage] {}))
             (fn [{:keys [tx app-route]}]
@@ -201,7 +201,7 @@
                 (dispatch! (apply batch (concat with-actions on-start)))
                 ;(with-groups rt invert-route parent-branch tx-groups :route app-route :post-tx nil)
                 (let [tx-groups (->> (get-in (get-state) [::runtime/partitions branch :stage])
-                                     (filter (fn [[uri tx]] (and (should-transact!? uri get-state) (not (empty? tx)))))
+                                     (filter (fn [[uri tx]] (and (should-transact!? user uri get-state) (not (empty? tx)))))
                                      (into {}))]
                   (if (and (nil? parent-branch) (not (empty? tx-groups)))
                     ; todo what if transact throws?
