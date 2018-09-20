@@ -60,12 +60,12 @@
                     :domain/disable-javascript
                     :domain/environment
                     :domain/ident
+                    :domain/router
+                    :domain/home-route
 
                     ; These are insecure fields, they should be redundant here, but there is order of operation issues
                     :domain/code
                     :domain/css
-                    :domain/router
-                    :domain/home-route
                     ]))
 
 (defn domain-request-insecure [domain-eid peer branch]
@@ -73,9 +73,7 @@
                    (hc/db peer domain-uri branch)
                    [:db/id
                     :domain/code
-                    :domain/css
-                    :domain/router
-                    :domain/home-route]))
+                    :domain/css]))
 
 #?(:cljs
    (defn error-cmp [e]
@@ -95,21 +93,17 @@
           [:pre (.-stack e)]]])]))
 
 (defn process-domain [domain]                               ; this should be memoized at the call site?
-  (-> (into {} domain)                                      ; why?
-      (update-existing :domain/environment read-string) #_"todo this can throw"))
-
-(defn shadow-domain [domain]
-  ; also called from the view, which wants database types, so separate from process-domain
-  (-> (into {} domain)
-      (update :domain/home-route or-str "[:hyperfiddle.ide/entry-point-fiddles]")))
+  (-> domain
+      (update :domain/home-route or-str "[:hyperfiddle.ide/entry-point-fiddles]")
+      (update-existing :domain/environment read-string)) #_"todo this can throw")
 
 (defn context [ctx source-domain user-domain-insecure]
   ; Secure first, which is backwards, see `domain-request` comment
   (let [domain (into @(runtime/state (:peer ctx) [::runtime/domain]) user-domain-insecure)]
     (assoc ctx
-      :hypercrud.browser/domain (shadow-domain domain)      ; already was processed during bootstrapping. shadow again for domain-insecure
+      :hypercrud.browser/domain domain                      ; already processed
       :hypercrud.browser/invert-route (r/partial routing/invert-route domain)
-      :hypercrud.browser/source-domain (process-domain (shadow-domain source-domain)))))
+      :hypercrud.browser/source-domain (process-domain source-domain))))
 
 (defn local-basis [page-or-leaf global-basis route ctx f]
   (concat

@@ -57,7 +57,7 @@
                           ; terminate when domain not found
                           (throw (ex-info "Domain not found" {:hyperfiddle.io/http-status-code 404
                                                               :domain-eid domain-eid}))
-                          (foundation/process-domain (foundation/shadow-domain raw-domain)))]]
+                          (foundation/process-domain raw-domain))]]
       (return domain))))
 
 (defn magic-ide-fiddle? [fiddle-ident domain-ident]
