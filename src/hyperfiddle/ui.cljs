@@ -275,8 +275,6 @@ User renderers should not be exposed to the reaction."
           [popover-cmp link-ref ctx visual-ctx props @(r/track prompt link-ref ?label)])
 
         @(r/fmap (r/comp (r/partial = :hf/iframe) :link/rel) link-ref)
-        ; link-props swallows bad routes (shorts them to nil),
-        ; all errors will always route through as (either/right nil)
         [stale/loading (stale/can-be-loading? ctx) (fmap #(router/assoc-frag % (:frag props)) @r+?route) ; what is this frag noise?
          (fn [e] [error-comp e])
          (fn [route]
