@@ -76,7 +76,7 @@
          fiddle (if (system-fiddle/system-fiddle? arg1)
                   (system-fiddle/hydrate-system-fiddle arg1)
                   (mlet [fiddle @(hc/hydrate (:peer ctx) (:branch ctx) @meta-fiddle-request)]
-                    (validate-fiddle (into {} fiddle))))]
+                    (validate-fiddle fiddle)))]
     (return
       (fiddle/fiddle-defaults fiddle route))))
 

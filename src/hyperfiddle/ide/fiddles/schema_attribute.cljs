@@ -18,7 +18,7 @@
             (case op
               :db/add (assoc entity a v)                    ; these are lookup refs because of the options query
               :db/retract (dissoc entity a)))
-          (into {} entity)
+          entity
           tx))
 
 (defn valueType-and-cardinality-with-tx! [special-attrs-state ctx tx]

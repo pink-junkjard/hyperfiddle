@@ -34,7 +34,6 @@
           (cats/bind either-root-data
                      (fn [root-data]
                        (let [indexed-root (->> root-data
-                                               (map #(into {} %))
                                                (group-by-assume-unique :attribute/ident)
                                                (map-values #(dissoc % :attribute/ident :db/id)))]
 
@@ -46,7 +45,6 @@
                                              (cats/fmap (fn [schema]
                                                           [(:domain.database/name hf-db)
                                                            (->> schema
-                                                                (map #(into {} %))
                                                                 (group-by-assume-unique :db/ident)
                                                                 (merge-with #(merge %2 %1) indexed-root))]))))))
                               (cats/sequence)
