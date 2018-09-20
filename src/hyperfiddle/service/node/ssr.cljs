@@ -154,17 +154,24 @@
                              load-level)]
     (-> (foundation/bootstrap-data rt foundation/LEVEL-NONE load-level (.-path req) (::runtime/global-basis initial-state))
         (p/then (fn []
-                  (let [auto-transact (->> @(runtime/state rt [::runtime/domain :domain/databases])
-                                           (map :domain.database/record)
-                                           (map (juxt :database/uri (fn [hf-db]
-                                                                      (either/branch
-                                                                        (security/subject-can-transact? hf-db @(runtime/state rt [::runtime/user-id]))
-                                                                        (constantly false)
-                                                                        identity))))
-                                           ; todo domain-uri is an ugly hack
-                                           ; we are assuming the security. also users should not need this db all the time
-                                           (into {foundation/domain-uri (boolean @(runtime/state rt [::runtime/user-id]))}))]
-                    (runtime/dispatch! rt [:set-auto-transact auto-transact]))))
+                  (either/branch
+                    (->> (hyperfiddle.ide/user-requests rt nil)
+                         (hyperfiddle.ide/build-ide-user rt nil))
+                    (fn [e] (p/rejected e))
+                    (fn [user]
+                      (->> @(runtime/state rt [::runtime/domain :domain/databases])
+                           (map :domain.database/record)
+                           (map (juxt :database/uri (fn [hf-db]
+                                                      (let [subject @(runtime/state rt [::runtime/user-id])]
+                                                        (either/branch
+                                                          (security/subject-can-transact? hf-db subject user)
+                                                          (constantly false)
+                                                          identity)))))
+                           ; todo domain-uri is an ugly hack
+                           ; we are assuming the security. also users should not need this db all the time
+                           (into {foundation/domain-uri (boolean @(runtime/state rt [::runtime/user-id]))})
+                           (vector :set-auto-transact)
+                           (runtime/dispatch! rt))))))
         (p/then (constantly 200))
         (p/catch #(or (:hyperfiddle.io/http-status-code (ex-data %)) 500))
         (p/then (fn [http-status-code]
