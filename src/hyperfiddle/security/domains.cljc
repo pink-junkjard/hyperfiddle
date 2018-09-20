@@ -7,6 +7,6 @@
 
 #?(:clj
    (def server
-     {::security/process-tx entity-ownership/write-domains}))
+     {:process-tx entity-ownership/write-domains}))
 
 (def client client-sec/entity-ownership)

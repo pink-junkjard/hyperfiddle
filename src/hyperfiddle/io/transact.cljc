@@ -24,7 +24,7 @@
                                            (throw (ex-info "Misconfigured database security" {:hyperfiddle.io/http-status-code 500
                                                                                               :uri uri
                                                                                               :additional-info (.getMessage e)})))
-                                         ::security/process-tx)))]
+                                         :process-tx)))]
          (f hf-db subject tx)))))
 
 #?(:clj

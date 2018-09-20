@@ -18,22 +18,22 @@
 
 
 (def allow-anonymous
-  {::subject-can-transact? (constantly true)
+  {:subject-can-transact? (constantly true)
    :can-create? (constantly true)
-   ::writable-entity? (constantly true)})
+   :writable-entity? (constantly true)})
 
 (def authenticated-users-only
-  {::subject-can-transact? (fn [hf-db subject user] (some? subject))
+  {:subject-can-transact? (fn [hf-db subject user] (some? subject))
    :can-create? (fn [hf-db subject ctx] (some? subject))
-   ::writable-entity? (fn [hf-db subject ctx] (some? subject))})
+   :writable-entity? (fn [hf-db subject ctx] (some? subject))})
 
 (let [owned-by? (fn [hf-db subject]
                   (-> (into #{} (:hyperfiddle/owners hf-db))
                       (contains? subject)))]
   (def owner-only
-    {::subject-can-transact? (fn [hf-db subject user] (owned-by? hf-db subject))
+    {:subject-can-transact? (fn [hf-db subject user] (owned-by? hf-db subject))
      :can-create? (fn [hf-db subject ctx] (owned-by? hf-db subject))
-     ::writable-entity? (fn [hf-db subject ctx] (owned-by? hf-db subject))}))
+     :writable-entity? (fn [hf-db subject ctx] (owned-by? hf-db subject))}))
 
 (let [parent-m (fn parent-m [ctx]
                  (let [?ident (some-> (:hypercrud.browser/field ctx) (r/cursor [::field/path-segment]) deref)]
@@ -47,9 +47,9 @@
                           (new-entity? peer uri dbid (branch/decode-parent-branch branch))
                           false)))]
   (def entity-ownership
-    {::subject-can-transact? (fn [hf-db subject user] (some? subject))
+    {:subject-can-transact? (fn [hf-db subject user] (some? subject))
      :can-create? (fn [hf-db subject ctx] (some? subject))
-     ::writable-entity? (fn [hf-db subject ctx]
+     :writable-entity? (fn [hf-db subject ctx]
                           (and (some? subject)
                                (or (contains? (set (:hyperfiddle/owners hf-db)) subject)
                                    (-> (mlet [m (maybe (parent-m ctx))
@@ -69,7 +69,7 @@
 
 (defn subject-can-transact? [hf-db subject user]            ; todo merge subject into user
   (mlet [client-sec (eval-client-sec hf-db)
-         :let [f (or (::subject-can-transact? client-sec) (constantly true))]]
+         :let [f (or (:subject-can-transact? client-sec) (constantly true))]]
     (try-either (f hf-db subject user))))
 
 (defn can-create? [ctx]
@@ -90,7 +90,7 @@
                    hf-db (domain/dbname->hfdb dbname (:hypercrud.browser/domain ctx))
                    subject @(runtime/state (:peer ctx) [::runtime/user-id])]
              client-sec (eval-client-sec hf-db)
-             :let [f (or (::writable-entity? client-sec) (constantly true))]]
+             :let [f (or (:writable-entity? client-sec) (constantly true))]]
         (try-either (f hf-db subject ctx)))
       (either/branch
         (fn [e]
