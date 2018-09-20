@@ -87,7 +87,7 @@
     (fn [val ctx {:keys [:embed-mode] :as props}]
       (let [ctx (shadow-fiddle ctx)]
         [:div props
-         (if-not embed-mode
+         #_(if-not embed-mode
            [:h3 "Source: " (str @(r/cursor (:hypercrud.browser/data ctx) [:fiddle/ident]))])
          ; Design constraint: one codemirror per tab, and it will expand to fill height.
          [horizontal-tabs
