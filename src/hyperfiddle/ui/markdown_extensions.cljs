@@ -17,18 +17,46 @@
     [taoensso.timbre :as timbre]))
 
 
+(def memoized-safe-eval
+  (memoize
+    (fn [code-str]
+      (if (blank->nil code-str)
+        (eval/safe-eval-string+ code-str)
+        (either/left nil)))))
+
+
+(declare markdown)                                          ; mutual recursion, it would be letfn if wasn't react components
+
 (defn a [content argument props ctx]
   [:a (merge {:href argument} (dissoc props :children))
    ; backwards compat with vanilla markdown anchors
    (or (:children props) content)])
 
-; mutual recursion, it would be letfn if wasn't react components
-(declare markdown)
 
-(let [memoized-safe-eval (memoize (fn [code-str]
-                                    (if (blank->nil code-str)
-                                      (eval/safe-eval-string+ code-str)
-                                      (either/left nil))))]
+(defn quick-element [content argument props ctx]
+  (let [content (some->> content memoized-safe-eval (unwrap #(timbre/warn %)))
+        argument (some->> argument memoized-safe-eval (unwrap (constantly argument)))] ; If argument doesn't parse as Clojure, treat as text
+
+    (cond
+
+      ; ![hyperfiddle.ui/img](https://i.imgur.com/ewdY65H.png) -> [hyperfiddle.ui/img val ctx props]
+      (fn? content) (let [argument (if (symbol? argument) (str argument) argument)] ; yolo
+                      [content argument ctx props])
+
+      (= :div content) [:div props (markdown argument)]
+
+      ; ![:img](https://i.imgur.com/ewdY65H.png)
+      ; ![:video](https://i.imgur.com/ewdY65H.png)
+      (keyword? content) [content (merge props {:src (str argument)})]
+
+      :else [:code "Bad quick-element: " content])))
+
+(defn quick-element-sugar "Jacks the image ![alt](src) syntax to repurpose to something more general. Doesn't support props!
+  Eats img alt-text, but that can be fixed."
+  [_ _ {:keys [children alt src]} ctx]
+  (quick-element (or alt ":img") src {} ctx))
+
+(let []
   (def ^:export markdown
     (remark/remark!
 
@@ -49,7 +77,9 @@
                 [:span (remark/adapt-props props)
                  [markdown content (assoc ctx ::unp true)]])
 
-       "a" hyperfiddle.ui.markdown-extensions/a
+       "a" a
+       "f" quick-element
+       "img" quick-element-sugar
 
        ; Is this comment true?::
        ;   Div is not needed, use it with block syntax and it hits React.createElement and works
@@ -79,11 +109,6 @@
                   (->> (memoized-safe-eval (str "(fn [ctx] \n" content "\n)"))
                        (fmap (fn [f] (f ctx)))
                        (unwrap #(timbre/warn %))))
-
-       "f" (fn [content argument props ctx]
-             (let [f (some->> content memoized-safe-eval (unwrap #(timbre/warn %)))
-                   val (some->> argument memoized-safe-eval (unwrap #(timbre/warn %)))]
-               (when f [f val ctx props])))
 
        "browse" (fn [content argument props ctx]
                   (let [[_ srel sclass] (re-find #"([^ ]*) ?(.*)" argument)
