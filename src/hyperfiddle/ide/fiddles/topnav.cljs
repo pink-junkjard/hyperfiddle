@@ -144,7 +144,7 @@
   (defn ^:export stage-ui-buttons [selected-uri stage ctx]
     (let [writes-allowed?+ (let [hf-db (domain/uri->hfdb @selected-uri @(runtime/state (:peer ctx) [::runtime/domain]))
                                  subject @(runtime/state (:peer ctx) [::runtime/user-id])
-                                 user @(:hyperfiddle.ide/user ctx)]
+                                 user @(runtime/state (:peer ctx) [::runtime/user])]
                              (security/subject-can-transact? hf-db subject user))
           anonymous? (nil? @(runtime/state (:peer ctx) [::runtime/user-id]))]
       (fragment

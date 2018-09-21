@@ -1,15 +1,20 @@
 (ns hyperfiddle.actions
   (:require [cats.core :refer [mlet]]
+            [cats.labs.promise]
             [cats.monad.either :as either]
             [contrib.ct :refer [unwrap]]
             [contrib.data :refer [map-values map-keys]]
             [contrib.datomic-tx :as tx]
+            [contrib.uri :refer [->URI]]
             [hypercrud.browser.router :as router]
+            [hypercrud.client.core :as hc]
             [hypercrud.client.peer :as peer]
             [hypercrud.client.schema :as schema]
             [hypercrud.types.DbVal :refer [->DbVal]]
+            [hypercrud.types.EntityRequest :refer [->EntityRequest]]
             [hypercrud.types.Err :as Err]
             [hypercrud.util.branch :as branch]
+            [hyperfiddle.io.hydrate-requests :refer [hydrate-all-or-nothing!]]
             [hyperfiddle.io.util :refer [v-not-nil?]]
             [hyperfiddle.domain :as domain]
             [hyperfiddle.runtime :as runtime]
@@ -66,6 +71,34 @@
       (p/catch (fn [error]
                  (dispatch! [:set-error error])
                  (throw error)))))
+
+(defn refresh-user [rt dispatch! get-state]
+  (let [users-uri (->URI "datomic:free://datomic:4334/hyperfiddle-users") ; todo inject
+        beta-uri (->URI "datomic:free://datomic:4334/~dustin.getz@hyperfiddle.net+beta") ; todo inject
+        basis (->> (if-let [global-basis @(runtime/state rt [::runtime/global-basis])]
+                     (:ide global-basis)
+                     (->> @(runtime/state rt [::runtime/partitions])
+                          (some (fn [[_ partition]]
+                                  (->> (:local-basis partition)
+                                       (filter (fn [[k _]] (#{users-uri beta-uri} k)))
+                                       seq)))))
+                   (filter (comp #{users-uri beta-uri} first))
+                   (into {}))
+        stage nil
+        requests (let [user-id @(hyperfiddle.runtime/state rt [:hyperfiddle.runtime/user-id])
+                       $users (hc/db rt users-uri nil)]
+                   (cond-> [(->EntityRequest [:user/user-id user-id] $users [:hyperfiddle.ide/parinfer])]
+                     ; todo this should be modeled on the domain/project
+                     (= "tank" @(runtime/state rt [::runtime/domain :domain/ident]))
+                     (conj
+                       (let [$beta (hc/db rt beta-uri nil)]
+                         (->EntityRequest [:user/user-id user-id] $beta [:hfnet.beta/accepted-on :hfnet.beta/archived])))))]
+    (-> (hydrate-all-or-nothing! rt basis stage requests)
+        (p/then (fn [responses]
+                  (dispatch! [:set-user (apply merge {} responses)])))
+        (p/catch (fn [error]
+                   (dispatch! [:set-error error])
+                   (throw error))))))
 
 (defn add-partition [rt route branch branch-aux & on-start]
   (fn [dispatch! get-state]
@@ -137,6 +170,7 @@
                   ; todo should just call foundation/bootstrap-data
                   (mlet [_ (refresh-global-basis rt dispatch! get-state)
                          _ (refresh-domain rt dispatch! get-state)
+                         _ (refresh-user rt dispatch! get-state)
                          :let [invert-id (fn [temp-id uri]
                                            (get-in tempid->id [uri temp-id] temp-id))
                                current-route (get-in (get-state) [::runtime/partitions nil :route])
@@ -147,17 +181,19 @@
                     ; currently this new route breaks the back button
                     (set-route rt route' nil keep-popovers? true dispatch! get-state)))))))
 
-(defn should-transact!? [user uri get-state]
+(defn should-transact!? [uri get-state]
   (and (get-in (get-state) [::runtime/auto-transact uri])
-       (let [hf-db (domain/uri->hfdb uri (::runtime/domain (get-state)))] ; todo this needs sourced from context domain for topnav
+       (let [hf-db (domain/uri->hfdb uri (::runtime/domain (get-state))) ; todo this needs sourced from context domain for topnav
+             user-id (get-in (get-state) [::runtime/user-id])
+             user (get-in (get-state) [::runtime/user])]
          (either/branch
-           (security/subject-can-transact? hf-db (get-in (get-state) [::runtime/user-id]) user)
+           (security/subject-can-transact? hf-db user-id user)
            #(do
               (timbre/error %)
               false)
            identity))))
 
-(defn with-groups [rt user invert-route branch tx-groups & {:keys [route post-tx]}]
+(defn with-groups [rt invert-route branch tx-groups & {:keys [route post-tx]}]
   {:pre [(not-any? nil? (keys tx-groups))]}
   (fn [dispatch! get-state]
     (let [tx-groups (->> tx-groups
@@ -165,7 +201,7 @@
                          (map (fn [[uri tx]] [uri (update-to-tempids get-state branch uri tx)]))
                          (into {}))
           transact-uris (->> (keys tx-groups)
-                             (filter (fn [uri] (and (nil? branch) (should-transact!? user uri get-state)))))
+                             (filter (fn [uri] (and (nil? branch) (should-transact!? uri get-state)))))
           transact-groups (select-keys tx-groups transact-uris)
           with-actions (->> (apply dissoc tx-groups transact-uris)
                             (mapv (fn [[uri tx]] [:with branch uri tx])))]
@@ -188,7 +224,7 @@
 (defn open-popover [branch popover-id]
   [:open-popover branch popover-id])
 
-(defn stage-popover [rt user invert-route branch swap-fn-async & on-start] ; todo rewrite in terms of with-groups
+(defn stage-popover [rt invert-route branch swap-fn-async & on-start] ; todo rewrite in terms of with-groups
   (fn [dispatch! get-state]
     (p/then (swap-fn-async (get-in (get-state) [::runtime/partitions branch :stage] {}))
             (fn [{:keys [tx app-route]}]
@@ -201,7 +237,7 @@
                 (dispatch! (apply batch (concat with-actions on-start)))
                 ;(with-groups rt invert-route parent-branch tx-groups :route app-route :post-tx nil)
                 (let [tx-groups (->> (get-in (get-state) [::runtime/partitions branch :stage])
-                                     (filter (fn [[uri tx]] (and (should-transact!? user uri get-state) (not (empty? tx)))))
+                                     (filter (fn [[uri tx]] (and (should-transact!? uri get-state) (not (empty? tx)))))
                                      (into {}))]
                   (if (and (nil? parent-branch) (not (empty? tx-groups)))
                     ; todo what if transact throws?
@@ -237,12 +273,3 @@
     (let [tx-groups (-> (get-in (get-state) [::runtime/partitions nil :stage])
                         (select-keys [uri]))]
       (transact! peer invert-route tx-groups dispatch! get-state :post-tx [[:reset-stage-uri nil uri]]))))
-
-(defn set-user-id [rt user-id]
-  (fn [dispatch! get-state]
-    (when-not (= (::runtime/user-id (get-state)) user-id)
-      (dispatch! [:set-user-id user-id])
-      ; todo what about domain?
-      (-> (refresh-partition-basis rt nil dispatch! get-state)
-          (p/then (fn [] (hydrate-partition rt nil nil dispatch! get-state))))
-      nil)))

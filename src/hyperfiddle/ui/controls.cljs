@@ -10,6 +10,7 @@
     [hypercrud.browser.context :as context]
     [hypercrud.browser.field :as field]
     [hyperfiddle.data :as data]
+    [hyperfiddle.runtime :as runtime]
     [hyperfiddle.tempid :refer [tempid? underlying-tempid stable-relation-key smart-entity-identifier]]
     #_[hyperfiddle.ui]
     [hyperfiddle.ui.docstring :refer [semantic-docstring]]
@@ -160,7 +161,7 @@
 (defn ^:export code [val ctx & [props]]
   (let [props (-> (entity-props val props ctx)
                   (update :mode #(or % "clojure"))
-                  (assoc :parinfer @(r/fmap :hyperfiddle.ide/parinfer (:hyperfiddle.ide/user ctx))))]
+                  (assoc :parinfer @(runtime/state (:peer ctx) [::runtime/user :hyperfiddle.ide/parinfer])))]
     [debounced props (code-comp ctx)]))
 
 (defn ^:export css [val ctx & [props]]

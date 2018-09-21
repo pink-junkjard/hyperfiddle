@@ -51,7 +51,7 @@
 
 (defn stage! [link-ref route popover-id child-branch ctx]
   (let [f (fn [swap-fn-async]
-            (->> (actions/stage-popover (:peer ctx) @(:hyperfiddle.ide/user ctx) (:hypercrud.browser/invert-route ctx) child-branch
+            (->> (actions/stage-popover (:peer ctx) (:hypercrud.browser/invert-route ctx) child-branch
                                         swap-fn-async       ; the swap-fn could be determined via the link rel
                                         (actions/close-popover (:branch ctx) popover-id))
                  (runtime/dispatch! (:peer ctx))))]
@@ -97,7 +97,7 @@
   (letfn [(f [swap-fn-async]
             (p/then (swap-fn-async {})
                     (fn [{:keys [tx app-route]}]
-                      (->> (actions/with-groups (:peer ctx) @(:hyperfiddle.ide/user ctx) (:hypercrud.browser/invert-route ctx) (:branch ctx) tx :route app-route)
+                      (->> (actions/with-groups (:peer ctx) (:hypercrud.browser/invert-route ctx) (:branch ctx) tx :route app-route)
                            (runtime/dispatch! (:peer ctx))))))]
     (with-swap-fn link-ref nil ctx f)))
 

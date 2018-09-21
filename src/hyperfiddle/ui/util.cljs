@@ -64,7 +64,7 @@
 
 (defn with-tx! [ctx tx]
   (let [uri (context/uri ctx)]
-    (->> (actions/with-groups (:peer ctx) @(:hyperfiddle.ide/user ctx) (:hypercrud.browser/invert-route ctx) (:branch ctx) {uri tx})
+    (->> (actions/with-groups (:peer ctx) (:hypercrud.browser/invert-route ctx) (:branch ctx) {uri tx})
          (runtime/dispatch! (:peer ctx)))))
 
 (let [on-change (fn [ctx o n]

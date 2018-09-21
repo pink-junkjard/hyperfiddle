@@ -247,9 +247,10 @@
 (def LEVEL-NONE 0)
 (def LEVEL-GLOBAL-BASIS 1)
 (def LEVEL-DOMAIN 2)
-(def LEVEL-ROUTE 3)
-(def LEVEL-LOCAL-BASIS 4)
-(def LEVEL-HYDRATE-PAGE 5)
+(def LEVEL-USER 3)
+(def LEVEL-ROUTE 4)
+(def LEVEL-LOCAL-BASIS 5)
+(def LEVEL-HYDRATE-PAGE 6)
 
 ; this needs to be a bit smarter; this should be invoked by everyone (all service endpoints, ssr, browser)
 ; e.g. for service/hydrate-route, we have route, and local-basis, just need to fetch domain & hydrate
@@ -262,6 +263,7 @@
     (-> (condp = (inc init-level)
           LEVEL-GLOBAL-BASIS (actions/refresh-global-basis rt (partial runtime/dispatch! rt) #(deref (runtime/state rt)))
           LEVEL-DOMAIN (actions/refresh-domain rt (partial runtime/dispatch! rt) #(deref (runtime/state rt)))
+          LEVEL-USER (actions/refresh-user rt (partial runtime/dispatch! rt) #(deref (runtime/state rt)))
           LEVEL-ROUTE (let [branch-aux {:hyperfiddle.ide/foo "page"}] ;ide
                         (try (let [route (runtime/decode-route rt encoded-route)]
                                (when-let [e (router/invalid-route? route)] (throw e))

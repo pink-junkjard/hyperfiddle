@@ -97,8 +97,6 @@
   {:hyperfiddle.ui/debug-tooltips true,
    :hypercrud.browser/path [],
    :peer nil,
-   :hyperfiddle.ide/user
-   (r/track identity {:db/id 17592186078474, :user/sub "google-oauth2|106653369366485678033", :user/name "dustin.getz", :user/email "dustin.getz@hyperfiddle.net", :user/picture "https://lh4.googleusercontent.com/-K5tDfqrY6BQ/AAAAAAAAAAI/AAAAAAAAAAo/McQNvtNPinE/photo.jpg", :user/last-seen #inst "2018-09-13T15:51:54.068-00:00", :user/admin-comment "hyperfiddle", :user/user-id #uuid "acd054a8-4e36-4d6c-a9ec-95bdc47f0d39"})
    :hyperfiddle.ui/iframe-on-click nil,
    :hypercrud.browser/route (r/track identity [:demo/hyper-control nil]),
    :hypercrud.browser/source-domain

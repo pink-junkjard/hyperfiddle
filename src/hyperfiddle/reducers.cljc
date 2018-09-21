@@ -152,12 +152,18 @@
     :set-user-id (first args)
     user-id))
 
+(defn user-reducer [user action & args]
+  (case action
+    :set-user (first args)
+    user))
+
 (def reducer-map {:hyperfiddle.runtime/fatal-error fatal-error-reducer
                   :hyperfiddle.runtime/domain domain-reducer
                   :hyperfiddle.runtime/global-basis global-basis-reducer
                   :hyperfiddle.runtime/partitions partitions-reducer
                   :hyperfiddle.runtime/auto-transact auto-transact-reducer
                   :hyperfiddle.runtime/user-id user-id-reducer
+                  :hyperfiddle.runtime/user user-reducer
 
                   ; user
                   :display-mode display-mode-reducer
