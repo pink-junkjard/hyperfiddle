@@ -139,16 +139,15 @@
 ; todo should summon route via context/target-route. but there is still tension in the data api for deferred popovers
 (defn api [[fiddle :as route] ctx]
   {:pre [route (not (string? route))]}
-  (let [ctx (assoc ctx ::user (hyperfiddle.runtime/state (:peer ctx) [:hyperfiddle.runtime/user]))] ; todo remove
-    (case (get-in ctx [::runtime/branch-aux ::foo])
-      "page" (into
-               (when true #_(:active-ide? (runtime/host-env (:peer ctx))) ; true for embedded src mode
-                 (request-from-route (ide-fiddle-route route ctx) (page-ide-context ctx)))
-               (if (magic-ide-fiddle? fiddle (get-in ctx [:hypercrud.browser/domain :domain/ident]))
-                 (request-from-route route (page-ide-context ctx))
-                 (request-from-route route (page-target-context ctx))))
-      "ide" (request-from-route route (leaf-ide-context ctx))
-      "user" (request-from-route route (leaf-target-context ctx)))))
+  (case (get-in ctx [::runtime/branch-aux ::foo])
+    "page" (into
+             (when true #_(:active-ide? (runtime/host-env (:peer ctx))) ; true for embedded src mode
+               (request-from-route (ide-fiddle-route route ctx) (page-ide-context ctx)))
+             (if (magic-ide-fiddle? fiddle (get-in ctx [:hypercrud.browser/domain :domain/ident]))
+               (request-from-route route (page-ide-context ctx))
+               (request-from-route route (page-target-context ctx))))
+    "ide" (request-from-route route (leaf-ide-context ctx))
+    "user" (request-from-route route (leaf-target-context ctx))))
 
 #?(:cljs
    (defn view-page [[fiddle :as route] ctx]
@@ -191,12 +190,11 @@
 #?(:cljs
    ; todo should summon route via context/target-route. but there is still tension in the data api for deferred popovers
    (defn view [[fiddle :as route] ctx]                      ; pass most as ref for reactions
-     (let [ctx (assoc ctx ::user (hyperfiddle.runtime/state (:peer ctx) [:hyperfiddle.runtime/user]))] ; todo remove
-       (case (namespace fiddle)
-         ;"hyperfiddle.ide" [ui/iframe (leaf-ide-context ctx) {:route route}]
-         (case (get-in ctx [::runtime/branch-aux ::foo])
-           "page" (view-page route ctx)                     ; component, seq-component or nil
-           ; On SSR side this is only ever called as "page", but it could be differently (e.g. turbolinks)
-           ; On Browser side, also only ever called as "page", but it could be configured differently (client side render the ide, server render userland...?)
-           "ide" [ui/iframe (leaf-ide-context ctx) {:route route}]
-           "user" [ui/iframe (leaf-target-context ctx) {:route route}])))))
+     (case (namespace fiddle)
+       ;"hyperfiddle.ide" [ui/iframe (leaf-ide-context ctx) {:route route}]
+       (case (get-in ctx [::runtime/branch-aux ::foo])
+         "page" (view-page route ctx)                       ; component, seq-component or nil
+         ; On SSR side this is only ever called as "page", but it could be differently (e.g. turbolinks)
+         ; On Browser side, also only ever called as "page", but it could be configured differently (client side render the ide, server render userland...?)
+         "ide" [ui/iframe (leaf-ide-context ctx) {:route route}]
+         "user" [ui/iframe (leaf-target-context ctx) {:route route}]))))
