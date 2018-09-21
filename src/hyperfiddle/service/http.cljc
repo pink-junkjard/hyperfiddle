@@ -64,7 +64,9 @@
                                                        :hyperfiddle.runtime/branch-aux branch-aux}}}
           rt (->Runtime host-env (r/atom (reducers/root-reducer initial-state nil))
                         reducers/root-reducer jwt user-id)]
+      ; todo should just call foundation/bootstrap-data
       (-> (actions/refresh-domain rt (partial runtime/dispatch! rt) #(deref (runtime/state rt)))
+          (p/then (fn [_] (actions/refresh-user rt (partial runtime/dispatch! rt) #(deref (runtime/state rt)))))
           (p/then (fn [_] (runtime/local-basis rt global-basis route branch branch-aux)))
           (p/then (fn [local-basis]
                     {:status 200
@@ -97,7 +99,9 @@
                                 request-body)
           rt (->Runtime host-env (r/atom (reducers/root-reducer initial-state nil))
                         reducers/root-reducer jwt user-id)]
+      ; todo should just call foundation/bootstrap-data
       (-> (actions/refresh-domain rt (partial runtime/dispatch! rt) #(deref (runtime/state rt)))
+          (p/then (fn [_] (actions/refresh-user rt (partial runtime/dispatch! rt) #(deref (runtime/state rt)))))
           (p/then (fn [_] (runtime/hydrate-route rt local-basis route branch branch-aux request-body)))
           (p/then (fn [data]
                     {:status 200
