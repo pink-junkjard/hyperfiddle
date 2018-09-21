@@ -92,10 +92,14 @@
          [:fieldset [:legend "(.-stack e)"]                 ; network error
           [:pre (.-stack e)]]])]))
 
+(defn shadow-domain [domain]
+  ; also called from the view, which wants database types, so separate from process-domain
+  (update domain :domain/home-route or-str "[:hyperfiddle.ide/entry-point-fiddles]"))
+
 (defn process-domain [domain]                               ; this should be memoized at the call site?
   (-> domain
-      (update :domain/home-route or-str "[:hyperfiddle.ide/entry-point-fiddles]")
-      (update-existing :domain/environment read-string)) #_"todo this can throw")
+      (update-existing :domain/environment read-string) #_"todo this can throw"
+      (shadow-domain)))
 
 (defn context [ctx source-domain user-domain-insecure]
   ; Secure first, which is backwards, see `domain-request` comment
