@@ -4,7 +4,7 @@
             [hypercrud.types.Err :refer [->Err]]
             [hyperfiddle.foundation :as foundation]
             [hyperfiddle.io.bindings :refer [*subject*]]
-            [hyperfiddle.io.hydrate-requests :refer [hydrate-requests]]
+            [hyperfiddle.io.datomic.hydrate-requests :refer [hydrate-requests]]
             [hyperfiddle.io.rpc-router :refer [decode-basis]]
             [hyperfiddle.io.sync :refer [sync]]
             [hyperfiddle.io.transact :refer [transact!]]
