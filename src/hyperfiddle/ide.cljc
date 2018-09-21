@@ -95,7 +95,7 @@
 (defn route-decode [rt path-and-frag]
   {:pre [(string? path-and-frag)]}
   (let [[path frag] (split-fragment path-and-frag)
-        domain @(runtime/state rt [:hyperfiddle.runtime/domain])
+        domain @(runtime/state rt [::runtime/domain])
         home-route (some-> domain :domain/home-route safe-read-edn-string (->> (unwrap #(timbre/error %)))) ; in hf format
         router (some-> domain :domain/router safe-read-edn-string (->> (unwrap #(timbre/error %))))]
 
@@ -111,7 +111,7 @@
 
 (defn route-encode [rt [fiddle _ _ frag :as route]]
   {:post [(str/starts-with? % "/")]}
-  (let [domain @(runtime/state rt [:hyperfiddle.runtime/domain])
+  (let [domain @(runtime/state rt [::runtime/domain])
         router (some-> domain :domain/router safe-read-edn-string (->> (unwrap #(timbre/error %))))
         home-route (some-> domain :domain/home-route safe-read-edn-string (->> (unwrap #(timbre/error %))))
         home-route (if router (router-bidi/bidi->hf home-route) home-route)]

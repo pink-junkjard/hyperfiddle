@@ -116,7 +116,7 @@
             dirty? (not @(r/fmap empty? (runtime/state (:peer ctx) [::runtime/partitions nil :stage])))]
         (fake-managed-anchor :hf/iframe :stage ctx "stage" {:tooltip [nil tooltip] :class (when dirty? "stage-dirty")}))
       (ui/link :hf/self :new-fiddle ctx "new" (let [disabled? (not (security/can-create? ctx)) ; we explicitly know the context here is $
-                                                    anonymous? (nil? @(hyperfiddle.runtime/state (:peer ctx) [:hyperfiddle.runtime/user-id]))]
+                                                    anonymous? (nil? @(runtime/state (:peer ctx) [::runtime/user-id]))]
                                                 {:disabled disabled?
                                                  :tooltip (cond
                                                             (and anonymous? disabled?) [:warning "Please login"]

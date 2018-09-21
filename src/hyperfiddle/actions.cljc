@@ -67,7 +67,7 @@
 (defn refresh-domain [rt dispatch! get-state]
   (-> (runtime/domain rt)
       (p/then (fn [domain]
-                (dispatch! [:hyperfiddle.runtime/set-domain domain])))
+                (dispatch! [::runtime/set-domain domain])))
       (p/catch (fn [error]
                  (dispatch! [:set-error error])
                  (throw error)))))
@@ -85,7 +85,7 @@
                    (filter (comp #{users-uri beta-uri} first))
                    (into {}))
         stage nil
-        requests (let [user-id @(hyperfiddle.runtime/state rt [:hyperfiddle.runtime/user-id])
+        requests (let [user-id @(runtime/state rt [::runtime/user-id])
                        $users (hc/db rt users-uri nil)]
                    (cond-> [(->EntityRequest [:user/user-id user-id] $users [:hyperfiddle.ide/parinfer])]
                      ; todo this should be modeled on the domain/project
