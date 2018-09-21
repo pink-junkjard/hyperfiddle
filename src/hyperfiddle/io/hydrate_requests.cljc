@@ -3,8 +3,6 @@
             [cats.monad.either :as either]
             [cuerdas.core :as str]
             [hyperfiddle.io.rpc-router :refer [encode-basis]]
-    #?(:clj
-            [hyperfiddle.io.datomic.hydrate-requests :as datomic-hydrate-requests])
             [hyperfiddle.io.http.core :refer [http-request!]]
             [hyperfiddle.io.util :refer [process-result v-not-nil?]]
             [hyperfiddle.runtime :as runtime]
@@ -49,6 +47,3 @@
         (p/then (fn [{:keys [body]}]
                   (assert (= (count requests) (count (:pulled-trees body))) "Server contract violation; mismatched counts")
                   body)))))
-
-#?(:clj
-   (def hydrate-requests datomic-hydrate-requests/hydrate-requests))
