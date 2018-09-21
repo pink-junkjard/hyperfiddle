@@ -44,7 +44,7 @@
   runtime/AppValLocalBasis
   (local-basis [rt global-basis route branch branch-aux]
     (let [ctx {:branch branch
-               :hyperfiddle.runtime/branch-aux branch-aux
+               ::runtime/branch-aux branch-aux
                :peer rt}
           ; this is ide
           page-or-leaf (case (:hyperfiddle.ide/foo branch-aux)
@@ -59,7 +59,7 @@
     {:pre [route (not (string? route))]}
     (let [data-cache (-> @(runtime/state rt [::runtime/partitions branch]) (select-keys [:tempid-lookups :ptm]))
           ctx {:branch branch
-               :hyperfiddle.runtime/branch-aux branch-aux
+               ::runtime/branch-aux branch-aux
                :peer rt}
           ; this is ide
           page-or-leaf (case (:hyperfiddle.ide/foo branch-aux)

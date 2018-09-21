@@ -61,7 +61,7 @@
           initial-state {::runtime/user-id user-id
                          ::runtime/global-basis global-basis
                          ::runtime/partitions {branch {:route route
-                                                       :hyperfiddle.runtime/branch-aux branch-aux}}}
+                                                       ::runtime/branch-aux branch-aux}}}
           rt (->Runtime host-env (r/atom (reducers/root-reducer initial-state nil))
                         reducers/root-reducer jwt user-id)]
       ; todo should just call foundation/bootstrap-data
@@ -95,7 +95,7 @@
                                  ; why dont we need to preheat the tempid lookups here for parent branches?
                                  ::runtime/partitions {branch {:local-basis local-basis
                                                                :route route
-                                                               :hyperfiddle.runtime/branch-aux branch-aux}}}
+                                                               ::runtime/branch-aux branch-aux}}}
                                 request-body)
           rt (->Runtime host-env (r/atom (reducers/root-reducer initial-state nil))
                         reducers/root-reducer jwt user-id)]
