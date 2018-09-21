@@ -115,18 +115,12 @@
                       {:hyperfiddle.ui.markdown-extensions/unp true}]]
             dirty? (not @(r/fmap empty? (runtime/state (:peer ctx) [::runtime/partitions nil :stage])))]
         (fake-managed-anchor :hf/iframe :stage ctx "stage" {:tooltip [nil tooltip] :class (when dirty? "stage-dirty")}))
-      (ui/link :hf/self :new-fiddle ctx "new" (let [hf-db @(hyperfiddle.runtime/state (:peer ctx) [:hyperfiddle.runtime/domain :domain/fiddle-database])
-                                                    subject @(hyperfiddle.runtime/state (:peer ctx) [:hyperfiddle.runtime/user-id])
-                                                    user @(:hyperfiddle.ide/user ctx)
-                                                    writes-allowed?+ (security/subject-can-transact? hf-db subject user)
-                                                    anonymous? (nil? subject)]
-                                                {:disabled (either/branch writes-allowed?+ (constantly true) not) ; todo this logic could be factored out into ui-from-link
-                                                 :tooltip (either/branch
-                                                            writes-allowed?+
-                                                            (fn [e] [:warning "Misconfigured db security"])
-                                                            (fn [writes-allowed?]
-                                                              (cond (and anonymous? (not writes-allowed?)) [:warning "Please login"]
-                                                                    (not writes-allowed?) [:warning "Writes restricted"])))}))
+      (ui/link :hf/self :new-fiddle ctx "new" (let [disabled? (not (security/can-create? ctx)) ; we explicitly know the context here is $
+                                                    anonymous? (nil? @(hyperfiddle.runtime/state (:peer ctx) [:hyperfiddle.runtime/user-id]))]
+                                                {:disabled disabled?
+                                                 :tooltip (cond
+                                                            (and anonymous? disabled?) [:warning "Please login"]
+                                                            disabled? [:warning "Writes restricted"])}))
       [tooltip {:label "Environment administration"} (ui/link :hf/self :domain ctx "env")]
       (if @(runtime/state (:peer ctx) [::runtime/user-id])
         (if-let [{:keys [:hypercrud.browser/data]} (hyperfiddle.data/browse ctx :hf/iframe :account)]
