@@ -12,3 +12,6 @@
 
 ; https://forum.datomic.com/t/is-this-a-bug-in-datalog-symbol-resolution-with-not/613
 (def attr-not-archived? (complement attr-archived?))
+
+(defn attr-datomic? [$ e-attr]
+  (<= e-attr 62))
