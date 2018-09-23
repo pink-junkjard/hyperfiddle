@@ -1,51 +1,55 @@
 (ns contrib.loader
   (:require
     [cats.core :refer [mlet return]]
+    [contrib.cljs-platform :refer [browser?]]
     [contrib.string :refer [blank->nil]]
     [goog.object]
     [promesa.core :as p]
     [reagent.core]))
 
 
-(defn script! [href]
+(defn script! [href & [{:keys [defer async]
+                        :or {defer true
+                             async true}}]]
   (p/promise
     (fn [resolve reject]
-      (let [el (js/document.createElement "script")]
-        ; https://stackoverflow.com/questions/21214515/is-the-order-of-onload-handler-and-src-set-important-in-a-script-element
-        ; https://stackoverflow.com/questions/16230886/trying-to-fire-the-onload-event-on-script-tag
-        (doto el
-          (goog.object/set "defer" true)                    ; In SSR case, defer onLoad until after body is parsed, but before DOMContentLoaded
-          (goog.object/set "async" true)                    ; In non-SSR case, this reduces time-to-glass but can introduce a flash of "unstyled" content
-          (goog.object/set "onload" #(resolve el))
-          (goog.object/set "src" href)
-          (js/document.body.appendChild))))))
+      (when (browser?)                                      ; can be called from domain/cljs
+        (let [el (js/document.createElement "script")]
+          ; https://stackoverflow.com/questions/21214515/is-the-order-of-onload-handler-and-src-set-important-in-a-script-element
+          ; https://stackoverflow.com/questions/16230886/trying-to-fire-the-onload-event-on-script-tag
+          (doto el
+            (goog.object/set "defer" defer)                 ; In SSR case, defer onLoad until after body is parsed, but before DOMContentLoaded
+            (goog.object/set "async" async)                 ; In non-SSR case, this reduces time-to-glass but can introduce a flash of "unstyled" content
+            (goog.object/set "onload" #(resolve el))
+            (goog.object/set "src" href)
+            (js/document.body.appendChild)))))))
 
-(defn style! [href]
+(defn style! [href & [props]]
   (p/promise
     (fn [resolve reject]
-      (let [el (js/document.createElement "link")]
-        (doto el
-          (goog.object/set "rel" "stylesheet")
-          (goog.object/set "type" "text/css")
-          (goog.object/set "href" href)
-          (js/document.head.appendChild))
-        (resolve el)))))
+      (when (browser?)
+        (let [el (js/document.createElement "link")]
+          (doto el
+            (goog.object/set "rel" "stylesheet")
+            (goog.object/set "type" "text/css")
+            (goog.object/set "href" href)
+            (js/document.head.appendChild))
+          (resolve el))))))
 
-
-(defn load-asset! [href]
+(defn load-asset! [href props]
   (condp #(clojure.string/ends-with? %2 %1) href
-    ".css" (style! href)
-    ".js" (script! href)))
+    ".css" (style! href props)
+    ".js" (script! href props)))
 
 (def ^:export Loader!
   (reagent.core/create-class
     {:reagent-render (fn [])
      :component-did-mount
      (fn [this]
-       (let [[_ asset-hrefs resolve! reject!] (reagent.core/argv this)]
+       (let [[_ asset-hrefs resolve! props] (reagent.core/argv this)]
          (-> (->> asset-hrefs
                   (filter blank->nil)
-                  (map load-asset!)
+                  (map #(load-asset! % props))
                   doall)
              p/all
              (p/then (fn [els]
