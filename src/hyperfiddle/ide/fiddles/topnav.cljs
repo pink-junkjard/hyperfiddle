@@ -78,7 +78,7 @@
             src-mode (src-mode? (get target-route 3))
             no-target-fiddle (nil? (:db/id @data))          ; ide-route omits fiddle for ide routes
             change! #(runtime/dispatch! (:peer ctx) (actions/set-display-mode %))
-            value (if src-mode :src display-mode)]
+            value (if src-mode :hypercrud.browser.browser-ui/src display-mode)]
         [:span.radio-group
          (radio-option {:label "api" :tooltip "What the API client sees" :target :hypercrud.browser.browser-ui/api :change! change! :value value
                         :disabled (or src-mode no-target-fiddle)})
