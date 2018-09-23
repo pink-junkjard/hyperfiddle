@@ -178,10 +178,8 @@
               :on-change change-tab]
              ^{:key (str @selected-uri)}
              [staging-control ctx selected-uri]
-             (when child [child selected-uri stage ctx])
-             [markdown "Hyperfiddle always generates valid transactions, if it doesn't, please file a bug.
-
-*WARNING:* Datomic schema alterations cannot be used in the same transaction, see [#6](https://github.com/hyperfiddle/hyperfiddle/issues/6)."]))))))
+             (when child
+               [child selected-uri stage ctx])))))))
 
 #?(:cljs
    (defn leaf-view [ctx f]
