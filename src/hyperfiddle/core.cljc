@@ -5,13 +5,14 @@
     [hyperfiddle.api]
     #?(:cljs [hyperfiddle.ui])
 
-    ; Optional helpers
+    ; Query helpers
     #?(:clj [contrib.datomic])
     #?(:clj [hyperfiddle.query])
 
+    ; UI helpers
+    #?(:cljs [contrib.loader])
     #?(:cljs [contrib.reagent])
     #?(:cljs [contrib.ui])
-    #?(:cljs [contrib.ui.loader])
 
     ; These things can hardcode hyperfiddle.ui, like userland
     #?(:cljs [hyperfiddle.ui.markdown-extensions])

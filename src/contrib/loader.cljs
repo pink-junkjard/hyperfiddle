@@ -1,9 +1,10 @@
-(ns contrib.ui.loader
+(ns contrib.loader
   (:require
     [cats.core :refer [mlet return]]
     [contrib.string :refer [blank->nil]]
+    [goog.object]
     [promesa.core :as p]
-    [goog.object]))
+    [reagent.core]))
 
 
 (defn script! [href]
