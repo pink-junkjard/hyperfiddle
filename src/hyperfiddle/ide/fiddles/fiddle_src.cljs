@@ -67,7 +67,7 @@
           (field [:fiddle/css] ctx hyper-control props))
    :fiddle (fn [val ctx props]
              (fragment
-               (field [:fiddle/ident] ctx hyper-control props)
+               (field [:fiddle/ident] ctx hyper-control (merge props {:read-only true}))
                (field [:fiddle/hydrate-result-as-fiddle] ctx hyper-control props)
                [:div.p "Additional attributes"]
                (->> @(r/fmap ::field/children (:hypercrud.browser/field ctx))
