@@ -124,10 +124,9 @@
   (ssr [rt]
     (let [ctx {:peer rt
                ::runtime/branch-aux {::ide/foo "page"}}]
-      [foundation/view :page ctx (if (or (not (:active-ide? host-env))
-                                         (= "www" @(runtime/state rt [::runtime/domain :domain/ident])))
-                                   (r/partial ide/view (context/target-route ctx))
-                                   (constantly [:div "loading... "]))]))
+      [foundation/view :page ctx (if (:active-ide? host-env)
+                                   (constantly [:div "loading... "])
+                                   (r/partial ide/view (context/target-route ctx)))]))
 
   hc/Peer
   (hydrate [this branch request]

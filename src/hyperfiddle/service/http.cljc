@@ -15,17 +15,24 @@
 (defn cloud-host-environment [{:keys [BUILD HF_HOSTNAMES HF_ALIAS_HOSTNAMES] :as env} protocol hostname]
   {:pre [hostname]}
   (let [hf-hostname (first (filter #(.endsWith hostname (str "." %)) HF_HOSTNAMES))
-        alias-hostname (first (filter #(.endsWith hostname (str "." %)) HF_ALIAS_HOSTNAMES))]
-    (map->HostEnvironment
-      {:hostname hostname
-       :service-uri (->URI (str protocol "://" hostname "/api/" BUILD "/"))
-       :active-ide? (boolean hf-hostname)
-       :domain-eid (cond
-                     hf-hostname [:domain/ident (second (re-find (re-pattern (str "(.*)\\." hf-hostname)) hostname))]
-                     alias-hostname [:domain/ident (second (re-find (re-pattern (str "(.*)\\." alias-hostname)) hostname))]
-                     :else [:domain/aliases hostname])
-       :auth/root (or hf-hostname alias-hostname)
-       :ide/root (or hf-hostname (first HF_ALIAS_HOSTNAMES))})))
+        hf-alias-hostname (first (filter #(.endsWith hostname (str "." %)) HF_ALIAS_HOSTNAMES))]
+    (-> (cond
+          hf-hostname (let [ident (second (re-find (re-pattern (str "(.*)\\." hf-hostname)) hostname))]
+                        {:active-ide? (not= "www" ident)    ; should be true; hack "Because we can't fragment our domains"
+                         :domain-eid [:domain/ident ident]
+                         :auth/root hf-hostname
+                         :ide/root hf-hostname})
+          hf-alias-hostname {:active-ide? false
+                             :domain-eid [:domain/ident (second (re-find (re-pattern (str "(.*)\\." hf-alias-hostname)) hostname))]
+                             :auth/root hf-alias-hostname
+                             :ide/root (first HF_ALIAS_HOSTNAMES)}
+          :else-user-alias {:active-ide? false
+                            :domain-eid [:domain/aliases hostname]
+                            :auth/root nil
+                            :ide/root (first HF_ALIAS_HOSTNAMES)})
+        (assoc :hostname hostname
+               :service-uri (->URI (str protocol "://" hostname "/api/" BUILD "/")))
+        (map->HostEnvironment))))
 
 (defn e->platform-response [e]
   ; todo there are a subset of requests that are cacheable
