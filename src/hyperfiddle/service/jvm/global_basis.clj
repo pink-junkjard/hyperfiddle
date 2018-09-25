@@ -18,6 +18,9 @@
   (state [rt] state-atom)
   (state [rt path] (r/cursor state-atom path))
 
+  runtime/HostInfo
+  (host-env [rt] host-env)
+
   runtime/AppFnGlobalBasis
   (global-basis [rt]
     (global-basis rt (:domain-eid host-env)))
