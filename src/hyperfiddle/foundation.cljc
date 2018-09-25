@@ -146,7 +146,7 @@
 #?(:cljs
    (defn ^:export staging [ctx & [child]]
      (let [source-uri (runtime/state (:peer ctx) [::runtime/domain :domain/fiddle-database :database/uri])
-           selected-uri (r/atom (hyperfiddle.domain/dbname->uri "$" @(runtime/state (:peer ctx) [::runtime/domain])))
+           selected-uri (runtime/state (:peer ctx) [:staging/selected-uri]) ; this is only writabel because the browser's state impl uses reagent cursors all the way to the top
            change-tab #(reset! selected-uri %)]
        (fn [ctx & [child]]
          (let [non-empty-uris (->> @(runtime/state (:peer ctx) [::runtime/partitions nil :stage])
@@ -169,7 +169,8 @@
                                     (sort-by :label))
                stage (runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :stage @selected-uri])]
            (when-not (contains? (->> tabs-definition (map :id) (into #{})) @selected-uri)
-             (reset! selected-uri @source-uri))
+             (reset! selected-uri (or (hyperfiddle.domain/dbname->uri "$" @(runtime/state (:peer ctx) [::runtime/domain]))
+                                      @source-uri)))
            (fragment
              :topnav
              [horizontal-tabs

@@ -157,6 +157,11 @@
     :set-user (first args)
     user))
 
+(defn selected-uri-reducer [uri action & args]
+  (case action
+    :select-uri (first args)
+    uri))
+
 (def reducer-map {:hyperfiddle.runtime/fatal-error fatal-error-reducer
                   :hyperfiddle.runtime/domain domain-reducer
                   :hyperfiddle.runtime/global-basis global-basis-reducer
@@ -167,6 +172,7 @@
 
                   ; user
                   :display-mode display-mode-reducer
-                  :pressed-keys pressed-keys-reducer})
+                  :pressed-keys pressed-keys-reducer
+                  :staging/selected-uri selected-uri-reducer})
 
 (def root-reducer (state/combine-reducers reducer-map))
