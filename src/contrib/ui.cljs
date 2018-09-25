@@ -235,12 +235,18 @@
 
 (def ^:export markdown (remark/remark!))
 
-(defn radio-option [props]
+(let [on-change (fn [value e]
+                  ; ideally use e -target -value, but that is not very useful since it would require string serialization
+                  value)]
+  (defn radio [props]
+    [:input (-> (assoc props :type "radio")
+                (update-existing :value str)
+                (update-existing :on-change r/comp (r/partial on-change (:value props))))]))
+
+(defn radio-with-label [props]
   [tooltip {:label (:tooltip props)}
    [:label.radio-option {:class (if (:disabled props) "disabled")}
-    [:input {:type "radio"
-             :style {:width "auto"}
-             :checked (= (:value props) (:target props))
-             :on-change #((:change! props) (:target props))
-             :disabled (:disabled props)}]
-    (:label props)]])
+    [radio (-> props
+               (dissoc :tooltip :label)
+               (update :style merge {:width "auto"}))]
+    (or (:label props) (str (:value props)))]])

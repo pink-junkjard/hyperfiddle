@@ -7,7 +7,7 @@
     [contrib.reagent :refer [fragment]]
     [contrib.rfc3986 :refer [encode-rfc3986-pchar]]
     [contrib.ednish :refer [encode-ednish]]
-    [contrib.ui :refer [radio-option easy-checkbox]]
+    [contrib.ui :refer [easy-checkbox radio-with-label]]
     [contrib.ui.tooltip :refer [tooltip]]
     [hypercrud.browser.context :as context]
     [hypercrud.browser.router :as router]
@@ -18,7 +18,7 @@
     [hyperfiddle.runtime :as runtime]
     [hyperfiddle.security.client :as security]
     [hyperfiddle.ui :as ui :refer [ui-from-link markdown]]
-    [hyperfiddle.ui.util :refer [on-change->tx with-tx!]]))
+    [hyperfiddle.ui.controls :refer [radio-group]]))
 
 
 (defn any-loading? [peer]
@@ -54,24 +54,25 @@
 
       (let [src-mode (src-mode? (get target-route 3))
             no-target-fiddle (nil? @(r/cursor (:hypercrud.browser/data ctx) [:db/id])) ; ide-route omits fiddle for ide routes
-            change! #(runtime/dispatch! (:peer ctx) (actions/set-display-mode %))
+            on-change (r/comp (r/partial runtime/dispatch! (:peer ctx)) actions/set-display-mode)
             value (if src-mode :hypercrud.browser.browser-ui/src @(runtime/state (:peer ctx) [:display-mode]))]
-        [:span.radio-group
-         (radio-option {:label "api" :tooltip "What the API client sees" :target :hypercrud.browser.browser-ui/api :change! change! :value value
-                        :disabled (or src-mode no-target-fiddle)})
-         (radio-option {:label "data" :tooltip "Ignore :fiddle/renderer" :target :hypercrud.browser.browser-ui/xray :change! change! :value value
-                        :disabled (or src-mode no-target-fiddle)})
-         (radio-option {:label "view" :tooltip "Use :fiddle/renderer" :target :hypercrud.browser.browser-ui/user :value value :change! change!
-                        :disabled (or src-mode no-target-fiddle)})
-         (radio-option {:label (let [root-rel-path (runtime/encode-route (:peer ctx) (router/dissoc-frag target-route))
-                                     href (if-not src-mode
-                                            (str root-rel-path "#" (encode-rfc3986-pchar (encode-ednish (pr-str :src))))
-                                            (str root-rel-path "#"))]
-                                 (if (and (not src-mode) (not no-target-fiddle))
-                                   [:a {:href href :target "_blank"} "src"]
-                                   [:span "src"]))
-                        :tooltip "View fiddle source" :target :hypercrud.browser.browser-ui/src :value value :change! change!
-                        :disabled (or (not src-mode) no-target-fiddle)})])
+        (into [:span.radio-group]
+              (->> [{:label "api" :tooltip "What the API client sees" :value :hypercrud.browser.browser-ui/api
+                     :disabled (or src-mode no-target-fiddle)}
+                    {:label "data" :tooltip "Ignore :fiddle/renderer" :value :hypercrud.browser.browser-ui/xray
+                     :disabled (or src-mode no-target-fiddle)}
+                    {:label "view" :tooltip "Use :fiddle/renderer" :value :hypercrud.browser.browser-ui/user
+                     :disabled (or src-mode no-target-fiddle)}
+                    {:label (let [root-rel-path (runtime/encode-route (:peer ctx) (router/dissoc-frag target-route))
+                                  href (if-not src-mode
+                                         (str root-rel-path "#" (encode-rfc3986-pchar (encode-ednish (pr-str :src))))
+                                         (str root-rel-path "#"))]
+                              (if (and (not src-mode) (not no-target-fiddle))
+                                [:a {:href href :target "_blank"} "src"]
+                                [:span "src"]))
+                     :tooltip "View fiddle source" :value :hypercrud.browser.browser-ui/src
+                     :disabled (or (not src-mode) no-target-fiddle)}]
+                   (map (fn [props] [radio-with-label (assoc props :checked (= (:value props) value) :on-change on-change)])))))
       (let [tooltip [:div {:style {:text-align "left"}}
                      [markdown
                       (->> @(runtime/state (:peer ctx) [::runtime/domain :domain/databases])
@@ -104,15 +105,12 @@
         [:a {:href (foundation/stateless-login-url ctx)} "login"])]]))
 
 (defn ^:export qe-picker-control [val ctx props]            ; not topnav
-  (let [options (->> [:query :entity :blank]
-                     (map #(radio-option
-                             {:label (case % :query "query" :entity "pull" :blank "blank")
-                              :target %
-                              :value val
-                              :change! (r/comp (r/partial with-tx! ctx)
-                                               (r/partial on-change->tx ctx val))})))]
-    [:span.qe.radio-group props
-     (apply fragment options)]))
+  (let [props (assoc props
+                :class "qe"
+                :options [{:value :query :label "query"}
+                          {:value :entity :label "pull"}
+                          {:value :blank :label "blank"}])]
+    [radio-group val ctx props]))
 
 (letfn [(toggle-auto-transact! [ctx selected-uri]
           (runtime/dispatch! (:peer ctx) [:toggle-auto-transact @selected-uri]))]

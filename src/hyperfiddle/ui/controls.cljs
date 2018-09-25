@@ -190,6 +190,17 @@
   (let [props (entity-props val props ctx)]
     [debounced props (edn-comp ctx)]))
 
+(defn ^:export radio-group [val ctx & [props]]
+  (into [:span.radio-group (select-keys props [:class])]
+        (->> (:options props)
+             (map (let [props (dissoc props :class :options)]
+                    (fn [option-props]
+                      [contrib.ui/radio-with-label
+                       (-> (merge props option-props)
+                           (update :disabled #(or % (r/track writable-entity? ctx)))
+                           (assoc :checked (= (:value option-props) val)
+                                  :on-change (r/partial partial-change-with-old-val (r/partial on-change->tx ctx) ctx)))]))))))
+
 (defn -magic-new-change! [state ctx #_ov v]
   (let [e @(r/fmap (r/partial smart-entity-identifier ctx)
                    (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data]))]
