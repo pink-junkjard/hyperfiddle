@@ -9,6 +9,7 @@
     #?(:cljs [contrib.reagent :refer [fragment]])
     [contrib.rfc3986 :refer [split-fragment]]
     [contrib.string :refer [safe-read-edn-string empty->nil]]
+    [contrib.uri :refer [->URI]]
     [hypercrud.browser.base :as base]
     [hypercrud.browser.browser-request :refer [request-from-route]]
     #?(:cljs [hypercrud.browser.browser-ui :as browser-ui])
@@ -134,7 +135,9 @@
         basis (case (get-in ctx [::runtime/branch-aux ::foo])
                 "page" (concat ide user)
                 "ide" (concat ide user)
-                "user" user)
+                "user" (if (:active-ide? (runtime/host-env (:peer ctx)))
+                         (merge user (select-keys ide [(->URI "datomic:free://datomic:4334/hyperfiddle-users")]))
+                         user))
         basis (sort basis)]                                 ; Userland api-fn should filter irrelevant routes
     (timbre/debug (pr-str basis))
     #_(determine-local-basis (hydrate-route route ...))
