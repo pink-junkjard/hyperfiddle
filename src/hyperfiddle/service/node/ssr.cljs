@@ -162,9 +162,7 @@
                                                       (security/subject-can-transact? hf-db subject user)
                                                       (constantly false)
                                                       identity)))))
-                       ; todo domain-uri is an ugly hack
-                       ; we are assuming the security. also users should not need this db all the time
-                       (into {foundation/domain-uri (boolean @(runtime/state rt [::runtime/user-id]))})
+                       (into {})
                        (vector :set-auto-transact)
                        (runtime/dispatch! rt))))
         (p/then (constantly 200))
