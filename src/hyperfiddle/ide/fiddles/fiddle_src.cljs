@@ -1,21 +1,24 @@
 (ns hyperfiddle.ide.fiddles.fiddle-src
   (:require
+    [cats.core :as cats]
     [clojure.pprint]
     [contrib.css :refer [css]]
+    [contrib.ct :refer [unwrap]]
     [contrib.pprint]
     [contrib.reactive :as r]
     [contrib.reagent :refer [fragment]]
     [contrib.ui]
+    [hypercrud.browser.context :as context]
     [hypercrud.browser.field :as field]
-    [hypercrud.ui.error :as error]
-    [hyperfiddle.ide.fiddles.topnav :refer [shadow-fiddle]]
+    [hyperfiddle.fiddle :as fiddle]
     [hyperfiddle.ide.fiddles.fiddle-links.renderer :as links-fiddle]
     #_[hyperfiddle.ide.hf-live :as hf-live]                 ;cycle
+    [hyperfiddle.ide.system-fiddle :as system-fiddle]
     [hyperfiddle.runtime :as runtime]
     [hyperfiddle.ui :refer [anchor field hyper-control link markdown]]
     [hyperfiddle.ui.controls :refer [label-with-docs]]
     [re-com.tabs :refer [horizontal-tabs]]
-    [hypercrud.browser.context :as context]))
+    [taoensso.timbre :as timbre]))
 
 
 (defn schema-links [ctx]
@@ -47,6 +50,22 @@
        [:div [hyper-control @(:hypercrud.browser/data ctx) ctx {:class "pull-database"}]])
      [:div])
    [:span.schema "schema: " (schema-links ctx-fiddle-type)]])
+
+; inline sys-link data when the entity is a system-fiddle
+(letfn [(-shadow-fiddle [target-ident fiddle-val]
+          (cond
+            (system-fiddle/system-fiddle? target-ident) (->> (system-fiddle/hydrate-system-fiddle target-ident)
+                                                             (cats/fmap #(fiddle/fiddle-defaults % nil))
+                                                             (unwrap #(timbre/error %)))
+
+            (nil? (:db/id fiddle-val)) fiddle-val
+            :else (fiddle/fiddle-defaults fiddle-val nil)))]
+  (defn shadow-fiddle [ctx]
+    {:pre [(-> ctx :hypercrud.browser/data)]}
+    (let [route @(:hypercrud.browser/route ctx)
+          [_ [e]] route                                     ; [:hyperfiddle/topnav [#entity["$" [:fiddle/ident :hyperfiddle.system/remove]]]]
+          [_ target-fiddle-ident] (:db/id e)]
+      (update ctx :hypercrud.browser/data (partial r/fmap (r/partial -shadow-fiddle target-fiddle-ident))))))
 
 (def tabs
   {:query (fn [val ctx props]

@@ -1,9 +1,7 @@
 (ns hyperfiddle.ide.fiddles.topnav
   (:require
-    [cats.core :refer [fmap]]
     [cats.monad.either :as either]
     [clojure.string :as string]
-    [contrib.ct :refer [unwrap]]
     [contrib.reactive :as r]
     [contrib.reader :refer [read-edn-string!]]
     [contrib.reagent :refer [fragment]]
@@ -13,34 +11,15 @@
     [contrib.ui.tooltip :refer [tooltip]]
     [hypercrud.browser.context :as context]
     [hypercrud.browser.router :as router]
-    [hyperfiddle.ide.system-fiddle :as system-fiddle]
     [hyperfiddle.actions :as actions]
     [hyperfiddle.data]
     [hyperfiddle.domain :as domain]
-    [hyperfiddle.fiddle :as fiddle]
     [hyperfiddle.foundation :as foundation]
     [hyperfiddle.runtime :as runtime]
     [hyperfiddle.security.client :as security]
     [hyperfiddle.ui :as ui :refer [ui-from-link markdown]]
-    [hyperfiddle.ui.util :refer [on-change->tx with-tx!]]
-    [taoensso.timbre :as timbre]))
+    [hyperfiddle.ui.util :refer [on-change->tx with-tx!]]))
 
-
-; inline sys-link data when the entity is a system-fiddle
-(letfn [(-shadow-fiddle [target-ident fiddle-val]
-          (cond
-            (system-fiddle/system-fiddle? target-ident) (->> (system-fiddle/hydrate-system-fiddle target-ident)
-                                                             (fmap #(fiddle/fiddle-defaults % nil))
-                                                             (unwrap #(timbre/error %)))
-
-            (nil? (:db/id fiddle-val)) fiddle-val
-            :else (fiddle/fiddle-defaults fiddle-val nil)))]
-  (defn shadow-fiddle [ctx]
-    {:pre [(-> ctx :hypercrud.browser/data)]}
-    (let [route @(:hypercrud.browser/route ctx)
-          [_ [e]] route                                     ; [:hyperfiddle/topnav [#entity["$" [:fiddle/ident :hyperfiddle.system/remove]]]]
-          [_ target-fiddle-ident] (:db/id e)]
-      (update ctx :hypercrud.browser/data (partial r/fmap (r/partial -shadow-fiddle target-fiddle-ident))))))
 
 (defn any-loading? [peer]
   (some (comp not nil? :hydrate-id val) @(runtime/state peer [::runtime/partitions])))
@@ -55,8 +34,7 @@
 (defn- set-managed [link] (assoc link :link/tx-fn "(assert false \"Never called, triggers popover view, also this is the same bit of info as dont-branch\")"))
 
 (defn renderer [val ctx props]
-  (let [display-mode @(runtime/state (:peer ctx) [:display-mode])
-        {:keys [hypercrud.browser/data] :as ctx} (shadow-fiddle ctx)
+  (let [target-route (context/target-route ctx)
         ; hack until hyperfiddle.net#156 is complete
         fake-managed-anchor (fn [rel class ctx & [?label props]]
                               (let [link-ref (->> (hyperfiddle.data/select ctx rel class)
@@ -65,7 +43,7 @@
     [:div props
      [:div.left-nav
       [tooltip {:label "Home"} [:a {:href "/"} @(runtime/state (:peer ctx) [::runtime/domain :domain/ident])]]
-      (let [fiddle-ident (some-> @(r/cursor (:hypercrud.browser/data ctx) [:fiddle/ident]))]
+      (let [fiddle-ident (first target-route)]
         [tooltip {:label (str fiddle-ident)}
          [:span (some-> fiddle-ident name) #_"domain editor doesn't target a fiddle"]])
       (fake-managed-anchor :hf/iframe :fiddle-shortcuts ctx "index" {:tooltip [nil "Fiddles in this domain"]})]
@@ -74,11 +52,10 @@
 
       [loading-spinner ctx]
 
-      (let [target-route (context/target-route ctx)
-            src-mode (src-mode? (get target-route 3))
-            no-target-fiddle (nil? (:db/id @data))          ; ide-route omits fiddle for ide routes
+      (let [src-mode (src-mode? (get target-route 3))
+            no-target-fiddle (nil? @(r/cursor (:hypercrud.browser/data ctx) [:db/id])) ; ide-route omits fiddle for ide routes
             change! #(runtime/dispatch! (:peer ctx) (actions/set-display-mode %))
-            value (if src-mode :hypercrud.browser.browser-ui/src display-mode)]
+            value (if src-mode :hypercrud.browser.browser-ui/src @(runtime/state (:peer ctx) [:display-mode]))]
         [:span.radio-group
          (radio-option {:label "api" :tooltip "What the API client sees" :target :hypercrud.browser.browser-ui/api :change! change! :value value
                         :disabled (or src-mode no-target-fiddle)})
@@ -115,20 +92,20 @@
                       {:hyperfiddle.ui.markdown-extensions/unp true}]]
             dirty? (not @(r/fmap empty? (runtime/state (:peer ctx) [::runtime/partitions nil :stage])))]
         (fake-managed-anchor :hf/iframe :stage ctx "stage" {:tooltip [nil tooltip] :class (when dirty? "stage-dirty")}))
-      (ui/link :hf/self :new-fiddle ctx "new" (let [disabled? (not (security/can-create? ctx)) ; we explicitly know the context here is $
-                                                    anonymous? (nil? @(runtime/state (:peer ctx) [::runtime/user-id]))]
-                                                {:disabled disabled?
-                                                 :tooltip (cond
-                                                            (and anonymous? disabled?) [:warning "Please login"]
-                                                            disabled? [:warning "Writes restricted"])}))
-      [tooltip {:label "Environment administration"} (ui/link :hf/self :domain ctx "env")]
+      (ui/link :hf/rel :new-fiddle ctx "new" (let [disabled? (not (security/can-create? ctx)) ; we explicitly know the context here is $
+                                                   anonymous? (nil? @(runtime/state (:peer ctx) [::runtime/user-id]))]
+                                               {:disabled disabled?
+                                                :tooltip (cond
+                                                           (and anonymous? disabled?) [:warning "Please login"]
+                                                           disabled? [:warning "Writes restricted"])}))
+      [tooltip {:label "Environment administration"} (ui/link :hf/rel :domain ctx "env")]
       (if @(runtime/state (:peer ctx) [::runtime/user-id])
         (if-let [{:keys [:hypercrud.browser/data]} (hyperfiddle.data/browse ctx :hf/iframe :account)]
           (fake-managed-anchor :hf/iframe :account ctx @(r/fmap :user/name data)
                                {:tooltip [nil @(r/fmap :user/email data)]}))
         [:a {:href (foundation/stateless-login-url ctx)} "login"])]]))
 
-(defn ^:export qe-picker-control [val ctx props]
+(defn ^:export qe-picker-control [val ctx props]            ; not topnav
   (let [options (->> [:query :entity :blank]
                      (map #(radio-option
                              {:label (case % :query "query" :entity "pull" :blank "blank")

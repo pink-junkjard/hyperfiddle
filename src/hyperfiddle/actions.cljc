@@ -75,25 +75,31 @@
 (defn refresh-user [rt dispatch! get-state]
   (let [users-uri (->URI "datomic:free://datomic:4334/hyperfiddle-users") ; todo inject
         beta-uri (->URI "datomic:free://datomic:4334/~dustin.getz@hyperfiddle.net+beta") ; todo inject
+        tank? (= "tank" @(runtime/state rt [::runtime/domain :domain/ident])) ; todo this should be modeled on the domain/project
+        active-ide? (:active-ide? (runtime/host-env rt))
+        user-uris (cond-> #{}
+                    tank? (conj beta-uri)
+                    (or tank? active-ide?) (conj users-uri))
         basis (->> (if-let [global-basis @(runtime/state rt [::runtime/global-basis])]
-                     (:ide global-basis)
+                     (merge (:ide global-basis) (:user global-basis))
                      (->> @(runtime/state rt [::runtime/partitions])
                           (some (fn [[_ partition]]
                                   (->> (:local-basis partition)
-                                       (filter (fn [[k _]] (#{users-uri beta-uri} k)))
+                                       (filter (fn [[k _]] (contains? user-uris k)))
                                        seq)))))
-                   (filter (comp #{users-uri beta-uri} first))
+                   (filter (comp user-uris first))
                    (into {}))
         stage nil
-        requests (let [user-id @(runtime/state rt [::runtime/user-id])
-                       $users (hc/db rt users-uri nil)]
-                   (cond-> [(->EntityRequest [:user/user-id user-id] $users [:hyperfiddle.ide/parinfer])]
-                     ; todo this should be modeled on the domain/project
-                     (= "tank" @(runtime/state rt [::runtime/domain :domain/ident]))
-                     (conj
-                       (let [$beta (hc/db rt beta-uri nil)]
-                         (->EntityRequest [:user/user-id user-id] $beta [:hfnet.beta/accepted-on :hfnet.beta/archived])))))]
-    (-> (hydrate-all-or-nothing! rt basis stage requests)
+        requests (let [user-id @(runtime/state rt [::runtime/user-id])]
+                   (cond-> []
+                     tank?
+                     (conj (->EntityRequest [:user/user-id user-id] (hc/db rt beta-uri nil) [:hfnet.beta/accepted-on :hfnet.beta/archived]))
+
+                     (or tank? active-ide?)
+                     (conj (->EntityRequest [:user/user-id user-id] (hc/db rt users-uri nil) [:hyperfiddle.ide/parinfer]))))]
+    (-> (if (empty? requests)
+          (p/resolved nil)
+          (hydrate-all-or-nothing! rt basis stage requests))
         (p/then (fn [responses]
                   (dispatch! [:set-user (apply merge {} responses)])))
         (p/catch (fn [error]

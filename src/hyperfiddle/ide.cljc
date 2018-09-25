@@ -58,11 +58,16 @@
   (and (not= foundation/source-domain-ident domain-ident)
        (= "hyperfiddle.ide" (namespace fiddle-ident))))
 
-(defn ide-fiddle-route [[fiddle datomic-args service-args frag :as route] ctx]
+(defn topnav-route [[fiddle datomic-args service-args frag :as route] ctx]
   ; Don't impact the request! Topnav can always use :target-route
   (let [ide-domain (magic-ide-fiddle? fiddle (get-in ctx [:hypercrud.browser/domain :domain/ident]))
         ?target-fiddle (if-not ide-domain [#entity["$" (base/legacy-fiddle-ident->lookup-ref fiddle)]])]
     [:hyperfiddle/topnav ?target-fiddle]))
+
+(defn ide-route [[fiddle-ident :as route] ctx]
+  (let [params (when-not (magic-ide-fiddle? fiddle-ident (get-in ctx [:hypercrud.browser/domain :domain/ident]))
+                 [[:fiddle/ident fiddle-ident]])]
+    [:hyperfiddle/ide params]))
 
 ; ide is overloaded, these ide-context functions are exclusive to (top)
 ; despite being in the namespace (hyperfiddle.ide) which encompasses the union of target/user (bottom) and ide (top)
@@ -129,8 +134,7 @@
         basis (case (get-in ctx [::runtime/branch-aux ::foo])
                 "page" (concat ide user)
                 "ide" (concat ide user)
-                ; adding ide on user popovers is a hack; ::runtime/user needs to be rethought in relation to bases
-                "user" (concat ide user))
+                "user" user)
         basis (sort basis)]                                 ; Userland api-fn should filter irrelevant routes
     (timbre/debug (pr-str basis))
     #_(determine-local-basis (hydrate-route route ...))
@@ -140,12 +144,18 @@
 (defn api [[fiddle :as route] ctx]
   {:pre [route (not (string? route))]}
   (case (get-in ctx [::runtime/branch-aux ::foo])
-    "page" (into
-             (when true #_(:active-ide? (runtime/host-env (:peer ctx))) ; true for embedded src mode
-               (request-from-route (ide-fiddle-route route ctx) (page-ide-context ctx)))
-             (if (magic-ide-fiddle? fiddle (get-in ctx [:hypercrud.browser/domain :domain/ident]))
-               (request-from-route route (page-ide-context ctx))
-               (request-from-route route (page-target-context ctx))))
+    "page" (let [ide-ctx (page-ide-context ctx)]
+             (into
+               (cond
+                 (:active-ide? (runtime/host-env (:peer ctx)))
+                 (concat (request-from-route (topnav-route route ctx) ide-ctx)
+                         (request-from-route (ide-route route ctx) ide-ctx))
+
+                 @(runtime/state (:peer ctx) [::runtime/domain :domain/environment :enable-hf-live?])
+                 (request-from-route (ide-route route ctx) ide-ctx))
+               (if (magic-ide-fiddle? fiddle (get-in ctx [:hypercrud.browser/domain :domain/ident]))
+                 (request-from-route route ide-ctx)
+                 (request-from-route route (page-target-context ctx)))))
     "ide" (request-from-route route (leaf-ide-context ctx))
     "user" (request-from-route route (leaf-target-context ctx))))
 
@@ -153,7 +163,6 @@
    (defn view-page [[fiddle :as route] ctx]
      (let [src-mode (let [[_ _ _ frag] route] (topnav/src-mode? frag)) ; Immoral - :src bit is tunneled in userland fragment space
            ide-ctx (page-ide-context ctx)
-           ide-route (ide-fiddle-route route ctx)
            {:keys [:active-ide?]} (runtime/host-env (:peer ctx))]
        (fragment
          :view-page
@@ -162,7 +171,7 @@
          (when active-ide?
            [ui/iframe
             (assoc ide-ctx :hypercrud.ui/error (r/constantly ui-error/error-inline))
-            {:route ide-route
+            {:route (topnav-route route ctx)
              :class "hidden-print"}])
 
          ; Content area
@@ -174,8 +183,9 @@
            (fragment
              :primary-content
              (when (and active-ide? src-mode)               ; primary, blue background (IDE)   /:posts/:hello-world#:src
+               ; todo can this just be hf-live?
                [ui/iframe ide-ctx                           ; srcmode is equal to topnav route but a diff renderer
-                {:route (ide-fiddle-route route ctx)
+                {:route (ide-route route ctx)
                  :class (css "devsrc")
                  :user-renderer fiddle-src-renderer}])
 

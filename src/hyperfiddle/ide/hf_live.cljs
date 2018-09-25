@@ -10,7 +10,6 @@
     [hypercrud.browser.router :as router]
     [hyperfiddle.data :as data]
     [hyperfiddle.ide.fiddles.fiddle-src :as fiddle-src]
-    [hyperfiddle.ide.fiddles.topnav :refer [shadow-fiddle]]
     [hyperfiddle.ui :refer [fiddle-api field]]))
 
 ; This is an entity in the project namespace in the IDE fiddle-repo, probably
@@ -20,20 +19,20 @@
 (defn fiddle-src [attrs val ctx-real props]
   [fiddle-src/fiddle-src-renderer val ctx-real (merge props {:embed-mode true})]
   #_(let [attrs (or (seq attrs)
-                  (clojure.set/intersection
-                    (-> @(:hypercrud.browser/data ctx-real)
-                        keys
-                        (->> (apply sorted-set-by (compare-by-index attr-order)))
-                        (disj :db/id))))
-        ctx (shadow-fiddle ctx-real)]
-    (fn [val ctx-real props]
-      (into
-        [:div props]
-        (for [k attrs
-              :let [?f (fiddle-src/controls k)
-                    props (when ?f {:embed-mode true})]]
-          ^{:key (str [k])}
-          [field [k] ctx ?f props])))))
+                    (clojure.set/intersection
+                      (-> @(:hypercrud.browser/data ctx-real)
+                          keys
+                          (->> (apply sorted-set-by (compare-by-index attr-order)))
+                          (disj :db/id))))
+          ctx (fiddle-src/shadow-fiddle ctx-real)]
+      (fn [val ctx-real props]
+        (into
+          [:div props]
+          (for [k attrs
+                :let [?f (fiddle-src/controls k)
+                      props (when ?f {:embed-mode true})]]
+            ^{:key (str [k])}
+            [field [k] ctx ?f props])))))
 
 (defn result-edn [attrs val ctx props]
   (let [s (-> val

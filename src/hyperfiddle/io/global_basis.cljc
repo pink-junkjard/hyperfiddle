@@ -8,7 +8,7 @@
     [hyperfiddle.foundation :as foundation]
     [hyperfiddle.io.http.core :refer [http-request!]]
     [hyperfiddle.io.hydrate-requests :refer [hydrate-all-or-nothing!]]
-    [hyperfiddle.runtime :as api]
+    [hyperfiddle.runtime :as runtime]
     [promesa.core :as p]
     [taoensso.timbre :as timbre]))
 
@@ -22,7 +22,7 @@
   (perf/time-promise
     (mlet [:let [domain-requests [(foundation/domain-request domain-eid rt)
                                   (foundation/domain-request [:domain/ident foundation/source-domain-ident] rt)]]
-           domain-basis (api/sync rt #{foundation/domain-uri})
+           domain-basis (runtime/sync rt #{foundation/domain-uri})
            [user-domain foundation-domain] (hydrate-all-or-nothing! rt domain-basis nil domain-requests)
            _ (if (nil? (:db/id user-domain))
                ; terminate when domain not found
@@ -33,9 +33,15 @@
            :let [user-domain (foundation/process-domain user-domain)
                  ide-domain (foundation/process-domain foundation-domain)
                  user-domain-uris (uris-for-domain user-domain) ; Any reachable thing, not per route.
-                 ide-domain-uris (uris-for-domain ide-domain) ; still a map (the whole environment) (local basis reqs us to declare these up front)
+                 ide-domain-uris (cond
+                                   ; this logic belongs in domain or ide
+                                   (:active-ide? (runtime/host-env rt))
+                                   (uris-for-domain ide-domain)
+
+                                   (get-in user-domain [:domain/environment :enable-hf-live?])
+                                   [(get-in ide-domain [:domain/fiddle-database :database/uri])])
                  uris (set/union user-domain-uris ide-domain-uris)]
-           sync (api/sync rt uris)]
+           sync (runtime/sync rt uris)]
       (cats/return                                          ; Just return the sync and reconstruct which is what in local-basis
         #_sync
         {:domain domain-basis

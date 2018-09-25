@@ -4,7 +4,7 @@
     [contrib.ct :refer [unwrap]]
     [contrib.reactive :as r]
     [contrib.reagent :refer [fragment]]
-    [hypercrud.browser.base]
+    [hypercrud.browser.base :as base]
     [hypercrud.browser.context :as context]
     [hyperfiddle.ide.console-links :refer [system-link?]]
     [hyperfiddle.ui :refer [hyper-control field table link]]
@@ -21,7 +21,7 @@
   (assoc fiddle :fiddle/links topnav-links))
 
 (defn- target-ide-route [ctx]
-  (hyperfiddle.ide/ide-fiddle-route (context/target-route ctx) ctx))
+  (hyperfiddle.ide/ide-route (context/target-route ctx) ctx))
 
 (defn remove-children [field]
   (dissoc field :hypercrud.browser.field/children))
@@ -29,13 +29,13 @@
 (defn inject-topnav-links+ [ctx]
   (let [ctx (update ctx :hypercrud.browser/field #(r/fmap remove-children %))]
     ; Hacks because hf-live is not yet modeled in the fiddle-graph, we hardcode knowledge of the IDE fiddle-graph instead
-    (-> (mlet [req (hypercrud.browser.base/meta-request-for-fiddle
+    (-> (mlet [req (base/meta-request-for-fiddle
                      (assoc ctx
                        :hypercrud.browser/route (r/track target-ide-route ctx)
                        :branch nil))
-               topnav-fiddle (hypercrud.browser.base/hydrate-fiddle (r/track identity req) ctx)]
+               src-fiddle (base/hydrate-fiddle (r/track identity req) ctx)]
           (return
-            (update ctx :hypercrud.browser/fiddle (partial r/fmap (r/partial inject-links (:fiddle/links topnav-fiddle))))))
+            (update ctx :hypercrud.browser/fiddle (partial r/fmap (r/partial inject-links (:fiddle/links src-fiddle))))))
         (->> (unwrap (constantly nil))))))
 
 (let [empty-renderer (fn [val ctx props]
