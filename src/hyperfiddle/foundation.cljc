@@ -154,17 +154,18 @@
                                    (map first)
                                    (remove (->> @(runtime/state (:peer ctx) [::runtime/domain :domain/databases])
                                                 (map (comp :database/uri :domain.database/record))
-                                                (into #{@source-uri domain-uri})))
-                                   (map (juxt identity (comp vector str)))
+                                                (into #{@source-uri})))
+                                   (map (juxt identity (fn [uri]
+                                                         [(if (= uri domain-uri)
+                                                            "domains"
+                                                            (str uri))])))
                                    (into {}))
                tabs-definition (->> @(runtime/state (:peer ctx) [::runtime/domain :domain/databases])
                                     (reduce (fn [acc hf-db]
                                               (let [uri (get-in hf-db [:domain.database/record :database/uri])]
                                                 (update acc uri (fnil conj '()) (:domain.database/name hf-db))))
                                             (into non-empty-uris
-                                                  {@source-uri '("src")
-                                                   ; domains-uri shouldn't need to be accessed
-                                                   domain-uri '("domain")}))
+                                                  {@source-uri '("src")}))
                                     (mapv (fn [[uri labels]] {:id uri :label (string/join " " labels)}))
                                     (sort-by :label))
                stage (runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :stage @selected-uri])]
