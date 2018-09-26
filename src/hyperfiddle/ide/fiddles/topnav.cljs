@@ -11,14 +11,13 @@
     [contrib.ui.tooltip :refer [tooltip]]
     [hypercrud.browser.context :as context]
     [hypercrud.browser.router :as router]
-    [hypercrud.ui.error :as ui-error]
     [hyperfiddle.actions :as actions]
     [hyperfiddle.data]
     [hyperfiddle.domain :as domain]
     [hyperfiddle.foundation :as foundation]
     [hyperfiddle.runtime :as runtime]
     [hyperfiddle.security.client :as security]
-    [hyperfiddle.ui :as ui :refer [ui-from-link markdown]]
+    [hyperfiddle.ui :as ui :refer [markdown]]
     [hyperfiddle.ui.controls :refer [radio-group]]))
 
 
