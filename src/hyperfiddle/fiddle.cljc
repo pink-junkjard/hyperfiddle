@@ -4,7 +4,8 @@
     [clojure.string :as string]
     [contrib.ct :refer [unwrap]]
     [contrib.data :refer [update-existing]]
-    [contrib.string :refer [blank->nil memoized-safe-read-edn-string or-str]]
+    [contrib.reader :refer [memoized-read-edn-string+]]
+    [contrib.string :refer [blank->nil or-str]]
     [contrib.template :as template]
     [contrib.try$ :refer [try-either]]
     [cuerdas.core :as str]
@@ -18,7 +19,7 @@
 (defn infer-query-formula [query]
   (unwrap
     #(timbre/warn %)
-    (mlet [q (memoized-safe-read-edn-string query)
+    (mlet [q (memoized-read-edn-string+ query)
            {qin :qin} (try-either (if q (datascript.parser/parse-query q)))]
           ; [{:variable {:symbol $}}{:variable {:symbol ?gender}}]
           (return

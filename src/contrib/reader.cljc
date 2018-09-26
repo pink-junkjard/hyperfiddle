@@ -20,15 +20,13 @@
    (binding [reader/*data-readers* (merge hc-data-readers reader/*data-readers*)]
      (reader/read-string opts s))))
 
-(defn read-edn-string+
-  ([s] (read-edn-string+ {:eof nil} s))
-  ([opts s]
-   {:pre [s]}
-   (try-either
-     (edn-reader/read-string
-       (update opts :readers merge hc-data-readers)
-       s))))
-
 (defn read-edn-string!
-  ([s] (unwrap #(throw %) (read-edn-string+ s)))
-  ([opts s] (unwrap #(throw %) (read-edn-string+ opts s))))
+  ([s]
+   (read-edn-string! {:eof nil} s))
+  ([opts s]
+   (-> (update opts :readers merge hc-data-readers)
+       (edn-reader/read-string s))))
+
+(defn read-edn-string+ [& args] (try-either (apply read-edn-string! args)))
+
+(def memoized-read-edn-string+ (memoize read-edn-string+))

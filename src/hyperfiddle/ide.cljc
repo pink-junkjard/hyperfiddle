@@ -6,9 +6,10 @@
     #?(:cljs [contrib.css :refer [css]])
     [contrib.ct :refer [unwrap]]
     [contrib.reactive :as r]
+    [contrib.reader :refer [read-edn-string+]]
     #?(:cljs [contrib.reagent :refer [fragment]])
     [contrib.rfc3986 :refer [split-fragment]]
-    [contrib.string :refer [safe-read-edn-string empty->nil]]
+    [contrib.string :refer [empty->nil]]
     [contrib.uri :refer [->URI]]
     [hypercrud.browser.base :as base]
     [hypercrud.browser.browser-request :refer [request-from-route]]
@@ -102,8 +103,8 @@
   {:pre [(string? path-and-frag)]}
   (let [[path frag] (split-fragment path-and-frag)
         domain @(runtime/state rt [::runtime/domain])
-        home-route (some-> domain :domain/home-route safe-read-edn-string (->> (unwrap #(timbre/error %)))) ; in hf format
-        router (some-> domain :domain/router safe-read-edn-string (->> (unwrap #(timbre/error %))))]
+        home-route (some-> domain :domain/home-route read-edn-string+ (->> (unwrap #(timbre/error %)))) ; in hf format
+        router (some-> domain :domain/router read-edn-string+ (->> (unwrap #(timbre/error %))))]
 
     ;(if (= "/!ide/" (subs path-and-frag 0 6)) (routing/decode (subs path-and-frag 5)))
     (or
@@ -118,8 +119,8 @@
 (defn route-encode [rt [fiddle _ _ frag :as route]]
   {:post [(str/starts-with? % "/")]}
   (let [domain @(runtime/state rt [::runtime/domain])
-        router (some-> domain :domain/router safe-read-edn-string (->> (unwrap #(timbre/error %))))
-        home-route (some-> domain :domain/home-route safe-read-edn-string (->> (unwrap #(timbre/error %))))
+        router (some-> domain :domain/router read-edn-string+ (->> (unwrap #(timbre/error %))))
+        home-route (some-> domain :domain/home-route read-edn-string+ (->> (unwrap #(timbre/error %))))
         home-route (if router (router-bidi/bidi->hf home-route) home-route)]
     ;(case (namespace fiddle)) "hyperfiddle.ide" (str "/!ide/" (routing/encode route))
     (or

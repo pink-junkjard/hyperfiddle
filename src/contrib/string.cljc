@@ -1,10 +1,7 @@
 (ns contrib.string
-  (:require [cats.monad.either :as either]
-            [clojure.string]
-            [contrib.data :refer [orp]]
-            [contrib.reader :refer [read-edn-string!]]
-            [contrib.try$ :refer [try-either]]
-            [cuerdas.core :as str]))
+  (:require
+    [contrib.data :refer [orp]]
+    [cuerdas.core :as str]))
 
 
 ;(defn split-last [s sep]
@@ -41,14 +38,6 @@
 (defn abc []
   (map (comp keyword str) "abcdefghijklmnopqrstuvwxyz")     ; this version works in clojurescript
   #_(->> (range) (map (comp keyword str char #(+ % (int \a))))))
-
-(defn safe-read-edn-string [user-edn-str]                   ; is this private? Should this ever be called? Isn't it slow?
-  (if user-edn-str
-    ; this doesn't handle sharp-lambdas
-    (try-either (read-edn-string! user-edn-str))
-    (either/right nil)))
-
-(def memoized-safe-read-edn-string (memoize safe-read-edn-string))
 
 (defn or-str [& args]                                       ; todo macro
   (apply orp str/empty-or-nil? args))

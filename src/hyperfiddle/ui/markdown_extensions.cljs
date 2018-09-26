@@ -6,7 +6,8 @@
     [contrib.ct :refer [unwrap]]
     [contrib.eval :as eval]
     [contrib.reactive :as r]
-    [contrib.string :refer [blank->nil memoized-safe-read-edn-string or-str]]
+    [contrib.reader :refer [memoized-read-edn-string+]]
+    [contrib.string :refer [blank->nil or-str]]
     [contrib.ui.remark :as remark]
     [cuerdas.core :as str]
     [goog.object]
@@ -119,9 +120,9 @@
 
        "live" (fn [content argument props ctx]
                 (let [[_ srel spath] (re-find #"([^ ]*) ?(.*)" argument)]
-                  (-> (mlet [rel (memoized-safe-read-edn-string srel)
-                             class (memoized-safe-read-edn-string spath)
-                             fiddle-attrs (memoized-safe-read-edn-string (str "[" content "]"))
+                  (-> (mlet [rel (memoized-read-edn-string+ srel)
+                             class (memoized-read-edn-string+ spath)
+                             fiddle-attrs (memoized-read-edn-string+ (str "[" content "]"))
                              :let [props (assoc props :hyperfiddle.ide.hf-live/fiddle-attrs fiddle-attrs)]]
                         (return [hyperfiddle.ide.hf-live/browse rel class ctx props]))
                       (either/branch
@@ -142,12 +143,12 @@
                       [f ctx]
                       (hyperfiddle.ui/result @(:hypercrud.browser/data ctx) ctx (update props :class css "unp")))))
        "value" (fn [content argument props ctx]
-                 (let [path (unwrap #(timbre/warn %) (memoized-safe-read-edn-string (str "[" argument "]")))
+                 (let [path (unwrap #(timbre/warn %) (memoized-read-edn-string+ (str "[" argument "]")))
                        ?f (some->> content memoized-safe-eval (unwrap #(timbre/warn %)))]
                    (hyperfiddle.ui/value path ctx ?f props)))
 
        "field" (fn [content argument props ctx]
-                 (let [path (unwrap #(timbre/warn %) (memoized-safe-read-edn-string (str "[" argument "]")))
+                 (let [path (unwrap #(timbre/warn %) (memoized-read-edn-string+ (str "[" argument "]")))
                        ?f (some->> content memoized-safe-eval (unwrap #(timbre/warn %)))]
                    (hyperfiddle.ui/field path ctx ?f (-> props
                                                          (update :class css "unp")

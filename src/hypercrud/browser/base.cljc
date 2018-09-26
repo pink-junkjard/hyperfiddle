@@ -2,7 +2,7 @@
   (:require [cats.core :refer [mlet return]]
             [cats.monad.either :as either]
             [contrib.reactive :as r]
-            [contrib.string :refer [memoized-safe-read-edn-string]]
+            [contrib.reader :refer [memoized-read-edn-string+]]
             [contrib.try$ :refer [try-either]]
             [hypercrud.browser.context :as context]
             [hypercrud.browser.field :as field]
@@ -82,7 +82,7 @@
 
 (defn request-for-fiddle [fiddle ctx]                       ; depends on route
   (case @(r/cursor fiddle [:fiddle/type])
-    :query (mlet [q (memoized-safe-read-edn-string @(r/cursor fiddle [:fiddle/query]))
+    :query (mlet [q (memoized-read-edn-string+ @(r/cursor fiddle [:fiddle/query]))
                   args (q-util/validate-query-params+ q @(r/fmap second (:hypercrud.browser/route ctx)) ctx)]
              (return (->QueryRequest q args)))
 
@@ -91,7 +91,7 @@
       (if-let [uri (domain/dbname->uri dbname (:hypercrud.browser/domain ctx))]
         (let [[_ [?e :as args]] @(:hypercrud.browser/route ctx) ; Missing entity param is valid state now https://github.com/hyperfiddle/hyperfiddle/issues/268
               db (hc/db (:peer ctx) uri (:branch ctx))
-              pull-exp (or (-> (memoized-safe-read-edn-string @(r/cursor fiddle [:fiddle/pull]))
+              pull-exp (or (-> (memoized-read-edn-string+ @(r/cursor fiddle [:fiddle/pull]))
                                (either/branch (constantly nil) identity))
                            ['*])]
           (either/right (->EntityRequest (or (:db/id ?e) ?e) db pull-exp)))
