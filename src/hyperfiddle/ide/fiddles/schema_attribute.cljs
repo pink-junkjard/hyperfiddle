@@ -5,7 +5,7 @@
     [contrib.datomic-tx :as tx]
     [contrib.ui :refer [debounced]]
     [hyperfiddle.ui :refer [field markdown]]
-    [hyperfiddle.ui.util :refer [readonly->disabled on-change->tx entity-change->tx with-tx!]]))
+    [hyperfiddle.ui.util :refer [on-change->tx entity-change->tx with-tx!]]))
 
 
 (def special-attrs #{:db/ident :db/cardinality :db/valueType})
@@ -65,9 +65,8 @@
         ident-f (fn [val ctx props]
                   (let [on-change! (r/comp (r/partial ident-with-tx! special-attrs-state ctx)
                                            (r/partial on-change->tx ctx))
-                        props (-> (assoc props :value @(:hypercrud.browser/data ctx)
-                                               :on-change on-change!)
-                                  readonly->disabled)]
+                        props (assoc props :value @(:hypercrud.browser/data ctx)
+                                           :on-change on-change!)]
                     [debounced props contrib.ui/keyword]))
         valueType-and-cardinality-f (fn [val ctx props]
                                       (let [on-change! (r/comp (r/partial valueType-and-cardinality-with-tx! special-attrs-state ctx)
