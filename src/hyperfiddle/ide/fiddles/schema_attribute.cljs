@@ -5,7 +5,7 @@
     [contrib.datomic-tx :as tx]
     [contrib.ui :refer [debounced]]
     [hyperfiddle.ui :refer [field markdown]]
-    [hyperfiddle.ui.util :refer [on-change->tx entity-change->tx with-tx!]]))
+    [hyperfiddle.ui.util :refer [entity-change->tx with-tx!]]))
 
 
 (def special-attrs #{:db/ident :db/cardinality :db/valueType})
@@ -64,7 +64,7 @@
         reactive-merge #(merge-in-tx % @special-attrs-state ctx)
         ident-f (fn [val ctx props]
                   (let [on-change! (r/comp (r/partial ident-with-tx! special-attrs-state ctx)
-                                           (r/partial on-change->tx ctx))
+                                           (r/partial entity-change->tx ctx))
                         props (assoc props :value @(:hypercrud.browser/data ctx)
                                            :on-change on-change!)]
                     [debounced props contrib.ui/keyword]))
@@ -88,6 +88,6 @@
          (field [:db/unique] ctx hyperfiddle.ui/hyper-control {:read-only (not valid-attr?)
                                                                :options "unique-options"})
          [markdown "!block[Careful: below is not validated, don't stage invalid schema]{.alert .alert-warning style=\"margin-bottom: 0\"}"]
-         (field [:db/isComponent] ctx nil {:read-only (not valid-attr?)})
+         (field [:db/isComponent] ctx nil {:disabled (not valid-attr?)})
          (field [:db/fulltext] ctx nil {:disabled (not valid-attr?)})
          ]))))

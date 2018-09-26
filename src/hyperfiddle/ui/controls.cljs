@@ -15,36 +15,36 @@
     #_[hyperfiddle.ui]
     [hyperfiddle.ui.docstring :refer [semantic-docstring]]
     [hyperfiddle.ui.select$ :refer [select]]
-    [hyperfiddle.ui.util :refer [entity-props on-change->tx partial-change-with-old-val with-tx! writable-entity?]]))
+    [hyperfiddle.ui.util :refer [with-entity-change! with-tx! writable-entity?]]))
 
 
 (defn ^:export keyword [val ctx & [props]]
-  (let [props (-> props
-                  (assoc :value val)
-                  (update :disabled #(or % (not @(r/track writable-entity? ctx))))
-                  (entity-props ctx))]
+  (let [props (-> (assoc props
+                    :value val
+                    :on-change (with-entity-change! ctx))
+                  (update :disabled #(or % (not @(r/track writable-entity? ctx)))))]
     [debounced props contrib.ui/keyword]))
 
 (defn ^:export string [val ctx & [props]]
-  (let [props (-> props
-                  (assoc :value val)
-                  (update :disabled #(or % (not @(r/track writable-entity? ctx))))
-                  (entity-props ctx))]
+  (let [props (-> (assoc props
+                    :value val
+                    :on-change (with-entity-change! ctx))
+                  (update :disabled #(or % (not @(r/track writable-entity? ctx)))))]
     [debounced props contrib.ui/text #_contrib.ui/textarea]))
 
 (defn ^:export long [val ctx & [props]]
-  (let [props (-> props
-                  (assoc :value val)
-                  (update :disabled #(or % (not @(r/track writable-entity? ctx))))
-                  (entity-props ctx))]
+  (let [props (-> (assoc props
+                    :value val
+                    :on-change (with-entity-change! ctx))
+                  (update :disabled #(or % (not @(r/track writable-entity? ctx)))))]
     [debounced props contrib.ui/long]))
 
 (defn ^:export boolean [val ctx & [props]]
   (let [props (update props :disabled #(or % (not @(r/track writable-entity? ctx))))]
     [:div (update props :class #(str % (if (:disabled props) " disabled")))
-     (let [props (-> (entity-props props ctx)
-                     (update :on-change partial-change-with-old-val ctx)
-                     (assoc :checked (clojure.core/boolean val)))]
+     (let [props (assoc props
+                   :checked (clojure.core/boolean val)
+                   :on-change (with-entity-change! ctx))]
        [contrib.ui/easy-checkbox props])]))
 
 (let [adapter (fn [e]
@@ -56,10 +56,7 @@
     (let [option-props (update props :disabled #(or % (not @(r/track writable-entity? ctx))))]
       [:select (-> (dissoc props :label-fn)
                    (assoc :value (if (nil? val) "" (str val))
-                          :on-change (r/comp
-                                       (r/partial with-tx! ctx)
-                                       (r/partial on-change->tx ctx val)
-                                       adapter)))
+                          :on-change (r/comp (with-entity-change! ctx) adapter)))
        [:option (assoc option-props :key true :value "true") "True"]
        [:option (assoc option-props :key false :value "false") "False"]
        [:option (assoc option-props :key :nil :value "") "--"]])))
@@ -152,11 +149,10 @@
             doall))]))
 
 (defn ^:export instant [val ctx & [props]]
-  (let [props (-> props
-                  (assoc :value val)
-                  (update :disabled #(or % (not @(r/track writable-entity? ctx))))
-                  (entity-props ctx)
-                  (update :on-change partial-change-with-old-val ctx))]
+  (let [props (-> (assoc props
+                    :value val
+                    :on-change (with-entity-change! ctx))
+                  (update :disabled #(or % (not @(r/track writable-entity? ctx)))))]
     [recom-date props]))
 
 (defn- code-comp [ctx]
@@ -165,29 +161,29 @@
     :hyperfiddle.ui.layout/table contrib.ui/code-inline-block))
 
 (defn ^:export code [val ctx & [props]]
-  (let [props (-> props
-                  (assoc :value val)
+  (let [props (-> (assoc props
+                    :value val
+                    :on-change (with-entity-change! ctx)
+                    :parinfer @(runtime/state (:peer ctx) [::runtime/user :hyperfiddle.ide/parinfer]))
                   (update :read-only #(or % (not @(r/track writable-entity? ctx))))
-                  (entity-props ctx)
-                  (update :mode #(or % "clojure"))
-                  (assoc :parinfer @(runtime/state (:peer ctx) [::runtime/user :hyperfiddle.ide/parinfer])))]
+                  (update :mode #(or % "clojure")))]
     [debounced props (code-comp ctx)]))
 
 (defn ^:export css [val ctx & [props]]
-  (let [props (-> props
-                  (assoc :value val)
+  (let [props (-> (assoc props
+                    :value val
+                    :on-change (with-entity-change! ctx))
                   (update :read-only #(or % (not @(r/track writable-entity? ctx))))
-                  (entity-props ctx)
                   (update :mode #(or % "css")))]
     [debounced props (code-comp ctx)]))
 
 (defn ^:export markdown-editor [val ctx & [props]]          ; This is legacy; :mode=markdown should be bound in userland
-  (let [props (-> props
-                  (assoc :value val)
-                  (update :read-only #(or % (not @(r/track writable-entity? ctx))))
-                  (entity-props ctx)
-                  (assoc :mode "markdown"
-                         :lineWrapping true))]
+  (let [props (-> (assoc props
+                    :value val
+                    :on-change (with-entity-change! ctx)
+                    :mode "markdown"
+                    :lineWrapping true)
+                  (update :read-only #(or % (not @(r/track writable-entity? ctx)))))]
     [debounced props (code-comp ctx)]))
 
 (defn- edn-comp [ctx]
@@ -198,17 +194,17 @@
 (defn ^:export edn-many [val ctx & [props]]
   (let [valueType @(context/hydrate-attribute ctx (last (:hypercrud.browser/path ctx)) :db/valueType :db/ident)
         val (set (if (= valueType :db.type/ref) (map (r/partial smart-entity-identifier ctx) val) val))
-        props (-> props
-                  (assoc :value val)
-                  (update :read-only #(or % (not @(r/track writable-entity? ctx))))
-                  (entity-props ctx))]
+        props (-> (assoc props
+                    :value val
+                    :on-change (with-entity-change! ctx))
+                  (update :read-only #(or % (not @(r/track writable-entity? ctx)))))]
     [debounced props (edn-comp ctx)]))
 
 (defn ^:export edn [val ctx & [props]]
-  (let [props (-> props
-                  (assoc :value val)
-                  (update :read-only #(or % (not @(r/track writable-entity? ctx))))
-                  (entity-props ctx))]
+  (let [props (-> (assoc props
+                    :value val
+                    :on-change (with-entity-change! ctx))
+                  (update :read-only #(or % (not @(r/track writable-entity? ctx)))))]
     [debounced props (edn-comp ctx)]))
 
 (defn ^:export radio-group [val ctx & [props]]
@@ -220,7 +216,7 @@
                        (-> (merge props option-props)
                            (update :disabled #(or % (not @(r/track writable-entity? ctx))))
                            (assoc :checked (= (:value option-props) val)
-                                  :on-change (r/partial partial-change-with-old-val (r/partial on-change->tx ctx) ctx)))]))))))
+                                  :on-change (with-entity-change! ctx)))]))))))
 
 (defn -magic-new-change! [state ctx #_ov v]
   (let [e @(r/fmap (r/partial smart-entity-identifier ctx)

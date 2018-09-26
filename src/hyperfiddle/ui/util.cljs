@@ -29,42 +29,31 @@
           (throw e))
         (fn [f] (into [f] args))))))
 
-(defn on-change->tx [ctx o n]
-  (let [id @(r/fmap (r/partial smart-entity-identifier ctx) (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data]))
-        attribute @(context/hydrate-attribute ctx (last (:hypercrud.browser/path ctx)))]
-    (tx/edit-entity id attribute o (empty->nil n))))
-
-(let [on-change (fn [ctx f n]
-                  (let [entity @(get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data])
-                        attr-ident (last (:hypercrud.browser/path ctx))
-                        {:keys [:db/cardinality :db/valueType]} @(context/hydrate-attribute ctx attr-ident)
-                        o (if (not= (:db/ident valueType) :db.type/ref)
-                            (get entity attr-ident)
-                            (case (:db/ident cardinality)
-                              :db.cardinality/one (smart-entity-identifier ctx (get entity attr-ident))
-                              :db.cardinality/many (map (partial smart-entity-identifier ctx) (get entity attr-ident))))]
-                    (f o n)))]
-  (defn partial-change-with-old-val
-    "adapts (fn [o n] ...) to (fn [n] ...)"
-    [f ctx]
-    (r/partial on-change ctx f)))
-
-(defn entity-change->tx [ctx new-val]                       ; legacy todo remove
-  ((partial-change-with-old-val (partial on-change->tx ctx) ctx) new-val))
-
-(defn writable-entity? [ctx]
-  (and
-    ; If the db/id was not pulled, we cannot write through to the entity
-    (boolean @(r/fmap :db/id (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data])))
-    @(r/track security/writable-entity? (:hypercrud.browser/parent ctx))))
+(defn entity-change->tx
+  ([ctx n]
+   (let [entity @(get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data])
+         attr-ident (last (:hypercrud.browser/path ctx))
+         {:keys [:db/cardinality :db/valueType]} @(context/hydrate-attribute ctx attr-ident)
+         o (if (not= (:db/ident valueType) :db.type/ref)
+             (get entity attr-ident)
+             (case (:db/ident cardinality)
+               :db.cardinality/one (smart-entity-identifier ctx (get entity attr-ident))
+               :db.cardinality/many (map (partial smart-entity-identifier ctx) (get entity attr-ident))))]
+     (entity-change->tx ctx o n)))
+  ([ctx o n]
+   (let [id @(r/fmap (r/partial smart-entity-identifier ctx) (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data]))
+         attribute @(context/hydrate-attribute ctx (last (:hypercrud.browser/path ctx)))]
+     (tx/edit-entity id attribute o (empty->nil n)))))
 
 (defn with-tx! [ctx tx]
   (let [uri (context/uri ctx)]
     (->> (actions/with-groups (:peer ctx) (:hypercrud.browser/invert-route ctx) (:branch ctx) {uri tx})
          (runtime/dispatch! (:peer ctx)))))
 
-(let [on-change (fn [ctx o n]
-                  (->> (on-change->tx ctx o n)
-                       (with-tx! ctx)))]
-  (defn entity-props [props ctx]
-    (assoc props :on-change (r/partial on-change ctx))))
+(defn with-entity-change! [ctx] (r/comp (r/partial with-tx! ctx) (r/partial entity-change->tx ctx)))
+
+(defn writable-entity? [ctx]
+  (and
+    ; If the db/id was not pulled, we cannot write through to the entity
+    (boolean @(r/fmap :db/id (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data])))
+    @(r/track security/writable-entity? (:hypercrud.browser/parent ctx))))
