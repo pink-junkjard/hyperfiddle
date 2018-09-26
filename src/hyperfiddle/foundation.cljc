@@ -168,10 +168,10 @@
                                                   {@source-uri '("src")}))
                                     (mapv (fn [[uri labels]] {:id uri :label (string/join " " labels)}))
                                     (sort-by :label))
+               _ (when-not (contains? (->> tabs-definition (map :id) (into #{})) @selected-uri)
+                   (reset! selected-uri (or (hyperfiddle.domain/dbname->uri "$" @(runtime/state (:peer ctx) [::runtime/domain]))
+                                            @source-uri)))
                stage (runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :stage @selected-uri])]
-           (when-not (contains? (->> tabs-definition (map :id) (into #{})) @selected-uri)
-             (reset! selected-uri (or (hyperfiddle.domain/dbname->uri "$" @(runtime/state (:peer ctx) [::runtime/domain]))
-                                      @source-uri)))
            (fragment
              :topnav
              [horizontal-tabs
