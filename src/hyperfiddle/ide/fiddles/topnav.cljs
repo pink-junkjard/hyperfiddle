@@ -11,6 +11,7 @@
     [contrib.ui.tooltip :refer [tooltip]]
     [hypercrud.browser.context :as context]
     [hypercrud.browser.router :as router]
+    [hypercrud.ui.error :as ui-error]
     [hyperfiddle.actions :as actions]
     [hyperfiddle.data]
     [hyperfiddle.domain :as domain]
@@ -31,22 +32,17 @@
 (defn src-mode? [frag]
   (= :src (some-> frag read-edn-string!)))
 
-(defn- set-managed [link] (assoc link :link/tx-fn "(assert false \"Never called, triggers popover view, also this is the same bit of info as dont-branch\")"))
-
 (defn renderer [val ctx props]
-  (let [target-route (context/target-route ctx)
-        ; hack until hyperfiddle.net#156 is complete
-        fake-managed-anchor (fn [rel class ctx & [?label props]]
-                              (let [link-ref (->> (hyperfiddle.data/select ctx rel class)
-                                                  (r/fmap set-managed))]
-                                [ui-from-link link-ref ctx (assoc props :dont-branch? true) ?label]))]
+  (let [target-route (context/target-route ctx)]
     [:div props
      [:div.left-nav
       [tooltip {:label "Home"} [:a {:href "/"} @(runtime/state (:peer ctx) [::runtime/domain :domain/ident])]]
       (let [fiddle-ident (first target-route)]
         [tooltip {:label (str fiddle-ident)}
          [:span (some-> fiddle-ident name) #_"domain editor doesn't target a fiddle"]])
-      (fake-managed-anchor :hf/iframe :fiddle-shortcuts ctx "index" {:tooltip [nil "Fiddles in this domain"]})]
+      (let [props {:tooltip [nil "Fiddles in this domain"]
+                   :iframe-as-popover true}]
+        [ui/link :hf/iframe :fiddle-shortcuts ctx "index" props])]
 
      [:div.right-nav {:key "right-nav"}                     ; CAREFUL; this key prevents popover flickering
 
@@ -89,8 +85,11 @@
                            (string/join "\n")
                            (str "##### Auto-transact:\n\n"))
                       {:hyperfiddle.ui.markdown-extensions/unp true}]]
-            dirty? (not @(r/fmap empty? (runtime/state (:peer ctx) [::runtime/partitions nil :stage])))]
-        (fake-managed-anchor :hf/iframe :stage ctx "stage" {:tooltip [nil tooltip] :class (when dirty? "stage-dirty")}))
+            props {:tooltip [nil tooltip]
+                   :class (when-not @(r/fmap empty? (runtime/state (:peer ctx) [::runtime/partitions nil :stage]))
+                            "stage-dirty")
+                   :iframe-as-popover true}]
+        [ui/link :hf/iframe :stage ctx "stage" props])
       (ui/link :hf/rel :new-fiddle ctx "new" (let [disabled? (not (security/can-create? ctx)) ; we explicitly know the context here is $
                                                    anonymous? (nil? @(runtime/state (:peer ctx) [::runtime/user-id]))]
                                                {:disabled disabled?
@@ -100,8 +99,9 @@
       [tooltip {:label "Environment administration"} (ui/link :hf/rel :domain ctx "env")]
       (if @(runtime/state (:peer ctx) [::runtime/user-id])
         (if-let [{:keys [:hypercrud.browser/data]} (hyperfiddle.data/browse ctx :hf/iframe :account)]
-          (fake-managed-anchor :hf/iframe :account ctx @(r/fmap :user/name data)
-                               {:tooltip [nil @(r/fmap :user/email data)]}))
+          (let [props {:tooltip [nil @(r/fmap :user/email data)]
+                       :iframe-as-popover true}]
+            [ui/link :hf/iframe :account ctx @(r/fmap :user/name data) props]))
         [:a {:href (foundation/stateless-login-url ctx)} "login"])]]))
 
 (defn ^:export qe-picker-control [val ctx props]            ; not topnav

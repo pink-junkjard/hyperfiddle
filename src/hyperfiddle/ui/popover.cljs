@@ -6,6 +6,7 @@
     [contrib.keypress :refer [with-keychord]]
     [contrib.reactive :as r]
     [contrib.pprint :refer [pprint-str]]
+    [contrib.string :refer [blank->nil]]
     [contrib.try$ :refer [try-promise]]
     [contrib.ui.tooltip :refer [tooltip tooltip-props]]
     [cuerdas.core :as string]
@@ -108,16 +109,6 @@
                   (update :class css "btn-warning"))]
     [:button props [:span (str label "!")]]))
 
-; props = {
-;   :route          [fiddle args]
-;   :tooltip        String | [Keyword Hiccup]
-;   :dont-branch?   Boolean
-;
-;   ; any other standard HTML button props, e.g.
-;   :class    String
-;   :style    Map[CSS-Key, CSS-Value]
-;   :on-click (e) => ()
-; }
 (defn popover-cmp [link-ref ctx visual-ctx props label]
   ; try to auto-generate branch/popover-id from the product of:
   ; - link's :db/id
@@ -130,9 +121,10 @@
                                             hash abs-normalized - str)]
                        (branch/encode-branch-child (:branch ctx) child-id-str))
         popover-id child-branch                             ; just use child-branch as popover-id
-        child-branch (when-not (:dont-branch? props) child-branch)
+        child-branch (when @(r/fmap (r/comp some? blank->nil :link/tx-fn) link-ref)
+                       child-branch)
         btn-props (-> props
-                      (dissoc :route :tooltip :dont-branch?)
+                      (dissoc :route :tooltip)
                       (assoc :on-click (r/partial open! (:route props) popover-id child-branch ctx))
                       ; use twbs btn coloring but not "btn" itself
                       (update :class css "btn-default"))]

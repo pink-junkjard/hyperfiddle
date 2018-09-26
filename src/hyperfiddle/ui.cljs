@@ -275,21 +275,24 @@ User renderers should not be exposed to the reaction."
           r+?route (r/fmap (r/partial routing/build-route' ctx) link-ref) ; need to re-focus from the top
           style {:color nil #_(connection-color ctx (cond (system-link? (:db/id @link-ref)) 60 :else 40))}
           props (update props :style #(or % style))
-          tx-fn? @(r/fmap (r/comp boolean blank->nil :link/tx-fn) link-ref)]
+          tx-fn? @(r/fmap (r/comp boolean blank->nil :link/tx-fn) link-ref)
+          is-iframe @(r/fmap (r/comp (r/partial = :hf/iframe) :link/rel) link-ref)]
       (cond
-        (and tx-fn? @(r/fmap (r/partial = (either/right nil)) r+?route))
+        (and tx-fn? @(r/fmap (r/comp nil? :link/fiddle) link-ref))
         (let [props (-> props
                         (update :class css "hyperfiddle")
                         (update :disabled #(or % (disabled? link-ref ctx))))]
           [affect-cmp link-ref ctx props @(r/track prompt link-ref ?label)])
 
-        tx-fn?
+        (or tx-fn? (and is-iframe (:iframe-as-popover props)))
         (let [props (-> @(r/track validated-route-tooltip-props r+?route link-ref ctx props)
+                        (dissoc :iframe-as-popover)
                         (update :class css "hyperfiddle")   ; should this be in popover-cmp? what is this class? – unify with semantic css
-                        (update :disabled #(or % (disabled? link-ref ctx))))]
-          [popover-cmp link-ref ctx visual-ctx props @(r/track prompt link-ref ?label)])
+                        (update :disabled #(or % (disabled? link-ref ctx))))
+              label @(r/track prompt link-ref ?label)]
+          [popover-cmp link-ref ctx visual-ctx props label])
 
-        @(r/fmap (r/comp (r/partial = :hf/iframe) :link/rel) link-ref)
+        is-iframe
         [stale/loading (stale/can-be-loading? ctx) (fmap #(router/assoc-frag % (:frag props)) @r+?route) ; what is this frag noise?
          (fn [e] [error-comp e])
          (fn [route]
