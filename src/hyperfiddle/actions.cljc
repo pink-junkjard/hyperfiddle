@@ -90,7 +90,7 @@
                    (filter (comp user-uris first))
                    (into {}))
         stage nil
-        requests (let [user-id @(runtime/state rt [::runtime/user-id])]
+        requests (when-let [user-id @(runtime/state rt [::runtime/user-id])]
                    (cond-> []
                      tank?
                      (conj (->EntityRequest [:user/user-id user-id] (hc/db rt beta-uri nil) [:hfnet.beta/accepted-on :hfnet.beta/archived]))
