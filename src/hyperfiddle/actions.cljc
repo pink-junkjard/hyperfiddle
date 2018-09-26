@@ -79,7 +79,7 @@
         active-ide? (:active-ide? (runtime/host-env rt))
         user-uris (cond-> #{}
                     tank? (conj beta-uri)
-                    (or tank? active-ide?) (conj users-uri))
+                    active-ide? (conj users-uri))
         basis (->> (if-let [global-basis @(runtime/state rt [::runtime/global-basis])]
                      (merge (:ide global-basis) (:user global-basis))
                      (->> @(runtime/state rt [::runtime/partitions])
@@ -95,7 +95,7 @@
                      tank?
                      (conj (->EntityRequest [:user/user-id user-id] (hc/db rt beta-uri nil) [:hfnet.beta/accepted-on :hfnet.beta/archived]))
 
-                     (or tank? active-ide?)
+                     active-ide?
                      (conj (->EntityRequest [:user/user-id user-id] (hc/db rt users-uri nil) [:hyperfiddle.ide/parinfer]))))]
     (-> (if (empty? requests)
           (p/resolved nil)
