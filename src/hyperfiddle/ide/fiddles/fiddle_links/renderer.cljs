@@ -42,7 +42,6 @@
                        (link :hf/remove :link ctx "remove" {:disabled (system-link? @(r/fmap :db/id (:hypercrud.browser/data ctx)))}))]
   (defn renderer [val ctx {:keys [:embed-mode] :as props}]
     [table
-     #_(partial form (fn [path ctx ?f & args] (field path ctx ?f :read-only (read-only? ctx))))
      (fn [ctx]
        [(field [:link/rel] ctx hyper-control)
         (field [:link/class] ctx hyper-control)

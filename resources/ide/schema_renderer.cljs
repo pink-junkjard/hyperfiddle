@@ -28,11 +28,11 @@
          [hyperfiddle.ui/table
           (fn [ctx]
             [(hyperfiddle.ui/field [:db/ident] ctx)
-             (hyperfiddle.ui/field [:db/valueType] ctx #(hyperfiddle.ui.controls/string ((comp (fnil name :–) :db/ident) %) %2 %3) {:read-only true})
-             (hyperfiddle.ui/field [:db/cardinality] ctx #(hyperfiddle.ui.controls/string ((comp (fnil name :–) :db/ident) %) %2 %3) {:read-only true})
-             (hyperfiddle.ui/field [:db/unique] ctx #(hyperfiddle.ui.controls/string ((comp (fnil name :–) :db/ident) %) %2 %3) {:read-only true})
+             (hyperfiddle.ui/field [:db/valueType] ctx #(hyperfiddle.ui.controls/string ((comp (fnil name :–) :db/ident) %) %2 %3) {:disabled true})
+             (hyperfiddle.ui/field [:db/cardinality] ctx #(hyperfiddle.ui.controls/string ((comp (fnil name :–) :db/ident) %) %2 %3) {:disabled true})
+             (hyperfiddle.ui/field [:db/unique] ctx #(hyperfiddle.ui.controls/string ((comp (fnil name :–) :db/ident) %) %2 %3) {:disabled true})
              (hyperfiddle.ui/field [:db/isComponent] ctx)
-             (hyperfiddle.ui/field [:db/fulltext] ctx nil {:read-only true})
+             (hyperfiddle.ui/field [:db/fulltext] ctx nil {:disabled true})
              (hyperfiddle.ui/field [:db/doc] ctx)])
           ctx
           {:hyperfiddle.ui.sort/initial-sort [[:db/ident] :asc]}]))]))

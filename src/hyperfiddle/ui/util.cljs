@@ -29,10 +29,6 @@
           (throw e))
         (fn [f] (into [f] args))))))
 
-(defn readonly->disabled [props]                            ; this utility is harmful and should be removed
-  ; :placeholder, etc is allowed and pass through
-  (rename-keys props {:read-only :disabled}))
-
 (defn on-change->tx [ctx o n]
   (let [id @(r/fmap (r/partial smart-entity-identifier ctx) (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data]))
         attribute @(context/hydrate-attribute ctx (last (:hypercrud.browser/path ctx)))]
@@ -70,9 +66,5 @@
 (let [on-change (fn [ctx o n]
                   (->> (on-change->tx ctx o n)
                        (with-tx! ctx)))]
-  (defn entity-props
-    ([props ctx]
-     (-> (assoc props :on-change (r/partial on-change ctx))
-         (update :read-only #(or % (not @(r/track writable-entity? ctx))))))
-    ; val is complected convenience arity, coincidentally most consumers need to assoc :value
-    ([val props ctx] (entity-props (assoc props :value val) ctx))))
+  (defn entity-props [props ctx]
+    (assoc props :on-change (r/partial on-change ctx))))

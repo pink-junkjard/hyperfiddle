@@ -89,5 +89,5 @@
                                                                :options "unique-options"})
          [markdown "!block[Careful: below is not validated, don't stage invalid schema]{.alert .alert-warning style=\"margin-bottom: 0\"}"]
          (field [:db/isComponent] ctx nil {:read-only (not valid-attr?)})
-         (field [:db/fulltext] ctx nil {:read-only (not valid-attr?)})
+         (field [:db/fulltext] ctx nil {:disabled (not valid-attr?)})
          ]))))
