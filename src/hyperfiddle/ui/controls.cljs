@@ -197,7 +197,7 @@
                     (fn [option-props]
                       [contrib.ui/radio-with-label
                        (-> (merge props option-props)
-                           (update :disabled #(or % (r/track writable-entity? ctx)))
+                           (update :disabled #(or % (not @(r/track writable-entity? ctx))))
                            (assoc :checked (= (:value option-props) val)
                                   :on-change (r/partial partial-change-with-old-val (r/partial on-change->tx ctx) ctx)))]))))))
 
