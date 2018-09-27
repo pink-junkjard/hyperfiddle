@@ -1,6 +1,5 @@
 (ns hyperfiddle.io.datomic.hydrate-requests
   (:require [clojure.set :as set]
-            [cuerdas.core :as str]
             [datomic.api :as d]
             [hypercrud.types.DbVal]
             [hypercrud.types.EntityRequest]
@@ -100,7 +99,6 @@
   {:pre [requests
          (not-any? nil? requests)
          (every? #(or (instance? EntityRequest %) (instance? QueryRequest %)) requests)]}
-  (timbre/debug (->> (map (comp #(str/prune % 400) pr-str) [local-basis staged-branches (count requests)]) (interpose ", ") (apply str "hydrate-requests: ")))
   (binding [hyperfiddle.io.bindings/*subject* ?subject]
     (let [db-with-lookup (atom {})
           get-secure-db-with (build-get-secure-db-with staged-branches db-with-lookup (into {} local-basis) #_":: ([uri 1234]), but there are some duck type shenanigans happening")
