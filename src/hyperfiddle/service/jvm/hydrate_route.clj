@@ -2,6 +2,7 @@
   (:refer-clojure :exclude [sync])
   (:require
     [contrib.ct :refer [unwrap]]
+    [contrib.performance :as perf]
     [contrib.reactive :as r]
     [hypercrud.client.core :as hc]
     [hypercrud.client.peer :as peer :refer [-quiet-unwrap]]
@@ -10,12 +11,31 @@
     [hyperfiddle.io.datomic.hydrate-requests :refer [hydrate-requests]]
     [hyperfiddle.io.global-basis :refer [global-basis]]
     [hyperfiddle.io.hydrate-requests :refer [stage-val->staged-branches]]
-    [hyperfiddle.io.hydrate-route :refer [hydrate-loop request-fn-adapter]]
     [hyperfiddle.io.sync :refer [sync]]
+    [hyperfiddle.io.util :refer [process-result]]
     [hyperfiddle.runtime :as runtime]
     [hyperfiddle.state :as state]
-    [promesa.core :as p]))
+    [promesa.core :as p]
+    [taoensso.timbre :as timbre]))
 
+
+(defn- hydrate-requests-sync [local-basis stage requests ?subject]
+  {:pre [requests (not-any? nil? requests)]}
+  (let [staged-branches (stage-val->staged-branches stage)]
+    (hydrate-requests local-basis requests staged-branches ?subject)))
+
+(defn hydrate-request [rt branch request ?subject]
+  (let [ptm @(runtime/state rt [:hyperfiddle.runtime/partitions branch :ptm])]
+    (-> (if (contains? ptm request)
+          (get ptm request)
+          (let [requests [request]
+                {:keys [local-basis stage tempid-lookups]} @(runtime/state rt [::runtime/partitions branch])
+                {:keys [pulled-trees] :as resp} (hydrate-requests-sync local-basis {branch stage} requests ?subject)
+                ptm (merge ptm (zipmap requests pulled-trees))
+                tempid-lookups (merge-with merge tempid-lookups (get-in resp [:tempid-lookups branch]))]
+            (runtime/dispatch! rt [:hydrate!-success branch ptm tempid-lookups])
+            (get ptm request)))
+        (process-result request))))
 
 (deftype HydrateRoute [host-env state-atom root-reducer jwt ?subject]
   runtime/State
@@ -57,8 +77,7 @@
   runtime/AppValHydrate
   (hydrate-route [rt local-basis route branch branch-aux stage]
     {:pre [route (not (string? route))]}
-    (let [data-cache (-> @(runtime/state rt [::runtime/partitions branch]) (select-keys [:tempid-lookups :ptm]))
-          ctx {:branch branch
+    (let [ctx {:branch branch
                ::runtime/branch-aux branch-aux
                :peer rt}
           ; this is ide
@@ -66,24 +85,21 @@
                          "page" :page
                          "user" :leaf
                          "ide" :leaf)]
-      (hydrate-loop rt (request-fn-adapter local-basis route stage ctx
-                                           #(HydrateRoute. host-env (r/atom %) root-reducer jwt ?subject)
-                                           #(foundation/api page-or-leaf % (partial ide/api route)))
-                    local-basis branch stage data-cache)))
+      (perf/time (fn [get-total-time] (timbre/debug "Hydrate-route" "total time: " (get-total-time)))
+                 (foundation/api page-or-leaf ctx (partial ide/api route)))
+      (p/resolved (select-keys @(runtime/state rt [::runtime/partitions branch]) [:tempid-lookups :ptm]))))
 
   runtime/AppFnHydrate
   (hydrate-requests [rt local-basis stage requests]
-    {:pre [requests (not-any? nil? requests)]}
-    (let [staged-branches (stage-val->staged-branches stage)]
-      (p/resolved (hydrate-requests local-basis requests staged-branches ?subject))))
+    (p/resolved (hydrate-requests-sync local-basis stage requests ?subject)))
 
   runtime/AppFnSync
   (sync [rt dbs]
     (p/do* (sync dbs)))
 
   hc/Peer
-  (hydrate [this branch request]
-    (peer/hydrate state-atom branch request))
+  (hydrate [rt branch request]
+    (r/track hydrate-request rt branch request ?subject))
 
   (db [this uri branch]
     (peer/db-pointer uri branch))

@@ -1,29 +1,29 @@
 (ns hyperfiddle.service.jvm.service
   (:refer-clojure :exclude [sync])
-  (:require [hypercrud.transit :as hc-t]
-            [hypercrud.types.Err :refer [->Err]]
-            [hyperfiddle.foundation :as foundation]
-            [hyperfiddle.io.bindings :refer [*subject*]]
-            [hyperfiddle.io.datomic.hydrate-requests :refer [hydrate-requests]]
-            [hyperfiddle.io.rpc-router :refer [decode-basis]]
-            [hyperfiddle.io.sync :refer [sync]]
-            [hyperfiddle.io.transact :refer [transact!]]
-            [hyperfiddle.service.cookie :as cookie]
-            [hyperfiddle.service.http :as http-service]
-            [hyperfiddle.service.lib.jwt :as jwt]
-            [hyperfiddle.service.jvm.global-basis :refer [->GlobalBasisRuntime]]
-            [hyperfiddle.service.jvm.hydrate-route :refer [->HydrateRoute]]
-            [hyperfiddle.service.jvm.lib.http :as http]
-            [hyperfiddle.service.jvm.local-basis :refer [->LocalBasis]]
-            [io.pedestal.http.body-params :as body-params]
-            [io.pedestal.http.ring-middlewares :as ring-middlewares]
-            [io.pedestal.http.route :refer [expand-routes]]
-            [io.pedestal.interceptor.chain :refer [terminate]]
-            [io.pedestal.interceptor.helpers :as interceptor]
-            [promesa.core :as p]
-            [ring.util.response :as ring-resp]
-            [taoensso.timbre :as timbre]
-            [hypercrud.browser.router :as router])
+  (:require
+    [contrib.performance :as perf]
+    [hypercrud.transit :as hc-t]
+    [hypercrud.types.Err :refer [->Err]]
+    [hyperfiddle.foundation :as foundation]
+    [hyperfiddle.io.datomic.hydrate-requests :refer [hydrate-requests]]
+    [hyperfiddle.io.rpc-router :refer [decode-basis]]
+    [hyperfiddle.io.sync :refer [sync]]
+    [hyperfiddle.io.transact :refer [transact!]]
+    [hyperfiddle.service.cookie :as cookie]
+    [hyperfiddle.service.http :as http-service]
+    [hyperfiddle.service.jvm.global-basis :refer [->GlobalBasisRuntime]]
+    [hyperfiddle.service.jvm.hydrate-route :refer [->HydrateRoute]]
+    [hyperfiddle.service.jvm.lib.http :as http]
+    [hyperfiddle.service.jvm.local-basis :refer [->LocalBasis]]
+    [hyperfiddle.service.lib.jwt :as jwt]
+    [io.pedestal.http.body-params :as body-params]
+    [io.pedestal.http.ring-middlewares :as ring-middlewares]
+    [io.pedestal.http.route :refer [expand-routes]]
+    [io.pedestal.interceptor.chain :refer [terminate]]
+    [io.pedestal.interceptor.helpers :as interceptor]
+    [promesa.core :as p]
+    [ring.util.response :as ring-resp]
+    [taoensso.timbre :as timbre])
   (:import (com.auth0.jwt.exceptions JWTVerificationException)
            (java.util UUID)))
 
@@ -54,8 +54,10 @@
   (try
     (let [{:keys [body-params path-params]} req
           local-basis (decode-basis (:local-basis path-params))
-          {staged-branches :staged-branches request :request} body-params
-          r (hydrate-requests local-basis request staged-branches (:user-id req))]
+          {staged-branches :staged-branches requests :request} body-params
+          r (perf/time
+              (fn [get-total-time] (timbre/debugf "hydrate-requests: count %s, has stage? %s, total time: %s" (count requests) (not (empty? staged-branches)) (get-total-time)))
+              (hydrate-requests local-basis requests staged-branches (:user-id req)))]
       (ring-resp/response r))
     (catch Exception e
       (timbre/error e)
