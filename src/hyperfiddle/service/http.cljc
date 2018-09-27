@@ -97,7 +97,6 @@
           initial-state (reduce (fn [state [branch v]]
                                   (assoc-in state [::runtime/partitions branch :stage] v))
                                 {::runtime/user-id user-id
-                                 :stage request-body
                                  ; should this be constructed with reducers?
                                  ; why dont we need to preheat the tempid lookups here for parent branches?
                                  ::runtime/partitions {branch {:local-basis local-basis
