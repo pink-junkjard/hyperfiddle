@@ -29,9 +29,7 @@
 (defprotocol AppValHydrate
   ; user-data-fn not on this interface; hardcoded in runtime impls or read from db
   ; returns ptm without stage-val hashes
-  (hydrate-route [rt local-basis route branch branch-aux stage])
-  ; interface could just be
-  #_(hydrate-route [rt branch-ident]))
+  (hydrate-route [rt branch]))
 
 (defprotocol State
   (dispatch! [rt action-or-func])

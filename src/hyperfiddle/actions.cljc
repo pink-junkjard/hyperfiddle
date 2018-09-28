@@ -2,8 +2,7 @@
   (:require [cats.core :refer [mlet]]
             [cats.labs.promise]
             [cats.monad.either :as either]
-            [contrib.ct :refer [unwrap]]
-            [contrib.data :refer [map-values map-keys]]
+            [contrib.data :refer [map-values]]
             [contrib.datomic-tx :as tx]
             [contrib.uri :refer [->URI]]
             [hypercrud.browser.router :as router]
@@ -32,10 +31,8 @@
 
 (defn hydrate-partition [rt branch on-start dispatch! get-state]
   (dispatch! (apply batch (conj on-start [:hydrate!-start branch])))
-  (let [{:keys [route local-basis hydrate-id ::runtime/branch-aux]} (get-in (get-state) [::runtime/partitions branch])]
-    (assert route)
-    (assert (not (string? route)))
-    (-> (runtime/hydrate-route rt local-basis route branch branch-aux (map-values :stage (::runtime/partitions (get-state))))
+  (let [{:keys [hydrate-id]} (get-in (get-state) [::runtime/partitions branch])]
+    (-> (runtime/hydrate-route rt branch)
         (p/then (fn [{:keys [ptm tempid-lookups]}]
                   (if (= hydrate-id (get-in (get-state) [::runtime/partitions branch :hydrate-id]))
                     (dispatch! [:hydrate!-success branch ptm tempid-lookups])
