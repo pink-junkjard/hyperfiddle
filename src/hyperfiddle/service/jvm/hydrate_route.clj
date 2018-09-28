@@ -1,5 +1,6 @@
 (ns hyperfiddle.service.jvm.hydrate-route
   (:require
+    [contrib.data :refer [map-values]]
     [contrib.performance :as perf]
     [contrib.reactive :as r]
     [hypercrud.client.core :as hc]
@@ -54,9 +55,10 @@
     (ide/domain rt (:domain-eid host-env)))
 
   runtime/AppValHydrate
-  (hydrate-route [rt local-basis route branch branch-aux stage]
-    {:pre [route (not (string? route))]}
-    (let [db-with-lookup (atom {})
+  (hydrate-route [rt branch]
+    (let [{:keys [route local-basis ::runtime/branch-aux]} @(runtime/state rt [::runtime/partitions branch])
+          stage (map-values :stage @(runtime/state rt [::runtime/partitions]))
+          db-with-lookup (atom {})
           get-secure-db-with (hydrate-requests/build-get-secure-db-with (stage-val->staged-branches stage) db-with-lookup (into {} local-basis))
           ; todo should we be sharing state-atom?
           rt (->RequestFn db-with-lookup get-secure-db-with host-env state-atom root-reducer jwt ?subject)

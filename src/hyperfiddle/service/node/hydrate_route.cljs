@@ -1,5 +1,6 @@
 (ns hyperfiddle.service.node.hydrate-route
   (:require
+    [contrib.data :refer [map-values]]
     [contrib.reactive :as r]
     [hypercrud.client.core :as hc]
     [hypercrud.client.peer :as peer]
@@ -50,8 +51,10 @@
       (foundation/local-basis page-or-leaf global-basis route ctx ide/local-basis)))
 
   runtime/AppValHydrate
-  (hydrate-route [rt local-basis route branch branch-aux stage] ; :: ... -> DataCache on the wire
-    (let [data-cache (-> @(runtime/state rt [::runtime/partitions branch]) (select-keys [:tempid-lookups :ptm]))
+  (hydrate-route [rt branch]                                ; :: ... -> DataCache on the wire
+    (let [{:keys [route local-basis ::runtime/branch-aux]} @(runtime/state rt [::runtime/partitions branch])
+          stage (map-values :stage @(runtime/state rt [::runtime/partitions]))
+          data-cache (-> @(runtime/state rt [::runtime/partitions branch]) (select-keys [:tempid-lookups :ptm]))
           ctx {:branch branch
                ::runtime/branch-aux branch-aux
                :peer rt}

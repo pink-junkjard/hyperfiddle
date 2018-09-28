@@ -108,8 +108,10 @@
       (foundation/local-basis page-or-leaf global-basis route ctx ide/local-basis)))
 
   runtime/AppValHydrate
-  (hydrate-route [rt local-basis route branch branch-aux stage]
-    (hydrate-route-rpc! (:service-uri host-env) local-basis route branch branch-aux stage jwt))
+  (hydrate-route [rt branch]
+    (let [{:keys [route local-basis ::runtime/branch-aux]} @(runtime/state rt [::runtime/partitions branch])
+          stage (map-values :stage @(runtime/state rt [::runtime/partitions]))]
+      (hydrate-route-rpc! (:service-uri host-env) local-basis route branch branch-aux stage jwt)))
 
   runtime/AppFnHydrate
   (hydrate-requests [rt local-basis stage requests]

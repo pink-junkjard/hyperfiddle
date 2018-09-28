@@ -108,7 +108,7 @@
       ; todo should just call foundation/bootstrap-data
       (-> (actions/refresh-domain rt (partial runtime/dispatch! rt) #(deref (runtime/state rt)))
           (p/then (fn [_] (actions/refresh-user rt (partial runtime/dispatch! rt) #(deref (runtime/state rt)))))
-          (p/then (fn [_] (runtime/hydrate-route rt local-basis route branch branch-aux request-body)))
+          (p/then (fn [_] (runtime/hydrate-route rt branch)))
           (p/then (fn [data]
                     {:status 200
                      :headers {"Cache-Control" "max-age=31536000"} ; todo max-age=0 if POST
