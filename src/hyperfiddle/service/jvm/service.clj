@@ -85,7 +85,7 @@
   (build-pedestal-req-handler (partial http-service/local-basis-handler ->LocalBasis)))
 
 (def http-hydrate-route
-  (build-pedestal-req-handler (partial http-service/hydrate-route-handler (fn [& args] (apply ->HydrateRoute (atom {}) nil args)))))
+  (build-pedestal-req-handler (partial http-service/hydrate-route-handler ->HydrateRoute)))
 
 (defn set-host-environment [f]
   (interceptor/before
