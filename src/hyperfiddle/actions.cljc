@@ -252,15 +252,15 @@
                                                   [[:merge branch] ; merge the untransacted uris up
                                                    (discard-partition branch)])) ; clean up the partition
                                :route app-route)
-                    (let [e (some-> app-route router/invalid-route?)
-                          actions [[:merge branch]
-                                   (cond
-                                     e [:set-error e]
-                                     app-route [:partition-route nil app-route] ; what about local-basis? why not specify branch?
-                                     :else nil)
-                                   (discard-partition branch)]]
-                      (if e
-                        (dispatch! (apply batch actions))
+                    (if-let [e (some-> app-route router/invalid-route?)]
+                      (dispatch! (batch [:merge branch]
+                                        [:set-error e]
+                                        (discard-partition branch)))
+                      (let [actions [[:merge branch]
+                                     (when app-route
+                                       ; what about local-basis? why not specify branch?
+                                       [:partition-route nil app-route])
+                                     (discard-partition branch)]]
                         (hydrate-partition rt parent-branch actions dispatch! get-state))))))))))
 
 (defn reset-stage-uri [rt branch uri tx]
