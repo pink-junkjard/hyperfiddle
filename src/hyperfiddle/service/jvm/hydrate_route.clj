@@ -8,7 +8,7 @@
     [hypercrud.client.peer :as peer :refer [-quiet-unwrap]]
     [hyperfiddle.foundation :as foundation]
     [hyperfiddle.ide :as ide]
-    [hyperfiddle.io.datomic.hydrate-requests :refer [hydrate-requests]]
+    [hyperfiddle.io.datomic.hydrate-requests :as hydrate-requests]
     [hyperfiddle.io.global-basis :refer [global-basis]]
     [hyperfiddle.io.hydrate-requests :refer [stage-val->staged-branches]]
     [hyperfiddle.io.sync :refer [sync]]
@@ -19,25 +19,8 @@
     [taoensso.timbre :as timbre]))
 
 
-(defn- hydrate-requests-sync [local-basis stage requests ?subject]
-  {:pre [requests (not-any? nil? requests)]}
-  (let [staged-branches (stage-val->staged-branches stage)]
-    (hydrate-requests local-basis requests staged-branches ?subject)))
-
-(defn hydrate-request [rt branch request ?subject]
-  (let [ptm @(runtime/state rt [:hyperfiddle.runtime/partitions branch :ptm])]
-    (-> (if (contains? ptm request)
-          (get ptm request)
-          (let [requests [request]
-                {:keys [local-basis stage tempid-lookups]} @(runtime/state rt [::runtime/partitions branch])
-                {:keys [pulled-trees] :as resp} (hydrate-requests-sync local-basis {branch stage} requests ?subject)
-                ptm (merge ptm (zipmap requests pulled-trees))
-                tempid-lookups (merge-with merge tempid-lookups (get-in resp [:tempid-lookups branch]))]
-            (runtime/dispatch! rt [:hydrate!-success branch ptm tempid-lookups])
-            (get ptm request)))
-        (process-result request))))
-
-(deftype HydrateRoute [host-env state-atom root-reducer jwt ?subject]
+(deftype HydrateRoute [db-with-lookup ^:unsynchronized-mutable get-secure-db-with ; oof this is spaghetti
+                       host-env state-atom root-reducer jwt ?subject]
   runtime/State
   (dispatch! [rt action-or-func] (state/dispatch! state-atom root-reducer action-or-func))
   (state [rt] state-atom)
@@ -77,6 +60,12 @@
   runtime/AppValHydrate
   (hydrate-route [rt local-basis route branch branch-aux stage]
     {:pre [route (not (string? route))]}
+    (set! get-secure-db-with (hydrate-requests/build-get-secure-db-with (stage-val->staged-branches stage) db-with-lookup (into {} local-basis)))
+    ; must d/with at the beginning otherwise tempid reversal breaks
+    (doseq [[branch-ident branch-content] stage
+            [uri _] branch-content]
+      ; todo only execute once per uri (for leaf branch, parents are implied)
+      (get-secure-db-with uri branch-ident))
     (let [ctx {:branch branch
                ::runtime/branch-aux branch-aux
                :peer rt}
@@ -91,7 +80,9 @@
 
   runtime/AppFnHydrate
   (hydrate-requests [rt local-basis stage requests]
-    (p/resolved (hydrate-requests-sync local-basis stage requests ?subject)))
+    {:pre [requests (not-any? nil? requests)]}
+    (let [staged-branches (stage-val->staged-branches stage)]
+      (p/resolved (hydrate-requests/hydrate-requests local-basis requests staged-branches ?subject))))
 
   runtime/AppFnSync
   (sync [rt dbs]
@@ -99,7 +90,17 @@
 
   hc/Peer
   (hydrate [rt branch request]
-    (r/track hydrate-request rt branch request ?subject))
+    ; this MUST only be called from the request fn, otherwise non-route state will bleed in
+    (let [ptm @(runtime/state rt [::runtime/partitions branch :ptm])]
+      (-> (if (contains? ptm request)
+            (get ptm request)
+            (let [response (hydrate-requests/hydrate-request get-secure-db-with request ?subject)
+                  ptm (assoc ptm request response)
+                  tempid-lookups (hydrate-requests/extract-tempid-lookups db-with-lookup branch)]
+              (runtime/dispatch! rt [:hydrate!-success branch ptm tempid-lookups])
+              (get ptm request)))
+          (process-result request)
+          (r/atom))))
 
   (db [this uri branch]
     (peer/db-pointer uri branch))
