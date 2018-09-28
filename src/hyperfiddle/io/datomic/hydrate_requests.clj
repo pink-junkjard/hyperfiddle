@@ -41,7 +41,8 @@
 (def ERROR-BRANCH-PAST ":hyperfiddle.error/basis-stale Branching the past is currently unsupported, please refresh your basis by refreshing the page")
 
 (defn build-get-secure-db-with [staged-branches db-with-lookup local-basis]
-  {:pre [(not-any? nil? (vals local-basis))]}
+  {:pre [(map? local-basis)
+         (not-any? nil? (vals local-basis))]}
   (letfn [(filter-db [db]
             (let [read-sec-predicate (constantly true)]     ;todo look up sec pred
               (d/filter db read-sec-predicate)))
@@ -95,24 +96,36 @@
             internal-secure-db (get-secure-db-from-branch branch)]
         (->SecureDbWith (:secure-db internal-secure-db) (:id->tempid internal-secure-db))))))
 
-(defn hydrate-requests [local-basis requests staged-branches ?subject] ; theoretically, requests are grouped by basis for cache locality
+(defn extract-tempid-lookups [db-with-lookup branch-ident]
+  ; oof these are crap data structures
+  (reduce (fn [acc [branch internal-secure-db]]
+            (if (= branch-ident (:branch-ident branch))
+              (assoc acc (:uri branch) (:id->tempid internal-secure-db))
+              acc))
+          {}
+          @db-with-lookup))
+
+(defn hydrate-request [get-secure-db-with request ?subject]
+  {:pre [(or (instance? EntityRequest request) (instance? QueryRequest request))]}
+  (binding [hyperfiddle.io.bindings/*subject* ?subject]
+    (try (hydrate-request* request get-secure-db-with)
+         (catch Throwable e
+           (timbre/error e)
+           (->Err (str e))))))
+
+(defn hydrate-requests [local-basis requests staged-branches ?subject]
   {:pre [requests
          (not-any? nil? requests)
          (every? #(or (instance? EntityRequest %) (instance? QueryRequest %)) requests)]}
-  (binding [hyperfiddle.io.bindings/*subject* ?subject]
-    (let [db-with-lookup (atom {})
-          get-secure-db-with (build-get-secure-db-with staged-branches db-with-lookup (into {} local-basis) #_":: ([uri 1234]), but there are some duck type shenanigans happening")
-          pulled-trees (->> requests
-                            (map #(try (hydrate-request* % get-secure-db-with)
-                                       (catch Throwable e
-                                         (timbre/error e)
-                                         (->Err (str e)))))
-                            (doall))
-          ; this can also stream, as the request hydrates.
-          tempid-lookups (reduce (fn [acc [branch internal-secure-db]]
-                                   (assoc-in acc [(:branch-ident branch) (:uri branch)] (:id->tempid internal-secure-db)))
-                                 {}
-                                 @db-with-lookup)
-          result {:pulled-trees pulled-trees
-                  :tempid-lookups tempid-lookups}]
-      result)))
+  (let [db-with-lookup (atom {})
+        local-basis (into {} local-basis)                   ; :: ([uri 1234]), but there are some duck type shenanigans happening
+        get-secure-db-with (build-get-secure-db-with staged-branches db-with-lookup local-basis)
+        pulled-trees (->> requests
+                          (map #(hydrate-request get-secure-db-with % ?subject))
+                          (doall))
+        tempid-lookups (reduce (fn [acc [branch internal-secure-db]]
+                                 (assoc-in acc [(:branch-ident branch) (:uri branch)] (:id->tempid internal-secure-db)))
+                               {}
+                               @db-with-lookup)]
+    {:pulled-trees pulled-trees
+     :tempid-lookups tempid-lookups}))
