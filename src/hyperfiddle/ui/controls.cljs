@@ -89,9 +89,9 @@
                 [hyperfiddle.ui/ui-from-link link parent-ctx props "new"])]
 
              ; This hack detects FindCol, which has no parent cardinality but does need the links
-             nil [(if-let [link (data/select-here parent-ctx :hf/affix)]
+             nil [(if-let [link (some-> parent-ctx (data/select-here :hf/affix))]
                     [hyperfiddle.ui/ui-from-link link parent-ctx props "affix"])
-                  (if-let [link (data/select-here parent-ctx :hf/new)]
+                  (if-let [link (some-> parent-ctx (data/select-here :hf/new))]
                     [hyperfiddle.ui/ui-from-link link parent-ctx props "new"])]
              ))))
 
@@ -120,7 +120,7 @@
 (defn ^:export id-or-ident [val ctx & [props]]
   ; id control uses links from parent ctx (parent ref and parent path)
   ; select-here does not match :hf/self since it is in the parent ref position
-  (let [ctx (:hypercrud.browser/parent ctx)]
+  (if-let [ctx (:hypercrud.browser/parent ctx)]
     [:div
      [:div.input
       ; pr-str here to disambiguate `"tempid"` from `17592186046396` and `:gender/male`
@@ -146,7 +146,8 @@
             (map (fn [[rv k]]
                    ^{:key k}                                ; Use the userland class as the label (ignore hf/rel)
                    [hyperfiddle.ui/ui-from-link rv ctx props]))
-            doall))]))
+            doall))]
+    [:div [:div.input (pr-str val)]]))
 
 (defn ^:export instant [val ctx & [props]]
   (let [props (-> (assoc props

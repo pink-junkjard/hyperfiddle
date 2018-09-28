@@ -402,7 +402,14 @@ User renderers should not be exposed to the reaction."
     (->> (-> ctx :hypercrud.browser/field deref ::field/children)
          (map (fn [{segment ::field/path-segment}]
                 ^{:key (str [segment])}
-                [field [segment] ctx hyper-control props])))))
+                [field [segment] ctx hyper-control props])))
+    (when-let [f (condp = @(r/fmap ::field/element-type (:hypercrud.browser/field ctx))
+                   datascript.parser.Variable hyper-control
+                   datascript.parser.Aggregate hyper-control
+                   datascript.parser.Pull nil #_entity-links
+                   ; else nested pulls
+                   nil)]
+      [^{:key (str [])} [field [] ctx f props]])))
 
 (defn columns-relation-product [field ctx & [props]]
   (concat

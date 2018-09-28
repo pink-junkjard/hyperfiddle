@@ -232,25 +232,26 @@
                       ::source-symbol nil})
 
                    datascript.parser.FindColl
-                   (condp = (type (:element qfind))
-                     datascript.parser.Variable
-                     (-> (variable (:element qfind))
-                         (assoc ::cardinality :db.cardinality/many))
+                   (-> (condp = (type (:element qfind))
+                         datascript.parser.Variable
+                         (-> (variable (:element qfind))
+                             (assoc ::cardinality :db.cardinality/many))
 
-                     datascript.parser.Pull
-                     (let [source-symbol (get-in qfind [:element :source :symbol])
-                           pull-pattern (get-in qfind [:element :pattern :value])]
-                       {::cardinality :db.cardinality/many
-                        ::children (pull->fields (get schemas (str source-symbol)) source-symbol pull-pattern @data [])
-                        ::data-has-id? (entity-pull? pull-pattern)
-                        ::get-value identity
-                        ::label (get-in qfind [:element :variable :symbol])
-                        ::path-segment nil
-                        ::source-symbol source-symbol})
+                         datascript.parser.Pull
+                         (let [source-symbol (get-in qfind [:element :source :symbol])
+                               pull-pattern (get-in qfind [:element :pattern :value])]
+                           {::cardinality :db.cardinality/many
+                            ::children (pull->fields (get schemas (str source-symbol)) source-symbol pull-pattern @data [])
+                            ::data-has-id? (entity-pull? pull-pattern)
+                            ::get-value identity
+                            ::label (get-in qfind [:element :variable :symbol])
+                            ::path-segment nil
+                            ::source-symbol source-symbol})
 
-                     datascript.parser.Aggregate
-                     (-> (aggregate (:element qfind))
-                         (assoc ::cardinality :db.cardinality/many)))
+                         datascript.parser.Aggregate
+                         (-> (aggregate (:element qfind))
+                             (assoc ::cardinality :db.cardinality/many)))
+                       (assoc ::element-type (type (:element qfind))))
 
                    datascript.parser.FindTuple
                    {::level :tuple
@@ -283,20 +284,21 @@
                     ::source-symbol nil}
 
                    datascript.parser.FindScalar
-                   (condp = (type (:element qfind))
-                     datascript.parser.Variable
-                     (-> (variable (:element qfind))
-                         (assoc ::cardinality :db.cardinality/one))
+                   (-> (condp = (type (:element qfind))
+                         datascript.parser.Variable
+                         (-> (variable (:element qfind))
+                             (assoc ::cardinality :db.cardinality/one))
 
-                     datascript.parser.Pull
-                     (pull-one schemas @data
-                               (get-in qfind [:element :source :symbol])
-                               (get-in qfind [:element :variable :symbol])
-                               (get-in qfind [:element :pattern :value]))
+                         datascript.parser.Pull
+                         (pull-one schemas @data
+                                   (get-in qfind [:element :source :symbol])
+                                   (get-in qfind [:element :variable :symbol])
+                                   (get-in qfind [:element :pattern :value]))
 
-                     datascript.parser.Aggregate
-                     (-> (aggregate (:element qfind))
-                         (assoc ::cardinality :db.cardinality/one)))))))
+                         datascript.parser.Aggregate
+                         (-> (aggregate (:element qfind))
+                             (assoc ::cardinality :db.cardinality/one)))
+                       (assoc ::element-type (type (:element qfind))))))))
 
       :blank (either/right nil)
 
