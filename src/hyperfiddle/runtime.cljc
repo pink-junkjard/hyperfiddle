@@ -22,9 +22,7 @@
 ; App val uses link-graph to determine a local-basis and optimize hydrates for cache locality
 
 (defprotocol AppValLocalBasis                               ; only the data for this route, but decoupled from browser, foo not allowed.
-  (local-basis [rt global-basis route branch branch-aux])
-  ; interface could just be
-  #_(local-basis [rt branch-ident]))
+  (local-basis [rt branch-ident]))
 
 (defprotocol AppValHydrate
   ; user-data-fn not on this interface; hardcoded in runtime impls or read from db

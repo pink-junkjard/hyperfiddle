@@ -52,14 +52,12 @@
                  (throw error)))))
 
 (defn refresh-partition-basis [rt branch dispatch! get-state]
-  (let [{:keys [::runtime/global-basis]} (get-state)
-        {:keys [route ::runtime/branch-aux]} (get-in (get-state) [::runtime/partitions branch])]
-    (-> (runtime/local-basis rt global-basis route branch branch-aux)
-        (p/then (fn [local-basis]
-                  (dispatch! [:partition-basis branch local-basis])))
-        (p/catch (fn [error]
-                   (dispatch! [:partition-error branch error])
-                   (throw error))))))
+  (-> (runtime/local-basis rt branch)
+      (p/then (fn [local-basis]
+                (dispatch! [:partition-basis branch local-basis])))
+      (p/catch (fn [error]
+                 (dispatch! [:partition-error branch error])
+                 (throw error)))))
 
 (defn refresh-domain [rt dispatch! get-state]
   (-> (runtime/domain rt)
