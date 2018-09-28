@@ -17,6 +17,7 @@
     [hypercrud.browser.routing :as routing]
     [hypercrud.browser.router :as router]
     [hypercrud.client.core :as hc]
+    [hypercrud.client.peer :refer [-quiet-unwrap]]
     [hypercrud.types.EntityRequest :refer [->EntityRequest]]
     [hypercrud.types.Err :as Err]
     #?(:cljs [hypercrud.ui.stale :as stale])
@@ -119,8 +120,8 @@
         user-domain-insecure-req (-> [:domain/ident @(runtime/state (:peer ctx) [::runtime/domain :domain/ident])]
                                      (domain-request-insecure (:peer ctx) (:branch ctx)))]
     (into [source-domain-req user-domain-insecure-req]
-          (let [source-domain (hc/hydrate-api (:peer ctx) (:branch ctx) source-domain-req)
-                user-domain-insecure (hc/hydrate-api (:peer ctx) (:branch ctx) user-domain-insecure-req)]
+          (let [source-domain (-quiet-unwrap @(hc/hydrate (:peer ctx) (:branch ctx) source-domain-req))
+                user-domain-insecure (-quiet-unwrap @(hc/hydrate (:peer ctx) (:branch ctx) user-domain-insecure-req))]
             (when (and source-domain user-domain-insecure)
               (let [ctx (context ctx source-domain user-domain-insecure)]
                 (f ctx)))))))
