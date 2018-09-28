@@ -40,8 +40,10 @@
     (ide/domain rt (:domain-eid host-env)))
 
   runtime/AppValLocalBasis
-  (local-basis [rt global-basis route branch branch-aux]
-    (let [ctx {:branch branch
+  (local-basis [rt branch]
+    (let [global-basis @(runtime/state rt [::runtime/global-basis])
+          {:keys [route ::runtime/branch-aux]} @(runtime/state rt [::runtime/partitions branch])
+          ctx {:branch branch
                ::runtime/branch-aux branch-aux
                :peer rt}
           ; this is ide
