@@ -1,11 +1,10 @@
 (ns hyperfiddle.service.jvm.hydrate-route
   (:refer-clojure :exclude [sync])
   (:require
-    [contrib.ct :refer [unwrap]]
     [contrib.performance :as perf]
     [contrib.reactive :as r]
     [hypercrud.client.core :as hc]
-    [hypercrud.client.peer :as peer :refer [-quiet-unwrap]]
+    [hypercrud.client.peer :as peer]
     [hyperfiddle.foundation :as foundation]
     [hyperfiddle.ide :as ide]
     [hyperfiddle.io.datomic.hydrate-requests :as hydrate-requests]
@@ -103,8 +102,4 @@
           (r/atom))))
 
   (db [this uri branch]
-    (peer/db-pointer uri branch))
-
-  hc/HydrateApi
-  (hydrate-api [this branch request]
-    (-quiet-unwrap @(hc/hydrate this branch request))))
+    (peer/db-pointer uri branch)))

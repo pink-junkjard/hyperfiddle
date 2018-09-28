@@ -1,7 +1,6 @@
 (ns hyperfiddle.service.node.ssr
   (:require
     [cats.monad.either :as either]
-    [contrib.ct :refer [unwrap]]
     [contrib.data :refer [map-values]]
     [contrib.reactive :as r]
     [contrib.template :refer [load-resource]]
@@ -134,10 +133,6 @@
 
   (db [this uri branch]
     (peer/db-pointer uri branch))
-
-  hc/HydrateApi
-  (hydrate-api [this branch request]
-    (unwrap #(timbre/warn %) @(hc/hydrate this branch request)))
 
   IHash
   (-hash [this] (goog/getUid this)))
