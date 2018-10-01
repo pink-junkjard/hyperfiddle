@@ -27,6 +27,17 @@
 
 (defn global-basis-reducer [global-basis action & args]
   (case action
+    :hydrate!-route-success (let [[branch ptm tempid-lookups new-local-basis] args]
+                              (if (nil? branch)
+                                (map-values (fn [sub-basis]
+                                              (reduce-kv (fn [sub-basis uri t]
+                                                           (if (contains? sub-basis uri)
+                                                             (assoc sub-basis uri t)
+                                                             sub-basis))
+                                                         sub-basis
+                                                         new-local-basis))
+                                            global-basis)
+                                global-basis))
     :set-global-basis (first args)
     global-basis))
 
@@ -99,6 +110,15 @@
                                              (dissoc :error :hydrate-id)
                                              (assoc :ptm ptm
                                                     :tempid-lookups tempid-lookups)))))
+
+           :hydrate!-route-success (let [[branch ptm tempid-lookups new-basis] args]
+                                     (update partitions branch
+                                             (fn [partition]
+                                               (-> partition
+                                                   (dissoc :error :hydrate-id)
+                                                   (assoc :local-basis new-basis
+                                                          :ptm ptm
+                                                          :tempid-lookups tempid-lookups)))))
 
            :partition-error (let [[branch error] args]
                               (update partitions branch

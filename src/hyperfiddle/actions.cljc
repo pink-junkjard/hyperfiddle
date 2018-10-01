@@ -33,9 +33,9 @@
   (dispatch! (apply batch (conj on-start [:hydrate!-start branch])))
   (let [{:keys [hydrate-id]} (get-in (get-state) [::runtime/partitions branch])]
     (-> (runtime/hydrate-route rt branch)
-        (p/then (fn [{:keys [ptm tempid-lookups]}]
+        (p/then (fn [{:keys [local-basis ptm tempid-lookups]}]
                   (if (= hydrate-id (get-in (get-state) [::runtime/partitions branch :hydrate-id]))
-                    (dispatch! [:hydrate!-success branch ptm tempid-lookups])
+                    (dispatch! [:hydrate!-route-success branch ptm tempid-lookups local-basis]) ; todo domain & user are now potentially out of sync
                     (timbre/info (str "Ignoring response for " hydrate-id)))))
         (p/catch (fn [error]
                    (if (= hydrate-id (get-in (get-state) [::runtime/partitions branch :hydrate-id]))
