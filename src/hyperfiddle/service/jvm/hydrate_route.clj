@@ -1,4 +1,5 @@
 (ns hyperfiddle.service.jvm.hydrate-route
+  (:refer-clojure :exclude [sync])
   (:require
     [contrib.data :refer [map-values]]
     [contrib.performance :as perf]
@@ -9,6 +10,7 @@
     [hyperfiddle.ide :as ide]
     [hyperfiddle.io.datomic.hydrate-requests :as hydrate-requests]
     [hyperfiddle.io.hydrate-requests :refer [stage-val->staged-branches]]
+    [hyperfiddle.io.sync :refer [sync]]
     [hyperfiddle.io.util :refer [process-result]]
     [hyperfiddle.runtime :as runtime]
     [hyperfiddle.state :as state]
@@ -58,8 +60,16 @@
   (hydrate-route [rt branch]
     (let [{:keys [route local-basis ::runtime/branch-aux]} @(runtime/state rt [::runtime/partitions branch])
           stage (map-values :stage @(runtime/state rt [::runtime/partitions]))
+          local-basis (->> (mapcat second stage)            ; todo lift this up into hydrate-route-handler, need to solve domain/user tension first
+                           (remove (comp empty? second))
+                           (map first)
+                           (distinct)
+                           ; todo verify validity of uris?
+                           (sync)
+                           (reduce-kv assoc (into {} local-basis)))
+          _ (runtime/dispatch! rt [:partition-basis branch local-basis]) ; no one uses this but state should be consistent
           db-with-lookup (atom {})
-          get-secure-db-with (hydrate-requests/build-get-secure-db-with (stage-val->staged-branches stage) db-with-lookup (into {} local-basis))
+          get-secure-db-with (hydrate-requests/build-get-secure-db-with (stage-val->staged-branches stage) db-with-lookup local-basis)
           ; todo should we be sharing state-atom?
           rt (->RequestFn db-with-lookup get-secure-db-with host-env state-atom root-reducer jwt ?subject)
           ctx {:branch branch
@@ -78,7 +88,7 @@
                    (get-secure-db-with uri branch-ident)))
       (perf/time (fn [get-total-time] (timbre/debug "Hydrate-route::request-fn" "total time: " (get-total-time)))
                  (foundation/api page-or-leaf ctx (partial ide/api route)))
-      (p/resolved (select-keys @(runtime/state rt [::runtime/partitions branch]) [:tempid-lookups :ptm]))))
+      (p/resolved (select-keys @(runtime/state rt [::runtime/partitions branch]) [:local-basis :ptm :tempid-lookups]))))
 
   runtime/AppFnHydrate
   (hydrate-requests [rt local-basis stage requests]

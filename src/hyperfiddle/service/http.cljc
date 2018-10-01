@@ -110,9 +110,14 @@
           (p/then (fn [_] (actions/refresh-user rt (partial runtime/dispatch! rt) #(deref (runtime/state rt)))))
           (p/then (fn [_] (runtime/hydrate-route rt branch)))
           (p/then (fn [data]
-                    {:status 200
-                     :headers {"Cache-Control" "max-age=31536000"} ; todo max-age=0 if POST
-                     :body data}))
+                    (let [cache-control (if (->> @(runtime/state rt [::runtime/partitions])
+                                                 (map (comp :stage second))
+                                                 (some seq))
+                                          "max-age=0"
+                                          "max-age=31536000")]
+                      {:status 200
+                       :headers {"Cache-Control" cache-control}
+                       :body data})))
           (p/catch (fn [e]
                      (timbre/error e)
                      (e->platform-response e)))))
