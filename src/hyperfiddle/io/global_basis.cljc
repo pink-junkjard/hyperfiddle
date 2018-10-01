@@ -16,7 +16,8 @@
 (defn uris-for-domain [domain]
   (->> (:domain/databases domain)
        (map (comp :database/uri :domain.database/record))
-       (cons (get-in domain [:domain/fiddle-database :database/uri]))))
+       (cons (get-in domain [:domain/fiddle-database :database/uri]))
+       (into #{})))
 
 (defn global-basis [rt domain-eid]                          ; this is foundation code, app-fn level (Just sees configured datomic URIs, no userland api fn)
   (perf/time-promise
