@@ -1,6 +1,5 @@
 (ns contrib.ui.remark
   (:require
-    [contrib.cljs-platform :refer [global!]]
     [clojure.set]
     [clojure.string]
     [goog.object]
@@ -32,18 +31,18 @@
                                 (assoc acc k (extension k v)))
                               (empty extensions)
                               extensions)]
-    (-> (js/remark)
-        (.use (goog.object/get (global!) "remarkComments") #js {"beginMarker" "" "endMarker" ""})
-        (.use (goog.object/get (global!) "remarkToc"))
-        (.use js/remarkGenericExtensions
-              (clj->js
-                {"elements" (into {} (map vector (keys extensions) (repeat {"html" {"properties" {"content" "::content::" "argument" "::argument::"}}})))}))
-        (.use js/remarkReact
-              (clj->js
-                {"sanitize" false
-                 "remarkReactComponents" (reduce-kv (fn [m k v]
-                                                      (assoc m k (reagent/reactify-component v)))
-                                                    {} extensions)})))))
+    (cond-> (js/remark)
+      (exists? js/remarkComments) (.use js/remarkComments #js {"beginMarker" "" "endMarker" ""})
+      (exists? js/remarkToc) (.use js/remarkToc)
+      (exists? js/remarkGenericExtensions) (.use js/remarkGenericExtensions
+                                                 (clj->js
+                                                   {"elements" (into {} (map vector (keys extensions) (repeat {"html" {"properties" {"content" "::content::" "argument" "::argument::"}}})))}))
+      (exists? js/remarkReact) (.use js/remarkReact
+                                     (clj->js
+                                       {"sanitize" false
+                                        "remarkReactComponents" (reduce-kv (fn [m k v]
+                                                                             (assoc m k (reagent/reactify-component v)))
+                                                                           {} extensions)})))))
 
 (defn remark! [& [extensions]]
   ; remark creates react components which don't evaluate in this stack frame

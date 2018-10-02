@@ -1,7 +1,6 @@
 (ns contrib.ui
   (:refer-clojure :exclude [keyword long])
   (:require
-    [contrib.cljs-platform :refer [global!]]
     [contrib.css :refer [css]]
     [contrib.data :refer [update-existing]]
     [contrib.pprint :refer [pprint-str]]

@@ -1,7 +1,7 @@
 (ns contrib.loader
   (:require
     [cats.core :refer [mlet return]]
-    [contrib.cljs-platform :refer [browser?]]
+    [contrib.cljs-platform :refer [code-for-browser]]
     [contrib.string :refer [blank->nil]]
     [goog.object]
     [promesa.core :as p]
@@ -13,7 +13,7 @@
                              async true}}]]
   (p/promise
     (fn [resolve reject]
-      (when (browser?)                                      ; can be called from domain/cljs
+      (code-for-browser                                     ; can be called from domain/cljs
         (let [el (js/document.createElement "script")]
           ; https://stackoverflow.com/questions/21214515/is-the-order-of-onload-handler-and-src-set-important-in-a-script-element
           ; https://stackoverflow.com/questions/16230886/trying-to-fire-the-onload-event-on-script-tag
@@ -27,7 +27,7 @@
 (defn style! [href & [props]]
   (p/promise
     (fn [resolve reject]
-      (when (browser?)
+      (code-for-browser
         (let [el (js/document.createElement "link")]
           (doto el
             (goog.object/set "rel" "stylesheet")
