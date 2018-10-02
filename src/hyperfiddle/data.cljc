@@ -81,19 +81,23 @@
 (defn validate-one+r [rel class links]
   (let [n (count links)]
     (condp = n
-      1 (right (r/track identity (first links)))            ; lol lift
+      1 (right (first links))
       0 (left (str/format "no match for rel: %s class: %s" (pr-str rel) (pr-str class)))
       (left (str/format "Too many links matched (%s) for rel: %s class: %s" n (pr-str rel) (pr-str class))))))
 
 (defn ^:export select-here+ [ctx rel & [?corcs]]
   {:pre [ctx]}
-  (-> (select-all ctx rel ?corcs)
-      (->> (filter (comp (partial = (:hypercrud.browser/path ctx)) link/read-path :link/path)))
-      (->> (validate-one+r rel ?corcs))))
+  (->> (r/track select-all ctx rel ?corcs)
+       (r/fmap (r/partial filter (r/comp (r/partial = (:hypercrud.browser/path ctx)) link/read-path :link/path)))
+       (r/fmap (r/partial validate-one+r rel ?corcs))
+       r/apply-inner-r
+       deref))
 
 (defn ^:export select+ [ctx rel & [?corcs]]                 ; Right[Reaction[Link]], Left[String]
-  (let [rlinks (r/track select-all ctx rel ?corcs)]
-    @(r/fmap (r/partial validate-one+r rel ?corcs) rlinks)))
+  (->> (r/track select-all ctx rel ?corcs)
+       (r/fmap (r/partial validate-one+r rel ?corcs))
+       r/apply-inner-r
+       deref))
 
 (defn ^:export browse+ "Navigate a link by hydrating its context accounting for dependencies in scope.
   returns Either[Loading|Error,ctx]."

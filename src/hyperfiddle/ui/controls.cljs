@@ -140,13 +140,12 @@
      (if-let [link (data/select-here ctx :hf/detach)]
        [hyperfiddle.ui/ui-from-link link ctx props "detach"])
 
-     (let [related (data/select-all ctx :hf/rel)]
-       (->> (r/track identity related)
-            (r/unsequence (r/partial stable-relation-key ctx))
-            (map (fn [[rv k]]
-                   ^{:key k}                                ; Use the userland class as the label (ignore hf/rel)
-                   [hyperfiddle.ui/ui-from-link rv ctx props]))
-            doall))]
+     (->> (r/track data/select-all ctx :hf/rel)
+          (r/unsequence (r/partial stable-relation-key ctx))
+          (map (fn [[rv k]]
+                 ^{:key k}                                  ; Use the userland class as the label (ignore hf/rel)
+                 [hyperfiddle.ui/ui-from-link rv ctx props]))
+          doall)]
     [:div [:div.input (pr-str val)]]))
 
 (defn ^:export instant [val ctx & [props]]
