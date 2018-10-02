@@ -78,7 +78,7 @@
                     (set (:link/class link))                ; add more stuff here
                     (contrib.data/xorxs ?corcs)))))))
 
-(defn validate-one+r [rel class links]
+(defn validate-one+ [rel class links]
   (let [n (count links)]
     (condp = n
       1 (right (first links))
@@ -89,13 +89,13 @@
   {:pre [ctx]}
   (->> (r/track select-all ctx rel ?corcs)
        (r/fmap (r/partial filter (r/comp (r/partial = (:hypercrud.browser/path ctx)) link/read-path :link/path)))
-       (r/fmap (r/partial validate-one+r rel ?corcs))
+       (r/fmap (r/partial validate-one+ rel ?corcs))
        r/apply-inner-r
        deref))
 
 (defn ^:export select+ [ctx rel & [?corcs]]                 ; Right[Reaction[Link]], Left[String]
   (->> (r/track select-all ctx rel ?corcs)
-       (r/fmap (r/partial validate-one+r rel ?corcs))
+       (r/fmap (r/partial validate-one+ rel ?corcs))
        r/apply-inner-r
        deref))
 
