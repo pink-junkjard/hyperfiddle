@@ -1,7 +1,6 @@
 (ns contrib.reader
   (:refer-clojure :exclude [read-string])
   (:require
-    [contrib.ct :refer [unwrap]]
     [contrib.try$ :refer [try-either]]
     [clojure.tools.reader :as reader]
     [clojure.tools.reader.edn :as edn-reader]

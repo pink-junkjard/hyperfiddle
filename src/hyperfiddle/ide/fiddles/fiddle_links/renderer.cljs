@@ -7,8 +7,7 @@
     [hypercrud.browser.base :as base]
     [hypercrud.browser.context :as context]
     [hyperfiddle.ide.console-links :refer [system-link?]]
-    [hyperfiddle.ui :refer [hyper-control field table link]]
-    [hyperfiddle.ui.select$ :refer [select-error-cmp]]))
+    [hyperfiddle.ui :refer [hyper-control field table link]]))
 
 
 (defn link-fiddle [val ctx {:keys [:embed-mode] :as props}]

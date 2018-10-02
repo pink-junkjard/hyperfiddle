@@ -1,6 +1,5 @@
 (ns contrib.datomic-tx
   (:require
-    [contrib.ct :refer [unwrap]]
     [clojure.set :as set]
     [clojure.walk :as walk]))
 
