@@ -1,6 +1,5 @@
 (ns hyperfiddle.ui
   (:require
-    [contrib.pprint :refer [slow-pprint-str]]
     [cuerdas.core :as str]))
 
 

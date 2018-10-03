@@ -1,7 +1,7 @@
 (ns hyperfiddle.ide.fiddles.schema
   (:require
     [contrib.template :refer [load-resource]]
-    [contrib.pprint :refer [mpprint-str pprint-str]]))
+    [contrib.pprint :refer [pprint-str]]))
 
 
 (defn db-cardinality-options [$db]

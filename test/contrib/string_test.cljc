@@ -1,8 +1,7 @@
 (ns contrib.string-test
   (:require [clojure.pprint]
             [clojure.test :refer [deftest is]]
-            [contrib.string :refer [abc empty->nil blank->nil split-first]]
-            [net.cgrand.packed-printer :as packed-printer]))
+            [contrib.string :refer [abc empty->nil blank->nil split-first]]))
 
 
 (deftest empty->nil-1
