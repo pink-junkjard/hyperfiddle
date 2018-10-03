@@ -4,7 +4,7 @@
             [cuerdas.core :as str]
             [hyperfiddle.io.rpc-router :refer [encode-basis]]
             [hyperfiddle.io.http.core :refer [http-request!]]
-            [hyperfiddle.io.util :refer [process-result v-not-nil?]]
+            [hyperfiddle.io.util :refer [process-result]]
             [hyperfiddle.runtime :as runtime]
             [promesa.core :as p]
             [taoensso.timbre :as timbre]))
@@ -17,7 +17,7 @@
                       (map (fn [[uri tx]]
                              {:branch-ident branch-ident
                               :uri uri
-                              :tx (filter v-not-nil? tx)})))))))
+                              :tx tx})))))))
 
 (defn hydrate-one! [rt local-basis stage request]
   (-> (runtime/hydrate-requests rt local-basis stage [request])

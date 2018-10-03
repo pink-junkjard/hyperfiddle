@@ -19,9 +19,3 @@
   (if (instance? Err resultset-or-error)
     (either/left (human-error resultset-or-error request))
     (either/right resultset-or-error)))
-
-(defn v-not-nil? [stmt]
-  (or (map? stmt)
-      (let [[op e a v] stmt]
-        (not (and (or (= :db/add op) (= :db/retract op))
-                  (nil? v))))))

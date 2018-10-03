@@ -14,7 +14,6 @@
             [hypercrud.types.Err :as Err]
             [hypercrud.util.branch :as branch]
             [hyperfiddle.io.hydrate-requests :refer [hydrate-all-or-nothing!]]
-            [hyperfiddle.io.util :refer [v-not-nil?]]
             [hyperfiddle.domain :as domain]
             [hyperfiddle.runtime :as runtime]
             [hyperfiddle.security.client :as security]
@@ -153,34 +152,32 @@
 
 (defn transact! [rt invert-route tx-groups dispatch! get-state & {:keys [route post-tx]}]
   (dispatch! [:transact!-start])
-  (let [tx-groups (map-values (partial filter v-not-nil?)   ; hack because the ui still generates some garbage tx
-                              tx-groups)]
-    (-> (runtime/transact! rt tx-groups)
-        (p/catch (fn [e]
-                   #?(:cljs
-                      (let [message (cond
-                                      (string? e) e
-                                      (Err/Err? e) (:msg e)
-                                      (map? e) (:message e)
-                                      :else (ex-message e))]
-                        (js/alert message)))
-                   (dispatch! [:transact!-failure e])
-                   (throw e)))
-        (p/then (fn [{:keys [tempid->id]}]
-                  (dispatch! (apply batch [:transact!-success (keys tx-groups)] post-tx))
-                  ; todo should just call foundation/bootstrap-data
-                  (mlet [_ (refresh-global-basis rt dispatch! get-state)
-                         _ (refresh-domain rt dispatch! get-state)
-                         _ (refresh-user rt dispatch! get-state)
-                         :let [invert-id (fn [temp-id uri]
-                                           (get-in tempid->id [uri temp-id] temp-id))
-                               current-route (get-in (get-state) [::runtime/partitions nil :route])
-                               route' (-> (or route current-route)
-                                          (invert-route invert-id))
-                               keep-popovers? (or (nil? route) (router/compare-routes route current-route))]]
-                    ; todo we want to overwrite our current browser location with this new url
-                    ; currently this new route breaks the back button
-                    (set-route rt route' nil keep-popovers? true dispatch! get-state)))))))
+  (-> (runtime/transact! rt tx-groups)
+      (p/catch (fn [e]
+                 #?(:cljs
+                    (let [message (cond
+                                    (string? e) e
+                                    (Err/Err? e) (:msg e)
+                                    (map? e) (:message e)
+                                    :else (ex-message e))]
+                      (js/alert message)))
+                 (dispatch! [:transact!-failure e])
+                 (throw e)))
+      (p/then (fn [{:keys [tempid->id]}]
+                (dispatch! (apply batch [:transact!-success (keys tx-groups)] post-tx))
+                ; todo should just call foundation/bootstrap-data
+                (mlet [_ (refresh-global-basis rt dispatch! get-state)
+                       _ (refresh-domain rt dispatch! get-state)
+                       _ (refresh-user rt dispatch! get-state)
+                       :let [invert-id (fn [temp-id uri]
+                                         (get-in tempid->id [uri temp-id] temp-id))
+                             current-route (get-in (get-state) [::runtime/partitions nil :route])
+                             route' (-> (or route current-route)
+                                        (invert-route invert-id))
+                             keep-popovers? (or (nil? route) (router/compare-routes route current-route))]]
+                  ; todo we want to overwrite our current browser location with this new url
+                  ; currently this new route breaks the back button
+                  (set-route rt route' nil keep-popovers? true dispatch! get-state))))))
 
 (defn should-transact!? [uri get-state]
   (and (get-in (get-state) [::runtime/auto-transact uri])
