@@ -21,18 +21,19 @@
        ; todo cannot swallow this error
        (unwrap #(timbre/warn %))))
 
-(defn recurse-from-link [link ctx]
+(defn recurse-from-link [ctx link]
   (->> (base/data-from-link link ctx)
        (cats/fmap api-data)
        ; todo cannot swallow this error
        (unwrap #(timbre/warn %))))
 
 (defn body-field [ctx]
-  (->> @(r/fmap :fiddle/links (:hypercrud.browser/fiddle ctx))
-       (filter (partial link/same-path-as? (:hypercrud.browser/path ctx)))
-       (map #(recurse-from-link % ctx))
-       (apply merge)
-       (into (let [child-fields? (not @(r/fmap (r/comp nil? ::field/children) (:hypercrud.browser/field ctx)))]
+  (->> @(r/fmap->> (:hypercrud.browser/fiddle ctx)
+                   :fiddle/links
+                   (filter (r/partial link/same-path-as? (:hypercrud.browser/path ctx)))
+                   (map (r/partial recurse-from-link ctx))
+                   (apply merge))
+       (into (let [child-fields? (not @(r/fmap-> (:hypercrud.browser/field ctx) ::field/children nil?))]
                (if (and child-fields? (context/attribute-segment? (last (:hypercrud.browser/path ctx)))) ; ignore relation and fe fields
                  (with-result ctx)
                  {})))))
@@ -60,17 +61,16 @@
 (defn api-data [ctx]
   ; at this point we only care about inline links
   ; also no popovers can be opened, so remove managed
-  (let [ctx (update ctx :hypercrud.browser/fiddle (partial r/fmap hypercrud.browser.browser-request/filter-inline-links))
-        thing (->> (r/fmap :fiddle/links (:hypercrud.browser/fiddle ctx))
-                   (link/links-at (:hypercrud.browser/path ctx)) ; todo reactivity
-                   (map #(recurse-from-link % ctx))
-                   (apply merge))
-        thing3 (when @(r/fmap :fiddle/hydrate-result-as-fiddle (:hypercrud.browser/fiddle ctx))
-                 ; This only makes sense on :fiddle/type :query because it has arbitrary arguments
-                 ; EntityRequest args are too structured.
-                 (let [[_ [inner-fiddle & inner-args]] @(:hypercrud.browser/route ctx)]
-                   (recurse-from-route [inner-fiddle (vec inner-args)] ctx)))]
+  (let [ctx (update ctx :hypercrud.browser/fiddle (partial r/fmap hypercrud.browser.browser-request/filter-inline-links))]
     (merge (with-result ctx)
-           thing
-           thing3
+           @(r/fmap->> (:hypercrud.browser/fiddle ctx)
+                       :fiddle/links
+                       (filter (r/partial link/same-path-as? (:hypercrud.browser/path ctx)))
+                       (map (r/partial recurse-from-link ctx))
+                       (apply merge))
+           (when @(r/fmap :fiddle/hydrate-result-as-fiddle (:hypercrud.browser/fiddle ctx))
+             ; This only makes sense on :fiddle/type :query because it has arbitrary arguments
+             ; EntityRequest args are too structured.
+             (let [[_ [inner-fiddle & inner-args]] @(:hypercrud.browser/route ctx)]
+               (recurse-from-route [inner-fiddle (vec inner-args)] ctx)))
            {@(:hypercrud.browser/route ctx) @(:hypercrud.browser/data ctx)})))

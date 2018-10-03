@@ -11,6 +11,3 @@
 
 (defn same-path-as? [path link]
   (= path (read-path (:link/path link))))
-
-(defn links-at [path links-ref]
-  (filter (partial same-path-as? path) @links-ref))

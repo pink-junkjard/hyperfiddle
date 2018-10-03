@@ -87,7 +87,7 @@
 (defn ^:export select-here+ [ctx rel & [?corcs]]
   {:pre [ctx]}
   (->> (r/fmap->> (select-all-r ctx rel ?corcs)
-                  (filter (r/comp (r/partial = (:hypercrud.browser/path ctx)) link/read-path :link/path))
+                  (filter (r/partial link/same-path-as? (:hypercrud.browser/path ctx)))
                   (validate-one+ rel ?corcs))
        r/apply-inner-r
        deref))
