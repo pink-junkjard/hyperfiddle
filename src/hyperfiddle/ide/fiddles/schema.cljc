@@ -38,7 +38,7 @@
                       {:db/valueType [:db/ident]}
                       {:db/cardinality [:db/ident]}
                       :db/doc
-                      :db/unique
+                      {:db/unique [:db/ident]}
                       :db/isComponent
                       :db/fulltext])
    :fiddle/pull-database $db
