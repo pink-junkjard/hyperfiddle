@@ -4,6 +4,7 @@
             [contrib.data :as util]
     #?(:cljs [reagent.core :as reagent])
     #?(:cljs [reagent.ratom :refer [IReactiveAtom]]))
+  #?(:cljs (:require-macros [contrib.reactive]))
   #?(:clj
      (:import (clojure.lang IAtom IDeref))))
 
@@ -133,6 +134,26 @@
   {:pre [f]}
   (assert (reactive? rv) (str "fmap rv: " rv " did you pass nil instead of (r/atom nil)?"))
   (track (comp f deref) rv))
+
+(defmacro fmap-> [x & forms]
+  (loop [x x, forms forms]
+    (if forms
+      (let [form (first forms)
+            threaded (if (seq? form)
+                       (with-meta `(fmap (partial last-arg-first ~@form) ~x) (meta form))
+                       `(fmap ~form ~x))]
+        (recur threaded (next forms)))
+      x)))
+
+(defmacro fmap->> [x & forms]
+  (loop [x x, forms forms]
+    (if forms
+      (let [form (first forms)
+            threaded (if (seq? form)
+                       (with-meta `(fmap (partial ~@form) ~x) (meta form))
+                       `(fmap ~form ~x))]
+        (recur threaded (next forms)))
+      x)))
 
 (letfn [(-fapply [rf rv] (@rf @rv))]
   (defn fapply [rf & rvs]

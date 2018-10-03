@@ -50,5 +50,5 @@
                               (cats/sequence)
                               (cats/fmap #(into {} %)))))))]
   (defn hydrate-schema [ctx]
-    (->> (hc/hydrate (:peer ctx) (:branch ctx) (hc-attr-request ctx))
-         (r/fmap (r/partial with-root-data ctx)))))
+    (r/fmap->> (hc/hydrate (:peer ctx) (:branch ctx) (hc-attr-request ctx))
+               (with-root-data ctx))))

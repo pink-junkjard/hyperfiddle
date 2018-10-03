@@ -44,8 +44,9 @@
 
 (defn attr-renderer-control [val ctx & [props]]
   ; The only way to stabilize this is for this type signature to become a react class.
-  (when-let [?user-f @(->> (context/hydrate-attribute ctx (last (:hypercrud.browser/path ctx)))
-                           (r/fmap (r/comp blank->nil :attribute/renderer)))]
+  (when-let [?user-f @(r/fmap-> (context/hydrate-attribute ctx (last (:hypercrud.browser/path ctx)))
+                                :attribute/renderer
+                                blank->nil)]
     [user-portal (ui-error/error-comp ctx)
      ; ?user-f is stable due to memoizing eval (and only due to this)
      [eval-renderer-comp nil ?user-f val ctx props]]))
@@ -61,9 +62,8 @@
 
 (defn entity-links-iframe [val ctx & [props]]
   (fragment
-    (->> (data/select-all ctx :hf/iframe)
-         (remove (comp (partial data/deps-over-satisfied? ctx) link/read-path :link/path))
-         (r/track identity)
+    (->> (r/fmap->> (data/select-all-r ctx :hf/iframe)
+                    (remove (r/comp (r/partial data/deps-over-satisfied? ctx) link/read-path :link/path)))
          (r/unsequence (r/partial stable-relation-key ctx))
          (map (fn [[rv k]]
                 ^{:key k}
@@ -112,10 +112,10 @@
         level (::field/level field)
         segment (last (:hypercrud.browser/path ctx))
         segment-type (context/segment-type-2 segment)       ; :element means :relation? no, naked. Relation is ortho
-        child-fields (not @(r/fmap (r/comp nil? ::field/children) (:hypercrud.browser/field ctx)))]
+        has-child-fields (r/fmap-> (:hypercrud.browser/field ctx) ::field/children nil? not)]
     (cond
       (field/identity-segment? field) (dbid-label _ ctx props)
-      :else (match* [level segment-type segment child-fields]
+      :else (match* [level segment-type segment has-child-fields]
               [nil :splat _ _] (label-with-docs (::field/label field) (semantic-docstring ctx "Free-hand attribute entry") props)
               [nil :attribute _ _] (label-with-docs (::field/label field) (semantic-docstring ctx) props)
               [nil :element _ true] (label-with-docs "*relation*" (semantic-docstring ctx) props)
@@ -272,19 +272,19 @@ User renderers should not be exposed to the reaction."
     (let [visual-ctx ctx
           ctx (context/refocus ctx (link/read-path @(r/fmap :link/path link-ref)))
           error-comp (ui-error/error-comp ctx)
-          r+?route (r/fmap (r/partial routing/build-route' ctx) link-ref) ; need to re-focus from the top
+          r+?route (r/fmap->> link-ref (routing/build-route' ctx)) ; need to re-focus from the top
           style {:color nil #_(connection-color ctx (cond (system-link? (:db/id @link-ref)) 60 :else 40))}
           props (update props :style #(or % style))
-          tx-fn? @(r/fmap (r/comp boolean blank->nil :link/tx-fn) link-ref)
-          is-iframe @(r/fmap (r/comp (r/partial = :hf/iframe) :link/rel) link-ref)]
+          has-tx-fn @(r/fmap-> link-ref :link/tx-fn blank->nil boolean)
+          is-iframe @(r/fmap-> link-ref :link/rel (= :hf/iframe))]
       (cond
-        (and tx-fn? @(r/fmap (r/comp nil? :link/fiddle) link-ref))
+        (and has-tx-fn @(r/fmap-> link-ref :link/fiddle nil?))
         (let [props (-> props
                         (update :class css "hyperfiddle")
                         (update :disabled #(or % (disabled? link-ref ctx))))]
           [affect-cmp link-ref ctx props @(r/track prompt link-ref ?label)])
 
-        (or tx-fn? (and is-iframe (:iframe-as-popover props)))
+        (or has-tx-fn (and is-iframe (:iframe-as-popover props)))
         (let [props (-> @(r/track validated-route-tooltip-props r+?route link-ref ctx props)
                         (dissoc :iframe-as-popover)
                         (update :class css "hyperfiddle")   ; should this be in popover-cmp? what is this class? – unify with semantic css
@@ -338,7 +338,9 @@ User renderers should not be exposed to the reaction."
      [Body @(:hypercrud.browser/data ctx) ctx props]]
     (when (= '* (last relative-path))                       ; :hypercrud.browser/path
       ; guard against crashes for nil data
-      {:key (hash (some->> ctx :hypercrud.browser/parent :hypercrud.browser/data (r/fmap keys) deref))})))
+      {:key @(r/fmap-> (or (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data])
+                           (r/track identity nil))
+                       keys hash)})))
 
 (defn table-field "Form fields are label AND value. Table fields are label OR value."
   [relative-path ctx Body Head props]                       ; Body :: (val props ctx) => DOM, invoked as component
@@ -369,16 +371,15 @@ User renderers should not be exposed to the reaction."
 
 (defn ^:export table "Semantic table; columns driven externally" ; this is just a widget
   [columns ctx & [props]]
-  (let [sort-col (r/atom (::sort/initial-sort props))
-        sort (fn [v] (hyperfiddle.ui.sort/sort-fn v sort-col))]
+  (let [sort-col (r/atom (::sort/initial-sort props))]
     (fn [columns ctx & [props]]
       (let [props (dissoc props ::sort/initial-sort)
             ctx (assoc ctx ::sort/sort-col sort-col
                            ::layout :hyperfiddle.ui.layout/table)]
         [:table (update props :class (fnil css "hyperfiddle") "unp") ; fnil case is iframe root (not a field :many)
          [:thead (->> (columns (dissoc ctx :hypercrud.browser/data) props) (into [:tr]))] ; strict
-         (->> (:hypercrud.browser/data ctx)
-              (r/fmap sort)
+         (->> (r/fmap-> (:hypercrud.browser/data ctx)
+                        (sort/sort-fn sort-col))
               (r/unsequence (r/partial data/row-keyfn ctx))
               (map (fn [[row k]]
                      (->> (columns (context/row ctx row) props)
@@ -397,43 +398,33 @@ User renderers should not be exposed to the reaction."
     (keyword (str (data/row-keyfn ctx val)))
     (fields (assoc ctx ::layout :hyperfiddle.ui.layout/block))))
 
-(defn columns [field ctx & [props]]
+(defn columns [m-field relative-path field ctx & [props]]
   (concat
-    (->> (-> ctx :hypercrud.browser/field deref ::field/children)
-         (map (fn [{segment ::field/path-segment}]
-                ^{:key (str [segment])}
-                [field [segment] ctx hyper-control props])))
-    (when-let [f (condp = @(r/fmap ::field/element-type (:hypercrud.browser/field ctx))
+    (->> @(r/fmap->> m-field ::field/children (map ::field/path-segment))
+         (map (fn [child-segment]
+                (let [relative-path (conj relative-path child-segment)]
+                  ^{:key (str relative-path)}
+                  [field relative-path ctx hyper-control props]))))
+    (when-let [f (condp = @(r/fmap ::field/element-type m-field)
                    datascript.parser.Variable hyper-control
                    datascript.parser.Aggregate hyper-control
                    datascript.parser.Pull nil #_entity-links
                    ; else nested pulls
                    nil)]
-      [^{:key (str [])} [field [] ctx f props]])))
+      [^{:key (str relative-path)} [field relative-path ctx f props]])))
 
 (defn columns-relation-product [field ctx & [props]]
-  (concat
-    (->> @(r/fmap ::field/children (:hypercrud.browser/field ctx))
-         (mapcat (fn [{segment ::field/path-segment
-                       child-fields ::field/children
-                       el-type ::field/element-type}]
-                   (concat
-                     (map (fn [{child-segment ::field/path-segment}]
-                            ^{:key (str [segment child-segment])}
-                            [field [segment child-segment] ctx hyper-control props])
-                          child-fields)
-                     (if-let [f (condp = el-type
-                                  datascript.parser.Variable hyper-control
-                                  datascript.parser.Aggregate hyper-control
-                                  datascript.parser.Pull nil #_entity-links)]
-                       [^{:key (str [segment])} [field [segment] ctx f props]])))))))
+  (->> (r/fmap ::field/children (:hypercrud.browser/field ctx))
+       (r/unsequence ::field/path-segment)
+       (mapcat (fn [[m-field segment]]
+                 (columns m-field [segment] field ctx props)))))
 
 (defn pull "handles any datomic result that isn't a relation, recursively"
   [field val ctx & [props]]
   (let [cardinality @(r/fmap ::field/cardinality (:hypercrud.browser/field ctx))]
     (match* [cardinality]
-      [:db.cardinality/one] [form (r/partial columns field) val ctx props]
-      [:db.cardinality/many] [table (r/partial columns field) ctx props])))
+      [:db.cardinality/one] [form (r/partial columns (:hypercrud.browser/field ctx) [] field) val ctx props]
+      [:db.cardinality/many] [table (r/partial columns (:hypercrud.browser/field ctx) [] field) ctx props])))
 
 (defn ^:export result "Default result renderer. Invoked as fn, returns seq-hiccup, hiccup or
 nil. call site must wrap with a Reagent component"          ; is this just hyper-control ?

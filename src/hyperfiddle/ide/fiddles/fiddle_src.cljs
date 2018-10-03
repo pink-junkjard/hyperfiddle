@@ -56,7 +56,7 @@
     (let [route @(:hypercrud.browser/route ctx)
           [_ [e]] route                                     ; [:hyperfiddle/topnav [#entity["$" [:fiddle/ident :hyperfiddle.system/remove]]]]
           [_ target-fiddle-ident] (:db/id e)]
-      (update ctx :hypercrud.browser/data (partial r/fmap (r/partial -shadow-fiddle target-fiddle-ident))))))
+      (update ctx :hypercrud.browser/data #(r/fmap->> % (-shadow-fiddle target-fiddle-ident))))))
 
 (def tabs
   {:query (fn [val ctx props]
@@ -85,11 +85,11 @@
                  (field [:fiddle/ident] ctx hyper-control (assoc props :disabled true))
                  (field [:fiddle/hydrate-result-as-fiddle] ctx hyper-control props)
                  [:div.p "Additional attributes"]
-                 (->> @(r/fmap ::field/children (:hypercrud.browser/field ctx))
-                      ; todo tighter reactivity
-                      (map ::field/path-segment)
-                      (remove #(= (namespace %) "fiddle"))
-                      (remove #(= :db/id %))
+                 (->> @(r/fmap->> (:hypercrud.browser/field ctx)
+                                  ::field/children
+                                  (map ::field/path-segment)
+                                  (remove (r/comp (r/partial = "fiddle") namespace))
+                                  (remove (r/partial = :db/id)))
                       (map (fn [segment]
                              ^{:key (str [segment])}
                              [field [segment] ctx nil]))

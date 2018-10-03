@@ -125,7 +125,7 @@
   (let [q (::field/query field)
         missing-fe-wrapper (::field/source-symbol field)]
     (if missing-fe-wrapper
-      (system-links-impl q [field] schemas)     ; wrapper for FindColl, FindTuple, etc? weird.
+      (system-links-impl q [field] schemas)                 ; wrapper for FindColl, FindTuple, etc? weird.
       (system-links-impl q (::field/children field) schemas))))
 
 (let [f (fn [new-links fiddle]
@@ -133,4 +133,4 @@
   (defn inject-console-links [ctx]
     (let [console-links (->> (console-links @(:hypercrud.browser/field ctx) @(:hypercrud.browser/schemas ctx))
                              (map fiddle/auto-link))]
-      (update ctx :hypercrud.browser/fiddle (partial r/fmap (r/partial f console-links))))))
+      (update ctx :hypercrud.browser/fiddle #(r/fmap->> % (f console-links))))))

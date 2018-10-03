@@ -54,7 +54,7 @@
     fiddle))
 
 (defn meta-request-for-fiddle [ctx]
-  (if @(r/fmap (r/comp system-fiddle/system-fiddle? first) (:hypercrud.browser/route ctx))
+  (if @(r/fmap-> (:hypercrud.browser/route ctx) first system-fiddle/system-fiddle?)
     (either/right nil)
     (try-either
       (let [fiddle @(r/fmap first (:hypercrud.browser/route ctx))

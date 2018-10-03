@@ -140,7 +140,7 @@
      (if-let [link (data/select-here ctx :hf/detach)]
        [hyperfiddle.ui/ui-from-link link ctx props "detach"])
 
-     (->> (r/track data/select-all ctx :hf/rel)
+     (->> (data/select-all-r ctx :hf/rel)
           (r/unsequence (r/partial stable-relation-key ctx))
           (map (fn [[rv k]]
                  ^{:key k}                                  ; Use the userland class as the label (ignore hf/rel)

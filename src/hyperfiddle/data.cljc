@@ -28,9 +28,8 @@
                    (mapcat (fn [[field path-segment]]
                              (cond->> [[path-segment]]
                                (context/find-element-segment? path-segment) ; this only happens once at the top for relation queries
-                               (into (->> (r/fmap ::field/children field)
-                                          (r/unsequence ::field/path-segment)
-                                          (mapv (fn [[m-child-field child-segment]]
+                               (into (->> @(r/fmap->> field ::field/children (map ::field/path-segment))
+                                          (mapv (fn [child-segment]
                                                   [path-segment child-segment]))))))))]
     (if-not (= :relation (-> ctx :hypercrud.browser/field deref ::field/level)) ; omit relation-[]
       (conj (vec paths) [])                                 ; entity-[]
@@ -44,7 +43,7 @@
            [segment & xs] (contrib.data/ancestry-divergence target-path common-path)]
       (if-not segment
         true                                                ; finished
-        (let [child-field (r/fmap (r/partial context/find-child-field segment (:hypercrud.browser/schemas ctx)) field)]
+        (let [child-field (r/fmap->> field (context/find-child-field segment (:hypercrud.browser/schemas ctx)))]
           (case @(r/fmap ::field/cardinality child-field)
             :db.cardinality/one (recur child-field xs)
             :db.cardinality/many false
@@ -62,21 +61,21 @@
   (let [this-path (:hypercrud.browser/path ctx)]
     (not= this-path (:hypercrud.browser/path (link-path-floor ctx link-path)))))
 
-(defn ^:export select-all "List[Link]. Find the closest match."
-  ; Not reactive! Track it outside. (r/track data/select-all ctx rel ?class)
+(defn select-all-r "List[Link]. Find the closest match."
   ([ctx] {:pre [ctx]}
-   (->> @(r/fmap :fiddle/links (:hypercrud.browser/fiddle ctx)) ; Reaction deref is why this belongs in a track
-        (filter (comp (partial deps-satisfied? ctx)
-                      link/read-path :link/path))))
+   (r/fmap->> (:hypercrud.browser/fiddle ctx)
+              :fiddle/links
+              (filter (r/comp (r/partial deps-satisfied? ctx) link/read-path :link/path))))
   ([ctx rel] {:pre [ctx rel]}
-   (->> (select-all ctx)
-        (filter #(= rel (:link/rel %)))))
+   (r/fmap->> (select-all-r ctx)
+              (filter (r/comp (r/partial = rel) :link/rel))))
   ([ctx rel ?corcs]
-   (->> (select-all ctx rel)
-        (filter (fn [link]
-                  (clojure.set/superset?
-                    (set (:link/class link))                ; add more stuff here
-                    (contrib.data/xorxs ?corcs)))))))
+   (r/fmap->> (select-all-r ctx rel)
+              (filter (r/comp (r/partial r/last-arg-first clojure.set/superset? (contrib.data/xorxs ?corcs))
+                              ;  add more stuff here
+                              set :link/class)))))
+
+(defn ^:export select-all "List[Link]. Find the closest match." [& args] @(apply select-all-r args))
 
 (defn validate-one+ [rel class links]
   (let [n (count links)]
@@ -87,15 +86,15 @@
 
 (defn ^:export select-here+ [ctx rel & [?corcs]]
   {:pre [ctx]}
-  (->> (r/track select-all ctx rel ?corcs)
-       (r/fmap (r/partial filter (r/comp (r/partial = (:hypercrud.browser/path ctx)) link/read-path :link/path)))
-       (r/fmap (r/partial validate-one+ rel ?corcs))
+  (->> (r/fmap->> (select-all-r ctx rel ?corcs)
+                  (filter (r/comp (r/partial = (:hypercrud.browser/path ctx)) link/read-path :link/path))
+                  (validate-one+ rel ?corcs))
        r/apply-inner-r
        deref))
 
 (defn ^:export select+ [ctx rel & [?corcs]]                 ; Right[Reaction[Link]], Left[String]
-  (->> (r/track select-all ctx rel ?corcs)
-       (r/fmap (r/partial validate-one+ rel ?corcs))
+  (->> (r/fmap->> (select-all-r ctx rel ?corcs)
+                  (validate-one+ rel ?corcs))
        r/apply-inner-r
        deref))
 

@@ -97,7 +97,9 @@
                       (eval-string+ (str "(fn [ctx] \n" formula-str "\n)"))
                       (either/right (constantly (constantly nil))))
              f (try-either (f-wrap ctx))
-             colored-args (try-either @(r/fmap (r/comp f (r/partial pull->colored-eid ctx)) (or (:hypercrud.browser/data ctx) (r/track identity nil))))
+             colored-args (try-either @(r/fmap->> (or (:hypercrud.browser/data ctx) (r/track identity nil))
+                                                  (pull->colored-eid ctx)
+                                                  f))
              :let [route (id->tempid (router/canonicalize fiddle-id (normalize-args colored-args)) ctx)]]
         (return route)))))
 
