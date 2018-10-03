@@ -112,7 +112,7 @@
         level (::field/level field)
         segment (last (:hypercrud.browser/path ctx))
         segment-type (context/segment-type-2 segment)       ; :element means :relation? no, naked. Relation is ortho
-        has-child-fields (r/fmap-> (:hypercrud.browser/field ctx) ::field/children nil? not)]
+        has-child-fields @(r/fmap-> (:hypercrud.browser/field ctx) ::field/children nil? not)]
     (cond
       (field/identity-segment? field) (dbid-label _ ctx props)
       :else (match* [level segment-type segment has-child-fields]
