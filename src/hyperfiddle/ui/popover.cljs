@@ -1,7 +1,6 @@
 (ns hyperfiddle.ui.popover
   (:require
     [contrib.css :refer [css]]
-    [contrib.data :refer [abs-normalized]]
     [contrib.eval :as eval]
     [contrib.keypress :refer [with-keychord]]
     [contrib.reactive :as r]
@@ -118,7 +117,7 @@
                                              @(r/fmap :db/id link-ref)
                                              (:route props)
                                              @(r/fmap (r/partial stable-entity-key ctx) (:hypercrud.browser/fiddle ctx))]
-                                            hash abs-normalized - str)]
+                                            hash str)]
                        (branch/encode-branch-child (:branch ctx) child-id-str))
         popover-id child-branch                             ; just use child-branch as popover-id
         child-branch (when @(r/fmap (r/comp some? blank->nil :link/tx-fn) link-ref)

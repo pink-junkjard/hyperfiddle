@@ -58,12 +58,11 @@
         props (-> props
                   (update :on-change (fn [on-change]
                                        (fn [e]
-                                         (let [select-value (blank->nil (.-target.value e))
-                                               id (if select-value
-                                                    (let [v (unwrap #(timbre/warn %) (contrib.reader/read-edn-string+ select-value))
-                                                          legacy-tempid (and (integer? v) (< v 0))]
-                                                      (if legacy-tempid (str v) v)))]
-                                           (on-change id)))))
+                                         (-> (some->> (.-target.value e)
+                                                      blank->nil
+                                                      contrib.reader/read-edn-string+ ; todo why handle this exception? just throw and call it a day
+                                                      (unwrap #(timbre/warn %))) ; instead of terminating on error, the user now transacts a retract
+                                             on-change))))
                   ; Don't disable :select if there are options, we may want to see them. Make it look :disabled but allow the click
                   (update :disabled #(or % no-options?))
                   (update :class #(str % (if (:disabled option-props) " disabled"))))

@@ -93,10 +93,6 @@
     (-> (apply hash-map (flatten kwargs))
         (as-> $ (if (seq args) (assoc $ nil args) $)))))
 
-(defn abs-normalized [x]
-  #?(:clj  (if x (Math/abs x) 0)
-     :cljs (js/Math.abs x)))
-
 (defn xorxs [xorxs]
   (cond (vector? xorxs) xorxs
         (set? xorxs) xorxs

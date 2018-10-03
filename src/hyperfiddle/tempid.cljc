@@ -1,6 +1,5 @@
 (ns hyperfiddle.tempid
   (:require
-    [contrib.data :refer [abs-normalized]]
     [contrib.reactive :as r]
     [hypercrud.browser.context :as context]
     [hypercrud.browser.field :as field]
@@ -61,7 +60,7 @@
   (-> (str (:hypercrud.browser/path ctx) "."
            (hash-data (:hypercrud.browser/parent ctx)) "."
            (hash-data ctx))
-      hash abs-normalized - str))
+      hash str))
 
 (defn tempid-from-stage "unstable"
   ([ctx]
@@ -71,7 +70,7 @@
   ([dbname ctx]
    @(r/fmap->> (runtime/state (:peer ctx) [::runtime/partitions])
                (branch/branch-val (context/uri dbname ctx) (:branch ctx))
-               hash abs-normalized - str)))
+               hash str)))
 
 (defn ^:export with-tempid-color "tempids in hyperfiddle are colored, because we need the backing dbval in order to reverse hydrated
   dbid back into their tempid for routing"
