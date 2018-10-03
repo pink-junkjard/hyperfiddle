@@ -27,7 +27,7 @@
 
    {:db/ident :hyperfiddle/owners :db/valueType :db.type/uuid :db/cardinality :db.cardinality/many}
 
-   {:db/ident :domain/aliases :db/valueType :db.type/string :db/cardinality :db.cardinality/many :db/unique :db.unique/identity :db/doc "Point your production DNS at the hyperfiddle.net IP and register the domain name here. Aliases are served without the dev toolbar."}
+   {:db/ident :domain/aliases :db/valueType :db.type/string :db/cardinality :db.cardinality/many :db/unique :db.unique/value :db/doc "Point your production DNS at the hyperfiddle.net IP and register the domain name here. Aliases are served without the dev toolbar."}
    {:db/ident :domain/code :db/valueType :db.type/string :db/cardinality :db.cardinality/one :db/doc "a ClojureScript form for storing view functions, evaluated on page load"}
    {:db/ident :domain/css :db/valueType :db.type/string :db/cardinality :db.cardinality/one}
    {:db/ident :domain/disable-javascript :db/valueType :db.type/boolean :db/cardinality :db.cardinality/one :db/doc "Elide Hyperfiddle javascript in production domains so client doesn't have to parse/eval it, this will decrease time-to-interaction on static sites like blogs. Counter-intuitively this will probably make your app overall slower because without javascript you can't take advantage of `Cache-control: Immutable` on api responses which get the entire static site in browser cache."}
