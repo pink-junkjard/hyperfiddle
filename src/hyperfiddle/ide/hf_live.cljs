@@ -16,8 +16,8 @@
 (def attr-order [:fiddle/ident :fiddle/type :fiddle/pull-database :fiddle/pull :fiddle/query
                  :fiddle/renderer :fiddle/css :fiddle/markdown :fiddle/links :fiddle/hydrate-result-as-fiddle])
 
-(defn fiddle-src [attrs val ctx-real props]
-  [fiddle-src/fiddle-src-renderer val ctx-real (assoc props :embed-mode true)]
+(defn fiddle-src [attrs initial-tab val ctx-real props]
+  [fiddle-src/fiddle-src-renderer val ctx-real (assoc props :embed-mode true :initial-tab initial-tab)]
   #_(let [attrs (or (seq attrs)
                     (clojure.set/intersection
                       (-> @(:hypercrud.browser/data ctx-real)
@@ -60,7 +60,9 @@
                         (dissoc ctx :hyperfiddle.ui.markdown-extensions/unp))]
               [hyperfiddle.ui/iframe ctx (-> props (update :class css "hf-live") (assoc :user-renderer f))])])
          (let [as-edn (r/cursor state [:edn-fiddle])
-               f (r/partial (if @as-edn result-edn fiddle-src) fiddle-attrs)]
+               f (if @as-edn
+                   (r/partial result-edn fiddle-attrs)
+                   (r/partial fiddle-src fiddle-attrs (:initial-tab props)))]
            [:div.src.col-sm.order-sm-1.order-xs-2
             [:div "Interactive Hyperfiddle editor:" [contrib.ui/easy-checkbox-boolean " EDN?" as-edn {:class "hf-live"}]]
             [hyperfiddle.ui/iframe ctx {:class (css (:class props) "devsrc hf-live")

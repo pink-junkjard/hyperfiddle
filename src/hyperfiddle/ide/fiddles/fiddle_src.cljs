@@ -98,7 +98,7 @@
                                        [:div (link :hf/remove :fiddle ctx "Remove fiddle" {:class "btn-outline-danger"})])))))})
 
 (defn fiddle-src-renderer [val ctx props]
-  (let [tab-state (r/atom :query)]
+  (let [tab-state (r/atom (if (contains? tabs (:initial-tab props)) (:initial-tab props) :query))]
     (fn [val ctx {:keys [:embed-mode] :as props}]
       (let [ctx (shadow-fiddle ctx)]
         [:div (select-keys props [:class])
