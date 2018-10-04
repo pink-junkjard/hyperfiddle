@@ -6,6 +6,6 @@
         com.taoensso/timbre {:mvn/version "4.10.0"}
         funcool/promesa {:mvn/version "1.9.0"}
         io.pedestal/pedestal.service {:mvn/version "0.5.4"}
-        ;org.apache.commons/commons-lang3 {:mvn/version "3.4"}
+        org.apache.commons/commons-lang3 {:mvn/version "3.8.1"}
         org.clojure/clojure {:mvn/version "1.9.0"}
         }}
