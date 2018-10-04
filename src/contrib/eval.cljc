@@ -24,11 +24,13 @@
                                                        hc-data-readers
                                                        {'entity hc-readers/entity
                                                         'uri hc-readers/uri})]
-               (let [{value :value error :error :as eval-result} (cljs/eval-str (atom -cljs-empty-state-val)
-                                                                                code-str'
-                                                                                nil
-                                                                                {:eval cljs/js-eval}
-                                                                                identity)]
+               (let [r (atom nil)
+                     _ (cljs/eval-str (atom -cljs-empty-state-val)
+                                      code-str'
+                                      nil
+                                      {:eval cljs/js-eval}
+                                      (partial reset! r))
+                     {value :value error :error :as eval-result} @r]
                  (cond
                    error (throw (ex-info "cljs eval failed" {:cljs-input code-str :cljs-result eval-result}))
                    :else value))))))
