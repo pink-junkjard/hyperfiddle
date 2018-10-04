@@ -2,12 +2,13 @@
   (:require
     [clojure.test :refer [deftest is]]
     [contrib.reactive :as r]
+    #?(:cljs [hyperfiddle.ui])                              ; hack for circular dep hack
     [hyperfiddle.fiddle :refer [data-defaults fiddle-defaults]]))
 
 
 (deftest test-data-defaults []
-                            (is (not (nil? (:fiddle/query (data-defaults {:fiddle/type :query})))))
-                            (is (not (nil? (:fiddle/pull (data-defaults {:fiddle/type :entity}))))))
+  (is (not (nil? (:fiddle/query (data-defaults {:fiddle/type :query})))))
+  (is (not (nil? (:fiddle/pull (data-defaults {:fiddle/type :entity}))))))
 
 #?(:cljs
    (deftest test-ui-defaults []
