@@ -36,7 +36,7 @@
                                {}))
                   (update :ANALYTICS #(not= % "false"))     ; todo this check is garbage
                   (update :HF_HOSTNAMES #(string/split % #";"))
-                  (update :SERVICE_PORT #(Integer/parseInt %))
+                  (update :SERVICE_PORT #(#?(:clj Integer/parseInt :cljs js/parseInt) %))
                   (update-existing :HF_ALIAS_HOSTNAMES #(string/split % #";"))))]
     (doseq [v required]
       (assert (not (nil? (get env v))) (str "Environment variable for '" v "' not found")))
