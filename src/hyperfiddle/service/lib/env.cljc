@@ -15,9 +15,11 @@
                    :AUTH0_DOMAIN
                    :AUTH0_CLIENT_ID
                    :AUTH0_CLIENT_SECRET
+                   :SERVICE_HOST
+                   :SERVICE_PORT
                    :STATIC_RESOURCES
                    :NODE_PORT}
-        optional #{:ANALYTICS :HF_ALIAS_HOSTNAMES}
+        optional #{:ANALYTICS :HF_ALIAS_HOSTNAMES :SERVICE_HOST}
         env (let [env #?(:clj  (let [raw-env (System/getenv)]
                                  (reify
                                    ILookup
@@ -34,6 +36,7 @@
                                {}))
                   (update :ANALYTICS #(not= % "false"))     ; todo this check is garbage
                   (update :HF_HOSTNAMES #(string/split % #";"))
+                  (update :SERVICE_PORT #(Integer/parseInt %))
                   (update-existing :HF_ALIAS_HOSTNAMES #(string/split % #";"))))]
     (doseq [v required]
       (assert (not (nil? (get env v))) (str "Environment variable for '" v "' not found")))
