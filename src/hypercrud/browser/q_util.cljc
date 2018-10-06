@@ -3,7 +3,9 @@
     [cats.core :refer [mlet]]
     [cats.monad.either :as either]
     [clojure.string]
+    [contrib.ct :refer [unwrap]]
     [contrib.data :refer [parse-query-element]]
+    [contrib.reader]
     [contrib.try$ :refer [try-either]]
     [hypercrud.client.core :as hc]
     [hypercrud.types.ThinEntity :refer [#?(:cljs ThinEntity)]]
@@ -47,3 +49,8 @@
     (cond #_#_(seq unused) (either/left {:message "unused param" :data {:query q :params params' :unused unused}})
       (not= (count params') (count query-holes)) (either/left {:message "missing params" :data {:query q :params params' :unused unused}})
       :else-valid (either/right params'))))
+
+(defn args [s-query]
+  (let [q (unwrap (constantly nil) (contrib.reader/memoized-read-edn-string+ s-query))
+        holes (unwrap (constantly nil) (try-either (parse-holes q)))]
+    (remove #(clojure.string/starts-with? % "$") holes)))
