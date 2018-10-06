@@ -6,7 +6,6 @@
     [contrib.ct :refer [unwrap]]
     [contrib.pprint]
     [contrib.reactive :as r]
-    [contrib.reagent :refer [fragment]]
     [contrib.ui]
     [hypercrud.browser.context :as context]
     [hypercrud.browser.field :as field]
@@ -61,12 +60,12 @@
 (def tabs
   {:query (fn [val ctx props]
             (let [props (dissoc props :embed-mode)]
-              (fragment
-                (field [:fiddle/type] ctx (r/partial query-composite-stable ctx) props)
-                (case @(r/cursor (:hypercrud.browser/data ctx) [:fiddle/type])
-                  :entity (field [:fiddle/pull] ctx hyper-control props)
-                  :query (field [:fiddle/query] ctx hyper-control props)
-                  :blank nil))))
+              [:<>
+               (field [:fiddle/type] ctx (r/partial query-composite-stable ctx) props)
+               (case @(r/cursor (:hypercrud.browser/data ctx) [:fiddle/type])
+                 :entity (field [:fiddle/pull] ctx hyper-control props)
+                 :query (field [:fiddle/query] ctx hyper-control props)
+                 :blank nil)]))
    :links (fn [val ctx props]
             ; Careful: pass through :embed-mode
             (field [:fiddle/links] ctx links-fiddle/renderer props))
@@ -81,21 +80,21 @@
             (field [:fiddle/css] ctx hyper-control props)))
    :fiddle (fn [val ctx props]
              (let [props (dissoc props :embed-mode)]
-               (fragment
-                 (field [:fiddle/ident] ctx hyper-control (assoc props :disabled true))
-                 (field [:fiddle/hydrate-result-as-fiddle] ctx hyper-control props)
-                 [:div.p "Additional attributes"]
-                 (->> @(r/fmap->> (:hypercrud.browser/field ctx)
-                                  ::field/children
-                                  (map ::field/path-segment)
-                                  (remove (r/comp (r/partial = "fiddle") namespace))
-                                  (remove (r/partial = :db/id)))
-                      (map (fn [segment]
-                             ^{:key (str [segment])}
-                             [field [segment] ctx nil]))
-                      (doall))
-                 (field [:db/id] ctx (fn [val ctx props]
-                                       [:div (link :hf/remove :fiddle ctx "Remove fiddle" {:class "btn-outline-danger"})])))))})
+               [:<>
+                (field [:fiddle/ident] ctx hyper-control (assoc props :disabled true))
+                (field [:fiddle/hydrate-result-as-fiddle] ctx hyper-control props)
+                [:div.p "Additional attributes"]
+                (->> @(r/fmap->> (:hypercrud.browser/field ctx)
+                                 ::field/children
+                                 (map ::field/path-segment)
+                                 (remove (r/comp (r/partial = "fiddle") namespace))
+                                 (remove (r/partial = :db/id)))
+                     (map (fn [segment]
+                            ^{:key (str [segment])}
+                            [field [segment] ctx nil]))
+                     (doall))
+                (field [:db/id] ctx (fn [val ctx props]
+                                      [:div (link :hf/remove :fiddle ctx "Remove fiddle" {:class "btn-outline-danger"})]))]))})
 
 (defn fiddle-src-renderer [val ctx props]
   (let [tab-state (r/atom (if (contains? tabs (:initial-tab props)) (:initial-tab props) :query))]

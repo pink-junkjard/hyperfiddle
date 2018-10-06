@@ -3,7 +3,6 @@
     [cats.core :refer [mlet return]]
     [contrib.ct :refer [unwrap]]
     [contrib.reactive :as r]
-    [contrib.reagent :refer [fragment]]
     [hypercrud.browser.base :as base]
     [hypercrud.browser.context :as context]
     [hyperfiddle.ide.console-links :refer [system-link?]]
@@ -11,10 +10,10 @@
 
 
 (defn link-fiddle [val ctx {:keys [:embed-mode] :as props}]
-  (fragment
-    [hyper-control val ctx (dissoc props :embed-mode)]
-    (when-not embed-mode
-      (link :hf/affix :fiddle ctx "affix" {:disabled (system-link? @(r/fmap :db/id (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data])))}))))
+  [:<>
+   [hyper-control val ctx (dissoc props :embed-mode)]
+   (when-not embed-mode
+     (link :hf/affix :fiddle ctx "affix" {:disabled (system-link? @(r/fmap :db/id (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data])))}))])
 
 (defn- target-ide-route [ctx]
   (hyperfiddle.ide/ide-route (context/target-route ctx) ctx))

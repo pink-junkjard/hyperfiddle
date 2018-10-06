@@ -2,14 +2,15 @@
   (:require
     [contrib.reactive-debug :refer [track-cmp]]
     [goog.object]
+    [prop-types :as prop-types]
     [reagent.core :as reagent]))
 
 
-(defn fragment [react-key & xs]
+(defn ^:deprecated fragment [react-key & xs]
   (let [[k xs] (if (keyword? react-key)
                  [react-key xs]
                  [:_ (cons react-key xs)])]
-    (js/reactCreateFragment (clj->js {k (map reagent/as-element xs)}))))
+    (into [:<> {:key (str k)}] xs)))
 
 ;(defn wrap-naked-string "wrap naked strings into divs" [C v]
 ;  (if (string? v) [:div v] v)
@@ -24,7 +25,7 @@
     {:display-name "with-react-context"
      :reagent-render (fn [context template]
                        template)
-     :child-context-types #js {"cljs-context" js/propTypes.object}
+     :child-context-types #js {"cljs-context" (.-object prop-types)}
      :get-child-context (fn []
                           (this-as this
                             (let [[_ context template] (reagent/argv this)]
@@ -33,7 +34,7 @@
 
 (defn from-react-context "extract react context" [f]
   (reagent/create-class
-    {:context-types #js {"cljs-context" js/propTypes.object}
+    {:context-types #js {"cljs-context" (.-object prop-types)}
      :reagent-render (fn [& args]
                        (let [context (goog.object/get (.-context (reagent/current-component)) "cljs-context")]
                          (into [f context] args)))

@@ -73,7 +73,7 @@
              ; Really need a way to single here from below, to get rid of div.p
              ; So that means signalling via this :children value
              (if (::unp ctx)
-               (js/reactCreateFragment #js {"_" (:children props)})
+               (into [:<>] (:children props))
                [:div.p (dissoc props :children) (:children props)]))
 
        "span" (fn [content argument props ctx]

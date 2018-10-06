@@ -2,7 +2,6 @@
   (:require
     [contrib.pprint :refer [pprint-str]]
     [contrib.reactive :as r]
-    [contrib.reagent :refer [fragment]]
     [contrib.ui :refer [markdown]]
     [hypercrud.types.Err :as Err]
     [hyperfiddle.foundation :as foundation]))
@@ -35,10 +34,10 @@
      #_(if (:query data) [markdown (str "```\n" (:query data) "\n```")])]))
 
 (defn error-block-with-stage [ctx e & [?class]]
-  (fragment
-    [error-block e ?class]
-    #_(if (some-> e e->map :data :ident (= :db.error/datoms-conflict)))
-    [foundation/staging ctx]))
+  [:<>
+   [error-block e ?class]
+   #_(if (some-> e e->map :data :ident (= :db.error/datoms-conflict)))
+   [foundation/staging ctx]])
 
 (defn error-comp [ctx]
   ; :find-element :attribute :value

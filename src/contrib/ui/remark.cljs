@@ -1,9 +1,13 @@
 (ns contrib.ui.remark
   (:require
+    ["@hyperfiddle/remark-generic-extensions/lib/browser" :as remark-generic-extensions]
     [clojure.set]
     [clojure.string]
     [goog.object]
-    [reagent.core :as reagent]))
+    [prop-types :as prop-types]
+    [reagent.core :as reagent]
+    [remark :as remark]
+    [remark-react :as remark-react]))
 
 
 (defn adapt-props [props]
@@ -14,7 +18,7 @@
 (defn extension [name f]
   (reagent/create-class
     {:display-name (str "markdown-" name)
-     :context-types #js {:ctx js/propTypes.object}
+     :context-types #js {:ctx (.-object prop-types)}
      :reagent-render (fn [{:keys [content argument] :as props}]
                        (let [ctx (goog.object/get (.-context (reagent/current-component)) "ctx")
                              content (if-not (= content "undefined") content)
@@ -31,18 +35,18 @@
                                 (assoc acc k (extension k v)))
                               (empty extensions)
                               extensions)]
-    (cond-> (js/remark)
-      (exists? js/remarkComments) (.use js/remarkComments #js {"beginMarker" "" "endMarker" ""})
-      (exists? js/remarkToc) (.use js/remarkToc)
-      (exists? js/remarkGenericExtensions) (.use js/remarkGenericExtensions
-                                                 (clj->js
-                                                   {"elements" (into {} (map vector (keys extensions) (repeat {"html" {"properties" {"content" "::content::" "argument" "::argument::"}}})))}))
-      (exists? js/remarkReact) (.use js/remarkReact
-                                     (clj->js
-                                       {"sanitize" false
-                                        "remarkReactComponents" (reduce-kv (fn [m k v]
-                                                                             (assoc m k (reagent/reactify-component v)))
-                                                                           {} extensions)})))))
+    (-> (remark)
+        (.use remark-generic-extensions
+              (clj->js
+                {"elements" (into {} (map vector (keys extensions) (repeat {"html" {"properties" {"content" "::content::" "argument" "::argument::"}}})))}))
+        (.use remark-react (clj->js
+                             {"sanitize" false
+                              "remarkReactComponents" (reduce-kv (fn [m k v]
+                                                                   (assoc m k (reagent/reactify-component v)))
+                                                                 {} extensions)}))
+        (cond->
+          (exists? js/remarkComments) (.use js/remarkComments #js {"beginMarker" "" "endMarker" ""})
+          (exists? js/remarkToc) (.use js/remarkToc)))))
 
 (defn remark! [& [extensions]]
   ; remark creates react components which don't evaluate in this stack frame
@@ -62,4 +66,4 @@
            (let [[_ value ?ctx] (reagent/argv this)]
              #js {:ctx ?ctx})))
 
-       :child-context-types #js {:ctx js/propTypes.object}})))
+       :child-context-types #js {:ctx (.-object prop-types)}})))

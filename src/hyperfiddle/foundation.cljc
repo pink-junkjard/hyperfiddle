@@ -9,7 +9,6 @@
     [contrib.eval :as eval]
     [contrib.reactive :as r]
     [contrib.reader :refer [read-string read-edn-string!]]
-    #?(:cljs [contrib.reagent :refer [fragment]])
     [contrib.pprint :refer [pprint-datoms-str]]
     [contrib.string :refer [or-str]]
     #?(:cljs [contrib.ui :refer [code debounced markdown validated-cmp]])
@@ -173,16 +172,15 @@
                    (reset! selected-uri (or (hyperfiddle.domain/dbname->uri "$" @(runtime/state (:peer ctx) [::runtime/domain]))
                                             @source-uri)))
                stage (runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :stage @selected-uri])]
-           (fragment
-             :topnav
-             [horizontal-tabs
-              :model selected-uri
-              :tabs tabs-definition
-              :on-change change-tab]
-             ^{:key (str @selected-uri)}
-             [staging-control ctx selected-uri]
-             (when child
-               [child selected-uri stage ctx])))))))
+           [:<> {:key "topnav"}
+            [horizontal-tabs
+             :model selected-uri
+             :tabs tabs-definition
+             :on-change change-tab]
+            ^{:key (str @selected-uri)}
+            [staging-control ctx selected-uri]
+            (when child
+              [child selected-uri stage ctx])])))))
 
 #?(:cljs
    (defn leaf-view [ctx f]

@@ -9,7 +9,6 @@
     "eventsource": "0.2.1",
     "prop-types": "15.6.1",
     "react": "16.2.0",
-    "react-addons-create-fragment": "^15.6.2",
     "react-dom": "16.2.0",
     "remark": "^8.0.0",
     "remark-react": "^4.0.1",

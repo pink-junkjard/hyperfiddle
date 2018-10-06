@@ -3,7 +3,6 @@
   (:require
     [cats.monad.either :refer [branch]]
     [contrib.reactive :as r]
-    [contrib.reagent :refer [fragment]]
     [contrib.ui :refer [debounced]]                         ; avoid collisions
     [contrib.ui.recom-date :refer [recom-date]]
     [contrib.ui.tooltip :refer [tooltip-thick]]
@@ -74,26 +73,25 @@
 (defn dbid-label [_ ctx & [props]]
   (let [prompt (some->> (:hypercrud.browser/field ctx) (r/fmap ::field/label) deref)
         parent-ctx (:hypercrud.browser/parent ctx)]
-    (apply fragment
-           (label-with-docs prompt (semantic-docstring ctx) props)
-           ; dbid links are at parent path, but we don't always have a parent #543
-           (condp = (some-> parent-ctx cardinality)
+    (into [:<> (label-with-docs prompt (semantic-docstring ctx) props)]
+          ; dbid links are at parent path, but we don't always have a parent #543
+          (condp = (some-> parent-ctx cardinality)
 
-             ; :one is handled by the body
-             :db.cardinality/one nil
+            ; :one is handled by the body
+            :db.cardinality/one nil
 
-             :db.cardinality/many
-             [(if-let [link (data/select-here parent-ctx :hf/affix)]
-                [hyperfiddle.ui/ui-from-link link parent-ctx props "affix"])
-              (if-let [link (data/select-here parent-ctx :hf/new)]
-                [hyperfiddle.ui/ui-from-link link parent-ctx props "new"])]
+            :db.cardinality/many
+            [(if-let [link (data/select-here parent-ctx :hf/affix)]
+               [hyperfiddle.ui/ui-from-link link parent-ctx props "affix"])
+             (if-let [link (data/select-here parent-ctx :hf/new)]
+               [hyperfiddle.ui/ui-from-link link parent-ctx props "new"])]
 
-             ; This hack detects FindCol, which has no parent cardinality but does need the links
-             nil [(if-let [link (some-> parent-ctx (data/select-here :hf/affix))]
-                    [hyperfiddle.ui/ui-from-link link parent-ctx props "affix"])
-                  (if-let [link (some-> parent-ctx (data/select-here :hf/new))]
-                    [hyperfiddle.ui/ui-from-link link parent-ctx props "new"])]
-             ))))
+            ; This hack detects FindCol, which has no parent cardinality but does need the links
+            nil [(if-let [link (some-> parent-ctx (data/select-here :hf/affix))]
+                   [hyperfiddle.ui/ui-from-link link parent-ctx props "affix"])
+                 (if-let [link (some-> parent-ctx (data/select-here :hf/new))]
+                   [hyperfiddle.ui/ui-from-link link parent-ctx props "new"])]
+            ))))
 
 (defn id-prompt [ctx val]
   (pr-str (smart-entity-identifier ctx val)))

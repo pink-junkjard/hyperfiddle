@@ -47,8 +47,7 @@
     (invert-route (:hypercrud.browser/domain ctx) route invert-id)))
 
 (defn route [ctx route]                                     ; circular, this can be done sooner
-  {:pre [(if-let [params (second route)] (vector? params) true) ; validate normalized already
-         (some-> ctx :hypercrud.browser/domain :domain/fiddle-database :database/uri)]}
+  {:pre [(if-let [params (second route)] (vector? params) true)]} ; validate normalized already
   (assoc ctx :hypercrud.browser/route
              ; route should be a ref, provided by the caller, that we fmap over
              ; because it is not, this is obviously fragile and will break on any change to the route

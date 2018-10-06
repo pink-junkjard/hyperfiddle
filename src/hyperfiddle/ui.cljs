@@ -10,7 +10,6 @@
     [contrib.data :refer [take-to]]
     [contrib.pprint :refer [pprint-str]]
     [contrib.reactive :as r]
-    [contrib.reagent :refer [fragment]]
     [contrib.reagent-native-events :refer [native-click-listener]]
     [contrib.string :refer [blank->nil]]
     [contrib.ui]
@@ -61,14 +60,13 @@
 (declare fiddle-xray)
 
 (defn entity-links-iframe [val ctx & [props]]
-  (fragment
-    (->> (r/fmap->> (data/select-all-r ctx :hf/iframe)
-                    (remove (r/comp (r/partial data/deps-over-satisfied? ctx) link/read-path :link/path)))
-         (r/unsequence (r/partial stable-relation-key ctx))
-         (map (fn [[rv k]]
-                ^{:key k}
-                [ui-from-link rv ctx props]))
-         doall)))
+  (->> (r/fmap->> (data/select-all-r ctx :hf/iframe)
+                  (remove (r/comp (r/partial data/deps-over-satisfied? ctx) link/read-path :link/path)))
+       (r/unsequence (r/partial stable-relation-key ctx))
+       (map (fn [[rv k]]
+              ^{:key k}
+              [ui-from-link rv ctx props]))
+       (into [:<>])))
 
 (defn control "this is a function, which returns component"
   [val ctx & [props]]                                       ; returns Func[(ref, props, ctx) => DOM]
@@ -222,16 +220,16 @@ User renderers should not be exposed to the reaction."
        (fn [ctx]                                            ; fresh clean ctx
          (let [on-click (r/partial click-fn @(:hypercrud.browser/route ctx))]
            [native-click-listener {:on-click on-click}
-            (fragment
-              [ui-comp ctx (update props :class css "ui")]
-              [fiddle-css-renderer (r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/css])])]))
+            [:<>
+             [ui-comp ctx (update props :class css "ui")]
+             [fiddle-css-renderer (r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/css])]]]))
        (fn [ctx]
          (let [on-click (r/partial click-fn @(:hypercrud.browser/route ctx))]
            ; use the stale ctx's route, otherwise alt clicking while loading could take you to the new route, which is jarring
            [native-click-listener {:on-click on-click}
-            (fragment
-              [ui-comp ctx (update props :class css "hyperfiddle-loading" "ui")]
-              [fiddle-css-renderer (r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/css])])]))])))
+            [:<>
+             [ui-comp ctx (update props :class css "hyperfiddle-loading" "ui")]
+             [fiddle-css-renderer (r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/css])]]]))])))
 
 (letfn [(prompt [link-ref ?label]
           (or ?label (->> (conj (set @(r/fmap :link/class link-ref))
@@ -393,10 +391,8 @@ User renderers should not be exposed to the reaction."
      [:a {:href "~entity('$','tempid')"} [:code "~entity('$','tempid')"]] "."]))
 
 (defn form "Not an abstraction." [fields val ctx & [props]]
-  (apply
-    fragment
-    (keyword (str (data/row-keyfn ctx val)))
-    (fields (assoc ctx ::layout :hyperfiddle.ui.layout/block))))
+  (into [:<> {:key (str (data/row-keyfn ctx val))}]
+        (fields (assoc ctx ::layout :hyperfiddle.ui.layout/block))))
 
 (defn columns [m-field relative-path field ctx & [props]]
   (concat
@@ -429,18 +425,18 @@ User renderers should not be exposed to the reaction."
 (defn ^:export result "Default result renderer. Invoked as fn, returns seq-hiccup, hiccup or
 nil. call site must wrap with a Reagent component"          ; is this just hyper-control ?
   [val ctx & [props]]
-  (fragment
-    (hint val ctx props)
-    (let [type @(r/fmap :fiddle/type (:hypercrud.browser/fiddle ctx))
-          level @(r/fmap ::field/level (:hypercrud.browser/field ctx))]
-      (match* [type level]
-        [:blank _] nil
-        [:query :relation] [table (r/partial columns-relation-product field) ctx props]
-        [:query :tuple] [form (r/partial columns-relation-product field) val ctx props]
-        [_ _] (pull field val ctx props)))
+  [:<>
+   (hint val ctx props)
+   (let [type @(r/fmap :fiddle/type (:hypercrud.browser/fiddle ctx))
+         level @(r/fmap ::field/level (:hypercrud.browser/field ctx))]
+     (match* [type level]
+       [:blank _] nil
+       [:query :relation] [table (r/partial columns-relation-product field) ctx props]
+       [:query :tuple] [form (r/partial columns-relation-product field) val ctx props]
+       [_ _] (pull field val ctx props)))
 
-    ; Unify with pull? What about table iframes
-    [field [] ctx entity-links-iframe (assoc props :label-fn (r/constantly nil #_[:div "result iframes"]))]))
+   ; Unify with pull? What about table iframes
+   [field [] ctx entity-links-iframe (assoc props :label-fn (r/constantly nil #_[:div "result iframes"]))]])
 
 (def ^:dynamic markdown)                                    ; this should be hf-contrib or something
 

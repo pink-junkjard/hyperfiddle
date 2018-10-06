@@ -7,7 +7,6 @@
     [contrib.ct :refer [unwrap]]
     [contrib.reactive :as r]
     [contrib.reader :refer [read-edn-string+]]
-    #?(:cljs [contrib.reagent :refer [fragment]])
     [contrib.rfc3986 :refer [split-fragment]]
     [contrib.string :refer [empty->nil]]
     [contrib.uri :refer [->URI]]
@@ -168,38 +167,35 @@
      (let [src-mode (let [[_ _ _ frag] route] (topnav/src-mode? frag)) ; Immoral - :src bit is tunneled in userland fragment space
            ide-ctx (page-ide-context ctx)
            {:keys [:active-ide?]} (runtime/host-env (:peer ctx))]
-       (fragment
-         :view-page
+       [:<> {:key "view-page"}
+        ; Topnav
+        (when active-ide?
+          [ui/iframe
+           (assoc ide-ctx :hypercrud.ui/error (r/constantly ui-error/error-inline))
+           {:route (topnav-route route ctx)
+            :class "hidden-print"}])
 
-         ; Topnav
-         (when active-ide?
-           [ui/iframe
-            (assoc ide-ctx :hypercrud.ui/error (r/constantly ui-error/error-inline))
-            {:route (topnav-route route ctx)
-             :class "hidden-print"}])
+        ; Content area
+        (if (magic-ide-fiddle? fiddle (get-in ctx [:hypercrud.browser/domain :domain/ident]))
 
-         ; Content area
-         (if (magic-ide-fiddle? fiddle (get-in ctx [:hypercrud.browser/domain :domain/ident]))
+          ^{:key :primary-content}
+          [ui/iframe ide-ctx {:route route :class "devsrc"}] ; primary, blue background (IDE), magic ide route like /hyperfiddle.ide/domain
 
-           ^{:key :primary-content}
-           [ui/iframe ide-ctx {:route route :class "devsrc"}] ; primary, blue background (IDE), magic ide route like /hyperfiddle.ide/domain
+          [:<> {:key "primary-content"}
+           (when (and active-ide? src-mode)                 ; primary, blue background (IDE)   /:posts/:hello-world#:src
+             ; todo can this just be hf-live?
+             [ui/iframe ide-ctx                             ; srcmode is equal to topnav route but a diff renderer
+              {:route (ide-route route ctx)
+               :class (css "devsrc")
+               :user-renderer fiddle-src-renderer}])
 
-           (fragment
-             :primary-content
-             (when (and active-ide? src-mode)               ; primary, blue background (IDE)   /:posts/:hello-world#:src
-               ; todo can this just be hf-live?
-               [ui/iframe ide-ctx                           ; srcmode is equal to topnav route but a diff renderer
-                {:route (ide-route route ctx)
-                 :class (css "devsrc")
-                 :user-renderer fiddle-src-renderer}])
-
-             ; User content view in both prod and ide. What if src-mode and not-dev ? This draws nothing
-             (when-not src-mode                             ; primary, white background (User)   /:posts/:hello-world
-               (let [ctx (page-target-context ctx)]
-                 [ui/iframe ctx {:route route
-                                 :class (css "hyperfiddle-user"
-                                             (when active-ide? "hyperfiddle-ide")
-                                             (some-> ctx :hypercrud.ui/display-mode deref name (->> (str "display-mode-"))))}]))))))))
+           ; User content view in both prod and ide. What if src-mode and not-dev ? This draws nothing
+           (when-not src-mode                               ; primary, white background (User)   /:posts/:hello-world
+             (let [ctx (page-target-context ctx)]
+               [ui/iframe ctx {:route route
+                               :class (css "hyperfiddle-user"
+                                           (when active-ide? "hyperfiddle-ide")
+                                           (some-> ctx :hypercrud.ui/display-mode deref name (->> (str "display-mode-"))))}]))])])))
 
 #?(:cljs
    ; todo should summon route via context/target-route. but there is still tension in the data api for deferred popovers
