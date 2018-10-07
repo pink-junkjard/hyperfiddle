@@ -48,7 +48,9 @@
 
       ; ![:img](https://i.imgur.com/ewdY65H.png)
       ; ![:video](https://i.imgur.com/ewdY65H.png)
-      (keyword? content) [content (merge props {:src (str argument)})]
+      ; This needs type coersion on attributes like "controls"="false"
+      (keyword? content) [content (merge (if argument {:src (str argument)})
+                                         props)]
 
       :else [:code "Bad quick-element: " content])))
 
