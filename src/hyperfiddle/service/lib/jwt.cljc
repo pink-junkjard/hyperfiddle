@@ -1,13 +1,11 @@
 (ns hyperfiddle.service.lib.jwt
-  #?(:clj
-     (:require [clojure.walk :as walk]
-               [contrib.data :refer [map-values]]))
+  (:require
+    #?(:clj [clojure.walk :as walk])
+    #?(:clj [contrib.data :refer [map-values]])
+    #?(:cljs [jsonwebtoken :as jwt]))
   #?(:clj
      (:import (com.auth0.jwt JWT)
               (com.auth0.jwt.algorithms Algorithm))))
-
-#?(:cljs
-   (def jwt (js/require "jsonwebtoken")))
 
 (defn build-verifier [env]
   #?(:clj  (let [jwt-verifier (-> (Algorithm/HMAC256 (:AUTH0_CLIENT_SECRET env))

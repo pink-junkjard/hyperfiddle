@@ -1,5 +1,6 @@
 (ns hyperfiddle.service.node.ssr
   (:require
+    ["react-dom/server" :as dom-server]
     [cats.monad.either :as either]
     [contrib.data :refer [map-values]]
     [contrib.reactive :as r]
@@ -32,7 +33,7 @@
   [component]
   (ratom/flush!)
   (binding [rutil/*non-reactive* true]
-    (.renderToNodeStream (reagent-server/module) (tmpl/as-element component))))
+    (dom-server/renderToNodeStream (tmpl/as-element component))))
 
 (def analytics (load-resource "analytics.html"))
 
