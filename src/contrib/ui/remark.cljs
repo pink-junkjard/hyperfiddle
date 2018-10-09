@@ -6,8 +6,9 @@
     [goog.object]
     [prop-types :as prop-types]
     [reagent.core :as reagent]
-    [remark :as remark]
-    [remark-react :as remark-react]))
+    ;[remark] ; works in node
+    ;[remark-react] ; works in node
+    ))
 
 
 (defn adapt-props [props]
@@ -29,6 +30,20 @@
   (let [c (-> remark-instance (.processSync value #js {"commonmark" true}) .-contents)
         content (-> c .-props .-children) #_"Throw away remark wrapper div"]
     content))
+
+(def remark                                                 ; todo need browser shim for path (path-browserify)
+  (cond
+    (exists? js/remark) js/remark
+    (exists? js/require) (or (js/require "remark")
+                             (throw (js/Error. "require('remark') failed")))
+    :else (throw (js/Error. "js/remark is missing"))))
+
+(def remark-react                                           ; todo npm deps chokes on hast-util-sanitize/lib/github.json
+  (cond
+    (exists? js/remarkReact) js/remarkReact
+    (exists? js/require) (or (js/require "remark-react")
+                             (throw (js/Error. "require('remark-react') failed")))
+    :else (throw (js/Error. "js/remarkReact is missing"))))
 
 (defn -remark-instance! [extensions]
   (let [extensions (reduce-kv (fn [acc k v]
