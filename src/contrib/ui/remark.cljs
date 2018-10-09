@@ -1,6 +1,6 @@
 (ns contrib.ui.remark
   (:require
-    ["@hyperfiddle/remark-generic-extensions/lib/browser.min" :as remark-generic-extensions]
+    ;["@hyperfiddle/remark-generic-extensions/lib/browser.min" :as remark-generic-extensions] ; works in node
     [clojure.set]
     [clojure.string]
     [goog.object]
@@ -44,6 +44,13 @@
     (exists? js/require) (or (js/require "remark-react")
                              (throw (js/Error. "require('remark-react') failed")))
     :else (throw (js/Error. "js/remarkReact is missing"))))
+
+(def remark-generic-extensions
+  (cond
+    (exists? js/remarkGenericExtensions) js/remarkGenericExtensions
+    (exists? js/require) (or (js/require "@hyperfiddle/remark-generic-extensions/lib/browser")
+                             (throw (js/Error. "require('remark-generic-extensions') failed")))
+    :else (throw (js/Error. "js/remarkGenericExtensions is missing"))))
 
 (defn -remark-instance! [extensions]
   (let [extensions (reduce-kv (fn [acc k v]
