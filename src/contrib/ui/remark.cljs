@@ -4,7 +4,7 @@
     [clojure.set]
     [clojure.string]
     [goog.object]
-    [prop-types :as prop-types]
+    [prop-types]
     [reagent.core :as reagent]
     ;[remark] ; works in node
     ;[remark-react] ; works in node

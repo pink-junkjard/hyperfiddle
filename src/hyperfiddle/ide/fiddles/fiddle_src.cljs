@@ -14,7 +14,7 @@
     #_[hyperfiddle.ide.hf-live :as hf-live]                 ;cycle
     [hyperfiddle.ide.system-fiddle :as system-fiddle]
     [hyperfiddle.runtime :as runtime]
-    [hyperfiddle.ui :refer [anchor field hyper-control link markdown]]
+    [hyperfiddle.ui :refer [anchor field hyper-control link]]
     [hyperfiddle.ui.controls :refer [label-with-docs]]
     [re-com.tabs :refer [horizontal-tabs]]
     [taoensso.timbre :as timbre]))
