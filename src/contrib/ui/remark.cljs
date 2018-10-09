@@ -1,6 +1,6 @@
 (ns contrib.ui.remark
   (:require
-    ["@hyperfiddle/remark-generic-extensions/lib/browser" :as remark-generic-extensions]
+    ["@hyperfiddle/remark-generic-extensions/lib/browser.min" :as remark-generic-extensions]
     [clojure.set]
     [clojure.string]
     [goog.object]
