@@ -23,7 +23,10 @@
                    (update :hypercrud.browser/data (partial contrib.reactive/fmap do-filter-reactive))
                    (assoc :hyperfiddle.ui/layout :hyperfiddle.ui.layout/table))]
        (if @is-edn
-         [contrib.ui/code {:value (-> @(:hypercrud.browser/data ctx) (->> (map #(dissoc % :db/id))) (contrib.pprint/pprint-str 1000))
+         [contrib.ui/code {:value (-> @(:hypercrud.browser/data ctx)
+                                      (->> (sort-by :db/ident)
+                                           (map #(dissoc % :db/id)))
+                                      (contrib.pprint/pprint-str 1000))
                            :read-only true}]
          [hyperfiddle.ui/table
           (fn [ctx]
