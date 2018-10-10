@@ -15,12 +15,11 @@
         org.clojure/clojurescript {:mvn/version "1.10.339"}
         org.clojure/core.match {:mvn/version "0.3.0-alpha5"}
         re-com {:mvn/version "2.0.0"}
-        reagent {:mvn/version "0.8.1"}
+        reagent {:mvn/version "0.8.1" :exclusions [cljsjs/react cljsjs/react-dom cljsjs/react-dom-server cljsjs/create-react-class]}
         }
  :aliases {:test-clj {:extra-paths ["test"]
                       :extra-deps
                       {com.datomic/datomic-free {:mvn/version "0.9.5656"}}}
            :test-cljs {:extra-paths ["test"]
-                       :override-deps {reagent {:mvn/version "0.8.1"}}
                        :extra-deps
                        {doo {:mvn/version "0.1.8"}}}}}
