@@ -260,7 +260,7 @@
   (if (>= init-level load-level)
     (p/resolved nil)
     (-> (condp = (inc init-level)
-          LEVEL-GLOBAL-BASIS (actions/refresh-global-basis rt (partial runtime/dispatch! rt) #(deref (runtime/state rt)))
+          LEVEL-GLOBAL-BASIS (actions/refresh-global-basis rt nil (partial runtime/dispatch! rt) #(deref (runtime/state rt)))
           LEVEL-DOMAIN (actions/refresh-domain rt (partial runtime/dispatch! rt) #(deref (runtime/state rt)))
           LEVEL-USER (actions/refresh-user rt (partial runtime/dispatch! rt) #(deref (runtime/state rt)))
           LEVEL-ROUTE (let [branch-aux {:hyperfiddle.ide/foo "page"}] ;ide

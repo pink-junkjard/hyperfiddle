@@ -42,12 +42,12 @@
                      (timbre/info (str "Ignoring response for " hydrate-id)))
                    (throw error))))))
 
-(defn refresh-global-basis [rt dispatch! get-state]
+(defn refresh-global-basis [rt on-finally dispatch! get-state] ; on-finally is a crude hack
   (-> (runtime/global-basis rt)
       (p/then (fn [global-basis]
-                (dispatch! [:set-global-basis global-basis])))
+                (dispatch! (apply batch [:set-global-basis global-basis] on-finally))))
       (p/catch (fn [error]
-                 (dispatch! [:set-error error])
+                 (dispatch! (apply batch [:set-error error] on-finally))
                  (throw error)))))
 
 (defn refresh-partition-basis [rt branch dispatch! get-state]
@@ -164,9 +164,9 @@
                  (dispatch! [:transact!-failure e])
                  (throw e)))
       (p/then (fn [{:keys [tempid->id]}]
-                (dispatch! (apply batch [:transact!-success (keys tx-groups)] post-tx))
                 ; todo should just call foundation/bootstrap-data
-                (mlet [_ (refresh-global-basis rt dispatch! get-state)
+                (mlet [:let [on-finally (into [[:transact!-success (keys tx-groups)]] post-tx)]
+                       _ (refresh-global-basis rt on-finally dispatch! get-state)
                        _ (refresh-domain rt dispatch! get-state)
                        _ (refresh-user rt dispatch! get-state)
                        :let [invert-id (fn [temp-id uri]
