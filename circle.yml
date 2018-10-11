@@ -9,7 +9,7 @@ jobs:
     steps:
       - checkout
       - restore_cache:
-          key: build-{{checksum "boot.properties" }}-{{ checksum "build.boot" }}
+          key: build-{{checksum "boot.properties"}}-{{checksum "build.boot"}}-{{checksum "deps.edn"}}
       - run: boot pom jar -f hyperfiddle-server.jar target
       - persist_to_workspace:
           root: .
@@ -19,7 +19,7 @@ jobs:
             - ~/.m2
             - ~/.boot/cache/lib
             - ~/.boot/cache/bin
-          key: build-{{checksum "boot.properties" }}-{{ checksum "build.boot" }}
+          key: build-{{checksum "boot.properties"}}-{{checksum "build.boot"}}-{{checksum "deps.edn"}}
 
   publish:
     docker:
@@ -32,14 +32,14 @@ jobs:
       - attach_workspace:
           at: .
       - restore_cache:
-          key: publish-{{checksum "boot.properties" }}-{{ checksum "build.boot" }}
+          key: publish-{{checksum "boot.properties"}}-{{checksum "build.boot"}}-{{checksum "deps.edn"}}
       - run: boot push-snapshot -f target/hyperfiddle-server.jar
       - save_cache:
           paths:
             - ~/.m2
             - ~/.boot/cache/lib
             - ~/.boot/cache/bin
-          key: publish-{{checksum "boot.properties" }}-{{ checksum "build.boot" }}
+          key: publish-{{checksum "boot.properties"}}-{{checksum "build.boot"}}-{{checksum "deps.edn"}}
 
 workflows:
   version: 2
