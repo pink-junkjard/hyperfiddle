@@ -172,11 +172,13 @@ User renderers should not be exposed to the reaction."
                   (css-slugify ident)])))
         (build-wrapped-render-expr-str [user-str] (str "(fn [val ctx props]\n" user-str ")"))
         (ui-comp [ctx & [props]]                            ; user-renderer comes through here
-          [user-portal (ui-error/error-comp ctx)
-           (let [props' (update props :class css (auto-ui-css-class ctx))
-                 props (select-keys props' [:class])
-                 value @(:hypercrud.browser/data ctx)]
-             (case @(:hypercrud.ui/display-mode ctx)
+          (let [props' (update props :class css (auto-ui-css-class ctx))
+                props (select-keys props' [:class])
+                value @(:hypercrud.browser/data ctx)
+                display-mode @(:hypercrud.ui/display-mode ctx)]
+            ^{:key (str display-mode)}
+            [user-portal (ui-error/error-comp ctx)
+             (case display-mode
                :hypercrud.browser.browser-ui/user (if-let [user-renderer (:user-renderer props')]
                                                     [user-renderer value ctx props]
                                                     (let [fiddle (:hypercrud.browser/fiddle ctx)]
@@ -190,7 +192,7 @@ User renderers should not be exposed to the reaction."
                                                        @(:hypercrud.browser/fiddle ctx) ; for good luck
                                                        ]))
                :hypercrud.browser.browser-ui/xray [fiddle-xray value ctx props]
-               :hypercrud.browser.browser-ui/api [fiddle-api value ctx props]))])
+               :hypercrud.browser.browser-ui/api [fiddle-api value ctx props])]))
         (fiddle-css-renderer [s] [:style {:dangerouslySetInnerHTML {:__html @s}}])
         (src-mode [route ctx]
           (mlet [:let [ctx (-> (context/clean ctx)

@@ -24,6 +24,6 @@
                                  [with-error e])
                                (into [:<>] children))))
 
-         :component-did-catch (fn [#_this e info]           ; args will need updating in reagent0.8.x
+         :component-did-catch (fn [this e info]
                                 (reset! show-error true)
                                 (reset! e-state e))}))))
