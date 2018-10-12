@@ -57,12 +57,13 @@
                      :disabled (or src-mode no-target-fiddle)}
                     {:label "view" :tooltip "Use :fiddle/renderer" :value :hypercrud.browser.browser-ui/user
                      :disabled (or src-mode no-target-fiddle)}
-                    {:label (let [root-rel-path (runtime/encode-route (:peer ctx) (router/dissoc-frag target-route))
-                                  href (if-not src-mode
-                                         (str root-rel-path "#" (encode-rfc3986-pchar (encode-ednish (pr-str :src))))
-                                         (str root-rel-path "#"))]
+                    {:label (let [root-rel-path (runtime/encode-route (:peer ctx) (router/dissoc-frag target-route))]
                               (if-not no-target-fiddle
-                                [:a {:href href :data-pushy-replace-state true} "src"]
+                                [:a {:href (if-not src-mode
+                                             (str root-rel-path "#" (encode-rfc3986-pchar (encode-ednish (pr-str :src))))
+                                             (str root-rel-path "#"))
+                                     :data-pushy-replace true}
+                                 (if src-mode "hide src" "src")]
                                 [:span "src"]))
                      :tooltip "View fiddle source" :value :hypercrud.browser.browser-ui/src
                      :disabled (or (not src-mode) no-target-fiddle)}]
