@@ -61,8 +61,8 @@
                                   href (if-not src-mode
                                          (str root-rel-path "#" (encode-rfc3986-pchar (encode-ednish (pr-str :src))))
                                          (str root-rel-path "#"))]
-                              (if (and (not src-mode) (not no-target-fiddle))
-                                [:a {:href href :target "_blank"} "src"]
+                              (if-not no-target-fiddle
+                                [:a {:href href :data-pushy-replace-state true} "src"]
                                 [:span "src"]))
                      :tooltip "View fiddle source" :value :hypercrud.browser.browser-ui/src
                      :disabled (or (not src-mode) no-target-fiddle)}]
