@@ -52,7 +52,7 @@
         [:div.row.hf-live.unp.no-gutters
          (let [as-edn (r/cursor state [:edn-result])
                f (when @as-edn fiddle-api)]
-           [:div.result.col-sm.order-sm-2.order-xs-1
+           [:div.result.col-sm
             [:div "Result:" [contrib.ui/easy-checkbox-boolean " EDN?" as-edn {:class "hf-live"}]]
             ; Careful: Reagent deep bug in prop comparison https://github.com/hyperfiddle/hyperfiddle/issues/340
             (let [ctx (if f
@@ -63,7 +63,7 @@
                f (if @as-edn
                    (r/partial result-edn fiddle-attrs)
                    (r/partial fiddle-src fiddle-attrs (:initial-tab props)))]
-           [:div.src.col-sm.order-sm-1.order-xs-2
+           [:div.src.col-sm
             [:div "Interactive Hyperfiddle editor:" [contrib.ui/easy-checkbox-boolean " EDN?" as-edn {:class "hf-live"}]]
             [hyperfiddle.ui/iframe ctx {:class (css (:class props) "devsrc hf-live")
                                         :route (router/assoc-frag (:route props) ":src")
