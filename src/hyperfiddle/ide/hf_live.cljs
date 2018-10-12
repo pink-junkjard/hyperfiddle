@@ -58,7 +58,9 @@
             (let [ctx (if f
                         ctx
                         (dissoc ctx :hyperfiddle.ui.markdown-extensions/unp))]
-              [hyperfiddle.ui/iframe ctx (-> props (update :class css "hf-live") (assoc :user-renderer f))])])
+              [hyperfiddle.ui/iframe ctx (-> props
+                                             (update :class css "hf-live")
+                                             (assoc :user-renderer f))])])
          (let [as-edn (r/cursor state [:edn-fiddle])
                f (if @as-edn
                    (r/partial result-edn fiddle-attrs)
