@@ -46,7 +46,7 @@
 
       [loading-spinner ctx]
 
-      (let [no-target-fiddle (nil? @(r/cursor (:hypercrud.browser/data ctx) [:db/id])) ; ide-route omits fiddle for ide routes
+      #_(let [no-target-fiddle (nil? @(r/cursor (:hypercrud.browser/data ctx) [:db/id])) ; ide-route omits fiddle for ide routes
             cant-view-source no-target-fiddle]
         (if-not cant-view-source
           (let [src-mode (src-mode? (get target-route 3))
