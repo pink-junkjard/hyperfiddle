@@ -123,9 +123,7 @@
        "live" (fn [content argument props ctx]
                 (let [[_ srel spath] (re-find #"([^ ]*) ?(.*)" argument)]
                   (-> (mlet [rel (memoized-read-edn-string+ srel)
-                             class (memoized-read-edn-string+ spath)
-                             #_#_fiddle-attrs (memoized-read-edn-string+ (str "[" content "]"))
-                             #_#_:let [props (assoc props :hyperfiddle.ide.hf-live/fiddle-attrs fiddle-attrs)]]
+                             class (memoized-read-edn-string+ spath)]
                         (return [hyperfiddle.ide.hf-live/browse rel class ctx props]))
                       (either/branch
                         (fn [e] [(error-comp ctx) e])

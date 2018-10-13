@@ -27,9 +27,6 @@
   (if @(r/track any-loading? (:peer ctx))
     [:div.display-inline-flex [re-com.core/throbber]]))
 
-(defn src-mode? [frag]
-  (= :src (some-> frag read-edn-string!)))
-
 (defn renderer [val ctx props]
   (let [target-route (context/target-route ctx)]
     [:div props

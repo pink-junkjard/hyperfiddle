@@ -16,9 +16,6 @@
 (def attr-order [:fiddle/ident :fiddle/type :fiddle/pull-database :fiddle/pull :fiddle/query
                  :fiddle/renderer :fiddle/css :fiddle/markdown :fiddle/links :fiddle/hydrate-result-as-fiddle])
 
-(defn fiddle-src [initial-tab val ctx-real props]
-  [fiddle-src/fiddle-src-renderer val ctx-real (assoc props :embed-mode true :initial-tab initial-tab)])
-
 (defn result-edn [val ctx props]
   (let [s (-> val
               #_(as-> $ (if (seq attrs) (select-keys $ attrs) $)) ; omit elided fiddle attrs
@@ -37,20 +34,19 @@
              f (when @as-edn fiddle-api)]
          [:div.result.col-sm
           [:div "Result:" [contrib.ui/easy-checkbox-boolean " EDN?" as-edn {:class "hf-live"}]]
-          ; Careful: Reagent deep bug in prop comparison https://github.com/hyperfiddle/hyperfiddle/issues/340
           (let [ctx (if f
                       ctx
                       (dissoc ctx :hyperfiddle.ui.markdown-extensions/unp))]
             [hyperfiddle.ui/iframe ctx (-> props (update :class css "hf-live") (assoc :user-renderer f))])])
-       (let [as-edn (r/cursor state [:edn-fiddle])
-             f (if @as-edn
-                 result-edn
-                 (r/partial fiddle-src (:initial-tab props)))]
+       (let [as-edn (r/cursor state [:edn-fiddle])]
          [:div.src.col-sm
           [:div "Interactive Hyperfiddle editor:" [contrib.ui/easy-checkbox-boolean " EDN?" as-edn {:class "hf-live"}]]
           [hyperfiddle.ui/iframe ctx {:class (css (:class props) "devsrc hf-live")
-                                      :route (router/assoc-frag (:route props) ":src")
-                                      :user-renderer f}]])])))
+                                      :route (:route props)
+                                      :hf-live true
+                                      :initial-tab (:initial-tab props)
+                                      :embed-mode true
+                                      :user-renderer (if @as-edn result-edn fiddle-src/fiddle-src-renderer)}]])])))
 
 (defn browse [rel class ctx props]
   (either/branch

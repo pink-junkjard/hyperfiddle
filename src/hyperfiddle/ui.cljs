@@ -173,7 +173,7 @@ User renderers should not be exposed to the reaction."
         (build-wrapped-render-expr-str [user-str] (str "(fn [val ctx props]\n" user-str ")"))
         (ui-comp [ctx & [props]]                            ; user-renderer comes through here
           (let [props' (update props :class css (auto-ui-css-class ctx))
-                props (select-keys props' [:class])
+                props (select-keys props' [:class :initial-tab #_:disabled]) ; https://github.com/hyperfiddle/hyperfiddle/issues/698
                 value @(:hypercrud.browser/data ctx)
                 display-mode @(:hypercrud.ui/display-mode ctx)]
             ^{:key (str display-mode)}
@@ -206,10 +206,10 @@ User renderers should not be exposed to the reaction."
                                (context/clean)
                                (routing/route [nil [(->ThinEntity "$" [:fiddle/ident @(r/fmap first (:hypercrud.browser/route ctx))])]]))]]
             (base/process-results fiddle request ctx)))]
-  (defn ^:export iframe [ctx {:keys [route] :as props}]     ; :: [route ctx & [?f props]]
+  (defn ^:export iframe [ctx {:keys [route hf-live] :as props}] ; :: [route ctx & [?f props]]
     (let [click-fn (or (:hyperfiddle.ui/iframe-on-click ctx) (constantly nil)) ; parent ctx receives click event, not child frame
           either-v (or (some-> @(runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :error]) either/left)
-                       (if (hyperfiddle.ide.fiddles.topnav/src-mode? (get route 3))
+                       (if hf-live
                          (src-mode route ctx)
                          (base/data-from-route route ctx)))
           error-comp (ui-error/error-comp ctx)

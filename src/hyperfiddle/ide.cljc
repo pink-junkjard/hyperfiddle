@@ -5,9 +5,9 @@
     [clojure.string :as str]
     #?(:cljs [contrib.css :refer [css]])
     [contrib.ct :refer [unwrap]]
-    [contrib.ednish :refer [encode-ednish]]
+    [contrib.ednish :refer [decode-ednish encode-ednish]]
     [contrib.reactive :as r]
-    [contrib.reader :refer [read-edn-string+]]
+    [contrib.reader :refer [read-edn-string+ read-edn-string!]]
     [contrib.rfc3986 :refer [split-fragment encode-rfc3986-pchar]]
     [contrib.string :refer [empty->nil]]
     [contrib.ui :refer [easy-checkbox radio-with-label]]
@@ -166,38 +166,40 @@
     "ide" (request-from-route route (leaf-ide-context ctx))
     "user" (request-from-route route (leaf-target-context ctx))))
 
+(defn read-fragment-only-hf-src [frag]
+  (let [frag (some-> frag decode-ednish read-edn-string+ (->> (unwrap (constantly nil))))]
+    (if (#{:hf.src} (some-> frag namespace keyword))
+      frag)))
+
 #?(:cljs
-   (defn primary-content-ide [ide-ctx content-ctx route props]
-     (let [state (r/atom {:edn-fiddle false :edn-result false})]
-       (fn [ide-ctx content-ctx route props]
+   (defn primary-content-ide [ide-ctx content-ctx route]
+     (let [state (r/atom {:edn-fiddle false})]
+       (fn [ide-ctx content-ctx route]
          [:div.row.hyperfiddle.hf-live.unp.no-gutters {:key "primary-content"}
           [:div.result.col-sm
            [:div "Result:"
-            (let [on-change (r/comp (r/partial runtime/dispatch! (:peer ide-ctx)) actions/set-display-mode)
-                  value @(runtime/state (:peer ide-ctx) [:display-mode])]
-              (into [:span.hyperfiddle.hf-live.radio-group]
-                    (->> [{:label "api" :tooltip "What the API client sees" :value :hypercrud.browser.browser-ui/api}
-                          {:label "data" :tooltip "Ignore :fiddle/renderer" :value :hypercrud.browser.browser-ui/xray}
-                          {:label "view" :tooltip "Use :fiddle/renderer" :value :hypercrud.browser.browser-ui/user}]
-                         (map (fn [props]
-                                [radio-with-label (assoc props :checked (= (:value props) value) :on-change on-change)])))))]
+            (into [:span.hyperfiddle.hf-live.radio-group]
+                  (->> [{:label "api" :tooltip "What the API client sees" :value :hypercrud.browser.browser-ui/api}
+                        {:label "data" :tooltip "Ignore :fiddle/renderer" :value :hypercrud.browser.browser-ui/xray}
+                        {:label "view" :tooltip "Use :fiddle/renderer" :value :hypercrud.browser.browser-ui/user}]
+                       (map (fn [props]
+                              [radio-with-label
+                               (assoc props :checked (= (:value props) @(runtime/state (:peer ide-ctx) [:display-mode]))
+                                            :on-change (r/comp (r/partial runtime/dispatch! (:peer ide-ctx)) actions/set-display-mode))]))))]
            [ui/iframe content-ctx
             {:route route
              :class (css "hyperfiddle-user"
                          "hyperfiddle-ide"
                          "hf-live"
                          (some-> content-ctx :hypercrud.ui/display-mode deref name (->> (str "display-mode-"))))}]]
-          (let [as-edn (r/cursor state [:edn-fiddle])
-                f (if @as-edn
-                    hf-live/result-edn
-                    (r/partial hf-live/fiddle-src (:initial-tab props)))]
+          (let [as-edn (r/cursor state [:edn-fiddle])]
             [:div.src.col-sm
              [:div "Interactive Hyperfiddle editor:" [contrib.ui/easy-checkbox-boolean " EDN?" as-edn {:class "hyperfiddle hf-live"}]]
              [ui/iframe ide-ctx
               {:route (ide-route route content-ctx)
-               :user-renderer f
-               :class (css (:class props)                   ; never happens
-                           "devsrc" "hf-live")}]])]))))
+               :initial-tab (let [[_ _ _ frag] route] (read-fragment-only-hf-src frag))
+               :user-renderer (if @as-edn hf-live/result-edn fiddle-src-renderer)
+               :class (css "devsrc" "hf-live")}]])]))))
 
 #?(:cljs
    (defn primary-content-production "No ide layout markup" [content-ctx route]
@@ -233,7 +235,7 @@
           ; tunneled ide route like /hyperfiddle.ide/domain - primary, blue background (IDE),
           is-magic-ide-fiddle ^{:key :primary-content} [ui/iframe ide-ctx {:route route :class "devsrc"}]
 
-          is-editor [primary-content-ide ide-ctx (page-target-context ctx) (router/dissoc-frag route) {:initial-tab nil}]
+          is-editor [primary-content-ide ide-ctx (page-target-context ctx) route]
 
           :else [primary-content-production (page-target-context ctx) route]
           )])))
