@@ -46,28 +46,18 @@
 
       [loading-spinner ctx]
 
-      (let [src-mode (src-mode? (get target-route 3))
-            no-target-fiddle (nil? @(r/cursor (:hypercrud.browser/data ctx) [:db/id])) ; ide-route omits fiddle for ide routes
-            on-change (r/comp (r/partial runtime/dispatch! (:peer ctx)) actions/set-display-mode)
-            value (if src-mode :hypercrud.browser.browser-ui/src @(runtime/state (:peer ctx) [:display-mode]))]
-        (into [:span.radio-group]
-              (->> [{:label "api" :tooltip "What the API client sees" :value :hypercrud.browser.browser-ui/api
-                     :disabled (or src-mode no-target-fiddle)}
-                    {:label "data" :tooltip "Ignore :fiddle/renderer" :value :hypercrud.browser.browser-ui/xray
-                     :disabled (or src-mode no-target-fiddle)}
-                    {:label "view" :tooltip "Use :fiddle/renderer" :value :hypercrud.browser.browser-ui/user
-                     :disabled (or src-mode no-target-fiddle)}
-                    {:label (let [root-rel-path (runtime/encode-route (:peer ctx) (router/dissoc-frag target-route))]
-                              (if-not no-target-fiddle
-                                [:a {:href (if-not src-mode
-                                             (str root-rel-path "#" (encode-rfc3986-pchar (encode-ednish (pr-str :src))))
-                                             (str root-rel-path "#"))
-                                     :data-pushy-replace true}
-                                 (if src-mode "hide src" "src")]
-                                [:span "src"]))
-                     :tooltip "View fiddle source" :value :hypercrud.browser.browser-ui/src
-                     :disabled (or (not src-mode) no-target-fiddle)}]
-                   (map (fn [props] [radio-with-label (assoc props :checked (= (:value props) value) :on-change on-change)])))))
+      (let [no-target-fiddle (nil? @(r/cursor (:hypercrud.browser/data ctx) [:db/id])) ; ide-route omits fiddle for ide routes
+            cant-view-source no-target-fiddle]
+        (if-not cant-view-source
+          (let [src-mode (src-mode? (get target-route 3))
+                root-rel-path (runtime/encode-route (:peer ctx) (router/dissoc-frag target-route))]
+            [tooltip {:label (str (if src-mode "Hide" "View") " fiddle source")}
+             [:a {:href (if src-mode
+                          (str root-rel-path "#")
+                          (str root-rel-path "#" (encode-rfc3986-pchar (encode-ednish (pr-str :src)))))
+                  :data-pushy-replace true}
+              (str (if src-mode "hide" "view") " src")]])))
+
       (let [tooltip [:div {:style {:text-align "left"}}
                      [markdown
                       (->> @(runtime/state (:peer ctx) [::runtime/domain :domain/databases])

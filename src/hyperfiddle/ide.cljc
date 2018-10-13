@@ -5,10 +5,12 @@
     [clojure.string :as str]
     #?(:cljs [contrib.css :refer [css]])
     [contrib.ct :refer [unwrap]]
+    [contrib.ednish :refer [encode-ednish]]
     [contrib.reactive :as r]
     [contrib.reader :refer [read-edn-string+]]
-    [contrib.rfc3986 :refer [split-fragment]]
+    [contrib.rfc3986 :refer [split-fragment encode-rfc3986-pchar]]
     [contrib.string :refer [empty->nil]]
+    [contrib.ui :refer [easy-checkbox radio-with-label]]
     [contrib.uri :refer [->URI]]
     [hypercrud.browser.base :as base]
     [hypercrud.browser.browser-request :refer [request-from-route]]
@@ -17,6 +19,7 @@
     [hypercrud.browser.routing :as routing]
     [hypercrud.browser.router :as router]
     [hypercrud.browser.router-bidi :as router-bidi]
+    [hyperfiddle.actions :as actions]
     [hyperfiddle.ide.system-fiddle :refer [system-fiddle?]]
     #?(:cljs [hyperfiddle.ui :as ui])
     #?(:cljs [hyperfiddle.ide.hf-live :as hf-live])
@@ -167,25 +170,29 @@
    (defn primary-content-ide [ide-ctx content-ctx route props]
      (let [state (r/atom {:edn-fiddle false :edn-result false})]
        (fn [ide-ctx content-ctx route props]
-         [:div.row.hf-live.unp.no-gutters {:key "primary-content"}
-          (let [as-edn (r/cursor state [:edn-result])
-                f (when @as-edn ui/fiddle-api)]
-            [:div.result.col-sm
-             [:div "Result:" [contrib.ui/easy-checkbox-boolean " EDN?" as-edn {:class "hf-live"}]]
-             (let [content-ctx (if f content-ctx (dissoc content-ctx :hyperfiddle.ui.markdown-extensions/unp))]
-               [ui/iframe content-ctx
-                {:route route
-                 :user-renderer f
-                 :class (css "hyperfiddle-user"
-                             "hyperfiddle-ide"
-                             "hf-live"
-                             (some-> content-ctx :hypercrud.ui/display-mode deref name (->> (str "display-mode-"))))}])])
+         [:div.row.hyperfiddle.hf-live.unp.no-gutters {:key "primary-content"}
+          [:div.result.col-sm
+           [:div "Result:"
+            (let [on-change (r/comp (r/partial runtime/dispatch! (:peer ide-ctx)) actions/set-display-mode)
+                  value @(runtime/state (:peer ide-ctx) [:display-mode])]
+              (into [:span.hyperfiddle.hf-live.radio-group]
+                    (->> [{:label "api" :tooltip "What the API client sees" :value :hypercrud.browser.browser-ui/api}
+                          {:label "data" :tooltip "Ignore :fiddle/renderer" :value :hypercrud.browser.browser-ui/xray}
+                          {:label "view" :tooltip "Use :fiddle/renderer" :value :hypercrud.browser.browser-ui/user}]
+                         (map (fn [props]
+                                [radio-with-label (assoc props :checked (= (:value props) value) :on-change on-change)])))))]
+           [ui/iframe content-ctx
+            {:route route
+             :class (css "hyperfiddle-user"
+                         "hyperfiddle-ide"
+                         "hf-live"
+                         (some-> content-ctx :hypercrud.ui/display-mode deref name (->> (str "display-mode-"))))}]]
           (let [as-edn (r/cursor state [:edn-fiddle])
                 f (if @as-edn
                     hf-live/result-edn
                     (r/partial hf-live/fiddle-src (:initial-tab props)))]
             [:div.src.col-sm
-             [:div "Interactive Hyperfiddle editor:" [contrib.ui/easy-checkbox-boolean " EDN?" as-edn {:class "hf-live"}]]
+             [:div "Interactive Hyperfiddle editor:" [contrib.ui/easy-checkbox-boolean " EDN?" as-edn {:class "hyperfiddle hf-live"}]]
              [ui/iframe ide-ctx
               {:route (ide-route route content-ctx)
                :user-renderer f
