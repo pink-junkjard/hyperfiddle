@@ -32,26 +32,25 @@
 (defn iframe [ctx props]
   (let [state (r/atom {:edn-fiddle false :edn-result false})]
     (fn [ctx props]
-      (let [props (dissoc props ::fiddle-attrs)]
-        [:div.row.hf-live.unp.no-gutters
-         (let [as-edn (r/cursor state [:edn-result])
-               f (when @as-edn fiddle-api)]
-           [:div.result.col-sm
-            [:div "Result:" [contrib.ui/easy-checkbox-boolean " EDN?" as-edn {:class "hf-live"}]]
-            ; Careful: Reagent deep bug in prop comparison https://github.com/hyperfiddle/hyperfiddle/issues/340
-            (let [ctx (if f
-                        ctx
-                        (dissoc ctx :hyperfiddle.ui.markdown-extensions/unp))]
-              [hyperfiddle.ui/iframe ctx (-> props (update :class css "hf-live") (assoc :user-renderer f))])])
-         (let [as-edn (r/cursor state [:edn-fiddle])
-               f (if @as-edn
-                   result-edn
-                   (r/partial fiddle-src (:initial-tab props)))]
-           [:div.src.col-sm
-            [:div "Interactive Hyperfiddle editor:" [contrib.ui/easy-checkbox-boolean " EDN?" as-edn {:class "hf-live"}]]
-            [hyperfiddle.ui/iframe ctx {:class (css (:class props) "devsrc hf-live")
-                                        :route (router/assoc-frag (:route props) ":src")
-                                        :user-renderer f}]])]))))
+      [:div.row.hf-live.unp.no-gutters
+       (let [as-edn (r/cursor state [:edn-result])
+             f (when @as-edn fiddle-api)]
+         [:div.result.col-sm
+          [:div "Result:" [contrib.ui/easy-checkbox-boolean " EDN?" as-edn {:class "hf-live"}]]
+          ; Careful: Reagent deep bug in prop comparison https://github.com/hyperfiddle/hyperfiddle/issues/340
+          (let [ctx (if f
+                      ctx
+                      (dissoc ctx :hyperfiddle.ui.markdown-extensions/unp))]
+            [hyperfiddle.ui/iframe ctx (-> props (update :class css "hf-live") (assoc :user-renderer f))])])
+       (let [as-edn (r/cursor state [:edn-fiddle])
+             f (if @as-edn
+                 result-edn
+                 (r/partial fiddle-src (:initial-tab props)))]
+         [:div.src.col-sm
+          [:div "Interactive Hyperfiddle editor:" [contrib.ui/easy-checkbox-boolean " EDN?" as-edn {:class "hf-live"}]]
+          [hyperfiddle.ui/iframe ctx {:class (css (:class props) "devsrc hf-live")
+                                      :route (router/assoc-frag (:route props) ":src")
+                                      :user-renderer f}]])])))
 
 (defn browse [rel class ctx props]
   (either/branch
