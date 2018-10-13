@@ -214,7 +214,7 @@
      (let [ide-ctx (page-ide-context ctx)
            {:keys [:active-ide?]} (runtime/host-env (:peer ctx))
            ; Immoral - :src bit is tunneled in userland fragment space
-           src-mode (when active-ide? (let [[_ _ _ frag] route] (topnav/src-mode? frag)))]
+           src-mode active-ide? #_(when active-ide? (let [[_ _ _ frag] route] (topnav/src-mode? frag)))]
 
        [:<> {:key "view-page"}
 
