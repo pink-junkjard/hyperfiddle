@@ -9,11 +9,10 @@
     [hyperfiddle.ui :refer [hyper-control field table link]]))
 
 
-(defn link-fiddle [val ctx {:keys [:embed-mode] :as props}]
+(defn link-fiddle [val ctx props]
   [:<>
-   [hyper-control val ctx (dissoc props :embed-mode)]
-   (when-not embed-mode
-     (link :hf/affix :fiddle ctx "affix" {:disabled (system-link? @(r/fmap :db/id (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data])))}))])
+   [hyper-control val ctx props]
+   (link :hf/affix :fiddle ctx "affix" {:disabled (system-link? @(r/fmap :db/id (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data])))})])
 
 (defn- target-ide-route [ctx]
   (hyperfiddle.ide/ide-route (context/target-route ctx) ctx))
@@ -36,18 +35,16 @@
                 (->> (inject-ide-links+ ctx) (unwrap (constantly nil)))
                 ctx)]
       [:div
-       (when-not embed-mode                                 ; more work to be done to get this popover hydrating
-         (link :hf/affix :link ctx "affix"))
+       (link :hf/affix :link ctx "affix")
        [table
         (fn [ctx]
           [(field [:link/rel] ctx hyper-control)
            (field [:link/class] ctx hyper-control)
-           (field [:link/fiddle] ctx link-fiddle {:embed-mode embed-mode
-                                                  :options "fiddle-options"
+           (field [:link/fiddle] ctx link-fiddle {:options "fiddle-options"
                                                   :option-label (r/comp pr-str :fiddle/ident first)})
            (field [:link/path] ctx hyper-control)
-           (when-not embed-mode (field [:link/formula] ctx hyper-control)) ; this is kind of deprecated, so hiding in hf-live to save space
-           (when-not embed-mode (field [:link/tx-fn] ctx hyper-control))
-           (when-not embed-mode (field [] ctx empty-renderer))])
+           (field [:link/formula] ctx hyper-control) ; this is kind of deprecated, so hiding in hf-live to save space
+           (field [:link/tx-fn] ctx hyper-control)
+           (field [] ctx empty-renderer)])
         ctx
         (dissoc props :embed-mode)]])))

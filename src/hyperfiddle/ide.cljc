@@ -166,7 +166,8 @@
    (defn view-page [[fiddle :as route] ctx]
      (let [src-mode (let [[_ _ _ frag] route] (topnav/src-mode? frag)) ; Immoral - :src bit is tunneled in userland fragment space
            ide-ctx (page-ide-context ctx)
-           {:keys [:active-ide?]} (runtime/host-env (:peer ctx))]
+           {:keys [:active-ide?]} (runtime/host-env (:peer ctx))
+           #_#_src-mode active-ide?]
        [:<> {:key "view-page"}
         ; Topnav
         (when active-ide?
@@ -175,13 +176,21 @@
            {:route (topnav-route route ctx)
             :class "hidden-print"}])
 
-        ; Content area
+        ; Primary content area
         (if (magic-ide-fiddle? fiddle (get-in ctx [:hypercrud.browser/domain :domain/ident]))
 
           ^{:key :primary-content}
-          [ui/iframe ide-ctx {:route route :class "devsrc"}] ; primary, blue background (IDE), magic ide route like /hyperfiddle.ide/domain
+          [ui/iframe ide-ctx {:route route :class "devsrc"}] ; tunneled ide route like /hyperfiddle.ide/domain - primary, blue background (IDE),
 
           [:<> {:key "primary-content"}
+           ; content-domain first, always visible
+           (let [ctx (page-target-context ctx)]
+             [ui/iframe ctx {:route (router/dissoc-frag route)
+                             :class (css "hyperfiddle-user"
+                                         (when active-ide? "hyperfiddle-ide")
+                                         (some-> ctx :hypercrud.ui/display-mode deref name (->> (str "display-mode-"))))}])
+
+           ; editor second
            (when (and active-ide? src-mode)                 ; primary, blue background (IDE)   /:posts/:hello-world#:src
              ; todo can this just be hf-live?
              [ui/iframe ide-ctx                             ; srcmode is equal to topnav route but a diff renderer
@@ -189,13 +198,7 @@
                :class (css "devsrc")
                :user-renderer fiddle-src-renderer}])
 
-           ; User content view in both prod and ide. What if src-mode and not-dev ? This draws nothing
-           (when-not src-mode                               ; primary, white background (User)   /:posts/:hello-world
-             (let [ctx (page-target-context ctx)]
-               [ui/iframe ctx {:route route
-                               :class (css "hyperfiddle-user"
-                                           (when active-ide? "hyperfiddle-ide")
-                                           (some-> ctx :hypercrud.ui/display-mode deref name (->> (str "display-mode-"))))}]))])])))
+           ])])))
 
 #?(:cljs
    ; todo should summon route via context/target-route. but there is still tension in the data api for deferred popovers
