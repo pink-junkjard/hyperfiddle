@@ -212,9 +212,12 @@
 #?(:cljs
    (defn view-page [[fiddle :as route] ctx]
      (let [ide-ctx (page-ide-context ctx)
+           is-magic-ide-fiddle (magic-ide-fiddle? fiddle (get-in ctx [:hypercrud.browser/domain :domain/ident]))
            {:keys [:active-ide?]} (runtime/host-env (:peer ctx))
-           ; Immoral - :src bit is tunneled in userland fragment space
-           src-mode active-ide? #_(when active-ide? (let [[_ _ _ frag] route] (topnav/src-mode? frag)))]
+           is-editor (and active-ide?
+                          (not is-magic-ide-fiddle)
+                          (not (system-fiddle? fiddle))     ; Schema editor, console links
+                          )]
 
        [:<> {:key "view-page"}
 
@@ -226,17 +229,13 @@
             :class "hidden-print"}])
 
         ; Primary content area
-        (if (magic-ide-fiddle? fiddle (get-in ctx [:hypercrud.browser/domain :domain/ident]))
-
+        (cond
           ; tunneled ide route like /hyperfiddle.ide/domain - primary, blue background (IDE),
-          ^{:key :primary-content}
-          [ui/iframe ide-ctx
-           {:route route
-            :class "devsrc"}]
+          is-magic-ide-fiddle ^{:key :primary-content} [ui/iframe ide-ctx {:route route :class "devsrc"}]
 
-          (if src-mode
-            [primary-content-ide ide-ctx (page-target-context ctx) (router/dissoc-frag route) {:initial-tab nil}]
-            [primary-content-production (page-target-context ctx) route])
+          is-editor [primary-content-ide ide-ctx (page-target-context ctx) (router/dissoc-frag route) {:initial-tab nil}]
+
+          :else [primary-content-production (page-target-context ctx) route]
           )])))
 
 #?(:cljs
