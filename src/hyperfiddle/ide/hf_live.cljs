@@ -19,9 +19,9 @@
 (defn fiddle-src [initial-tab val ctx-real props]
   [fiddle-src/fiddle-src-renderer val ctx-real (assoc props :embed-mode true :initial-tab initial-tab)])
 
-(defn result-edn [attrs val ctx props]
+(defn result-edn [val ctx props]
   (let [s (-> val
-              (as-> $ (if (seq attrs) (select-keys $ attrs) $)) ; omit elided fiddle attrs
+              #_(as-> $ (if (seq attrs) (select-keys $ attrs) $)) ; omit elided fiddle attrs
               (contrib.pprint/pprint-str 50))]
     [contrib.ui/code (assoc props                           ; Class ends up not on the codemirror, todo
                        :value s
