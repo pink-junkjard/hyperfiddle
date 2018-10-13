@@ -19,6 +19,7 @@
     [hypercrud.browser.router-bidi :as router-bidi]
     [hyperfiddle.ide.system-fiddle :refer [system-fiddle?]]
     #?(:cljs [hyperfiddle.ui :as ui])
+    #?(:cljs [hyperfiddle.ide.hf-live :as hf-live])
     #?(:cljs [hypercrud.ui.error :as ui-error])
     #?(:cljs [hypercrud.ui.stale :as stale])
     [hyperfiddle.data]
@@ -163,22 +164,33 @@
     "user" (request-from-route route (leaf-target-context ctx))))
 
 #?(:cljs
-   (defn primary-content-ide [ide-ctx content-ctx route]
-     [:<> {:key "primary-content"}
-      [ui/iframe content-ctx
-       {:route (router/dissoc-frag route)
-        :class (css "hyperfiddle-user"
-                    "hyperfiddle-ide"
-                    (some-> content-ctx :hypercrud.ui/display-mode deref name (->> (str "display-mode-"))))}]
-
-      ; editor second - primary, blue background (IDE)   /:posts/:hello-world#:src
-      ; Immoral - :src bit is tunneled in userland fragment space
-      (let [src-mode (let [[_ _ _ frag] route] (topnav/src-mode? frag))]
-        (when src-mode
-          [ui/iframe ide-ctx
-           {:route (ide-route route content-ctx)
-            :class (css "devsrc")}]))
-      ]))
+   (defn primary-content-ide [ide-ctx content-ctx route props]
+     (let [state (r/atom {:edn-fiddle false :edn-result false})]
+       (fn [ide-ctx content-ctx route props]
+         [:div.row.hf-live.unp.no-gutters {:key "primary-content"}
+          (let [as-edn (r/cursor state [:edn-result])
+                f (when @as-edn ui/fiddle-api)]
+            [:div.result.col-sm
+             [:div "Result:" [contrib.ui/easy-checkbox-boolean " EDN?" as-edn {:class "hf-live"}]]
+             (let [content-ctx (if f content-ctx (dissoc content-ctx :hyperfiddle.ui.markdown-extensions/unp))]
+               [ui/iframe content-ctx
+                {:route route
+                 :user-renderer f
+                 :class (css "hyperfiddle-user"
+                             "hyperfiddle-ide"
+                             "hf-live"
+                             (some-> content-ctx :hypercrud.ui/display-mode deref name (->> (str "display-mode-"))))}])])
+          (let [as-edn (r/cursor state [:edn-fiddle])
+                f (if @as-edn
+                    hf-live/result-edn
+                    (r/partial hf-live/fiddle-src (:initial-tab props)))]
+            [:div.src.col-sm
+             [:div "Interactive Hyperfiddle editor:" [contrib.ui/easy-checkbox-boolean " EDN?" as-edn {:class "hf-live"}]]
+             [ui/iframe ide-ctx
+              {:route (ide-route route content-ctx)
+               :user-renderer f
+               :class (css (:class props)                   ; never happens
+                           "devsrc" "hf-live")}]])]))))
 
 #?(:cljs
    (defn primary-content-production "No ide layout markup" [content-ctx route]
@@ -194,7 +206,8 @@
    (defn view-page [[fiddle :as route] ctx]
      (let [ide-ctx (page-ide-context ctx)
            {:keys [:active-ide?]} (runtime/host-env (:peer ctx))
-           #_#_src-mode active-ide?]
+           ; Immoral - :src bit is tunneled in userland fragment space
+           src-mode (when active-ide? (let [[_ _ _ frag] route] (topnav/src-mode? frag)))]
 
        [:<> {:key "view-page"}
 
@@ -209,11 +222,14 @@
         (if (magic-ide-fiddle? fiddle (get-in ctx [:hypercrud.browser/domain :domain/ident]))
 
           ; tunneled ide route like /hyperfiddle.ide/domain - primary, blue background (IDE),
-          ^{:key :primry-content} [ui/iframe ide-ctx {:route route :class "devsrc"}]
+          ^{:key :primary-content}
+          [ui/iframe ide-ctx
+           {:route route
+            :class "devsrc"}]
 
-          (if active-ide?
-            (primary-content-ide ide-ctx (page-target-context ctx) route)
-            (primary-content-production (page-target-context ctx) route))
+          (if src-mode
+            [primary-content-ide ide-ctx (page-target-context ctx) (router/dissoc-frag route) {:initial-tab nil}]
+            [primary-content-production (page-target-context ctx) route])
           )])))
 
 #?(:cljs
