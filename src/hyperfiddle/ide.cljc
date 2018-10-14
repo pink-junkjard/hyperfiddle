@@ -10,7 +10,7 @@
     [contrib.reader :refer [read-edn-string+ read-edn-string!]]
     [contrib.rfc3986 :refer [split-fragment encode-rfc3986-pchar]]
     [contrib.string :refer [empty->nil]]
-    [contrib.ui :refer [easy-checkbox radio-with-label]]
+    #?(:cljs [contrib.ui :refer [easy-checkbox radio-with-label]])
     [contrib.uri :refer [->URI]]
     [hypercrud.browser.base :as base]
     [hypercrud.browser.browser-request :refer [request-from-route]]
