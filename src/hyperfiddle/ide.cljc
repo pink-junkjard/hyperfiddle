@@ -14,7 +14,6 @@
     [contrib.uri :refer [->URI]]
     [hypercrud.browser.base :as base]
     [hypercrud.browser.browser-request :refer [request-from-route]]
-    #?(:cljs [hypercrud.browser.browser-ui :as browser-ui])
     [hypercrud.browser.context :as context]
     [hypercrud.browser.routing :as routing]
     [hypercrud.browser.router :as router]
@@ -88,10 +87,20 @@
   (-> (assoc ctx ::runtime/branch-aux {::foo "ide"})
       (*-ide-context)))
 
+(defn frame-on-click [rt branch branch-aux route event]
+  (when route                                               ; under what circimstances is this nil?
+    (let [is-alt-pressed (.-altKey event)]
+      (when is-alt-pressed
+        (let [anchor (-> (.composedPath event) (aget 0) (.matches "a"))
+              anchor-descendant (-> (.composedPath event) (aget 0) (.matches "a *"))]
+          (when-not (or anchor anchor-descendant)
+            (.stopPropagation event)
+            (js/window.open (router/encode route) "_blank")))))))
+
 (defn- *-target-context [ctx]
   (assoc ctx
     :hyperfiddle.ui/iframe-on-click (let [branch-aux {:hyperfiddle.ide/foo "page"}]
-                                      #?(:cljs (r/partial browser-ui/frame-on-click (:peer ctx) nil branch-aux)))
+                                      #?(:cljs (r/partial frame-on-click (:peer ctx) nil branch-aux)))
     :hypercrud.ui/display-mode (runtime/state (:peer ctx) [:display-mode])
     :hyperfiddle.ui/debug-tooltips (:active-ide? (runtime/host-env (:peer ctx)))))
 
