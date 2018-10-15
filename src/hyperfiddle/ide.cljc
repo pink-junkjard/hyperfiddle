@@ -100,7 +100,7 @@
 
 (defn- *-target-context [ctx]
   (assoc ctx
-    :hyperfiddle.ui/iframe-on-click #?(:cljs frame-on-click)
+    :hyperfiddle.ui/iframe-on-click #?(:cljs frame-on-click :clj nil)
     :hypercrud.ui/display-mode (runtime/state (:peer ctx) [:display-mode])
     :hyperfiddle.ui/debug-tooltips (:active-ide? (runtime/host-env (:peer ctx)))))
 
