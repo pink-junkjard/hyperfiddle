@@ -37,7 +37,7 @@
 
 (def analytics (load-resource "analytics.html"))
 
-(defn full-html [env state-val serve-js? hyperfiddle-dns? params app-component]
+(defn full-html [env state-val serve-js? hyperfiddle-dns? params root-html-str]
   (let [resource-base (str (:STATIC_RESOURCES env) "/" (:BUILD env))]
     [:html {:lang "en"}
      [:head
@@ -47,17 +47,7 @@
       [:meta {:charset "UTF-8"}]
       [:script {:id "build" :type "text/plain" :dangerouslySetInnerHTML {:__html (:BUILD env)}}]]
      [:body
-      [:div
-       {:id "root"
-        :dangerouslySetInnerHTML
-        {:__html
-         (try
-           (reagent-server/render-to-static-markup app-component)
-           (catch :default e
-             (reagent-server/render-to-string [:div
-                                               [:h1 "Javascript mounting..."]
-                                               [:h2 "SSR failed on:"]
-                                               [error/error-block e]])))}}]
+      [:div {:id "root" :dangerouslySetInnerHTML {:__html root-html-str}}]
       (when (and hyperfiddle-dns? (:ANALYTICS env))
         [:div {:dangerouslySetInnerHTML {:__html analytics}}])
       (when serve-js?
@@ -71,6 +61,20 @@
         [:script {:id "preamble" :src (str resource-base "/preamble.js")}])
       (when serve-js?
         [:script {:id "main" :src (str resource-base "/main.js")}])]]))
+
+(defn root-html-str [rt]
+  (let [ctx {:peer rt
+             ::runtime/branch-aux {::ide/foo "page"}}]
+    (try
+      (reagent-server/render-to-static-markup
+        [foundation/view :page ctx (if (:active-ide? (runtime/host-env rt))
+                                     (constantly [:div "loading... "])
+                                     (r/partial ide/view (context/target-route ctx)))])
+      (catch :default e
+        (reagent-server/render-to-string [:div
+                                          [:h1 "Javascript mounting..."]
+                                          [:h2 "SSR failed on:"]
+                                          [error/error-block e]])))))
 
 (deftype IdeSsrRuntime [host-env state-atom root-reducer jwt]
   runtime/State
@@ -124,14 +128,6 @@
   (sync [rt dbs]
     (sync-rpc! (:service-uri host-env) dbs jwt))
 
-  runtime/AppFnRenderPageRoot
-  (ssr [rt]
-    (let [ctx {:peer rt
-               ::runtime/branch-aux {::ide/foo "page"}}]
-      [foundation/view :page ctx (if (:active-ide? host-env)
-                                   (constantly [:div "loading... "])
-                                   (r/partial ide/view (context/target-route ctx)))]))
-
   hc/Peer
   (hydrate [this branch request]
     (peer/hydrate state-atom branch request))
@@ -171,8 +167,7 @@
                   (let [serve-js? (or (:active-ide? host-env) (not @(runtime/state rt [::runtime/domain :domain/disable-javascript])))
                         params {:host-env host-env
                                 :hyperfiddle.bootstrap/init-level browser-init-level}
-                        html [full-html env @(runtime/state rt) serve-js? (boolean (:auth/root host-env)) params
-                              (runtime/ssr rt)]]
+                        html [full-html env @(runtime/state rt) serve-js? (boolean (:auth/root host-env)) params (root-html-str rt)]]
                     (doto res
                       (.status http-status-code)
                       (.type "html")
