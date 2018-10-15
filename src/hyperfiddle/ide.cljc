@@ -87,20 +87,20 @@
   (-> (assoc ctx ::runtime/branch-aux {::foo "ide"})
       (*-ide-context)))
 
-(defn frame-on-click [rt branch branch-aux route event]
-  (when route                                               ; under what circimstances is this nil?
-    (let [is-alt-pressed (.-altKey event)]
-      (when is-alt-pressed
-        (let [anchor (-> (.composedPath event) (aget 0) (.matches "a"))
-              anchor-descendant (-> (.composedPath event) (aget 0) (.matches "a *"))]
-          (when-not (or anchor anchor-descendant)
-            (.stopPropagation event)
-            (js/window.open (router/encode route) "_blank")))))))
+#?(:cljs
+   (defn frame-on-click [route event]
+     (when route                                            ; under what circimstances is this nil?
+       (let [is-alt-pressed (.-altKey event)]
+         (when is-alt-pressed
+           (let [anchor (-> (.composedPath event) (aget 0) (.matches "a"))
+                 anchor-descendant (-> (.composedPath event) (aget 0) (.matches "a *"))]
+             (when-not (or anchor anchor-descendant)
+               (.stopPropagation event)
+               (js/window.open (router/encode route) "_blank"))))))))
 
 (defn- *-target-context [ctx]
   (assoc ctx
-    :hyperfiddle.ui/iframe-on-click (let [branch-aux {:hyperfiddle.ide/foo "page"}]
-                                      #?(:cljs (r/partial frame-on-click (:peer ctx) nil branch-aux)))
+    :hyperfiddle.ui/iframe-on-click frame-on-click
     :hypercrud.ui/display-mode (runtime/state (:peer ctx) [:display-mode])
     :hyperfiddle.ui/debug-tooltips (:active-ide? (runtime/host-env (:peer ctx)))))
 
