@@ -15,11 +15,13 @@
                    :AUTH0_DOMAIN
                    :AUTH0_CLIENT_ID
                    :AUTH0_CLIENT_SECRET
+                   :SENTRY_DSN
+                   :SENTRY_ENV
                    :SERVICE_HOST
                    :SERVICE_PORT
                    :STATIC_RESOURCES
                    :NODE_PORT}
-        optional #{:ANALYTICS :HF_ALIAS_HOSTNAMES :SERVICE_HOST}
+        optional #{:ANALYTICS :HF_ALIAS_HOSTNAMES :SERVICE_HOST :SENTRY_DSN :SENTRY_ENV}
         env (let [env #?(:clj  (let [raw-env (System/getenv)]
                                  (reify
                                    ILookup

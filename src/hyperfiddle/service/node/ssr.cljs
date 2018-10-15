@@ -2,6 +2,7 @@
   (:require
     ["react-dom/server" :as dom-server]
     [cats.monad.either :as either]
+    [clojure.set :as set]
     [contrib.data :refer [map-values]]
     [contrib.reactive :as r]
     [contrib.template :refer [load-resource]]
@@ -166,6 +167,8 @@
         (p/then (fn [http-status-code]
                   (let [serve-js? (or (:active-ide? host-env) (not @(runtime/state rt [::runtime/domain :domain/disable-javascript])))
                         params {:host-env host-env
+                                :sentry (-> (select-keys env [:SENTRY_DSN :SENTRY_ENV])
+                                            (set/rename-keys {:SENTRY_DSN :dsn :SENTRY_ENV :environment}))
                                 :hyperfiddle.bootstrap/init-level browser-init-level}
                         html [full-html env @(runtime/state rt) serve-js? (boolean (:auth/root host-env)) params (root-html-str rt)]]
                     (doto res
