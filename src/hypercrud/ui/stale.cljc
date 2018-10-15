@@ -1,6 +1,8 @@
 (ns hypercrud.ui.stale
-  (:require [cats.monad.either :as either]
-            [hyperfiddle.runtime :as runtime]))
+  (:require
+    [cats.monad.either :as either]
+    [hypercrud.client.peer :refer [loading?]]
+    [hyperfiddle.runtime :as runtime]))
 
 
 (defn can-be-loading? [ctx]
@@ -14,7 +16,7 @@
      (fn [can-be-loading either-v error success loading]
        (either/branch either-v
                       (fn [e]
-                        (if-let [ev (and (= "Loading" (:message e)) @prev-ev)]
+                        (if-let [ev (and (loading? e) @prev-ev)]
                           (if @can-be-loading
                             (either/branch ev error loading)
                             (do
