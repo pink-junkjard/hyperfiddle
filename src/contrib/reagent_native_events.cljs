@@ -46,6 +46,7 @@
 
 (defn button= [ident e]
   ; Meant to look at mouseup events
+  ; (or (button= :middle event) (and (button= :left event) (.-metaKey event)))
   (let [is-middle (-middle-click? e)]
     (case ident
       :middle is-middle
