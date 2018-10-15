@@ -13,9 +13,6 @@
 (defprotocol AppFnSync
   (sync [rt dbs]))
 
-(defprotocol AppFnRenderPageRoot                            ; Same protocol is Client Render
-  (ssr [rt]))
-
 (defprotocol AppFnTransact!
   (transact! [rt tx-groups]))
 
