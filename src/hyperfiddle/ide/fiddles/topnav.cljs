@@ -40,21 +40,7 @@
         [ui/link :hf/iframe :fiddle-shortcuts ctx "index" props])]
 
      [:div.right-nav {:key "right-nav"}                     ; CAREFUL; this key prevents popover flickering
-
       [loading-spinner ctx]
-
-      #_(let [no-target-fiddle (nil? @(r/cursor (:hypercrud.browser/data ctx) [:db/id])) ; ide-route omits fiddle for ide routes
-            cant-view-source no-target-fiddle]
-        (if-not cant-view-source
-          (let [src-mode (src-mode? (get target-route 3))
-                root-rel-path (runtime/encode-route (:peer ctx) (router/dissoc-frag target-route))]
-            [tooltip {:label (str (if src-mode "Hide" "View") " fiddle source")}
-             [:a {:href (if src-mode
-                          (str root-rel-path "#")
-                          (str root-rel-path "#" (encode-rfc3986-pchar (encode-ednish (pr-str :src)))))
-                  :data-pushy-replace true}
-              (str (if src-mode "hide" "view") " src")]])))
-
       (let [tooltip [:div {:style {:text-align "left"}}
                      [markdown
                       (->> @(runtime/state (:peer ctx) [::runtime/domain :domain/databases])
