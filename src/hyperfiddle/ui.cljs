@@ -7,7 +7,7 @@
     [clojure.string :as string]
     [contrib.ct :refer [unwrap]]
     [contrib.css :refer [css css-slugify]]
-    [contrib.data :refer [take-to]]
+    [contrib.data :refer [map-keys map-values take-to]]
     [contrib.pprint :refer [pprint-str]]
     [contrib.reactive :as r]
     [contrib.reagent-native-events :refer [native-click-listener]]
@@ -38,7 +38,9 @@
     [hyperfiddle.ui.popover :refer [affect-cmp popover-cmp]]
     [hyperfiddle.ui.select$]
     [hyperfiddle.ui.sort :as sort]
-    [hyperfiddle.ui.util :refer [eval-renderer-comp]]))
+    [hyperfiddle.ui.util :refer [eval-renderer-comp]]
+    [hypercrud.transit :as transit]
+    [reagent.core :as reagent]))
 
 
 (defn attr-renderer-control [val ctx & [props]]
@@ -216,6 +218,21 @@ User renderers should not be exposed to the reaction."
           props (dissoc props :route)]
       [stale/loading (stale/can-be-loading? ctx) either-v
        (fn [e]
+         (reagent/after-render
+           (fn []
+             (when (exists? js/Sentry)                      ; todo hide behind interface on runtime
+               (.withScope js/Sentry (fn [scope]
+                                       (.setExtra scope "ex-data" (clj->js (ex-data e)))
+                                       (.setExtra scope "route" (pr-str route))
+                                       (.setExtra scope "global-basis" (->> @(runtime/state (:peer ctx) [::runtime/global-basis])
+                                                                            (map-values #(map-keys str %))
+                                                                            (clj->js)))
+                                       (.setExtra scope "branch-ident" (clj->js (:branch ctx)))
+                                       (.setExtra scope "branch-state" (-> @(runtime/state (:peer ctx) [::runtime/partitions (:branch ctx)])
+                                                                           (select-keys [:route :local-basis :ptm])
+                                                                           (update :ptm keys)
+                                                                           (transit/encode)))
+                                       (.captureMessage js/Sentry (str (ex-message e))))))))
          (let [on-click (r/partial click-fn route)]
            [native-click-listener {:on-click on-click}
             [error-comp e (css "hyperfiddle-error" (:class props) "ui")]]))
