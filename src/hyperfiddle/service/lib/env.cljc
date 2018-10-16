@@ -15,8 +15,6 @@
                    :AUTH0_DOMAIN
                    :AUTH0_CLIENT_ID
                    :AUTH0_CLIENT_SECRET
-                   :SENTRY_DSN
-                   :SENTRY_ENV
                    :SERVICE_HOST
                    :SERVICE_PORT
                    :STATIC_RESOURCES
