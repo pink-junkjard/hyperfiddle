@@ -6,8 +6,6 @@
     [hyperfiddle.runtime :as runtime]))
 
 
-(def ^:dynamic root-ctx)                                    ; debug backdoor to dispatch!
-
 (defn set-globals []
   (set! js/pr pr)
   (set! js/pr_str pr-str)
@@ -32,16 +30,4 @@
                            (-> js/document.location.pathname
                                routing/decode
                                pprint-str)))
-
-  (set! js/root_ctx root-ctx)
-
-  (set! js/dispatch
-        (fn [ctx action & args]
-          (runtime/dispatch! (:peer ctx) (apply action args))))
   )
-
-; domain = cljs.core.get(main.main.root_ctx, kw('hypercrud.browser/domain'))
-; thing = cljs.core.hash_map(kw('hyperfiddle.ide/foo'), "page")
-; peer = cljs.core.get(main.main.root_ctx, kw('peer'))
-; dispatch = cljs.core.get(main.main.root_ctx, kw('dispatch!'))
-; dispatch(hyperfiddle.actions.manual_transact_BANG_(peer, domain, thing))
