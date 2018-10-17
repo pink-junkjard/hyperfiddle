@@ -1,4 +1,6 @@
-(ns hyperfiddle.state)
+(ns hyperfiddle.state
+  (:require
+    [taoensso.timbre :as timbre]))
 
 
 (defn combine-reducers [reducer-map]
@@ -15,14 +17,17 @@
 
     (let [[action & args] action-or-func]
       (if (= :batch action)
-        (swap! state-atom (fn [state]
-                            (reduce (fn [state [action & args]]
-                                      (if f! (apply f! action args))
-                                      ; todo what if action = func?
-                                      (apply root-reducer state action args))
-                                    state
-                                    args)))
         (do
+          (timbre/debug "dispatch!" :batch (pr-str (mapv first args)))
+          (swap! state-atom (fn [state]
+                              (reduce (fn [state [action & args]]
+                                        (if f! (apply f! action args))
+                                        ; todo what if action = func?
+                                        (apply root-reducer state action args))
+                                      state
+                                      args))))
+        (do
+          (timbre/debug "dispatch!" action)
           (if f! (apply f! action args))
           (swap! state-atom #(apply root-reducer % action args))))))
   nil)
