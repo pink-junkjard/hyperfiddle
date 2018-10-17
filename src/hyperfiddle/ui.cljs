@@ -221,7 +221,8 @@ User renderers should not be exposed to the reaction."
        (fn [e]
          (reagent/after-render
            (fn []
-             (when (exists? js/Sentry)                      ; todo hide behind interface on runtime
+             (when (and (exists? js/Sentry)                ; todo hide behind interface on runtime
+                        (not @(stale/can-be-loading? ctx)))
                (.withScope js/Sentry (fn [scope]
                                        (.setExtra scope "ex-data" (clj->js (ex-data e)))
                                        (.setExtra scope "route" (pr-str route))
