@@ -22,6 +22,7 @@
     [hypercrud.browser.link :as link]
     [hypercrud.browser.router :as router]
     [hypercrud.browser.routing :as routing]
+    [hypercrud.types.Err :as Err]
     [hypercrud.types.ThinEntity :refer [->ThinEntity]]
     [hypercrud.ui.connection-color :refer [connection-color]]
     [hypercrud.ui.error :as ui-error]
@@ -232,7 +233,11 @@ User renderers should not be exposed to the reaction."
                                                                            (select-keys [:route :local-basis :ptm])
                                                                            (update :ptm keys)
                                                                            (transit/encode)))
-                                       (.captureMessage js/Sentry (str (ex-message e))))))))
+                                       (.captureMessage js/Sentry (str (cond
+                                                                         (Err/Err? e) (:msg e)
+                                                                         (map? e) (:message e)
+                                                                         (string? e) e
+                                                                         :else (ex-message e)))))))))
          (let [on-click (r/partial click-fn route)]
            [native-click-listener {:on-click on-click}
             [error-comp e (css "hyperfiddle-error" (:class props) "ui")]]))
