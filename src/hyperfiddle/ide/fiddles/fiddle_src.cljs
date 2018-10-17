@@ -64,8 +64,8 @@
        [:<>
         (field [:fiddle/type] ctx (r/partial query-composite-stable ctx) props)
         (case @(r/cursor (:hypercrud.browser/data ctx) [:fiddle/type])
-          :entity (field [:fiddle/pull] ctx hyper-control props)
-          :query (field [:fiddle/query] ctx hyper-control props)
+          :entity ^{:key "pull"} [field [:fiddle/pull] ctx hyper-control props]
+          :query ^{:key "query"} [field [:fiddle/query] ctx hyper-control props]
           :blank nil)]))
 
    :hf.src/links
