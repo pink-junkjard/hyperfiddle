@@ -38,31 +38,6 @@
 
 (def analytics (load-resource "analytics.html"))
 
-(defn full-html [env state-val serve-js? hyperfiddle-dns? params root-html-str]
-  (let [resource-base (str (:STATIC_RESOURCES env) "/" (:BUILD env))]
-    [:html {:lang "en"}
-     [:head
-      [:title "Hyperfiddle"]
-      [:link {:rel "stylesheet" :href (str resource-base "/styles.css")}]
-      [:meta {:name "viewport" :content "width=device-width, initial-scale=1"}]
-      [:meta {:charset "UTF-8"}]
-      [:script {:id "build" :type "text/plain" :dangerouslySetInnerHTML {:__html (:BUILD env)}}]]
-     [:body
-      [:div {:id "root" :dangerouslySetInnerHTML {:__html root-html-str}}]
-      (when (and hyperfiddle-dns? (:ANALYTICS env))
-        [:div {:dangerouslySetInnerHTML {:__html analytics}}])
-      (when serve-js?
-        ; env vars for client side rendering
-        [:script {:id "params" :type "application/transit-json"
-                  :dangerouslySetInnerHTML {:__html (transit/encode params)}}])
-      (when serve-js?
-        [:script {:id "state" :type "application/transit-json"
-                  :dangerouslySetInnerHTML {:__html (transit/encode state-val)}}])
-      (when serve-js?
-        [:script {:id "preamble" :src (str resource-base "/preamble.js")}])
-      (when serve-js?
-        [:script {:id "main" :src (str resource-base "/main.js")}])]]))
-
 (defn root-html-str [rt]
   (let [ctx {:peer rt
              ::runtime/branch-aux {::ide/foo "page"}}]
@@ -78,6 +53,33 @@
                                           [:h1 "Javascript mounting..."]
                                           [:h2 "SSR failed on:"]
                                           [error/error-block e]])))))
+
+(defn full-html [env rt params]
+  (let [hyperfiddle-dns? (boolean (:auth/root (runtime/host-env rt)))
+        serve-js? (or (:active-ide? (runtime/host-env rt)) (not @(runtime/state rt [::runtime/domain :domain/disable-javascript])))
+        resource-base (str (:STATIC_RESOURCES env) "/" (:BUILD env))]
+    [:html {:lang "en"}
+     [:head
+      [:title "Hyperfiddle"]
+      [:link {:rel "stylesheet" :href (str resource-base "/styles.css")}]
+      [:meta {:name "viewport" :content "width=device-width, initial-scale=1"}]
+      [:meta {:charset "UTF-8"}]
+      [:script {:id "build" :type "text/plain" :dangerouslySetInnerHTML {:__html (:BUILD env)}}]]
+     [:body
+      [:div {:id "root" :dangerouslySetInnerHTML {:__html (root-html-str rt)}}]
+      (when (and hyperfiddle-dns? (:ANALYTICS env))
+        [:div {:dangerouslySetInnerHTML {:__html analytics}}])
+      (when serve-js?
+        ; env vars for client side rendering
+        [:script {:id "params" :type "application/transit-json"
+                  :dangerouslySetInnerHTML {:__html (transit/encode params)}}])
+      (when serve-js?
+        [:script {:id "state" :type "application/transit-json"
+                  :dangerouslySetInnerHTML {:__html (transit/encode @(runtime/state rt))}}])
+      (when serve-js?
+        [:script {:id "preamble" :src (str resource-base "/preamble.js")}])
+      (when serve-js?
+        [:script {:id "main" :src (str resource-base "/main.js")}])]]))
 
 (deftype IdeSsrRuntime [host-env state-atom root-reducer jwt]
   runtime/State
@@ -141,16 +143,15 @@
   IHash
   (-hash [this] (goog/getUid this)))
 
-(defn http-edge [env req res jwt user-id path-params query-params]
+(defn ssr [env host-env jwt user-id path]
   (let [initial-state {::runtime/user-id user-id}
-        host-env (object/get req "host-env")
         rt (->IdeSsrRuntime host-env (r/atom (reducers/root-reducer initial-state nil)) reducers/root-reducer jwt)
         load-level foundation/LEVEL-HYDRATE-PAGE
         browser-init-level (if (:active-ide? host-env)
                              ;force the browser to re-run the data bootstrapping when not aliased
                              foundation/LEVEL-NONE
                              load-level)]
-    (-> (foundation/bootstrap-data rt foundation/LEVEL-NONE load-level (.-path req) (::runtime/global-basis initial-state))
+    (-> (foundation/bootstrap-data rt foundation/LEVEL-NONE load-level path (::runtime/global-basis initial-state))
         (p/then (fn []
                   (->> @(runtime/state rt [::runtime/domain :domain/databases])
                        (map :domain.database/record)
@@ -167,23 +168,39 @@
         (p/then (constantly 200))
         (p/catch #(or (:hyperfiddle.io/http-status-code (ex-data %)) 500))
         (p/then (fn [http-status-code]
-                  (let [serve-js? (or (:active-ide? host-env) (not @(runtime/state rt [::runtime/domain :domain/disable-javascript])))
-                        params {:host-env host-env
+                  (let [params {:host-env host-env
                                 :sentry (-> (select-keys env [:BUILD :SENTRY_DSN :SENTRY_ENV])
                                             (set/rename-keys {:SENTRY_DSN :dsn :SENTRY_ENV :environment :BUILD :release}))
-                                :hyperfiddle.bootstrap/init-level browser-init-level}
-                        html [full-html env @(runtime/state rt) serve-js? (boolean (:auth/root host-env)) params (root-html-str rt)]]
-                    (doto res
-                      (.status http-status-code)
-                      (.type "html")
-                      (.write "<!DOCTYPE html>\n"))
-                    (let [stream (render-to-node-stream html)]
-                      (.on stream "error" (fn [e]
-                                            (timbre/error e)
-                                            (.end res (str "<h2>Fatal rendering error:</h2><h4>" (ex-message e) "</h4>"))))
-                      (.pipe stream res)))))
-        (p/catch (fn [e]
-                   (timbre/error e)
-                   (doto res
-                     (.status (or (:hyperfiddle.io/http-status-code (ex-data e)) 500))
-                     (.format #js {"text/html" #(.send res (str "<h2>Fatal error:</h2><h4>" (ex-message e) "</h4>"))})))))))
+                                :hyperfiddle.bootstrap/init-level browser-init-level}]
+                    {:http-status-code http-status-code
+                     :component [full-html env rt params]}))))))
+
+(defn express-ssr-string [env req res jwt user-id path-params query-params]
+  (-> (ssr env (object/get req "host-env") jwt user-id (.-path req))
+      (p/then (fn [{:keys [http-status-code component]}]
+                (doto res
+                  (.status http-status-code)
+                  (.format #js {"text/html" #(.send res (str "<!DOCTYPE html>\n" (reagent-server/render-to-string component)))}))))
+      (p/catch (fn [e]
+                 (timbre/error e)
+                 (doto res
+                   (.status (or (:hyperfiddle.io/http-status-code (ex-data e)) 500))
+                   (.format #js {"text/html" #(.send res (str "<h2>Fatal error:</h2><h4>" (ex-message e) "</h4>"))}))))))
+
+(defn express-ssr-stream [env req res jwt user-id path-params query-params]
+  (-> (ssr env (object/get req "host-env") jwt user-id (.-path req))
+      (p/then (fn [{:keys [http-status-code component]}]
+                (doto res
+                  (.status http-status-code)
+                  (.type "html")
+                  (.write "<!DOCTYPE html>\n"))
+                (let [stream (render-to-node-stream component)]
+                  (.on stream "error" (fn [e]
+                                        (timbre/error e)
+                                        (.end res (str "<h2>Fatal rendering error:</h2><h4>" (ex-message e) "</h4>"))))
+                  (.pipe stream res))))
+      (p/catch (fn [e]
+                 (timbre/error e)
+                 (doto res
+                   (.status (or (:hyperfiddle.io/http-status-code (ex-data e)) 500))
+                   (.format #js {"text/html" #(.send res (str "<h2>Fatal error:</h2><h4>" (ex-message e) "</h4>"))}))))))
