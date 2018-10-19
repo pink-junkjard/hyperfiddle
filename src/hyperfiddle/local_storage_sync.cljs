@@ -102,7 +102,7 @@
                            (if-let [migrate (get ls-migrations (:version ls-state))]
                              (recur (migrate ls-state))
                              (do
-                               (timbre/warn "Unable to migrate local-storage: " (pr-str ls-state))
+                               (when-not (nil? ls-state) (timbre/error "Unable to migrate local-storage: " ls-state))
                                (-> (state->local-storage initial-state)
                                    (update ::runtime/auto-transact #(init-auto-tx nil % (runtime/host-env rt))))))))]
       (when-not (= ls-state new-ls-state)
