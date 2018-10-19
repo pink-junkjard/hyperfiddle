@@ -69,7 +69,9 @@
     (try
       (reagent-server/render-to-static-markup
         [foundation/view :page ctx (if (:active-ide? (runtime/host-env rt))
-                                     (constantly [:div "loading... "])
+                                     (constantly [:div.loading-page>div.logo-callout
+                                                  [:img {:src "https://i.imgur.com/DtMAeuM.png"}]
+                                                  [:span.brand "hyperfiddle"]])
                                      (r/partial ide/view (context/target-route ctx)))])
       (catch :default e
         (reagent-server/render-to-string [:div
