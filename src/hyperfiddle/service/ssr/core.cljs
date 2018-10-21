@@ -1,9 +1,8 @@
-(ns hyperfiddle.service.node.ssr
+(ns hyperfiddle.service.ssr.core
   (:require
     ["react-dom/server" :as dom-server]
     [cats.monad.either :as either]
     [clojure.set :as set]
-    [contrib.data :refer [map-values]]
     [contrib.reactive :as r]
     [contrib.template :refer [load-resource]]
     [goog.object :as object]
@@ -14,10 +13,6 @@
     [hypercrud.ui.error :as error]
     [hyperfiddle.foundation :as foundation]
     [hyperfiddle.ide :as ide]
-    [hyperfiddle.io.global-basis :refer [global-basis-rpc!]]
-    [hyperfiddle.io.hydrate-requests :refer [hydrate-requests-rpc!]]
-    [hyperfiddle.io.hydrate-route :refer [hydrate-route-rpc!]]
-    [hyperfiddle.io.sync :refer [sync-rpc!]]
     [hyperfiddle.reducers :as reducers]
     [hyperfiddle.runtime :as runtime]
     [hyperfiddle.security.client :as security]
@@ -81,77 +76,13 @@
       (when serve-js?
         [:script {:id "main" :src (str resource-base "/main.js")}])]]))
 
-(deftype IdeSsrRuntime [host-env state-atom root-reducer jwt]
-  runtime/State
-  (dispatch! [rt action-or-func] (state/dispatch! state-atom root-reducer action-or-func))
-  (state [rt] state-atom)
-  (state [rt path] (r/cursor state-atom path))
-
-  runtime/HostInfo
-  (host-env [rt] host-env)
-
-  runtime/AppFnGlobalBasis
-  (global-basis [rt]
-    (global-basis-rpc! (:service-uri host-env) jwt))
-
-  runtime/Route
-  (decode-route [rt s]
-    (ide/route-decode rt s))
-
-  (encode-route [rt v]
-    (ide/route-encode rt v))
-
-  runtime/DomainRegistry
-  (domain [rt]
-    (ide/domain rt (:domain-eid host-env)))
-
-  runtime/AppValLocalBasis
-  (local-basis [rt branch]
-    (let [global-basis @(runtime/state rt [::runtime/global-basis])
-          {:keys [route ::runtime/branch-aux]} @(runtime/state rt [::runtime/partitions branch])
-          ctx {:branch branch
-               ::runtime/branch-aux branch-aux
-               :peer rt}
-          ; this is ide
-          page-or-leaf (case (:hyperfiddle.ide/foo branch-aux)
-                         "page" :page
-                         "user" :leaf
-                         "ide" :leaf)]
-      (foundation/local-basis page-or-leaf global-basis route ctx ide/local-basis)))
-
-  runtime/AppValHydrate
-  (hydrate-route [rt branch]
-    (let [{:keys [route local-basis ::runtime/branch-aux]} @(runtime/state rt [::runtime/partitions branch])
-          stage (map-values :stage @(runtime/state rt [::runtime/partitions]))]
-      (hydrate-route-rpc! (:service-uri host-env) local-basis route branch branch-aux stage jwt)))
-
-  runtime/AppFnHydrate
-  (hydrate-requests [rt local-basis stage requests]
-    (hydrate-requests-rpc! (:service-uri host-env) local-basis stage requests jwt))
-
-  runtime/AppFnSync
-  (sync [rt dbs]
-    (sync-rpc! (:service-uri host-env) dbs jwt))
-
-  hc/Peer
-  (hydrate [this branch request]
-    (peer/hydrate state-atom branch request))
-
-  (db [this uri branch]
-    (peer/db-pointer uri branch))
-
-  IHash
-  (-hash [this] (goog/getUid this)))
-
-(defn ssr [env host-env jwt user-id path]
-  (let [initial-state {::runtime/user-id user-id}
-        rt (->IdeSsrRuntime host-env (r/atom (reducers/root-reducer initial-state nil)) reducers/root-reducer jwt)
-        load-level foundation/LEVEL-HYDRATE-PAGE
-        browser-init-level (if (:active-ide? host-env)
+(defn ssr [env rt path]
+  (let [load-level foundation/LEVEL-HYDRATE-PAGE
+        browser-init-level (if (:active-ide? (runtime/host-env rt))
                              ;force the browser to re-run the data bootstrapping when not aliased
                              foundation/LEVEL-NONE
                              load-level)]
-    (-> (foundation/bootstrap-data rt foundation/LEVEL-NONE load-level path (::runtime/global-basis initial-state))
+    (-> (foundation/bootstrap-data rt foundation/LEVEL-NONE load-level path @(runtime/state rt [::runtime/global-basis]))
         (p/then (fn []
                   (->> @(runtime/state rt [::runtime/domain :domain/databases])
                        (map :domain.database/record)
@@ -168,39 +99,9 @@
         (p/then (constantly 200))
         (p/catch #(or (:hyperfiddle.io/http-status-code (ex-data %)) 500))
         (p/then (fn [http-status-code]
-                  (let [params {:host-env host-env
+                  (let [params {:host-env (runtime/host-env rt)
                                 :sentry (-> (select-keys env [:BUILD :SENTRY_DSN :SENTRY_ENV])
                                             (set/rename-keys {:SENTRY_DSN :dsn :SENTRY_ENV :environment :BUILD :release}))
                                 :hyperfiddle.bootstrap/init-level browser-init-level}]
                     {:http-status-code http-status-code
                      :component [full-html env rt params]}))))))
-
-(defn express-ssr-string [env req res jwt user-id path-params query-params]
-  (-> (ssr env (object/get req "host-env") jwt user-id (.-path req))
-      (p/then (fn [{:keys [http-status-code component]}]
-                (doto res
-                  (.status http-status-code)
-                  (.format #js {"text/html" #(.send res (str "<!DOCTYPE html>\n" (reagent-server/render-to-string component)))}))))
-      (p/catch (fn [e]
-                 (timbre/error e)
-                 (doto res
-                   (.status (or (:hyperfiddle.io/http-status-code (ex-data e)) 500))
-                   (.format #js {"text/html" #(.send res (str "<h2>Fatal error:</h2><h4>" (ex-message e) "</h4>"))}))))))
-
-(defn express-ssr-stream [env req res jwt user-id path-params query-params]
-  (-> (ssr env (object/get req "host-env") jwt user-id (.-path req))
-      (p/then (fn [{:keys [http-status-code component]}]
-                (doto res
-                  (.status http-status-code)
-                  (.type "html")
-                  (.write "<!DOCTYPE html>\n"))
-                (let [stream (render-to-node-stream component)]
-                  (.on stream "error" (fn [e]
-                                        (timbre/error e)
-                                        (.end res (str "<h2>Fatal rendering error:</h2><h4>" (ex-message e) "</h4>"))))
-                  (.pipe stream res))))
-      (p/catch (fn [e]
-                 (timbre/error e)
-                 (doto res
-                   (.status (or (:hyperfiddle.io/http-status-code (ex-data e)) 500))
-                   (.format #js {"text/html" #(.send res (str "<h2>Fatal error:</h2><h4>" (ex-message e) "</h4>"))}))))))
