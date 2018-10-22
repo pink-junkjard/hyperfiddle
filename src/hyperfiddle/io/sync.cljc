@@ -1,10 +1,13 @@
 (ns hyperfiddle.io.sync
   #?(:clj
      (:refer-clojure :exclude [sync]))
-  (:require #?(:clj [datomic.api :as d])
-                    [hyperfiddle.io.http.core :refer [http-request!]]
-                    [promesa.core :as p]
-                    [taoensso.timbre :as timbre])
+  (:require
+    [bidi.bidi :as bidi]
+    #?(:clj [datomic.api :as d])
+    [hyperfiddle.io.http :refer [build-routes]]
+    [hyperfiddle.io.http.core :refer [http-request!]]
+    [promesa.core :as p]
+    [taoensso.timbre :as timbre])
   #?(:clj
      (:import (java.net URISyntaxException)
               (java.util.concurrent ExecutionException))))
@@ -42,8 +45,8 @@
             (timbre/error e)
             (throw e)))))
 
-(defn sync-rpc! [service-uri dbs & [jwt]]
-  (-> {:url (str service-uri "sync")
+(defn sync-rpc! [service-uri build dbs & [jwt]]
+  (-> {:url (str service-uri (bidi/path-for (build-routes build) :sync))
        :accept :application/transit+json :as :auto
        :method :post :form dbs
        :content-type :application/transit+json}

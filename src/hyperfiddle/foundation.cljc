@@ -1,6 +1,7 @@
 (ns hyperfiddle.foundation
   (:refer-clojure :exclude [read-string])
   (:require
+    [bidi.bidi :as bidi]
     [cats.monad.either :as either :refer [branch left right]]
     [clojure.string :as string]
     #?(:cljs [contrib.css :refer [css]])
@@ -22,6 +23,7 @@
     #?(:cljs [hypercrud.ui.stale :as stale])
     [hyperfiddle.actions :as actions]
     [hyperfiddle.domain]
+    [hyperfiddle.io.http :refer [build-routes]]
     [hyperfiddle.runtime :as runtime]
     [hyperfiddle.security.domains]
     [promesa.core :as p]
@@ -30,17 +32,16 @@
 
 (def domain-uri #uri "datomic:free://datomic:4334/domains")
 (def source-domain-ident "hyperfiddle")                     ; todo this needs to be configurable
-(def auth0-redirect-path "/auth0")                          ; ide
 
 #?(:cljs
    (defn stateless-login-url [ctx]
-     (let [{:keys [hostname :ide/root]} (runtime/host-env (:peer ctx))
+     (let [{:keys [build hostname :ide/root]} (runtime/host-env (:peer ctx))
            {:keys [domain client-id]} (get-in ctx [:hypercrud.browser/domain :domain/environment :auth0 root])]
        (str domain "/login?"
             "client=" client-id
             "&scope=" "openid email profile"
             "&state=" (base64-url-safe/encode (runtime/encode-route (:peer ctx) (context/target-route ctx)))
-            "&redirect_uri=" (str "http://" hostname auth0-redirect-path)))))
+            "&redirect_uri=" (str "http://" hostname (bidi/path-for (build-routes build) :auth0-redirect))))))
 
 (defn domain-request [domain-eid peer]
   (->EntityRequest domain-eid

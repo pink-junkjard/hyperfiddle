@@ -1,11 +1,13 @@
 (ns hyperfiddle.io.global-basis
   (:refer-clojure :exclude [compare])
   (:require
+    [bidi.bidi :as bidi]
     [cats.core :as cats :refer [mlet]]
     [cats.labs.promise]
     [clojure.set :as set]
     [contrib.performance :as perf]
     [hyperfiddle.foundation :as foundation]
+    [hyperfiddle.io.http :refer [build-routes]]
     [hyperfiddle.io.http.core :refer [http-request!]]
     [hyperfiddle.io.hydrate-requests :refer [hydrate-all-or-nothing!]]
     [hyperfiddle.runtime :as runtime]
@@ -59,8 +61,8 @@
 
 ; This knows about userland api fn (but has no assumptions e.g. that it is the browser-api-fn)
 
-(defn global-basis-rpc! [service-uri & [jwt]]
-  (-> {:url (str service-uri "global-basis")
+(defn global-basis-rpc! [service-uri build & [jwt]]
+  (-> {:url (str service-uri (bidi/path-for (build-routes build) :global-basis))
        :accept :application/transit+json :as :auto
        :method :get}
       (into (when jwt {:auth {:bearer jwt}}))

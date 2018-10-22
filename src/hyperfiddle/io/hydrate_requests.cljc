@@ -1,13 +1,16 @@
 (ns hyperfiddle.io.hydrate-requests
-  (:require [cats.core :as cats]
-            [cats.monad.either :as either]
-            [cuerdas.core :as str]
-            [hyperfiddle.io.rpc-router :refer [encode-basis]]
-            [hyperfiddle.io.http.core :refer [http-request!]]
-            [hyperfiddle.io.util :refer [process-result]]
-            [hyperfiddle.runtime :as runtime]
-            [promesa.core :as p]
-            [taoensso.timbre :as timbre]))
+  (:require
+    [bidi.bidi :as bidi]
+    [cats.core :as cats]
+    [cats.monad.either :as either]
+    [cuerdas.core :as str]
+    [hyperfiddle.io.rpc-router :refer [encode-basis]]
+    [hyperfiddle.io.http :refer [build-routes]]
+    [hyperfiddle.io.http.core :refer [http-request!]]
+    [hyperfiddle.io.util :refer [process-result]]
+    [hyperfiddle.runtime :as runtime]
+    [promesa.core :as p]
+    [taoensso.timbre :as timbre]))
 
 
 (defn stage-val->staged-branches [stage-val]
@@ -33,10 +36,10 @@
                     (cats/sequence)
                     (either/branch p/rejected p/resolved))))))
 
-(defn hydrate-requests-rpc! [service-uri local-basis stage-val requests & [jwt]]
+(defn hydrate-requests-rpc! [service-uri build local-basis stage-val requests & [jwt]]
   (let [staged-branches (stage-val->staged-branches stage-val)
         ; Note the UI-facing interface contains stage-val; the API accepts staged-branches
-        req (into {:url (str service-uri "hydrate-requests/" (encode-basis local-basis)) ; serialize kvseq
+        req (into {:url (str service-uri (bidi/path-for (build-routes build) :hydrate-requests :local-basis (encode-basis local-basis))) ; serialize kvseq
                    :accept :application/transit+json :as :auto
                    :method :post                            ; hydrate-requests always has a POST body, though it has a basis and is cachable
                    :form {:staged-branches staged-branches :request requests}

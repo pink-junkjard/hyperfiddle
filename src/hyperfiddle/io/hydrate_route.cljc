@@ -1,13 +1,12 @@
 (ns hyperfiddle.io.hydrate-route
   (:require
+    [bidi.bidi :as bidi]
     [clojure.set :as set]
-    [cuerdas.core :as str]
-    [contrib.data :refer [map-keys]]
     [contrib.performance :as perf]
     [hypercrud.browser.router :as router]
-    [hypercrud.client.peer :as peer]
     [hypercrud.types.EntityRequest :refer [#?(:cljs EntityRequest)]]
     [hypercrud.types.QueryRequest :refer [#?(:cljs QueryRequest)]]
+    [hyperfiddle.io.http :refer [build-routes]]
     [hyperfiddle.io.http.core :refer [http-request!]]
     [hyperfiddle.io.rpc-router :refer [encode-basis]]
     [hyperfiddle.reducers :as reducers]                     ; this import is immoral
@@ -81,17 +80,16 @@
                                     (->Runtime (reducers/root-reducer state nil)))))]
       (f ctx))))
 
-(defn hydrate-route-rpc! [service-uri local-basis route branch branch-aux stage & [jwt]]
+(defn hydrate-route-rpc! [service-uri build local-basis route branch branch-aux stage & [jwt]]
   ; matrix params instead of path params
   (let [stage (->> stage
                    (remove (comp empty? second))
                    (into {}))]
-    (-> (merge {:url (str/format "%(service-uri)shydrate-route/$local-basis/$branch/$branch-aux$encoded-route"
-                                 {:service-uri service-uri
-                                  :local-basis (encode-basis local-basis)
-                                  :encoded-route (router/encode route) ; includes "/"
-                                  :branch (router/-encode-pchar branch)
-                                  :branch-aux (router/-encode-pchar branch-aux)})
+    (-> (merge {:url (str service-uri (bidi/path-for (build-routes build) :hydrate-route
+                                                     :local-basis (encode-basis local-basis)
+                                                     :encoded-route (subs (router/encode route) 1) ; includes "/"
+                                                     :branch (router/-encode-pchar branch)
+                                                     :branch-aux (router/-encode-pchar branch-aux)))
                 :accept :application/transit+json :as :auto}
                (when jwt {:auth {:bearer jwt}})
                (if (empty? stage)

@@ -1,12 +1,14 @@
 (ns hyperfiddle.io.transact
-  (:require [cats.monad.either :as either]
-            [contrib.eval :as eval]
-    #?(:clj
-            [datomic.api :as d])
-            [hyperfiddle.io.http.core :refer [http-request!]]
-            [hyperfiddle.security :as security]
-            [promesa.core :as p]
-            [taoensso.timbre :as timbre]))
+  (:require
+    [bidi.bidi :as bidi]
+    [cats.monad.either :as either]
+    [contrib.eval :as eval]
+    #?(:clj [datomic.api :as d])
+    [hyperfiddle.io.http :refer [build-routes]]
+    [hyperfiddle.io.http.core :refer [http-request!]]
+    [hyperfiddle.security :as security]
+    [promesa.core :as p]
+    [taoensso.timbre :as timbre]))
 
 #?(:clj
    (let [memoized-safe-eval-string (memoize eval/safe-eval-string+)]
@@ -39,8 +41,8 @@
                                (into {}))]
        {:tempid->id tempid-lookups})))
 
-(defn transact!-rpc! [service-uri tx-groups & [jwt]]
-  (-> {:url (str service-uri "transact")
+(defn transact!-rpc! [service-uri build tx-groups & [jwt]]
+  (-> {:url (str service-uri (bidi/path-for (build-routes build) :transact))
        :accept :application/transit+json :as :auto
        :method :post :form tx-groups
        :content-type :application/transit+json}
