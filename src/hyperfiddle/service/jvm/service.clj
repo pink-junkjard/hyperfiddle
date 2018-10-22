@@ -1,19 +1,21 @@
 (ns hyperfiddle.service.jvm.service
   (:refer-clojure :exclude [sync])
   (:require
+    [bidi.bidi :as bidi]
     [contrib.performance :as perf]
     [hypercrud.transit :as hc-t]
     [hypercrud.types.Err :refer [->Err]]
     [hyperfiddle.foundation :as foundation]
     [hyperfiddle.io.datomic.hydrate-requests :refer [hydrate-requests]]
+    [hyperfiddle.io.http :as http]
     [hyperfiddle.io.rpc-router :refer [decode-basis]]
     [hyperfiddle.io.sync :refer [sync]]
     [hyperfiddle.io.transact :refer [transact!]]
     [hyperfiddle.service.cookie :as cookie]
-    [hyperfiddle.service.http :as http-service]
+    [hyperfiddle.service.http :as http-service :refer [handle-route]]
     [hyperfiddle.service.jvm.global-basis :refer [->GlobalBasisRuntime]]
     [hyperfiddle.service.jvm.hydrate-route :refer [->HydrateRoute]]
-    [hyperfiddle.service.jvm.lib.http :as http]
+    [hyperfiddle.service.jvm.lib.http :as hf-interceptors]
     [hyperfiddle.service.jvm.local-basis :refer [->LocalBasis]]
     [hyperfiddle.service.lib.jwt :as jwt]
     [io.pedestal.http.body-params :as body-params]
@@ -36,24 +38,25 @@
 
 (def platform-response->pedestal-response identity)
 
-(defn build-pedestal-req-handler [platform-req-handler]
-  (interceptor/handler
-    (fn [req]
-      (-> (platform-req-handler
-            :host-env (:host-env req)
-            :path-params (:path-params req)
-            :request-body (:body-params req)
-            :jwt (:jwt req)
-            :user-id (:user-id req))
-          (p/then platform-response->pedestal-response)))))
+(defn platform->pedestal-req-handler [platform-req-handler req]
+  (-> (platform-req-handler
+        :host-env (:host-env req)
+        :route-params (:route-params req)
+        :request-body (:body-params req)
+        :jwt (:jwt req)
+        :user-id (:user-id req))
+      (p/then platform-response->pedestal-response)))
 
-(defn http-index [req]
-  (ring-resp/response "Hypercrud Server Running!"))
+(defmethod handle-route :default [handler req]
+  {:status 501 :body (str (pr-str handler) " not implemented")})
 
-(defn http-hydrate-requests [req]
+(defmethod handle-route :global-basis [handler req]
+  (platform->pedestal-req-handler (partial http-service/global-basis-handler ->GlobalBasisRuntime) req))
+
+(defmethod handle-route :hydrate-requests [handler req]
   (try
-    (let [{:keys [body-params path-params]} req
-          local-basis (decode-basis (:local-basis path-params))
+    (let [{:keys [body-params route-params]} req
+          local-basis (decode-basis (:local-basis route-params))
           {staged-branches :staged-branches requests :request} body-params
           r (perf/time
               (fn [get-total-time] (timbre/debugf "hydrate-requests: count %s, has stage? %s, total time: %s" (count requests) (not (empty? staged-branches)) (get-total-time)))
@@ -63,7 +66,20 @@
       (timbre/error e)
       (e->response e))))
 
-(defn http-transact! [req]
+(defmethod handle-route :hydrate-route [handler req]
+  (platform->pedestal-req-handler (partial http-service/hydrate-route-handler ->HydrateRoute) req))
+
+(defmethod handle-route :local-basis [handler req]
+  (platform->pedestal-req-handler (partial http-service/local-basis-handler ->LocalBasis) req))
+
+(defmethod handle-route :sync [handler req]
+  (try
+    (-> (sync (:body-params req))
+        (ring-resp/response))
+    (catch Exception e
+      (e->response e))))
+
+(defmethod handle-route :transact [handler req]
   (try
     (-> (transact! foundation/domain-uri (:user-id req) (:body-params req))
         (ring-resp/response))
@@ -71,21 +87,14 @@
       (timbre/error e)
       (e->response e))))
 
-(defn http-sync [req]
-  (try
-    (-> (sync (:body-params req))
-        (ring-resp/response))
-    (catch Exception e
-      (e->response e))))
+(defmethod handle-route :404 [handler req]
+  (ring-resp/not-found "Not found"))
 
-(def http-global-basis
-  (build-pedestal-req-handler (partial http-service/global-basis-handler ->GlobalBasisRuntime)))
+(defmethod handle-route :405 [handler req]
+  (ring-resp/not-found "Method Not Allowed"))
 
-(def http-local-basis
-  (build-pedestal-req-handler (partial http-service/local-basis-handler ->LocalBasis)))
-
-(def http-hydrate-route
-  (build-pedestal-req-handler (partial http-service/hydrate-route-handler ->HydrateRoute)))
+(defmethod handle-route :force-refresh [handler req]
+  {:status 404 #_410 :body "Please refresh your browser"})
 
 (defn set-host-environment [f]
   (interceptor/before
@@ -129,25 +138,26 @@
             :else (-> (terminate context)
                       (assoc :response {:status 400 :body (->Err "Conflicting cookies and auth bearer")}))))))))
 
+(defn build-router [env]
+  (let [routes (http/build-routes (:BUILD env))]
+    (fn [req]
+      (let [path (:path-info req)
+            request-method (:request-method req)
+            {:keys [handler route-params]} (bidi/match-route routes path :request-method request-method)]
+        (timbre/debug "router:" (pr-str handler) (pr-str request-method) (pr-str path))
+        (handle-route handler (assoc-in req [:route-params] route-params))))))
+
 (defn routes [env]
-  (let [service-root (str "/api/" (:BUILD env))]
+  (let [interceptors [(body-params/body-params
+                        (body-params/default-parser-map :edn-options {:readers *data-readers*}
+                                                        :transit-options [{:handlers hc-t/read-handlers}]))
+                      hf-interceptors/combine-body-params
+                      hf-interceptors/auto-content-type
+                      ring-middlewares/cookies
+                      (set-host-environment (partial http-service/cloud-host-environment env))
+                      (with-user env)
+                      hf-interceptors/promise->chan
+                      (build-router env)]]
     (expand-routes
-      `[[["/" {:get [:index http-index]}]
-         [~service-root {} ^:interceptors [~(body-params/body-params
-                                              (body-params/default-parser-map :edn-options {:readers *data-readers*}
-                                                                              :transit-options [{:handlers hc-t/read-handlers}]))
-                                           http/combine-body-params
-                                           http/auto-content-type
-                                           ring-middlewares/cookies
-                                           ~(set-host-environment (partial http-service/cloud-host-environment env))
-                                           ~(with-user env)
-                                           http/promise->chan]
-          ["/global-basis" {:get [:global-basis http-global-basis]}]
-          ["/local-basis/:global-basis/:branch/:branch-aux/*encoded-route" {:get [:local-basis-get http-local-basis]}]
-          ["/local-basis/:global-basis/:branch/:branch-aux/*encoded-route" {:post [:local-basis-post http-local-basis]}]
-          ["/hydrate-requests/:local-basis" {:post [:hydrate-requests http-hydrate-requests]}]
-          ["/hydrate-route/:local-basis/:branch/:branch-aux/*encoded-route" {:get [:hydrate-route-get http-hydrate-route]}]
-          ["/hydrate-route/:local-basis/:branch/:branch-aux/*encoded-route" {:post [:hydrate-route-post http-hydrate-route]}]
-          ["/transact" {:post [:transact! http-transact!]}]
-          ["/sync" {:post [:latest http-sync]}]
-          ]]])))
+      #{["/" :any interceptors :route-name :index]
+        ["/*" :any interceptors :route-name :wildcard]})))

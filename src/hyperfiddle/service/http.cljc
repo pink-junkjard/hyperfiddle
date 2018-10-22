@@ -11,6 +11,8 @@
             [taoensso.timbre :as timbre]))
 
 
+(defmulti handle-route (fn [handler & rest] handler))
+
 ; hf.net cloud specific
 (defn cloud-host-environment [{:keys [BUILD HF_HOSTNAMES HF_ALIAS_HOSTNAMES] :as env} protocol hostname]
   {:pre [hostname]}
@@ -31,7 +33,8 @@
                             :auth/root nil
                             :ide/root (first HF_ALIAS_HOSTNAMES)})
         (assoc :hostname hostname
-               :service-uri (->URI (str protocol "://" hostname "/api/" BUILD "/")))
+               :build BUILD
+               :service-uri (->URI (str protocol "://" hostname)))
         (map->HostEnvironment))))
 
 (defn e->platform-response [e]
@@ -53,18 +56,13 @@
                    (timbre/error e)
                    (e->platform-response e))))))
 
-(defn normalize-router-params [params]
-  ; bide yields :0, pedestal yields :encoded-route
-  (clojure.set/rename-keys params {:0 :encoded-route}))
-
-(defn local-basis-handler [->Runtime & {:keys [host-env path-params user-id jwt]}]
+(defn local-basis-handler [->Runtime & {:keys [host-env route-params user-id jwt]}]
   (try
-    (let [path-params (normalize-router-params path-params)
-          global-basis (decode-basis (:global-basis path-params)) ; todo this can throw
-          route (router/decode (str "/" (:encoded-route path-params)))
+    (let [global-basis (decode-basis (:global-basis route-params)) ; todo this can throw
+          route (router/decode (str "/" (:encoded-route route-params)))
           _ (when-let [e (router/invalid-route? route)] (throw e))
-          branch (some-> (:branch path-params) router/-decode-url-ednish)
-          branch-aux (some-> (:branch-aux path-params) router/-decode-url-ednish)
+          branch (some-> (:branch route-params) router/-decode-url-ednish)
+          branch-aux (some-> (:branch-aux route-params) router/-decode-url-ednish)
           initial-state {::runtime/user-id user-id
                          ::runtime/global-basis global-basis
                          ::runtime/partitions {branch {:route route
@@ -86,14 +84,13 @@
       (timbre/error e)
       (p/resolved (e->platform-response e)))))
 
-(defn hydrate-route-handler [->Runtime & {:keys [host-env path-params request-body user-id jwt]}]
+(defn hydrate-route-handler [->Runtime & {:keys [host-env route-params request-body user-id jwt]}]
   (try
-    (let [path-params (normalize-router-params path-params)
-          local-basis (decode-basis (:local-basis path-params)) ; todo this can throw
-          route (-> (str "/" (:encoded-route path-params)) router/decode)
+    (let [local-basis (decode-basis (:local-basis route-params)) ; todo this can throw
+          route (-> (str "/" (:encoded-route route-params)) router/decode)
           _ (when-let [e (router/invalid-route? route)] (throw e))
-          branch (some-> (:branch path-params) router/-decode-url-ednish)
-          branch-aux (some-> (:branch-aux path-params) router/-decode-url-ednish)
+          branch (some-> (:branch route-params) router/-decode-url-ednish)
+          branch-aux (some-> (:branch-aux route-params) router/-decode-url-ednish)
           initial-state (reduce (fn [state [branch v]]
                                   (assoc-in state [::runtime/partitions branch :stage] v))
                                 {::runtime/user-id user-id

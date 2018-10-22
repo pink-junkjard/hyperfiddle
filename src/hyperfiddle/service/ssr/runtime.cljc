@@ -26,7 +26,7 @@
 
   runtime/AppFnGlobalBasis
   (global-basis [rt]
-    (global-basis-rpc! (:service-uri host-env) jwt))
+    (global-basis-rpc! (:service-uri host-env) (:build host-env) jwt))
 
   runtime/Route
   (decode-route [rt s]
@@ -57,15 +57,15 @@
   (hydrate-route [rt branch]
     (let [{:keys [route local-basis ::runtime/branch-aux]} @(runtime/state rt [::runtime/partitions branch])
           stage (map-values :stage @(runtime/state rt [::runtime/partitions]))]
-      (hydrate-route-rpc! (:service-uri host-env) local-basis route branch branch-aux stage jwt)))
+      (hydrate-route-rpc! (:service-uri host-env) (:build host-env) local-basis route branch branch-aux stage jwt)))
 
   runtime/AppFnHydrate
   (hydrate-requests [rt local-basis stage requests]
-    (hydrate-requests-rpc! (:service-uri host-env) local-basis stage requests jwt))
+    (hydrate-requests-rpc! (:service-uri host-env) (:build host-env) local-basis stage requests jwt))
 
   runtime/AppFnSync
   (sync [rt dbs]
-    (sync-rpc! (:service-uri host-env) dbs jwt))
+    (sync-rpc! (:service-uri host-env) (:build host-env) dbs jwt))
 
   hc/Peer
   (hydrate [this branch request]

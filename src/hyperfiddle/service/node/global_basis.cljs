@@ -24,11 +24,11 @@
 
   runtime/AppFnHydrate
   (hydrate-requests [rt local-basis stage requests]
-    (hydrate-requests-rpc! (:service-uri host-env) local-basis stage requests jwt))
+    (hydrate-requests-rpc! (:service-uri host-env) (:build host-env) local-basis stage requests jwt))
 
   runtime/AppFnSync
   (sync [rt dbs]
-    (sync-rpc! (:service-uri host-env) dbs jwt))
+    (sync-rpc! (:service-uri host-env) (:build host-env) dbs jwt))
 
   hc/Peer
   (hydrate [this branch request]
