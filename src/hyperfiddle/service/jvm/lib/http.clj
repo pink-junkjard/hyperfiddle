@@ -70,8 +70,6 @@
             accept (-> (some accepts (keys content-types))
                        #_(or "application/transit+json; charset=utf-8"))
             content-renderer (get content-types accept)]
-        (timbre/debug (pr-str {:accept-header (get-in request [:headers "accept"])
-                               :accept accept}))
         #_(assert content-renderer (str "invalid Accept " (get-in request [:headers "accept"])))
         (-> context
             (update-in [:response :body] (or content-renderer str))
