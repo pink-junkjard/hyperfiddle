@@ -7,7 +7,7 @@
     [contrib.reactive :as r]
     [contrib.reader]
     [contrib.string :refer [blank->nil]]
-    [datascript.parser]
+    [datascript.parser :refer [FindRel FindColl FindTuple FindScalar Variable Aggregate Pull]]
     [hypercrud.browser.context :as context]
     [hypercrud.browser.field :as field]
     [hyperfiddle.data :as data]
@@ -27,26 +27,26 @@
     ; This logic duplicates ui/columns-relation-product &co
     (->>
       (condp = (type find)
-        datascript.parser.FindRel
+        FindRel
         (mapcat (fn [element field relation]
                   (condp = (type element)
-                    datascript.parser.Variable [relation]
-                    datascript.parser.Aggregate [relation]
-                    datascript.parser.Pull (mapv (fn [{f ::field/get-value}]
+                    Variable [relation]
+                    Aggregate [relation]
+                    Pull (mapv (fn [{f ::field/get-value}]
                                                    (field-label (f relation)))
                                                  (::field/children field))))
                 (:elements find)
                 (::field/children field)
                 row)
-        datascript.parser.FindColl
+        FindColl
         (condp = (type (:element find))
-          datascript.parser.Variable [row]
-          datascript.parser.Aggregate [row]
-          datascript.parser.Pull (mapv (fn [{f ::field/get-value}]
+          Variable [row]
+          Aggregate [row]
+          Pull (mapv (fn [{f ::field/get-value}]
                                          (field-label (f row)))
                                        (::field/children field)))
-        datascript.parser.FindTuple [row]
-        datascript.parser.FindScalar [row])
+        FindTuple [row]
+        FindScalar [row])
       (remove nil?)
       (interpose ", ")
       (apply str))))

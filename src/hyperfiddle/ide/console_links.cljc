@@ -4,10 +4,11 @@
     [contrib.data :refer [merge-by]]
     [contrib.string :refer [blank->nil]]
     [contrib.reactive :as r]
-    [datascript.parser :refer []]
+    [datascript.parser #?@(:cljs [:refer [FindColl]])]
     [hypercrud.browser.field :as field]
     [hyperfiddle.ide.system-fiddle :as system-fiddle]
-    [hyperfiddle.fiddle :as fiddle]))
+    [hyperfiddle.fiddle :as fiddle])
+  #?(:clj (:import (datascript.parser FindColl))))
 
 
 (defn ^:export system-link? [link-id]
@@ -87,7 +88,7 @@
      ; Don't generate it at the id-in-ref path - generate it at the ref.
      ; editable-ref, really. If we don't know identity we can't edit or link to it.
 
-     (let [fc (= datascript.parser.FindColl (type (:qfind q)))
+     (let [fc (= FindColl (type (:qfind q)))
            id-field (field/identity-segment? field)
            ref (::field/data-has-id? field)
            id-under-ref (and id-field parent-has-id)

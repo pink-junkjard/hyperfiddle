@@ -15,7 +15,7 @@
     [contrib.ui]
     [contrib.ui.safe-render :refer [user-portal]]
     [contrib.ui.tooltip :refer [tooltip tooltip-props]]
-    [datascript.parser]
+    [datascript.parser :refer [FindRel FindColl FindTuple FindScalar Variable Aggregate Pull]]
     [hypercrud.browser.context :as context]
     [hypercrud.browser.base :as base]
     [hypercrud.browser.field :as field]
@@ -427,9 +427,9 @@ User renderers should not be exposed to the reaction."
                   ^{:key (str relative-path)}
                   [field relative-path ctx hyper-control props]))))
     (when-let [f (condp = @(r/fmap ::field/element-type m-field)
-                   datascript.parser.Variable hyper-control
-                   datascript.parser.Aggregate hyper-control
-                   datascript.parser.Pull nil #_entity-links
+                   Variable hyper-control
+                   Aggregate hyper-control
+                   Pull nil #_entity-links
                    ; else nested pulls
                    nil)]
       [^{:key (str relative-path)} [field relative-path ctx f props]])))

@@ -5,7 +5,9 @@
             [contrib.data :refer [transpose]]
             [contrib.reactive :as r]
             [contrib.try$ :refer [try-either]]
-            [datascript.parser :as parser]))
+            [datascript.parser :as parser
+             #?@(:cljs [:refer [FindRel FindColl FindTuple FindScalar Variable Aggregate Pull]])])
+  #?(:clj (:import (datascript.parser FindRel FindColl FindTuple FindScalar Variable Aggregate Pull))))
 
 
 (def keyword->label #(some-> % name str))
@@ -199,106 +201,106 @@
       :query (mlet [{:keys [qfind] :as q} (try-either (parser/parse-query @(r/cursor request [:query])))]
                (cats/return
                  (merge {::query q}
-                 (condp = (type qfind)
-                   datascript.parser.FindRel
-                   (let [results-by-column (transpose @data)]
-                     {::level :relation
-                      ::cardinality :db.cardinality/many
-                      ::children (->> (:elements qfind)
-                                      (map-indexed (fn [fe-pos element]
-                                                     (merge {::element-type (type element)} ; https://github.com/hyperfiddle/hyperfiddle/issues/499
-                                                            (condp = (type element)
-                                                              datascript.parser.Variable
-                                                              (variable-rel fe-pos element)
+                        (condp = (type qfind)
+                          FindRel
+                          (let [results-by-column (transpose @data)]
+                            {::level :relation
+                             ::cardinality :db.cardinality/many
+                             ::children (->> (:elements qfind)
+                                             (map-indexed (fn [fe-pos element]
+                                                            (merge {::element-type (type element)} ; https://github.com/hyperfiddle/hyperfiddle/issues/499
+                                                                   (condp = (type element)
+                                                                     Variable
+                                                                     (variable-rel fe-pos element)
 
-                                                              datascript.parser.Pull
-                                                              (let [source-symbol (get-in element [:source :symbol])
-                                                                    pull-pattern (get-in element [:pattern :value])]
-                                                                {::cardinality :db.cardinality/one
-                                                                 ::children (pull->fields (get schemas (str source-symbol)) source-symbol pull-pattern (get results-by-column fe-pos) [])
-                                                                 ::data-has-id? (entity-pull? pull-pattern)
-                                                                 ::get-value (r/partial r/last-arg-first get fe-pos)
-                                                                 ::label (get-in element [:variable :symbol])
-                                                                 ::path-segment fe-pos
-                                                                 ::source-symbol source-symbol})
+                                                                     Pull
+                                                                     (let [source-symbol (get-in element [:source :symbol])
+                                                                           pull-pattern (get-in element [:pattern :value])]
+                                                                       {::cardinality :db.cardinality/one
+                                                                        ::children (pull->fields (get schemas (str source-symbol)) source-symbol pull-pattern (get results-by-column fe-pos) [])
+                                                                        ::data-has-id? (entity-pull? pull-pattern)
+                                                                        ::get-value (r/partial r/last-arg-first get fe-pos)
+                                                                        ::label (get-in element [:variable :symbol])
+                                                                        ::path-segment fe-pos
+                                                                        ::source-symbol source-symbol})
 
-                                                              datascript.parser.Aggregate
-                                                              (aggregate-rel fe-pos element)))))
-                                      vec)
-                      ::data-has-id? false
-                      ::get-value identity
-                      ::label nil
-                      ::path-segment nil
-                      ::source-symbol nil})
+                                                                     Aggregate
+                                                                     (aggregate-rel fe-pos element)))))
+                                             vec)
+                             ::data-has-id? false
+                             ::get-value identity
+                             ::label nil
+                             ::path-segment nil
+                             ::source-symbol nil})
 
-                   datascript.parser.FindColl
-                   (-> (condp = (type (:element qfind))
-                         datascript.parser.Variable
-                         (-> (variable (:element qfind))
-                             (assoc ::cardinality :db.cardinality/many))
+                          FindColl
+                          (-> (condp = (type (:element qfind))
+                                Variable
+                                (-> (variable (:element qfind))
+                                    (assoc ::cardinality :db.cardinality/many))
 
-                         datascript.parser.Pull
-                         (let [source-symbol (get-in qfind [:element :source :symbol])
-                               pull-pattern (get-in qfind [:element :pattern :value])]
-                           {::cardinality :db.cardinality/many
-                            ::children (pull->fields (get schemas (str source-symbol)) source-symbol pull-pattern @data [])
-                            ::data-has-id? (entity-pull? pull-pattern)
-                            ::get-value identity
-                            ::label (get-in qfind [:element :variable :symbol])
-                            ::path-segment nil
-                            ::source-symbol source-symbol})
+                                Pull
+                                (let [source-symbol (get-in qfind [:element :source :symbol])
+                                      pull-pattern (get-in qfind [:element :pattern :value])]
+                                  {::cardinality :db.cardinality/many
+                                   ::children (pull->fields (get schemas (str source-symbol)) source-symbol pull-pattern @data [])
+                                   ::data-has-id? (entity-pull? pull-pattern)
+                                   ::get-value identity
+                                   ::label (get-in qfind [:element :variable :symbol])
+                                   ::path-segment nil
+                                   ::source-symbol source-symbol})
 
-                         datascript.parser.Aggregate
-                         (-> (aggregate (:element qfind))
-                             (assoc ::cardinality :db.cardinality/many)))
-                       (assoc ::element-type (type (:element qfind))))
+                                Aggregate
+                                (-> (aggregate (:element qfind))
+                                    (assoc ::cardinality :db.cardinality/many)))
+                              (assoc ::element-type (type (:element qfind))))
 
-                   datascript.parser.FindTuple
-                   {::level :tuple
-                    ::cardinality :db.cardinality/one
-                    ::children (->> (:elements qfind)
-                                    (map-indexed (fn [fe-pos element]
-                                                   (-> (condp = (type element)
-                                                         datascript.parser.Variable
-                                                         (variable-rel fe-pos element)
+                          FindTuple
+                          {::level :tuple
+                           ::cardinality :db.cardinality/one
+                           ::children (->> (:elements qfind)
+                                           (map-indexed (fn [fe-pos element]
+                                                          (-> (condp = (type element)
+                                                                Variable
+                                                                (variable-rel fe-pos element)
 
-                                                         datascript.parser.Pull
-                                                         (let [source-symbol (get-in element [:source :symbol])
-                                                               pull-pattern (get-in element [:pattern :value])]
-                                                           {::cardinality :db.cardinality/one
-                                                            ::children (pull->fields (get schemas (str source-symbol)) source-symbol pull-pattern (get @data fe-pos) [])
-                                                            ::data-has-id? (entity-pull? pull-pattern)
-                                                            ::get-value (r/partial r/last-arg-first get fe-pos)
-                                                            ::label (get-in element [:variable :symbol])
-                                                            ::path-segment fe-pos
-                                                            ::source-symbol source-symbol})
+                                                                Pull
+                                                                (let [source-symbol (get-in element [:source :symbol])
+                                                                      pull-pattern (get-in element [:pattern :value])]
+                                                                  {::cardinality :db.cardinality/one
+                                                                   ::children (pull->fields (get schemas (str source-symbol)) source-symbol pull-pattern (get @data fe-pos) [])
+                                                                   ::data-has-id? (entity-pull? pull-pattern)
+                                                                   ::get-value (r/partial r/last-arg-first get fe-pos)
+                                                                   ::label (get-in element [:variable :symbol])
+                                                                   ::path-segment fe-pos
+                                                                   ::source-symbol source-symbol})
 
-                                                         datascript.parser.Aggregate
-                                                         (aggregate-rel fe-pos element))
-                                                       (assoc ::element-type (type element)))))
-                                    vec)
-                    ::data-has-id? false
-                    ::get-value identity
-                    ::label nil
-                    ::path-segment nil
-                    ::source-symbol nil}
+                                                                Aggregate
+                                                                (aggregate-rel fe-pos element))
+                                                              (assoc ::element-type (type element)))))
+                                           vec)
+                           ::data-has-id? false
+                           ::get-value identity
+                           ::label nil
+                           ::path-segment nil
+                           ::source-symbol nil}
 
-                   datascript.parser.FindScalar
-                   (-> (condp = (type (:element qfind))
-                         datascript.parser.Variable
-                         (-> (variable (:element qfind))
-                             (assoc ::cardinality :db.cardinality/one))
+                          FindScalar
+                          (-> (condp = (type (:element qfind))
+                                Variable
+                                (-> (variable (:element qfind))
+                                    (assoc ::cardinality :db.cardinality/one))
 
-                         datascript.parser.Pull
-                         (pull-one schemas @data
-                                   (get-in qfind [:element :source :symbol])
-                                   (get-in qfind [:element :variable :symbol])
-                                   (get-in qfind [:element :pattern :value]))
+                                Pull
+                                (pull-one schemas @data
+                                          (get-in qfind [:element :source :symbol])
+                                          (get-in qfind [:element :variable :symbol])
+                                          (get-in qfind [:element :pattern :value]))
 
-                         datascript.parser.Aggregate
-                         (-> (aggregate (:element qfind))
-                             (assoc ::cardinality :db.cardinality/one)))
-                       (assoc ::element-type (type (:element qfind))))))))
+                                Aggregate
+                                (-> (aggregate (:element qfind))
+                                    (assoc ::cardinality :db.cardinality/one)))
+                              (assoc ::element-type (type (:element qfind))))))))
 
       :blank (either/right nil)
 
