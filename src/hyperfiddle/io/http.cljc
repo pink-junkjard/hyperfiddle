@@ -32,7 +32,8 @@
 
 (defn build-routes [build]
   ["/" {"api/" {(str build "/") api
-                true :force-refresh}
+                [[#"[^/]*" :build] "/"] {true :force-refresh}
+                true :404}
         "auth0" {:get :auth0-redirect
                  #".+" :404
                  true :405}
