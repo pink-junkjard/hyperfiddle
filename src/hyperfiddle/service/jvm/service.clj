@@ -47,13 +47,13 @@
         :user-id (:user-id req))
       (p/then platform-response->pedestal-response)))
 
-(defmethod handle-route :default [handler req]
+(defmethod handle-route :default [handler env req]
   {:status 501 :body (str (pr-str handler) " not implemented")})
 
-(defmethod handle-route :global-basis [handler req]
+(defmethod handle-route :global-basis [handler env req]
   (platform->pedestal-req-handler (partial http-service/global-basis-handler ->GlobalBasisRuntime) req))
 
-(defmethod handle-route :hydrate-requests [handler req]
+(defmethod handle-route :hydrate-requests [handler env req]
   (try
     (let [{:keys [body-params route-params]} req
           local-basis (decode-basis (:local-basis route-params))
@@ -66,20 +66,20 @@
       (timbre/error e)
       (e->response e))))
 
-(defmethod handle-route :hydrate-route [handler req]
+(defmethod handle-route :hydrate-route [handler env req]
   (platform->pedestal-req-handler (partial http-service/hydrate-route-handler ->HydrateRoute) req))
 
-(defmethod handle-route :local-basis [handler req]
+(defmethod handle-route :local-basis [handler env req]
   (platform->pedestal-req-handler (partial http-service/local-basis-handler ->LocalBasis) req))
 
-(defmethod handle-route :sync [handler req]
+(defmethod handle-route :sync [handler env req]
   (try
     (-> (sync (:body-params req))
         (ring-resp/response))
     (catch Exception e
       (e->response e))))
 
-(defmethod handle-route :transact [handler req]
+(defmethod handle-route :transact [handler env req]
   (try
     (-> (transact! foundation/domain-uri (:user-id req) (:body-params req))
         (ring-resp/response))
@@ -87,13 +87,13 @@
       (timbre/error e)
       (e->response e))))
 
-(defmethod handle-route :404 [handler req]
+(defmethod handle-route :404 [handler env req]
   (ring-resp/not-found "Not found"))
 
-(defmethod handle-route :405 [handler req]
+(defmethod handle-route :405 [handler env req]
   (ring-resp/not-found "Method Not Allowed"))
 
-(defmethod handle-route :force-refresh [handler req]
+(defmethod handle-route :force-refresh [handler env req]
   {:status 404 #_410 :body "Please refresh your browser"})
 
 (defn set-host-environment [f]
@@ -145,7 +145,7 @@
             request-method (:request-method req)
             {:keys [handler route-params]} (bidi/match-route routes path :request-method request-method)]
         (timbre/debug "router:" (pr-str handler) (pr-str request-method) (pr-str path))
-        (handle-route handler (assoc-in req [:route-params] route-params))))))
+        (handle-route handler env (assoc-in req [:route-params] route-params))))))
 
 (defn routes [env]
   (let [interceptors [(body-params/body-params
