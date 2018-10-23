@@ -52,11 +52,13 @@
 
    "text/html"
    (fn [body]
-     (binding [clojure.pprint/*print-right-margin* 140]
-       (let [body-str (as-> (with-out-str (clojure.pprint/pprint body)) $
-                            (StringEscapeUtils/escapeHtml4 $)
-                            (format "<html><body><pre>%s</pre></body></html>" $))]
-         (print-fn #(.write *out* body-str)))))})
+     (if (string? body)
+       body
+       (binding [clojure.pprint/*print-right-margin* 140]
+         (let [body-str (as-> (with-out-str (clojure.pprint/pprint body)) $
+                                                                          (StringEscapeUtils/escapeHtml4 $)
+                                                                          (format "<html><body><pre>%s</pre></body></html>" $))]
+           (print-fn #(.write *out* body-str))))))})
 
 (def auto-content-type
   (interceptor/after
