@@ -35,6 +35,8 @@
                                                     (assoc data :hyperfiddle.io/http-status-code 504)
                                                     #?(:clj (.getCause e) :cljs (ex-cause e))))
 
+                                    (= (:status data) 0) (throw (ex-info (ex-message e) data (ex-cause e)))
+
                                     (:status data) (throw (ex-info (ex-message e)
                                                                    (assoc data :hyperfiddle.io/http-status-code (:status data))
                                                                    (ex-cause e)))
