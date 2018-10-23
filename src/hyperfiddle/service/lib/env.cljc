@@ -31,7 +31,9 @@
                     :SERVICE_PORT
                     :STATIC_RESOURCES
                     :NODE_PORT}
-         optional #{:ANALYTICS :HF_ALIAS_HOSTNAMES :SERVICE_HOST :SENTRY_DSN :SENTRY_ENV}
+         optional #{:ANALYTICS :HF_ALIAS_HOSTNAMES :SERVICE_HOST
+                    :SENTRY_DSN :SENTRY_ENV
+                    :AWS_ACCESS_KEY_ID :AWS_SECRET_KEY}
          env (-> (->> (concat required optional)
                       (reduce (fn [acc k]
                                 (assoc acc k (get raw-env (name k))))
