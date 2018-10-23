@@ -81,7 +81,7 @@
                 :class "qe"
                 :options [{:value :query :label "query"}
                           {:value :entity :label "pull"}
-                          {:value :blank :label "blank"}])]
+                          {:value :blank :label "static"}])]
     [radio-group val ctx props]))
 
 (letfn [(toggle-auto-transact! [ctx selected-uri]

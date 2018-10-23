@@ -188,7 +188,7 @@
           [:div.result.col-sm
            [:div "Result:"
             (into [:span.hyperfiddle.hf-live.radio-group]
-                  (->> [{:label "api" :tooltip "What the API client sees" :value :hypercrud.browser.browser-ui/api}
+                  (->> [{:label "edn" :tooltip "What the API client sees" :value :hypercrud.browser.browser-ui/api}
                         {:label "data" :tooltip "Ignore :fiddle/renderer" :value :hypercrud.browser.browser-ui/xray}
                         {:label "view" :tooltip "Use :fiddle/renderer" :value :hypercrud.browser.browser-ui/user}]
                        (map (fn [props]
@@ -203,7 +203,7 @@
                          (some-> content-ctx :hypercrud.ui/display-mode deref name (->> (str "display-mode-"))))}]]
           (let [as-edn (r/cursor state [:edn-fiddle])]
             [:div.src.col-sm
-             [:div "Interactive Hyperfiddle editor:" [contrib.ui/easy-checkbox-boolean " EDN?" as-edn {:class "hyperfiddle hf-live"}]]
+             [:div "Interactive Hyperfiddle editor:" [contrib.ui/easy-checkbox-boolean " edn" as-edn {:class "hyperfiddle hf-live"}]]
              [ui/iframe ide-ctx
               {:route (ide-route route content-ctx)
                :initial-tab (let [[_ _ _ frag] route] (read-fragment-only-hf-src frag))
