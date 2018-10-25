@@ -130,7 +130,8 @@
                            (update :on-change (fn [f]
                                                 (r/comp
                                                   (or f identity)
-                                                  (r/partial on-change state parse-string)))))]
+                                                  (r/partial on-change state parse-string))))
+                           (dissoc :magic-new-mode))]
              (into [cmp props] args)))
          :component-did-update
          (fn [this]
