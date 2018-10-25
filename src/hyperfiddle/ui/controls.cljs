@@ -36,12 +36,11 @@
     [debounced props contrib.ui/long]))
 
 (defn ^:export boolean [val ctx & [props]]
-  (let []
-    [:div props
-     (let [props (assoc props
-                   :checked (clojure.core/boolean val)
-                   :on-change (with-entity-change! ctx))]
-       [contrib.ui/easy-checkbox props])]))
+  [:div props
+   (let [props (assoc props
+                 :checked (clojure.core/boolean val)
+                 :on-change (with-entity-change! ctx))]
+     [contrib.ui/easy-checkbox props])])
 
 (let [adapter (fn [e]
                 (case (.-target.value e)
@@ -214,19 +213,18 @@
 (defn magic-new [val ctx props]
   (let [state (r/atom nil)]
     (fn [val ctx props]
-      (let []
-        [:div
-         [contrib.ui/keyword (assoc props
-                               :placeholder ":db/ident"
-                               :value @state
-                               :on-change (r/partial reset! state)
-                               :read-only (:disabled props))]
-         (let [props (-> (assoc props
-                           :magic-new-mode true
-                           :on-blur (r/partial -magic-new-change! state ctx)
-                           :disabled (let [_ [@state]]      ; force reactions
-                                       (or (nil? @state) (:disabled props)))
-                           :placeholder (pr-str :gender/female)))]
-           ; Uncontrolled widget on purpose i think
-           ; Cardinality :many not needed, because as soon as we assoc one value, we rehydrate typed
-           [contrib.ui/edn props])]))))
+      [:div
+       [contrib.ui/keyword (assoc props
+                             :placeholder ":db/ident"
+                             :value @state
+                             :on-change (r/partial reset! state)
+                             :read-only (:disabled props))]
+       (let [props (-> (assoc props
+                         :magic-new-mode true
+                         :on-blur (r/partial -magic-new-change! state ctx)
+                         :disabled (let [_ [@state]]        ; force reactions
+                                     (or (nil? @state) (:disabled props)))
+                         :placeholder (pr-str :gender/female)))]
+         ; Uncontrolled widget on purpose i think
+         ; Cardinality :many not needed, because as soon as we assoc one value, we rehydrate typed
+         [contrib.ui/edn props])])))

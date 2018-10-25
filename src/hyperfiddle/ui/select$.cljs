@@ -100,19 +100,18 @@
         ; no value at all
         @(r/fmap nil? entity))))
 
-(let []
-  (defn select "This arity should take a selector string (class) instead of Right[Reaction[Link]], blocked on removing path backdoor"
-    [val ctx props]
-    {:pre [ctx]}
-    (assert (:options props) "select: :options prop is required")
-    (-> (mlet [options-ref (data/select+ ctx :hf/iframe (keyword (:options props)))] ; coerce somewhere else tho
-          (return
-            (let [default-props {:on-change (with-entity-change! ctx)}
-                  props (-> (merge default-props props)
-                            (assoc :value (str (context/id ctx))))
-                  props (-> (select-keys props [:class])
-                            (assoc :user-renderer (r/partial select-anchor-renderer props {:disabled (compute-disabled ctx props)})))
-                  ctx (assoc ctx
-                        :hypercrud.ui/display-mode (r/track identity :hypercrud.browser.browser-ui/user))]
-              [hyperfiddle.ui/ui-from-link options-ref ctx props])))
-        (either/branch select-error-cmp identity))))
+(defn select "This arity should take a selector string (class) instead of Right[Reaction[Link]], blocked on removing path backdoor"
+  [val ctx props]
+  {:pre [ctx]}
+  (assert (:options props) "select: :options prop is required")
+  (-> (mlet [options-ref (data/select+ ctx :hf/iframe (keyword (:options props)))] ; coerce somewhere else tho
+        (return
+          (let [default-props {:on-change (with-entity-change! ctx)}
+                props (-> (merge default-props props)
+                          (assoc :value (str (context/id ctx))))
+                props (-> (select-keys props [:class])
+                          (assoc :user-renderer (r/partial select-anchor-renderer props {:disabled (compute-disabled ctx props)})))
+                ctx (assoc ctx
+                      :hypercrud.ui/display-mode (r/track identity :hypercrud.browser.browser-ui/user))]
+            [hyperfiddle.ui/ui-from-link options-ref ctx props])))
+      (either/branch select-error-cmp identity)))
