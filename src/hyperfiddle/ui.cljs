@@ -39,7 +39,7 @@
     [hyperfiddle.ui.popover :refer [affect-cmp popover-cmp]]
     [hyperfiddle.ui.select$]
     [hyperfiddle.ui.sort :as sort]
-    [hyperfiddle.ui.util :refer [eval-renderer-comp]]
+    [hyperfiddle.ui.util :refer [eval-renderer-comp writable-entity?]]
     [hypercrud.transit :as transit]
     [reagent.core :as reagent]))
 
@@ -358,7 +358,9 @@ User renderers should not be exposed to the reaction."
     [:div {:class (css "field" (:class props))
            :style {:border-color (connection-color ctx)}}
      [Head nil (dissoc ctx :hypercrud.browser/data) props]
-     [Body @(:hypercrud.browser/data ctx) ctx props]]
+     (let [props (update props :disabled #(or % (not @(r/track writable-entity? ctx))))
+           props (update props :class css (if (:disabled props) "disabled"))]
+       [Body @(:hypercrud.browser/data ctx) ctx props])]
     (when (= '* (last relative-path))                       ; :hypercrud.browser/path
       ; guard against crashes for nil data
       {:key @(r/fmap-> (or (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data])
@@ -377,7 +379,9 @@ User renderers should not be exposed to the reaction."
     ; Field omits [] but table does not, because we use it to specifically draw repeating anchors with a field renderer.
     :body [:td {:class (css "field" (:class props))
                 :style {:border-color (connection-color ctx)}}
-           [Body @(:hypercrud.browser/data ctx) ctx props]]))
+           (let [props (update props :disabled #(or % (not @(r/track writable-entity? ctx))))
+                 props (update props :class css (if (:disabled props) "disabled"))]
+             [Body @(:hypercrud.browser/data ctx) ctx props])]))
 
 (defn ^:export field "Works in a form or table context. Draws label and/or value."
   [relative-path ctx & [?f props]]

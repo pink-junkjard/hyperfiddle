@@ -84,8 +84,8 @@
          ; The rule is you can't stage anything until it's a valid Datomic attribute.
          ; So only the special attrs are editable at first.
          ; Once that is completed, the rest are editable.
-         (field [:db/doc] ctx nil {:read-only (not valid-attr?)})
-         (field [:db/unique] ctx hyperfiddle.ui/hyper-control {:read-only (not valid-attr?)
+         (field [:db/doc] ctx nil {:disabled (not valid-attr?)})
+         (field [:db/unique] ctx hyperfiddle.ui/hyper-control {:disabled (not valid-attr?)
                                                                :options "unique-options"})
          [markdown "!block[Careful: below is not validated, don't stage invalid schema]{.alert .alert-warning style=\"margin-bottom: 0\"}"]
          (field [:db/isComponent] ctx nil {:disabled (not valid-attr?)})

@@ -190,11 +190,14 @@
                    :on-change (r/partial swap! r not))
    label])
 
-(defn ^:export code [props]
+(defn ^:export code [props]                                 ; Adapt props to codemirror props
   (let [defaults {:lineNumbers true
                   :matchBrackets true
                   :autoCloseBrackets true
                   :viewportMargin js/Infinity}
+        props (-> props
+                  (assoc :read-only (if (:disabled props) "nocursor" false))
+                  (dissoc :disabled))
         props (into defaults props)]
     ; There is nothing to be done about invalid css down here.
     ; You'd have to write CodeMirror implementation-specific css.

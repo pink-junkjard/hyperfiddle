@@ -33,8 +33,8 @@
                     Variable [relation]
                     Aggregate [relation]
                     Pull (mapv (fn [{f ::field/get-value}]
-                                                   (field-label (f relation)))
-                                                 (::field/children field))))
+                                 (field-label (f relation)))
+                               (::field/children field))))
                 (:elements find)
                 (::field/children field)
                 row)
@@ -43,8 +43,8 @@
           Variable [row]
           Aggregate [row]
           Pull (mapv (fn [{f ::field/get-value}]
-                                         (field-label (f row)))
-                                       (::field/children field)))
+                       (field-label (f row)))
+                     (::field/children field)))
         FindTuple [row]
         FindScalar [row])
       (remove nil?)
@@ -54,7 +54,7 @@
 (defn select-anchor-renderer' [props option-props ctx]
   ; hack in the selected value if we don't have options hydrated?
   ; Can't, since we only have the #DbId hydrated, and it gets complicated with relaton vs entity etc
-  (let [no-options? @(r/fmap empty? (:hypercrud.browser/data ctx))
+  (let [is-no-options @(r/fmap empty? (:hypercrud.browser/data ctx))
         props (-> props
                   (update :on-change (fn [on-change]
                                        (fn [e]
@@ -63,8 +63,8 @@
                                                       contrib.reader/read-edn-string+ ; todo why handle this exception? just throw and call it a day
                                                       (unwrap #(timbre/warn %))) ; instead of terminating on error, the user now transacts a retract
                                              on-change))))
-                  ; Don't disable :select if there are options, we may want to see them. Make it look :disabled but allow the click
-                  (update :disabled #(or % no-options?))
+                  (dissoc :disabled)                        ; Use :read-only instead to allow click to expand options
+                  (update :read-only #(or % (:disabled props) is-no-options))
                   (update :class #(str % (if (:disabled option-props) " disabled"))))
         label-fn (contrib.eval/ensure-fn (:option-label props option-label))
         option-value-fn (fn [row]
@@ -95,9 +95,10 @@
 
 (defn compute-disabled [ctx props]
   (let [entity (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data])] ; how can this be loading??
-    (or (boolean (:read-only props))
-        @(r/fmap nil? entity)                               ; no value at all
-        (not @(r/track writable-entity? ctx)))))
+    (or (boolean (:disabled props))
+        (boolean (:read-only props))                        ; legacy
+        ; no value at all
+        @(r/fmap nil? entity))))
 
 (let []
   (defn select "This arity should take a selector string (class) instead of Right[Reaction[Link]], blocked on removing path backdoor"
