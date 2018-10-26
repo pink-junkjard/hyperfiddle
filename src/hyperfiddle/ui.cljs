@@ -39,19 +39,19 @@
     [hyperfiddle.ui.popover :refer [affect-cmp popover-cmp]]
     [hyperfiddle.ui.select$]
     [hyperfiddle.ui.sort :as sort]
-    [hyperfiddle.ui.util :refer [eval-renderer-comp writable-entity?]]
+    [hyperfiddle.ui.util :as ui-util :refer [eval-renderer-comp writable-entity?]]
     [hypercrud.transit :as transit]
     [reagent.core :as reagent]))
 
 
 (defn attr-renderer-control [val ctx & [props]]
   ; The only way to stabilize this is for this type signature to become a react class.
-  (when-let [?user-f @(r/fmap-> (context/hydrate-attribute ctx (last (:hypercrud.browser/path ctx)))
-                                :attribute/renderer
-                                blank->nil)]
+  (when-let [user-f @(r/fmap-> (context/hydrate-attribute ctx (last (:hypercrud.browser/path ctx)))
+                               :attribute/renderer
+                               blank->nil)]
     [user-portal (ui-error/error-comp ctx)
      ; ?user-f is stable due to memoizing eval (and only due to this)
-     [eval-renderer-comp nil ?user-f val ctx props]]))
+     [eval-renderer-comp user-f val ctx props]]))
 
 (declare result)
 (declare pull)
@@ -185,15 +185,16 @@ User renderers should not be exposed to the reaction."
                :hypercrud.browser.browser-ui/user (if-let [user-renderer (:user-renderer props')]
                                                     [user-renderer value ctx props]
                                                     (let [fiddle (:hypercrud.browser/fiddle ctx)]
-                                                      [eval-renderer-comp
-                                                       (some-> @(r/cursor fiddle [:fiddle/cljs-ns]) blank->nil)
-                                                       (some-> @(r/cursor fiddle [:fiddle/renderer]) blank->nil build-wrapped-render-expr-str)
-                                                       value ctx props
-                                                       ; If userland crashes, reactions don't take hold, we need to reset here.
-                                                       ; Cheaper to pass this as a prop than to hash everything
-                                                       ; Userland will never see this param as it isn't specified in the wrapped render expr.
-                                                       @(:hypercrud.browser/fiddle ctx) ; for good luck
-                                                       ]))
+                                                      [:<>
+                                                       [ui-util/eval-cljs-ns fiddle]
+                                                       [eval-renderer-comp
+                                                        (build-wrapped-render-expr-str @(r/cursor fiddle [:fiddle/renderer]))
+                                                        value ctx props
+                                                        ; If userland crashes, reactions don't take hold, we need to reset here.
+                                                        ; Cheaper to pass this as a prop than to hash everything
+                                                        ; Userland will never see this param as it isn't specified in the wrapped render expr.
+                                                        @(:hypercrud.browser/fiddle ctx) ; for good luck
+                                                        ]]))
                :hypercrud.browser.browser-ui/xray [fiddle-xray value ctx props]
                :hypercrud.browser.browser-ui/api [fiddle-api value ctx props])]))
         (fiddle-css-renderer [s] [:style {:dangerouslySetInnerHTML {:__html @s}}])

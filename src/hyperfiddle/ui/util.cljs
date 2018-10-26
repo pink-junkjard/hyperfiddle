@@ -5,8 +5,9 @@
     [clojure.set :refer [rename-keys]]
     [contrib.datomic-tx :as tx]
     [contrib.eval :as eval]
+    [contrib.eval-cljs :as eval-cljs]
     [contrib.reactive :as r]
-    [contrib.string :refer [empty->nil]]
+    [contrib.string :refer [blank->nil empty->nil]]
     [contrib.try$ :refer [try-either]]
     [hypercrud.browser.context :as context]
     [hyperfiddle.security.client :as security]
@@ -15,19 +16,19 @@
     [hyperfiddle.runtime :as runtime]))
 
 
+(defn eval-cljs-ns [fiddle]
+  (let [eval-in-ns 'user]                                   ; todo maybe use fiddle/ident for ns?
+    (some->> @(r/cursor fiddle [:fiddle/cljs-ns]) blank->nil
+             (eval-cljs/eval-statement-str! eval-in-ns)))
+  nil)
+
 ; defer eval until render cycle inside userportal
-(let [safe-eval-string #(try-either (when % (eval/eval-string! %))) ; don't actually need to safely eval, just want to memoize exceptions
-      memoized-eval-string (memoize safe-eval-string)]
-  (defn eval-renderer-comp [?fiddle-cljs-ns-str fiddle-renderer-str & args]
-    (let [+result (>>= (memoized-eval-string ?fiddle-cljs-ns-str)
-                       (r/constantly
-                         ; eval ns for the effect on the cljs namespaces
-                         (memoized-eval-string fiddle-renderer-str)))]
-      (either/branch
-        +result
-        (fn [e]
-          (throw e))
-        (fn [f] (into [f] args))))))
+(let [memoized-eval-string (memoize eval/eval-expr-str!+)]  ; don't actually need to safely eval, just want to memoize exceptions
+  (defn eval-renderer-comp [fiddle-renderer-str & args]
+    (either/branch
+      (memoized-eval-string fiddle-renderer-str)
+      (fn [e] (throw e))
+      (fn [f] (into [f] args)))))
 
 (defn entity-change->tx
   ([ctx n]

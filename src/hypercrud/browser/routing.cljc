@@ -84,7 +84,7 @@
     v                                                       ; In edge cases, this could be a colorless opaque value (composite or scalar)
     (->ThinEntity (context/dbname ctx) (smart-entity-identifier ctx v))))
 
-(let [eval-string+ (memoize eval/safe-eval-string+)]
+(let [eval-string!+ (memoize eval/eval-expr-str!+)]
   (defn ^:export build-route' "There may not be a route! Fiddle is sometimes optional"
     [ctx {:keys [:link/fiddle :link/tx-fn] :as link}]
     (if (and (not fiddle) tx-fn)
@@ -93,7 +93,7 @@
                          (right (:fiddle/ident fiddle))
                          (left {:message ":link/fiddle required" :data {:link link}}))
              f-wrap (if-let [formula-str (blank->nil (:link/formula link))]
-                      (eval-string+ (str "(fn [ctx] \n" formula-str "\n)"))
+                      (eval-string!+ (str "(fn [ctx] \n" formula-str "\n)"))
                       (either/right (constantly (constantly nil))))
              f (try-either (f-wrap ctx))
              colored-args (try-either @(r/fmap->> (or (:hypercrud.browser/data ctx) (r/track identity nil))

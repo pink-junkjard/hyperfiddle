@@ -11,7 +11,7 @@
     [taoensso.timbre :as timbre]))
 
 #?(:clj
-   (let [memoized-safe-eval-string (memoize eval/safe-eval-string+)]
+   (let [memoized-eval-string!+ (memoize eval/eval-expr-str!+)]
      (defn process-tx [domains-uri subject uri tx]
        (let [hf-db (-> (d/db (d/connect (str domains-uri)))
                        (d/entity [:database/uri uri]))
@@ -19,7 +19,7 @@
                  ::security/owner-only security/write-owner-only
                  ::security/authenticated-users-only security/write-authenticated-users-only
                  ::security/allow-anonymous security/write-allow-anonymous
-                 ::security/custom (-> (memoized-safe-eval-string (:database.custom-security/server hf-db))
+                 ::security/custom (-> (memoized-eval-string!+ (:database.custom-security/server hf-db))
                                        (either/branch
                                          (fn [e]
                                            (timbre/error e)

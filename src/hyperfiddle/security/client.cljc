@@ -4,7 +4,7 @@
     [cats.monad.maybe :as maybe]
     [cats.monad.either :as either :refer [right]]
     [contrib.ct :refer [maybe]]
-    [contrib.eval :refer [safe-eval-string+]]
+    [contrib.eval :refer [eval-expr-str!+]]
     [contrib.reactive :as r]
     [contrib.try$ :refer [try-either]]
     [hypercrud.browser.context :as context]
@@ -59,7 +59,7 @@
                                        ; ui probably in an invalid/error state when m or uri are nil
                                        (maybe/from-maybe false)))))}))
 
-(let [memoized-safe-eval-string (memoize safe-eval-string+)]
+(let [memoized-safe-eval-string (memoize eval-expr-str!+)]
   (defn- eval-client-sec [hf-db]
     (case (get-in hf-db [:database/write-security :db/ident] ::security/allow-anonymous) ; todo yank this default
       ::security/allow-anonymous (right allow-anonymous)

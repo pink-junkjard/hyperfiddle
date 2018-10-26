@@ -2,16 +2,17 @@
   (:refer-clojure :exclude [read-string])
   (:require
     [bidi.bidi :as bidi]
-    [cats.monad.either :as either :refer [branch left right]]
+    [cats.monad.either :as either]
     [clojure.string :as string]
     #?(:cljs [contrib.css :refer [css]])
     [contrib.base-64-url-safe :as base64-url-safe]
     [contrib.data :refer [update-existing]]
-    [contrib.eval :as eval]
+    #?(:cljs [contrib.eval-cljs :as eval-cljs])
     [contrib.reactive :as r]
     [contrib.reader :refer [read-string read-edn-string!]]
     [contrib.pprint :refer [pprint-datoms-str]]
     [contrib.string :refer [or-str]]
+    [contrib.try$ :refer [try-either]]
     #?(:cljs [contrib.ui :refer [code debounced markdown validated-cmp]])
     [hypercrud.browser.context :as context]
     [hypercrud.browser.routing :as routing]
@@ -190,26 +191,15 @@
      (f ctx)))
 
 #?(:cljs
-   (defn domain-init! [domain f]
-     (let [result (if-let [cljs (:domain/code domain)]
-                    (eval/safe-eval-string+ cljs)
-                    (right nil))]
-       (fn reagent-render [domain f]
-         (branch
-           result
-           (fn error [e]
-             (js/console.warn ":domain/code eval: " e)
-             (f))
-           (fn []
-             (f)))))))
+   (defn eval-domain-code!+ [code-str]
+     (try-either (some->> code-str (eval-cljs/eval-statement-str! 'user.domain)))))
 
 #?(:cljs
    (defn page-view [ctx f]
      ; Necessary wrapper div, this is returned from react-render
      [:div {:class (apply css @(runtime/state (:peer ctx) [:pressed-keys]))}
       [:style {:dangerouslySetInnerHTML {:__html (:domain/css (:hypercrud.browser/domain ctx))}}]
-      (f ctx)                                               ; nil, seq or reagent component
-      ]))
+      [f ctx]]))
 
 #?(:cljs
    (defn view [page-or-leaf ctx f]
@@ -223,16 +213,12 @@
          [:div                                              ; necessary wrapper div, it is the react root
           [error-cmp e]
           [staging ctx]]
-         (let [ctx (context ctx @source-domain @user-domain-insecure)
-               domain (:hypercrud.browser/domain ctx)]
-           ; f is nil, seq or reagent component
-           ^{:key domain}
-           [domain-init! domain
-            (case page-or-leaf
-              ; The foundation comes with special root markup which means the foundation/view knows about page/user (not ide)
-              ; Can't ide/user (not page) be part of the userland route?
-              :page (r/partial page-view ctx f)
-              :leaf (r/partial leaf-view ctx f))])))))
+         (let [ctx (context ctx @source-domain @user-domain-insecure)]
+           (case page-or-leaf
+             ; The foundation comes with special root markup which means the foundation/view knows about page/user (not ide)
+             ; Can't ide/user (not page) be part of the userland route?
+             :page [page-view ctx f]
+             :leaf [leaf-view ctx f]))))))
 
 (defn confirm [message]
   #?(:clj  (throw (ex-info "confirm unsupported by platform" nil))

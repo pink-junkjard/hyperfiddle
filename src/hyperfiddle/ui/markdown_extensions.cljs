@@ -22,9 +22,8 @@
   (memoize
     (fn [code-str]
       (if (blank->nil code-str)
-        (eval/safe-eval-string+ code-str)
+        (eval/eval-expr-str!+ code-str)
         (either/left nil)))))
-
 
 (declare markdown)                                          ; mutual recursion, it would be letfn if wasn't react components
 

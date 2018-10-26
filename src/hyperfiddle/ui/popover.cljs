@@ -19,7 +19,7 @@
     [taoensso.timbre :as timbre]))
 
 
-(let [safe-eval-string #(try-promise (eval/eval-string! %))
+(let [safe-eval-string #(try-promise (eval/eval-expr-str! %))
       memoized-eval-string (memoize safe-eval-string)]
   (defn- with-swap-fn [link-ref ?route ctx f]
     (let [{:keys [:link/tx-fn] :as link} @link-ref]

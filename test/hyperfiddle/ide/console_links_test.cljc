@@ -14,21 +14,21 @@
 
 ; Fixing these needs proper context mocking
 (deftest txfn-entity-remove []
-  (let [f (eval/eval-string! txfn-remove)
+  (let [f (eval/eval-expr-str! txfn-remove)
         uri #uri "test"
         ctx {:hypercrud.browser/data (r/atom {:db/id "entity"})}]
     #_(is (= (f ctx nil nil)
            {:tx {uri [[:db.fn/retractEntity "entity"]]}}))))
 
 (deftest txfn-value-remove-one []
-  (let [f (eval/eval-string! txfn-remove)
+  (let [f (eval/eval-expr-str! txfn-remove)
         uri #uri "test"
         ctx {:hypercrud.browser/data (r/atom {:db/id "child"})}]
     #_(is (= (f ctx nil nil)
            {:tx {uri [[:db.fn/retractEntity "child"]]}}))))
 
 (deftest txfn-value-remove-many []
-  (let [f (eval/eval-string! txfn-remove)
+  (let [f (eval/eval-expr-str! txfn-remove)
         uri #uri "test"
         ctx {:hypercrud.browser/data (r/atom [{:db/id "child 1"}
                                               {:db/id "child 2"}])}]
@@ -41,7 +41,7 @@
   ; otherwise pointless, this test serves one important use: evaling and invoking affix.edn in the build
   (let [f (-> (template/load-resource "auto-txfn/affix.edn")
               string/trim
-              eval/eval-string!)
+              eval/eval-expr-str!)
        uri (->URI "test")
        ctx {:hypercrud.browser/domain {:domain/databases #{{:domain.database/name "$"
                                                             :domain.database/record {:database/uri uri}}}}

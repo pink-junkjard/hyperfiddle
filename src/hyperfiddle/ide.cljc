@@ -1,6 +1,7 @@
 (ns hyperfiddle.ide
   (:require
     [cats.core :refer [mlet return]]
+    [cats.monad.either :as either]
     [cats.labs.promise]
     [clojure.string :as str]
     #?(:cljs [contrib.css :refer [css]])
@@ -36,7 +37,8 @@
     #?(:cljs [hyperfiddle.ide.fiddles.fiddle-src :refer [fiddle-src-renderer]])
     [hyperfiddle.ide.fiddles.schema]
     #?(:cljs [hyperfiddle.ide.fiddles.schema-attribute])
-    #?(:cljs [hyperfiddle.ide.fiddles.topnav :as topnav])))
+    #?(:cljs [hyperfiddle.ide.fiddles.topnav :as topnav])
+    [reagent.core :as reagent]))
 
 
 (defn domain [rt domain-eid]
@@ -250,13 +252,32 @@
           )])))
 
 #?(:cljs
-   ; todo should summon route via context/target-route. but there is still tension in the data api for deferred popovers
-   (defn view [[fiddle :as route] ctx]                      ; pass most as ref for reactions
-     (case (namespace fiddle)
-       ;"hyperfiddle.ide" [ui/iframe (leaf-ide-context ctx) {:route route}]
+   (defn- view2 [ctx]
+     (let [route (context/target-route ctx)]
        (case (get-in ctx [::runtime/branch-aux ::foo])
          "page" (view-page route ctx)                       ; component, seq-component or nil
          ; On SSR side this is only ever called as "page", but it could be differently (e.g. turbolinks)
          ; On Browser side, also only ever called as "page", but it could be configured differently (client side render the ide, server render userland...?)
          "ide" [ui/iframe (leaf-ide-context ctx) {:route route}]
          "user" [ui/iframe (leaf-target-context ctx) {:route route}]))))
+
+#?(:cljs
+   (defn view [ctx]
+     (let [code+ (foundation/eval-domain-code!+ (get-in ctx [:hypercrud.browser/domain :domain/code]))]
+       [:<>
+        (when (and (either/left? code+) (:active-ide? (runtime/host-env (:peer ctx))))
+          (let [e @code+]
+            (timbre/error e)
+            (let [href (runtime/encode-route (:peer ctx) [:hyperfiddle.ide/domain [[:domain/ident (get-in ctx [:hypercrud.browser/domain :domain/ident])]]])
+                  message (if-let [cause-message (some-> e ex-cause ex-message)]
+                            cause-message
+                            (ex-message e))]
+              [:h6 {:style {:text-align "center" :background-color "lightpink" :margin 0 :padding "0.5em 0"}}
+               "Exception evaluating " [:a {:href href} [:code ":domain/code"]] ": " message])))
+
+        (if (and (either/left? code+) (not (:active-ide? (runtime/host-env (:peer ctx)))))
+          ; todo this branch is fatal, so just stop the show, the admin needs to fix their app
+          ; technically belongs in foundation, but debt
+          [:div [:h2 {:style {:margin-top "10%" :text-align "center"}} "Misconfigured domain"]]
+          ^{:key "view"}
+          [view2 ctx])])))
