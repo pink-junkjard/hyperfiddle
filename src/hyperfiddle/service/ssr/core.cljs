@@ -42,7 +42,7 @@
                                      (constantly [:div.loading-page>div.logo-callout
                                                   [:img {:src "https://i.imgur.com/DtMAeuM.png"}]
                                                   [:span.brand "hyperfiddle"]])
-                                     (r/partial ide/view (context/target-route ctx)))])
+                                     ide/view)])
       (catch :default e
         (reagent-server/render-to-string [:div
                                           [:h1 "Javascript mounting..."]
