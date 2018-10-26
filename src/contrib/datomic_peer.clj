@@ -1,4 +1,4 @@
-(ns contrib.datomic
+(ns contrib.datomic-peer
   (:require
     [clojure.walk :refer [prewalk]]
     [datomic.api :as d]

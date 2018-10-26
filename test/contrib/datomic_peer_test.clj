@@ -1,9 +1,10 @@
-(ns contrib.datomic-test
-  (:require [clojure.test :refer [deftest is]]
-            [contrib.datomic :refer [datomic-entity-successors clone-entities
-                                     ref? many? one?]]
-            [datomic.api :as d]
-            [loom.alg-generic :as loom]))
+(ns contrib.datomic-peer-test
+  (:require
+    [clojure.test :refer [deftest is]]
+    [contrib.datomic-peer :refer [datomic-entity-successors clone-entities
+                                  ref? many? one?]]
+    [datomic.api :as d]
+    [loom.alg-generic :as loom]))
 
 
 (def uri "datomic:mem://empty")
