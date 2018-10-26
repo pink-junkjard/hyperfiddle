@@ -1,6 +1,6 @@
 (ns hyperfiddle.fiddle
   (:require
-    [cats.core :refer [mlet return]]
+    [cats.core :as cats]
     [clojure.string :as string]
     [contrib.ct :refer [unwrap]]
     [contrib.data :refer [update-existing]]
@@ -19,13 +19,15 @@
 (defn infer-query-formula [query]
   (unwrap
     #(timbre/warn %)
-    (mlet [q (memoized-read-edn-string+ query)
-           {qin :qin} (try-either (if q (datascript.parser/parse-query q)))]
-          ; [{:variable {:symbol $}}{:variable {:symbol ?gender}}]
-          (return
-            (if (seq (drop 1 qin))                              ; Removing the rules and src is hard with the bind wrappers so yolo
-              "identity"
-              "(constantly nil)")))))
+    (->> (memoized-read-edn-string+ query)
+         (cats/=<< #(try-either (datascript.parser/parse-query %)))
+         (cats/fmap (fn [{:keys [qin]}]
+                      (if (->> qin
+                               (remove #(and (instance? datascript.parser.BindScalar %)
+                                             (instance? datascript.parser.SrcVar (:variable %))))
+                               seq)
+                        "identity"
+                        "(constantly nil)"))))))
 
 (def txfn-affix (-> (template/load-resource "auto-txfn/affix.edn") string/trim))
 (def txfn-detach (-> (template/load-resource "auto-txfn/detach.edn") string/trim))
