@@ -5,7 +5,6 @@
     [cljs.analyzer :as ana]
     [cljs.js :as cljs]
     [cljs.tagged-literals :as tags]
-    [clojure.string :as string]
     [cognitect.transit]
     [hyperfiddle.hc_data_readers :refer [hc-data-readers]]
     [hyperfiddle.readers :as hc-readers]))
