@@ -37,8 +37,7 @@
     #?(:cljs [hyperfiddle.ide.fiddles.fiddle-src :refer [fiddle-src-renderer]])
     [hyperfiddle.ide.fiddles.schema]
     #?(:cljs [hyperfiddle.ide.fiddles.schema-attribute])
-    #?(:cljs [hyperfiddle.ide.fiddles.topnav :as topnav])
-    [reagent.core :as reagent]))
+    #?(:cljs [hyperfiddle.ide.fiddles.topnav :as topnav])))
 
 
 (defn domain [rt domain-eid]
