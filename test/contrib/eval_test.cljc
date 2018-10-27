@@ -12,7 +12,5 @@
   (is (= 2 ((eval-expr-str! "(constantly 2)"))))
 
   (timbre/with-config {:enabled? false}
-    (is (instance? Left (eval-expr-str!+ "")))
-    (is (instance? Left (eval-expr-str!+ " ")))
     (is (instance? Left (eval-expr-str!+ nil)))
     (is (instance? Left (eval-expr-str!+ ")")))))

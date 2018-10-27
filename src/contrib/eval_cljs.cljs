@@ -14,7 +14,7 @@
 (def ^:private -cljsjs-empty-state (build-cljsjs-empty-state))
 
 (defn eval-statement-str! [eval-in-ns code-str]
-  {:pre [(string? code-str) (not (string/blank? code-str))]}
+  {:pre [(string? code-str)]}
   (binding [ana/*cljs-warning-handlers* []
             tags/*cljs-data-readers* (merge tags/*cljs-data-readers*
                                             hc-data-readers
@@ -35,7 +35,6 @@
         (throw error)))))
 
 (defn eval-expr-str! [code-str]
-  {:pre [(string? code-str) (not (string/blank? code-str))]}
   (binding [ana/*cljs-warning-handlers* []
             tags/*cljs-data-readers* (merge tags/*cljs-data-readers*
                                             hc-data-readers
