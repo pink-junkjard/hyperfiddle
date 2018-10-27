@@ -1,14 +1,19 @@
 (ns hyperfiddle.ide.console-links
   (:require
+    [cats.core :refer [mlet]]
+    [cats.monad.either :as either]
+    [clojure.set :as set]
     [clojure.string :as string]
-    [contrib.data :refer [merge-by]]
-    [contrib.string :refer [blank->nil]]
+    [contrib.data :refer [merge-by transpose]]
+    [contrib.datomic :refer [ref? enclosing-pull-shape form-traverse]]
     [contrib.reactive :as r]
-    [datascript.parser #?@(:cljs [:refer [FindColl]])]
+    [contrib.string :refer [blank->nil]]
+    [contrib.try$ :refer [try-either]]
+    [datascript.parser :as parser #?@(:cljs [:refer [FindRel FindColl FindTuple FindScalar Variable Aggregate Pull]])]
     [hypercrud.browser.field :as field]
     [hyperfiddle.ide.system-fiddle :as system-fiddle]
     [hyperfiddle.fiddle :as fiddle])
-  #?(:clj (:import (datascript.parser FindColl))))
+  #?(:clj (:import (datascript.parser FindRel FindColl FindTuple FindScalar Variable Aggregate Pull))))
 
 
 (defn ^:export system-link? [link-id]
@@ -30,7 +35,7 @@
    :link/rel :hf/remove
    :link/path (path->str path)})
 
-(defn hf-edit [path dbname]
+(defn hf-self [path dbname]
   {:db/id (keyword "hyperfiddle.browser.system-link" (str "edit-" (hash path)))
    :hypercrud/sys? true
    :link/rel :hf/self
@@ -93,7 +98,7 @@
            ref (::field/data-has-id? field)
            id-under-ref (and id-field parent-has-id)
            ref-under-ref (and ref parent-has-id)]
-       (->> [(if ref (hf-edit child-path dbname))
+       (->> [(if ref (hf-self child-path dbname))
              ;(if (and id (seq parent-path)) (hf-edit parent-path dbname)) ; parent ref already did it
              (if (and ref (not id-field)) (hf-detach child-path))
              (if (hf-remove? id-field parent-path) (hf-remove parent-path))
@@ -135,3 +140,46 @@
     (let [console-links (->> (console-links @(:hypercrud.browser/field ctx) @(:hypercrud.browser/schemas ctx))
                              (map fiddle/auto-link))]
       (update ctx :hypercrud.browser/fiddle #(r/fmap->> % (f console-links))))))
+
+(defn findcoll-links-at [source path]
+  (let [id-field (#{:db/id :db/ident #_nil} (last path))
+        path (if id-field (butlast path) path)]
+    (-> #{(hf-self path (str source))
+          (if (= 1 (count path))
+            (if id-field (hf-remove path))
+            (hf-detach path))
+          (if (= 1 (count path))
+            (if id-field (hf-new path (str source)))
+            (hf-affix path (str source)))}
+        (disj nil))))
+
+(defn query-links+ [schemas q data]
+  (mlet [{find :qfind} (try-either (parser/parse-query q))]
+    (condp = (type find)
+      FindColl (let [{e :element} find]
+                 (condp = (type e)
+                   Pull (let [{{pattern :value} :pattern
+                               {source :symbol} :source} e
+                              schema (get schemas (str source))]
+                          (->> (enclosing-pull-shape schema pattern data)
+                               form-traverse
+                               (filter (comp (partial ref? schema) last))
+                               (mapcat (partial findcoll-links-at source))))
+                   Variable nil
+                   Aggregate nil))
+      FindRel nil
+      FindTuple nil
+      FindScalar (condp = (type (:element find))
+                   Pull nil
+                   Variable nil
+                   Aggregate nil)))
+  )
+
+(defn impl [schemas {:keys [fiddle/type fiddle/query fiddle/pull fiddle/pull-database]} data]
+  (case type
+    :entity nil
+    :query (query-links+ schemas query data)
+    :blank nil))
+
+(defn inject-console-links' [ctx]
+  (impl @(:hypercrud.browser/schemas ctx) @(:hypercrud.browser/fiddle ctx) @(:hypercrud.browser/data ctx)))

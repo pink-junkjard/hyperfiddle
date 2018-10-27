@@ -42,10 +42,10 @@
         (condp = (type (:element find))
           Variable [row]
           Aggregate [row]
-          Pull (mapv (fn [{f ::field/get-value}]
+          Pull (mapv (fn [{f ::field/get-value}]            ; identity
                        (field-label (f row)))
                      (::field/children field)))
-        FindTuple [row]
+        FindTuple [row]                                     ; bug - bad wrapper?
         FindScalar [row])
       (remove nil?)
       (interpose ", ")

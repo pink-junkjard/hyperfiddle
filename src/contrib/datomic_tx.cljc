@@ -1,7 +1,6 @@
 (ns contrib.datomic-tx
   (:require
-    [clojure.set :as set]
-    [clojure.walk :as walk]))
+    [clojure.set :as set]))
 
 
 (defn edit-entity [id attribute o n]
@@ -42,87 +41,6 @@
   us to re-assert datoms needlessly in datomic"
   (reduce simplify tx more-statements))
 
-(defn any-ref->dbid
-  "Safe for ref and primitive vals"
-  [v]
-  (cond (map? v) (:db/id v)
-        ; #DbId will just work, its already right
-        :else v))
-
-; Internal
-(defn entity->statements
-  "Only need schema to recurse into component entities. valueType and cardinality is determined dynamically.
-  If schema is omitted, don't recurse refs."
-  [{dbid :db/id :as entity} & [schema]]
-  ;; dissoc :db/id, it is done as a seq/filter for compatibility with #Entity
-  (assert (nil? schema) "todo component recursion")
-  (->> (seq entity)
-       (filter (fn [[k v]] (not= :db/id k)))
-
-       (mapcat (fn [[attr v]]
-                 ; dont care about refs - just pass them through blindly, they are #DbId and will just work
-                 (if (vector? v)
-                   (mapv (fn [v] [:db/add dbid attr (any-ref->dbid v)]) v)
-                   [[:db/add dbid attr (any-ref->dbid v)]])))))
-
-(defn entity-components [schema entity]
-  (mapcat (fn [[attr v]]
-            (let [{:keys [:db/cardinality :db/valueType :db/isComponent]} (get schema attr)]
-              (if isComponent
-                (case [(:db/ident valueType) (:db/ident cardinality)]
-                  [:db.type/ref :db.cardinality/one] [v]
-                  [:db.type/ref :db.cardinality/many] (vec v)
-                  []))))
-          entity))
-
-; pulled-tree->statements, respect component
-(defn entity-and-components->statements [schema e]
-  ; tree-seq lets us get component entities too
-  (->> (tree-seq map? #(entity-components schema %) e)
-       (mapcat entity->statements)))
-
-; ignores component, not useful imo
-(defn pulled-tree-children [schema entity]
-  ; Need schema for component. How can you walk a pulled-tree without inspecting component?
-  ; If it turns out we don't need component, we can dispatch on map?/coll? and not need schema.
-  (mapcat (fn [[attr v]]
-            (let [{:keys [:db/cardinality :db/valueType]} (get schema attr)]
-              (case [(:db/ident valueType) (:db/ident cardinality)]
-                [:db.type/ref :db.cardinality/one] [v]
-                [:db.type/ref :db.cardinality/many] (vec v)
-                [])))
-          entity))
-
-; ignore component - pretty useless imo
-(defn pulled-tree->statements [schema pulled-tree]
-  (->> (tree-seq map? #(pulled-tree-children schema %) pulled-tree)
-       (mapcat entity->statements)))
-
-; don't know what this is
-(defn walk-pulled-tree [schema f tree]                      ; don't actually need schema for anything but component which is ignored here
-  (walk/postwalk
-    (fn [o] (if (map? o) (f o) o))
-    tree))
-
-; rename: walk-pulled-tree (respecting component)
-(defn walk-entity [schema f entity]                         ; Walks entity components, applying f to each component, dehydrating non-components
-  (->> (f entity)
-       (mapv
-         (fn [[a v]]
-           (let [{:keys [:db/cardinality :db/valueType :db/isComponent]} (get schema a) ; really just for component, the rest could be polymorphic
-                 v (if-not (= (:db/ident valueType) :db.type/ref) ; dbid absent from schema, its fine
-                     v
-                     (if isComponent
-                       (case (:db/ident cardinality)        ; Walk component (go deeper)
-                         :db.cardinality/one (walk-entity schema f v)
-                         :db.cardinality/many (mapv #(walk-entity schema f %) v))
-
-                       (case (:db/ident cardinality)        ; Dehydrate non-component
-                         :db.cardinality/one (select-keys v [:db/id])
-                         :db.cardinality/many (mapv #(select-keys % [:db/id]) v))))]
-             [a v])))
-       (into {})))
-
 (letfn [(update-v [id->tempid schema a v]
           (if (= :db.type/ref (get-in schema [a :db/valueType :db/ident]))
             (get id->tempid v v)
@@ -139,7 +57,8 @@
            a
            (update-v id->tempid schema a ov)
            (update-v id->tempid schema a nv)])]
-  (defn stmt-id->tempid [id->tempid schema [op :as stmt]]
+  (defn stmt-id->tempid "Deep introspection of args to transaction fns in order to reverse tempids"
+    [id->tempid schema [op :as stmt]]
     (let [f (case op
               :db/add add-ret
               :db/retract add-ret
@@ -149,7 +68,7 @@
               :db.fn/cas cas)]
       (f id->tempid schema stmt))))
 
-(defn find-datom "not a good abstraction" [tx e-needle a-needle]
+(defn ^:export find-datom "not a good abstraction" [tx e-needle a-needle]
   (let [[[_ _ _ v]] (->> tx (filter (fn [[op e a v]]
                                       (= [op e a] [:db/add e-needle a-needle]))))]
     v))

@@ -2,12 +2,15 @@
   (:require
     [clojure.string :as string]
     [clojure.test :refer [deftest is]]
+    [contrib.ct :refer [unwrap]]
     [contrib.eval :as eval]
     [contrib.reactive :as r]
     [contrib.template :as template]
     [contrib.uri :refer [->URI]]
+    [fixtures.ctx :refer [ctx result-coll query-coll]]
     [hypercrud.browser.field :as field]
-    [hyperfiddle.fiddle :refer [txfn-remove]]))
+    [hyperfiddle.fiddle :refer [txfn-remove]]
+    [hyperfiddle.ide.console-links :refer [query-links+]]))
 
 
 ; todo collapse these 3 into one test
@@ -52,3 +55,8 @@
        modal-route [nil [{:db/id "child"}]]]
    (is (= (f ctx nil modal-route)
           {:tx {uri [[:db/add "parent" :parent/child "child"]]}}))))
+
+;(deftest foo-1
+;  []
+;  (query-links+ @(:hypercrud.browser/schemas ctx) query-coll result-coll)
+;  )

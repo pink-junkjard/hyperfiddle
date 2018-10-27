@@ -6,6 +6,7 @@
     contrib.char$-test
     contrib.data-test
     #_contrib.datomic-errors-test
+    contrib.datomic-test
     contrib.datomic-tx-test
     contrib.eval-test
     contrib.reactive-test
@@ -27,6 +28,7 @@
     'contrib.char$-test
     'contrib.data-test
     #_'contrib.datomic-errors-test
+    'contrib.datomic-test
     'contrib.datomic-tx-test
     'contrib.eval-test
     'contrib.reactive-test
