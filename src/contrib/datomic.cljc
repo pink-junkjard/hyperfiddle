@@ -5,6 +5,10 @@
     [contrib.data :refer [group-by-pred]]))
 
 
+(defn valueType [schema-by-attr k]
+  ; :db/id is nil
+  (-> schema-by-attr (get k) :db/valueType :db/ident))
+
 (defn ref? [schema-by-attr k]                               ; Nasty treeish client code. Should this use dynamic scope to hide schema?
   {:pre [schema-by-attr (keyword? k)]}
   (-> schema-by-attr (get k) :db/valueType :db/ident (= :db.type/ref)))

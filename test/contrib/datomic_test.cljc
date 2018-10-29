@@ -115,6 +115,7 @@
 (deftest enclosing-pull-shape-
   []
   (enclosing-pull-shape schema [] [{:db/ident :foo} {:db/id 10 :db/ident :yo}])
+  (enclosing-pull-shape schema [:db/ident] [])
   (enclosing-pull-shape schema [] [{:db/id 17592186046209,
                                     :db/ident :shirt-size/womens-medium,
                                     :hyperfiddle/owners [#uuid "acd054a8-4e36-4d6c-a9ec-95bdc47f0d39"],
@@ -124,4 +125,10 @@
                                     :reg/gender {:db/id 17592186046204}}
                                    ])
   (enclosing-pull-shape schema (pull-shape pull-pattern-1) result-coll)
+  )
+
+(deftest form-traverse-
+  []
+  (is (= '([:db/ident])
+         (form-traverse [:db/ident])))
   )

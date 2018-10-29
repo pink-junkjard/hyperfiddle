@@ -1,12 +1,15 @@
 (ns hyperfiddle.ide.console-links
   (:require
-    [cats.core :refer [mlet]]
+    [cats.core :refer [mlet =<< fmap return]]
     [cats.monad.either :as either]
+    [clojure.core.match :refer [match]]                     ; match* cljs?
     [clojure.set :as set]
     [clojure.string :as string]
+    [contrib.ct :refer [unwrap]]
     [contrib.data :refer [merge-by transpose]]
-    [contrib.datomic :refer [ref? enclosing-pull-shape form-traverse]]
+    [contrib.datomic :refer [valueType ref? enclosing-pull-shape form-traverse]]
     [contrib.reactive :as r]
+    [contrib.reader :refer [memoized-read-edn-string+]]
     [contrib.string :refer [blank->nil]]
     [contrib.try$ :refer [try-either]]
     [datascript.parser :as parser #?@(:cljs [:refer [FindRel FindColl FindTuple FindScalar Variable Aggregate Pull]])]
@@ -25,33 +28,28 @@
 
 (defn hf-detach [path]
   {:db/id (keyword "hyperfiddle.browser.system-link" (str "detach-" (hash path)))
-   :hypercrud/sys? true
    :link/rel :hf/detach
    :link/path (path->str path)})
 
 (defn hf-remove [path]
   {:db/id (keyword "hyperfiddle.browser.system-link" (str "remove-" (hash path)))
-   :hypercrud/sys? true
    :link/rel :hf/remove
    :link/path (path->str path)})
 
 (defn hf-self [path dbname]
   {:db/id (keyword "hyperfiddle.browser.system-link" (str "edit-" (hash path)))
-   :hypercrud/sys? true
    :link/rel :hf/self
    :link/path (path->str path)
    :link/fiddle (system-fiddle/console-edit dbname)})
 
 (defn hf-new [path dbname]
   {:db/id (keyword "hyperfiddle.browser.system-link" (str "new-" (hash path)))
-   :hypercrud/sys? true
    :link/rel :hf/new
-   :link/path (blank->nil path)
+   :link/path (path->str path)                              ; what was broken before?
    :link/fiddle (system-fiddle/console-new dbname)})
 
 (defn hf-affix [path dbname]
   {:db/id (keyword "hyperfiddle.browser.system-link" (str "affix-" (hash path)))
-   :hypercrud/sys? true
    :link/rel :hf/affix
    :link/path (path->str path)
    :link/fiddle (system-fiddle/console-affix dbname)})
@@ -134,52 +132,61 @@
       (system-links-impl q [field] schemas)                 ; wrapper for FindColl, FindTuple, etc? weird.
       (system-links-impl q (::field/children field) schemas))))
 
+(defn findcoll-links-at [schema source path]
+  (let [source (str source)]
+    (let [attr (last path)
+          depth (dec (count path))]                         ; 0-based
+      (match [depth attr (valueType schema attr)]
+        ; You probably didn't pull both db/id and db/ident, not idiomatic
+        [0 :db/id _] (let [path (butlast path)]             ; use parent path
+                       [(hf-self path source)
+                        (hf-remove path)
+                        (hf-new path source)])
+        [0 :db/ident _] (let [path (butlast path)]          ; use parent path
+                          [(hf-self path source)
+                           (hf-remove path)
+                           (hf-new path source)])
+        [_ _ :db.type/ref] [(hf-self path source)
+                            (hf-affix path source)
+                            (hf-detach path)]
+        [_ _ _] []
+        ))))
+
+(defn query-links [schemas data q]
+  (->> (try-either (parser/parse-query q))
+       (fmap (fn [{find :qfind}]
+               (condp = (type find)
+                 FindColl (let [{e :element} find]
+                            (condp = (type e)
+                              Pull (let [{{pattern :value} :pattern
+                                          {source :symbol} :source} e
+                                         schema (get schemas (str source))]
+                                     (->> (enclosing-pull-shape schema pattern data)
+                                          form-traverse
+                                          (mapcat (partial findcoll-links-at schema source))))
+                              Variable nil
+                              Aggregate nil))
+                 FindRel nil
+                 FindTuple nil
+                 FindScalar (condp = (type (:element find))
+                              Pull nil
+                              Variable nil
+                              Aggregate nil))))
+       ; If this fails, there are not links.
+       (unwrap println)))
+
+(defn console-links-2 [schemas {:keys [fiddle/type fiddle/query fiddle/pull fiddle/pull-database]} data]
+  (->> (case type
+         :blank nil
+         :entity nil
+         :query (->> (memoized-read-edn-string+ query)
+                     (fmap (partial query-links schemas data))
+                     (unwrap println)))))
+
 (let [f (fn [new-links fiddle]
           (update fiddle :fiddle/links (partial merge-by (juxt :link/rel (comp blank->nil :link/path)) new-links)))]
   (defn inject-console-links [ctx]
     (let [console-links (->> (console-links @(:hypercrud.browser/field ctx) @(:hypercrud.browser/schemas ctx))
+                             #_(console-links-2 @(:hypercrud.browser/schemas ctx) @(:hypercrud.browser/fiddle ctx) @(:hypercrud.browser/data ctx))
                              (map fiddle/auto-link))]
       (update ctx :hypercrud.browser/fiddle #(r/fmap->> % (f console-links))))))
-
-(defn findcoll-links-at [source path]
-  (let [id-field (#{:db/id :db/ident #_nil} (last path))
-        path (if id-field (butlast path) path)]
-    (-> #{(hf-self path (str source))
-          (if (= 1 (count path))
-            (if id-field (hf-remove path))
-            (hf-detach path))
-          (if (= 1 (count path))
-            (if id-field (hf-new path (str source)))
-            (hf-affix path (str source)))}
-        (disj nil))))
-
-(defn query-links+ [schemas q data]
-  (mlet [{find :qfind} (try-either (parser/parse-query q))]
-    (condp = (type find)
-      FindColl (let [{e :element} find]
-                 (condp = (type e)
-                   Pull (let [{{pattern :value} :pattern
-                               {source :symbol} :source} e
-                              schema (get schemas (str source))]
-                          (->> (enclosing-pull-shape schema pattern data)
-                               form-traverse
-                               (filter (comp (partial ref? schema) last))
-                               (mapcat (partial findcoll-links-at source))))
-                   Variable nil
-                   Aggregate nil))
-      FindRel nil
-      FindTuple nil
-      FindScalar (condp = (type (:element find))
-                   Pull nil
-                   Variable nil
-                   Aggregate nil)))
-  )
-
-(defn impl [schemas {:keys [fiddle/type fiddle/query fiddle/pull fiddle/pull-database]} data]
-  (case type
-    :entity nil
-    :query (query-links+ schemas query data)
-    :blank nil))
-
-(defn inject-console-links' [ctx]
-  (impl @(:hypercrud.browser/schemas ctx) @(:hypercrud.browser/fiddle ctx) @(:hypercrud.browser/data ctx)))

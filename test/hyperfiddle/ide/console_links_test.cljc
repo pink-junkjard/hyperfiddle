@@ -5,12 +5,13 @@
     [contrib.ct :refer [unwrap]]
     [contrib.eval :as eval]
     [contrib.reactive :as r]
+    [contrib.reader]
     [contrib.template :as template]
     [contrib.uri :refer [->URI]]
     [fixtures.ctx :refer [ctx result-coll query-coll]]
     [hypercrud.browser.field :as field]
     [hyperfiddle.fiddle :refer [txfn-remove]]
-    [hyperfiddle.ide.console-links :refer [query-links+]]))
+    [hyperfiddle.ide.console-links :refer [query-links]]))
 
 
 ; todo collapse these 3 into one test
@@ -45,7 +46,7 @@
   (let [f (-> (template/load-resource "auto-txfn/affix.edn")
               string/trim
               eval/eval-expr-str!)
-       uri (->URI "test")
+       uri #uri "test"
        ctx {:hypercrud.browser/domain {:domain/databases #{{:domain.database/name "$"
                                                             :domain.database/record {:database/uri uri}}}}
             :hypercrud.browser/field (r/atom {::field/source-symbol "$"})
@@ -56,7 +57,37 @@
    (is (= (f ctx nil modal-route)
           {:tx {uri [[:db/add "parent" :parent/child "child"]]}}))))
 
-;(deftest foo-1
-;  []
-;  (query-links+ @(:hypercrud.browser/schemas ctx) query-coll result-coll)
-;  )
+(deftest foo-1
+  []
+  (is (= #{[:hf/self nil]
+           [:hf/remove nil]
+           [:hf/new nil]
+           [:hf/self ":reg/gender"]
+           [:hf/affix ":reg/gender"]
+           [:hf/detach ":reg/gender"]
+           [:hf/self ":reg/shirt-size"]
+           [:hf/affix ":reg/shirt-size"]
+           [:hf/detach ":reg/shirt-size"]}
+         (->> (query-links @(:hypercrud.browser/schemas ctx)
+                           []
+                           '[:find [(pull ?e [:db/id        ; self
+                                              :reg/email    ; not a ref
+                                              :reg/age      ; not a ref
+                                              {:reg/gender [:db/ident] ;self at gender level
+                                               :reg/shirt-size [:db/ident]}]) ; self at gender level
+                                    ...]
+                             :where [?e :reg/email]])
+              (map (juxt :link/rel :link/path))
+              set)
+         ))
+
+  (is (= #{[:hf/self nil]
+           [:hf/remove nil]
+           [:hf/new nil]}
+         (->> (query-links @(:hypercrud.browser/schemas ctx)
+                           []
+                           '[:find [(pull ?e [:db/id]) ...] :where [?e :reg/email]])
+              (map (juxt :link/rel :link/path))
+              set)
+         ))
+  )
