@@ -9,6 +9,7 @@
     contrib.datomic-test
     contrib.datomic-tx-test
     contrib.eval-test
+    contrib.match-test
     contrib.reactive-test
     contrib.rfc3986-test
     contrib.string-test
@@ -31,6 +32,7 @@
     'contrib.datomic-test
     'contrib.datomic-tx-test
     'contrib.eval-test
+    'contrib.match-test
     'contrib.reactive-test
     'contrib.rfc3986-test
     'contrib.string-test

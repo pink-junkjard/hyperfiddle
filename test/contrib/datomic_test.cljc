@@ -2,7 +2,7 @@
   (:require
     [clojure.test :refer [deftest is]]
     [contrib.datomic :refer [pull-shape pulled-tree-derivative enclosing-pull-shape
-                             form-traverse pull-shape-union]]
+                             pull-traverse pull-shape-union]]
     [fixtures.ctx :refer [ctx schema result-coll]]))
 
 
@@ -125,10 +125,35 @@
                                     :reg/gender {:db/id 17592186046204}}
                                    ])
   (enclosing-pull-shape schema (pull-shape pull-pattern-1) result-coll)
+  (enclosing-pull-shape schema (pull-shape pull-pattern-1) [])
   )
 
 (deftest form-traverse-
   []
-  (is (= '([:db/ident])
-         (form-traverse [:db/ident])))
+  (is (= (pull-traverse [:db/ident])
+         (pull-traverse [:db/id])
+         (pull-traverse [:db/id :db/ident])
+         '([])))
+
+  (is (= (pull-traverse [:reg/gender])
+         (pull-traverse [{:reg/gender [:db/ident]}])
+         (pull-traverse [{:reg/gender [:db/id]}])
+         (pull-traverse [{:reg/gender [:db/id :db/ident]}])
+         (pull-traverse [{:reg/gender []}])
+         '([:reg/gender])))
+
+
+
+  (is (= (pull-traverse [:reg/gender
+                         :db/id ; In place order
+                         {:reg/shirt-size [:db/ident
+                                           :reg/gender
+                                           :db/ident
+                                           :db/id]}
+                         :db/id ; Ignored, use first
+                         ])
+         '([:reg/gender]
+            []
+            [:reg/shirt-size]
+            [:reg/shirt-size :reg/gender])))
   )

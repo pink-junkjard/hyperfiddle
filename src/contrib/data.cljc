@@ -106,6 +106,11 @@
   (let [{a true b false} (group-by f? xs)]
     [a b]))
 
+(defn ungroup "this is not quite ungroup but so close!" [m]
+  (->> m
+       (mapcat (fn [[path links]]
+                 (map vector links (repeat path))))))
+
 (defn filter-keys [f? m]
   (->> m (filter (fn [[k v]] (f? k))) (into {})))
 

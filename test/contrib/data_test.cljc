@@ -2,7 +2,7 @@
   (:require
     [clojure.test :refer [deftest is]]
     [contrib.string :refer [blank->nil]]
-    [contrib.data :refer [cond-let map-pad pad rtrim-coll fix-arity fvor take-to
+    [contrib.data :refer [cond-let map-pad pad rtrim-coll fix-arity fvor take-to ungroup
                           compare-by-index ancestry-common ancestry-divergence merge-by orp]]))
 
 
@@ -35,6 +35,24 @@
 
   (is (nil? (cond-let
               [a nil] (inc a)))))
+
+(deftest ungroup-1
+  []
+  (ungroup {[] [:hf/self :hf/remove :hf/new],
+            [:reg/email] [],
+            [:reg/age] [],
+            [:reg/gender] [:hf/self :hf/affix :hf/detach],
+            [:reg/shirt-size] [:hf/self :hf/affix :hf/detach],
+            [:reg/shirt-size :reg/gender] [:hf/self :hf/affix :hf/detach]})
+
+  (ungroup '([[] [:hf/self :hf/remove :hf/new]]
+              [[:reg/email] []]
+              [[:reg/age] []]
+              [[:reg/gender] [:hf/self :hf/affix :hf/detach]]
+              [[:reg/shirt-size] [:hf/self :hf/affix :hf/detach]]
+              [[:reg/shirt-size :reg/gender] [:hf/self :hf/affix :hf/detach]]))
+
+  )
 
 (deftest seq-rtrim-1
   []

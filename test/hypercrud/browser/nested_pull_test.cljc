@@ -4,7 +4,7 @@
             [contrib.data :as data]
             [contrib.reactive :as r]
             [hypercrud.browser.field :as field :refer [auto-field]]
-            [hyperfiddle.ide.console-links :refer [console-links]]
+            [hyperfiddle.ide.console-links :refer [console-links-fiddle]]
             [hypercrud.types.QueryRequest :refer [->QueryRequest]]))
 
 
@@ -142,41 +142,4 @@
                    (::field/children field))]
       (is (= expected actual)))
 
-    (let [links (console-links field @(:hypercrud.browser/schemas ctx))
-          expected #{{:link/path "0", :link/rel :hf/detach}
-                     {:link/path "0 :one-ref1", :link/rel :hf/self}
-                     {:link/path "0 :one-ref2 :many-ref1", :link/rel :hf/self}
-                     {:link/path "0 :many-ref2 :one-ref1", :link/rel :hf/detach}
-                     {:link/path "0 :one-ref1", :link/rel :hf/affix}
-                     {:link/path "0 :many-ref1", :link/rel :hf/detach}
-                     {:link/path "0 :many-ref2", :link/rel :hf/self}
-                     {:link/path "0 :many-ref2", :link/rel :hf/affix}
-                     {:link/path "0 :many-ref2 :many-ref1", :link/rel :hf/self}
-                     {:link/path "0 :many-ref2 :many-ref1", :link/rel :hf/affix}
-                     {:link/path "0 :many-ref2", :link/rel :hf/detach}
-                     {:link/path "0", :link/rel :hf/self}
-                     {:link/path "0 :many-ref1", :link/rel :hf/self}
-                     {:link/path "0 :one-ref2", :link/rel :hf/detach}
-                     {:link/path "0 :one-ref1", :link/rel :hf/detach}
-                     {:link/path "0 :one-ref2 :many-ref1", :link/rel :hf/affix}
-                     {:link/path "0 :many-ref2 :one-ref1", :link/rel :hf/affix}
-                     {:link/path "0 :many-ref1", :link/rel :hf/affix}
-                     {:link/path "0 :one-ref2 :many-ref1", :link/rel :hf/detach}
-                     {:link/path "0 :many-ref2 :one-ref1", :link/rel :hf/self}
-                     {:link/path "0 :one-ref2 :one-ref1", :link/rel :hf/detach}
-                     {:link/path "0 :many-ref2 :many-ref1", :link/rel :hf/detach}
-                     {:link/path "0 :one-ref2 :one-ref1", :link/rel :hf/self}
-                     {:link/path "0 :one-ref2", :link/rel :hf/self}
-                     {:link/path "0 :one-ref2 :one-ref1", :link/rel :hf/affix}
-                     {:link/path "0 :one-ref2", :link/rel :hf/affix}}
-          actual (->> links
-                      (walk/prewalk (fn [x]
-                                      (if (map? x)
-                                        ; just testing the structural attributes
-                                        (->> (select-keys x [:link/path
-                                                             :link/rel])
-                                             (remove (comp nil? second))
-                                             (into {}))
-                                        x)))
-                      (into #{}))]
-      (is (= expected actual)))))
+    ))

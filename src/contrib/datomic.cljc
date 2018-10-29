@@ -1,17 +1,31 @@
 (ns contrib.datomic
   (:require
-    [clojure.set :as set]
-    [clojure.walk :as walk]
     [contrib.data :refer [group-by-pred]]))
 
 
+(defn identity-segment? [attr-spec]
+  ; Not necessarily a keyword
+  ; But accepts pull-shapes, so doesn't have to be the full attr spec
+  (contains? #{:db/id :db/ident} attr-spec))
+
+(defn smart-lookup-ref-no-tempids "see hyperfiddle.tempid/smart-entity-identifier"
+  [{:keys [:db/id :db/ident] :as v}]
+  (let [identity-lookup nil]
+    (or #_(if (underlying-tempid ctx id) id)                  ; the lookups are no good yet, must use the dbid (not the tempid, actions/with will handle that reversal)
+        ident
+        identity-lookup
+        id
+        (if-not (map? v) v)                                 ; id-scalar
+        nil                                                 ; This is an entity but you didn't pull any identity - error?
+        )))
+
 (defn valueType [schema-by-attr k]
   ; :db/id is nil
-  (-> schema-by-attr (get k) :db/valueType :db/ident))
+  (-> schema-by-attr (get k) :db/valueType smart-lookup-ref-no-tempids))
 
 (defn ref? [schema-by-attr k]                               ; Nasty treeish client code. Should this use dynamic scope to hide schema?
   {:pre [schema-by-attr (keyword? k)]}
-  (-> schema-by-attr (get k) :db/valueType :db/ident (= :db.type/ref)))
+  (-> schema-by-attr (get k) :db/valueType smart-lookup-ref-no-tempids (= :db.type/ref)))
 
 (declare pull-shape)
 
@@ -65,23 +79,21 @@
     (apply merge-with pull-shape-union vs)))
 
 (defn enclosing-pull-shape "Union the requested pull-pattern-shape with the actual result shape"
-  [schema pull-pattern-shape coll]
-  (apply pull-shape-union pull-pattern-shape (map (partial pulled-tree-derivative schema) coll)))
+  [schema shape coll]
+  (apply pull-shape-union shape (map (partial pulled-tree-derivative schema) coll)))
 
-(comment
-  (infer-attrs result identity)
-  (apply into (->> (map tree-derivative result) (map set)))
-  (transpose result)                                        ; for relations only
-  )
-
-(defn form-traverse [form-shape & [path]]
-  (->> form-shape
+(defn pull-traverse "Manufacture superset of possible link paths"
+  [pull-shape & [path]]
+  (->> pull-shape
        (mapcat (fn [attr-spec]
                  (cond
+                   (identity-segment? attr-spec) [[]]       ; top level only
                    (keyword? attr-spec) [(conj (vec path) attr-spec)]
                    (map? attr-spec) (->> attr-spec
-                                         (mapcat (fn [[k children]]
-                                                   (let [path (conj (vec path) k)]
+                                         (mapcat (fn [[ref-attr children]]
+                                                   (let [path (conj (vec path) ref-attr)]
                                                      (concat [path]
-                                                             (form-traverse children path)))))))))))
+                                                             (pull-traverse (remove identity-segment? children) path)))))
+                                         distinct))))
+       distinct))
 
