@@ -8,7 +8,7 @@
     [contrib.ct :refer [unwrap]]
     [contrib.ednish :refer [decode-ednish encode-ednish]]
     [contrib.reactive :as r]
-    [contrib.reader :refer [read-edn-string+ read-edn-string!]]
+    [contrib.reader :refer [read-edn-string+]]
     [contrib.rfc3986 :refer [split-fragment encode-rfc3986-pchar]]
     [contrib.string :refer [empty->nil]]
     #?(:cljs [contrib.ui :refer [easy-checkbox radio-with-label]])

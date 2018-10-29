@@ -8,7 +8,7 @@
     [contrib.data :refer [xorxs]]
     [contrib.eval :as eval]
     [contrib.reactive :as r]
-    [contrib.reader :refer [memoized-read-edn-string+]]
+    [contrib.reader :as reader]
     [contrib.string :refer [blank->nil]]
     [contrib.try$ :refer [try-either]]
     [hypercrud.browser.context :as context]
@@ -60,7 +60,7 @@
     (case (:fiddle/type ?fiddle)
       :query (let [q (unwrap                                ; todo whats the point of this monad?
                        #(timbre/warn %)
-                       (mlet [q (memoized-read-edn-string+ (:fiddle/query ?fiddle))]
+                       (mlet [q (reader/memoized-read-string+ (:fiddle/query ?fiddle))]
                          (if (vector? q)
                            (cats/return q)
                            (either/left {:message (str "Invalid query '" (pr-str q) "', only vectors supported")}))))]

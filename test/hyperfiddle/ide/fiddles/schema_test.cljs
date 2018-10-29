@@ -2,7 +2,7 @@
   (:require
     [clojure.test :refer [deftest is]]
     [contrib.reactive :as r]
-    [contrib.reader :refer [read-edn-string!]]
+    [contrib.reader :refer [read-edn-string! read-string]]
     [contrib.uri :refer [->URI]]
     [hypercrud.client.core :refer [Peer]]
     [hypercrud.client.peer :as peer]
@@ -49,7 +49,7 @@
 (deftest schema []
   (let [req (-> (schema-fiddle/schema "$")
                 :fiddle/query
-                read-edn-string!
+                read-string
                 (->QueryRequest [(peer/db-pointer (->URI "$-db") nil)]))]
     (is (not (nil? (render-system-fiddle [:hyperfiddle.schema/$] req nil))))))
 

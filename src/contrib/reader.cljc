@@ -19,6 +19,9 @@
    (binding [reader/*data-readers* (merge hc-data-readers reader/*data-readers*)]
      (reader/read-string opts s))))
 
+(defn read-string+ [& args] (try-either (apply read-string args)))
+(def memoized-read-string+ (memoize read-string+))
+
 (defn read-edn-string!
   ([s]
    (read-edn-string! {:eof nil} s))

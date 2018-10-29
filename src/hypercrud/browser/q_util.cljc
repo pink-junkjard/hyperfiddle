@@ -5,7 +5,7 @@
     [clojure.string]
     [contrib.ct :refer [unwrap]]
     [contrib.data :refer [parse-query-element]]
-    [contrib.reader]
+    [contrib.reader :as reader]
     [contrib.try$ :refer [try-either]]
     [hypercrud.client.core :as hc]
     [hypercrud.types.ThinEntity :refer [#?(:cljs ThinEntity)]]
@@ -51,6 +51,6 @@
       :else-valid (either/right params'))))
 
 (defn args [s-query]
-  (let [q (unwrap (constantly nil) (contrib.reader/memoized-read-edn-string+ s-query))
+  (let [q (unwrap (constantly nil) (reader/memoized-read-string+ s-query))
         holes (unwrap (constantly nil) (try-either (parse-holes q)))]
     (remove #(clojure.string/starts-with? % "$") holes)))

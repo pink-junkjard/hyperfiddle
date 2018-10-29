@@ -2,7 +2,7 @@
   (:require [cats.core :refer [mlet return]]
             [cats.monad.either :as either]
             [contrib.reactive :as r]
-            [contrib.reader :refer [memoized-read-edn-string+]]
+            [contrib.reader :as reader :refer [memoized-read-edn-string+]]
             [contrib.try$ :refer [try-either]]
             [hypercrud.browser.context :as context]
             [hypercrud.browser.field :as field]
@@ -82,7 +82,7 @@
 
 (defn request-for-fiddle [fiddle ctx]                       ; depends on route
   (case @(r/cursor fiddle [:fiddle/type])
-    :query (mlet [q (memoized-read-edn-string+ @(r/cursor fiddle [:fiddle/query]))
+    :query (mlet [q (reader/memoized-read-string+ @(r/cursor fiddle [:fiddle/query]))
                   args (q-util/validate-query-params+ q @(r/fmap second (:hypercrud.browser/route ctx)) ctx)]
              (return (->QueryRequest q args)))
 

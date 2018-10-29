@@ -4,7 +4,7 @@
     [clojure.string :as string]
     [contrib.ct :refer [unwrap]]
     [contrib.data :refer [update-existing]]
-    [contrib.reader :refer [memoized-read-edn-string+]]
+    [contrib.reader :as reader]
     [contrib.string :refer [blank->nil or-str]]
     [contrib.template :as template]
     [contrib.try$ :refer [try-either]]
@@ -19,7 +19,7 @@
 (defn infer-query-formula [query]
   (unwrap
     #(timbre/warn %)
-    (->> (memoized-read-edn-string+ query)
+    (->> (reader/memoized-read-string+ query)
          (cats/=<< #(try-either (datascript.parser/parse-query %)))
          (cats/fmap (fn [{:keys [qin]}]
                       (if (->> qin
