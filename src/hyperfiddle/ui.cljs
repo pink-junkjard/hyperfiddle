@@ -463,10 +463,7 @@ nil. call site must wrap with a Reagent component"          ; is this just hyper
        [:blank _] nil
        [:query :relation] [table (r/partial columns-relation-product field) ctx props]
        [:query :tuple] [form (r/partial columns-relation-product field) val ctx props]
-       [_ _] (pull field val ctx props)))
-
-   ; Unify with pull? What about table iframes
-   [field [] ctx entity-links-iframe (assoc props :label-fn (r/constantly nil #_[:div "result iframes"]))]])
+       [_ _] (pull field val ctx props)))])
 
 (def ^:dynamic markdown)                                    ; this should be hf-contrib or something
 
@@ -476,7 +473,8 @@ nil. call site must wrap with a Reagent component"          ; is this just hyper
   (let [ctx (inject-console-links ctx)]
     [:div (select-keys props [:class])
      [:h3 (pr-str @(:hypercrud.browser/route ctx))]
-     (result val ctx {})]))
+     (result val ctx {})
+     [field [] ctx entity-links-iframe (assoc props :label-fn (r/constantly nil))]]))
 
 (letfn [(render-edn [data]
           (let [edn-str (pprint-str data 160)]
