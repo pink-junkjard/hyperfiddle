@@ -36,7 +36,7 @@
 
 (defn canonicalize "(apply canonicalize route)"
   [& [fiddle #_?fiddle-args ?datomic-args ?service-args ?initial-state]]
-  (orp empty? (rtrim-coll nil? [fiddle ?datomic-args ?service-args ?initial-state])))
+  (orp seq (rtrim-coll nil? [fiddle ?datomic-args ?service-args ?initial-state])))
 
 (defn decode [s]
   (let [[root s] (split-first s "/")

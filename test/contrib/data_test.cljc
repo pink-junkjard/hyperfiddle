@@ -3,7 +3,7 @@
     [clojure.test :refer [deftest is]]
     [contrib.string :refer [blank->nil]]
     [contrib.data :refer [cond-let map-pad pad rtrim-coll fix-arity fvor take-to
-                          compare-by-index ancestry-common ancestry-divergence merge-by]]))
+                          compare-by-index ancestry-common ancestry-divergence merge-by orp]]))
 
 
 (comment
@@ -91,3 +91,7 @@
          '({:link/rel :hf/edit, :link/path nil}
             {:link/rel :hf/edit, :link/path ":reg/gender", :link/extra-stuff true}
             {:link/rel :hf/edit, :link/path ":reg/gender :reg/shirt-size"}))))
+
+(deftest orp-test []
+  (is (= false (orp some? nil false 1)))
+  (is (= 6 (orp even? 1 3 5 6 7))))

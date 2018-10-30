@@ -107,8 +107,15 @@
 (defn filter-keys [f? m]
   (->> m (filter (fn [[k v]] (f? k))) (into {})))
 
-(defn orp "or with custom predicate" [f? & args]            ; todo macro
-  (first (remove f? args)))
+#?(:clj
+   (defmacro orp
+     ([pred] nil)
+     ([pred x]
+      `(let [or# ~x]
+         (when (~pred or#) or#)))
+     ([pred x & next]
+      `(let [or# ~x]
+         (if (~pred or#) or# (orp ~pred ~@next))))))
 
 ; https://crossclj.info/ns/net.mikera/core.matrix/0.62.0/clojure.core.matrix.utils.html#_xor
 (defn xor "Returns the logical xor of a set of values, considered as booleans."

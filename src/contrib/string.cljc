@@ -39,5 +39,4 @@
   (map (comp keyword str) "abcdefghijklmnopqrstuvwxyz")     ; this version works in clojurescript
   #_(->> (range) (map (comp keyword str char #(+ % (int \a))))))
 
-(defn or-str [& args]                                       ; todo macro
-  (apply orp str/empty-or-nil? args))
+(defn or-str [a b] (orp seq a b))

@@ -7,6 +7,7 @@
 (deftest empty->nil-1
   (is (= (empty->nil nil) nil))
   (is (= (empty->nil "") nil))
+  (is (= (empty->nil " ") " "))
   (is (= (empty->nil "a") "a")))
 
 (deftest blank->nil-1
