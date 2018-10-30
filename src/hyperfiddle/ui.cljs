@@ -205,7 +205,7 @@ User renderers should not be exposed to the reaction."
                  :let [fiddle (let [fiddle {:fiddle/type :entity
                                             :fiddle/pull-database "$"}]
                                 ; turns out we dont need fiddle for much if we already know the request
-                                (r/track fiddle/fiddle-defaults fiddle route))
+                                (r/track fiddle/apply-defaults fiddle))
                        ctx (-> (context/source-mode ctx)
                                (context/clean)
                                (routing/route [nil [(->ThinEntity "$" [:fiddle/ident @(r/fmap first (:hypercrud.browser/route ctx))])]]))]]

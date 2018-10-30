@@ -1,5 +1,6 @@
 (ns contrib.ui.codemirror
   (:require
+    [contrib.data :refer [orp]]
     [cuerdas.core :as str]
     [goog.object :as object]
     [reagent.core :as reagent]))
@@ -32,9 +33,8 @@
   (reagent/create-class
     {:reagent-render
      (fn [props]
-       [:textarea (merge (select-keys props [:id :class])   ; #318 Warning: React does not recognize the `lineNumbers` prop on a DOM element
-                         {:default-value (str (:value props))
-                          :auto-complete "off"})])
+       [contrib.ui/textarea (assoc (select-keys props [:id :class :default-value :on-change :value]) ; #318 Warning: React does not recognize the `lineNumbers` prop on a DOM element
+                              :auto-complete "off")])
 
      :component-did-mount
      (fn [this]
@@ -59,8 +59,17 @@
 
          (object/set this "codeMirrorRef" ref)
          (.on ref "change" (fn [_ e]
-                             (let [[_ {:keys [on-change]}] (reagent/argv this)]
-                               (when on-change (on-change (.getValue ref))))))))
+                             (let [[_ {:keys [on-change] :as props}] (reagent/argv this)]
+                               (when on-change
+                                 (let [value (orp seq (.getValue ref))]
+                                   (when (not= value (:value props))
+                                     (if (= value (:default-value props))
+                                       (on-change nil)
+                                       (on-change value))))))))
+
+         (.on ref "blur" (fn [_ e]
+                           (when (= (.getValue ref) "")
+                             (.setValue ref (:default-value props)))))))
 
      :component-will-unmount
      (fn [this]
@@ -70,8 +79,11 @@
      (fn [this]
        (let [[_ props] (reagent/argv this)
              ref (object/get this "codeMirrorRef")
-             new-value (str (:value props))]
+             new-value (orp some? (:value props) (:default-value props) "")
+             current-value (.getValue ref)]
          ; internal CM value state != ctor props
-         (when-not (= (.getValue ref) new-value)
+         (when (and (not= current-value new-value)
+                    (not (and (= "" current-value) (= (:default-value props) new-value)))
+                    (not (and (= "" new-value) (= (:default-value props) current-value))))
            (.setValue ref new-value))
-         (sync-changed-props! ref (dissoc props :value :on-change))))}))
+         (sync-changed-props! ref (dissoc props :default-value :value :on-change))))}))

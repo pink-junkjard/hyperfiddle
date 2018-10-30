@@ -2,7 +2,7 @@
   (:refer-clojure :exclude [keyword long])
   (:require
     [contrib.css :refer [css]]
-    [contrib.data :refer [update-existing]]
+    [contrib.data :refer [orp update-existing]]
     [contrib.pprint :refer [pprint-str]]
     [contrib.reactive :as r]
     [contrib.reader]
@@ -51,9 +51,10 @@
       (reagent/create-class
         {:reagent-render
          (fn [props comp & args]
-           (let [props (-> props
+           (let [props (-> (if-some [value @(r/cursor os-ref [:value])]
+                             (assoc props :value value)
+                             (dissoc props :value))
                            (dissoc :debounce/interval)
-                           (assoc :value @(r/cursor os-ref [:value]))
                            (update :on-change (fn [f]
                                                 (let [f (debounce (r/partial debounced-adapter os-ref f)
                                                                   (or (:debounce/interval props) default-debounce-ms))]
@@ -211,8 +212,7 @@
         :showing? showing?
         :position :below-center
         :anchor [:a {:href "javascript:void 0;" :on-click (r/partial swap! showing? not)}
-                 [:code (or (blank->nil (:value props))
-                            "—" #_ "There might not be a visible value")]]
+                 [:code (orp seq (:value props) (:default-value props) "-")]]
         :popover [re-com/popover-content-wrapper
                   :close-button? true
                   :on-cancel (r/partial reset! showing? false)

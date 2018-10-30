@@ -10,35 +10,8 @@
     [contrib.uri :refer [->URI]]
     [fixtures.ctx :refer [ctx result-coll query-coll]]
     [hypercrud.browser.field :as field]
-    [hyperfiddle.fiddle :refer [txfn-remove]]
     [hyperfiddle.ide.console-links :refer [query-links]]))
 
-
-; todo collapse these 3 into one test
-
-; Fixing these needs proper context mocking
-(deftest txfn-entity-remove []
-  (let [f (eval/eval-expr-str! txfn-remove)
-        uri #uri "test"
-        ctx {:hypercrud.browser/data (r/atom {:db/id "entity"})}]
-    #_(is (= (f ctx nil nil)
-           {:tx {uri [[:db.fn/retractEntity "entity"]]}}))))
-
-(deftest txfn-value-remove-one []
-  (let [f (eval/eval-expr-str! txfn-remove)
-        uri #uri "test"
-        ctx {:hypercrud.browser/data (r/atom {:db/id "child"})}]
-    #_(is (= (f ctx nil nil)
-           {:tx {uri [[:db.fn/retractEntity "child"]]}}))))
-
-(deftest txfn-value-remove-many []
-  (let [f (eval/eval-expr-str! txfn-remove)
-        uri #uri "test"
-        ctx {:hypercrud.browser/data (r/atom [{:db/id "child 1"}
-                                              {:db/id "child 2"}])}]
-    #_(is (= (f ctx nil nil)
-           {:tx {uri [[:db.fn/retractEntity "child 1"]
-                      [:db.fn/retractEntity "child 2"]]}}))))
 
 (deftest mt-fet-at
   []

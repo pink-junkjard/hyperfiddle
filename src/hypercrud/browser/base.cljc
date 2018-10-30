@@ -78,7 +78,7 @@
                   (mlet [fiddle @(hc/hydrate (:peer ctx) (:branch ctx) @meta-fiddle-request)]
                     (validate-fiddle fiddle)))]
     (return
-      (fiddle/fiddle-defaults fiddle route))))
+      (fiddle/apply-defaults fiddle))))
 
 (defn request-for-fiddle [fiddle ctx]                       ; depends on route
   (case @(r/cursor fiddle [:fiddle/type])

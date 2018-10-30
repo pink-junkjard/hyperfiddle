@@ -1,11 +1,9 @@
 (ns hyperfiddle.fiddle
   (:require
     [cats.core :as cats]
-    [clojure.string :as string]
     [contrib.ct :refer [unwrap]]
-    [contrib.data :refer [update-existing]]
     [contrib.reader :as reader]
-    [contrib.string :refer [blank->nil or-str]]
+    [contrib.string :refer [or-str]]
     [contrib.template :as template]
     [contrib.try$ :refer [try-either]]
     [cuerdas.core :as str]
@@ -14,7 +12,8 @@
     [taoensso.timbre :as timbre]))
 
 
-(declare data-defaults)
+(declare fiddle-defaults)
+(declare apply-defaults)
 
 (defn infer-query-formula [query]
   (unwrap
@@ -29,60 +28,52 @@
                         "identity"
                         "(constantly nil)"))))))
 
-(def txfn-affix (-> (template/load-resource "auto-txfn/affix.edn") string/trim))
-(def txfn-detach (-> (template/load-resource "auto-txfn/detach.edn") string/trim))
-(def txfn-remove (-> (template/load-resource "auto-txfn/remove.edn") string/trim))
-(def tempid-child "(partial hyperfiddle.api/tempid-child ctx)")
-(def tempid-detached "(constantly (hyperfiddle.api/tempid-detached ctx))")
+(def link-defaults
+  {:link/formula (fn [link]
+                   (condp contains? (:link/rel link)
+                     #{:hf/new} "(constantly (hyperfiddle.api/tempid-detached ctx))"
+                     #{:hf/affix} "(partial hyperfiddle.api/tempid-child ctx)"
+                     #{:hf/rel :hf/self :hf/iframe}
+                     (case (get-in link [:link/fiddle :fiddle/type] ((:fiddle/type fiddle-defaults) (:link/fiddle link)))
+                       :query (infer-query-formula (get-in link [:link/fiddle :fiddle/query] ((:fiddle/query fiddle-defaults) (:link/fiddle link))))
+                       :entity "identity"
+                       :blank nil)
+                     nil))
+   :link/tx-fn (fn [link]
+                 (case (:link/rel link)
+                   :hf/new "(constantly {:tx []})"          ; hack to draw as popover
+                   :hf/remove (template/load-resource "auto-txfn/remove.edn")
+                   :hf/affix (template/load-resource "auto-txfn/affix.edn")
+                   :hf/detach (template/load-resource "auto-txfn/detach.edn")
+                   :hf/self nil
+                   :hf/iframe nil
+                   :hf/rel nil
+                   nil))})
 
-(defn auto-link [{:keys [:link/rel] :as link}]
-  ; Don't crash if we don't understand the rel
-  (let [a (case rel
-            :hf/new {:link/formula tempid-detached :link/tx-fn "(constantly {:tx []})"} ; hack to draw as popover
-            :hf/remove {:link/tx-fn txfn-remove}
-            :hf/affix {:link/formula tempid-child :link/tx-fn txfn-affix}
-            :hf/detach {:link/tx-fn txfn-detach}
-            :hf/self {}                                     ; We know this is an anchor, otherwise pull deeper instead
-            :hf/iframe {}                                   ; iframe is always a query, otherwise pull deeper instead. Today this defaults in the add-fiddle txfn
-            :hf/rel {}
-            nil)
+(def fiddle-defaults
+  {:fiddle/markdown (fn [fiddle] (str/fmt "### %s" (some-> fiddle :fiddle/ident str)))
+   :fiddle/pull (constantly "[:db/id *]")
+   :fiddle/pull-database (constantly "$")
+   :fiddle/query (constantly "[:find (pull ?e [:db/id *]) :where\n [?e :db/ident :db/add]]")
+   :fiddle/renderer (fn [fiddle]
+                      #?(:cljs (-> hyperfiddle.ui/fiddle meta :expr-str)
+                         :clj  nil))
+   :fiddle/type (constantly :blank)})
 
-        ; apply userland tweaks
-        b (merge-with #(or %2 (blank->nil %1)) a link)
+(defn auto-link [link]
+  (let [link (cond-> link
+               (contains? #{:hf/rel :hf/self :hf/new :hf/iframe} (:link/rel link)) (update :link/fiddle apply-defaults))]
+    (-> link
+        (update :link/formula or-str ((:link/formula link-defaults) link))
+        (update :link/tx-fn or-str ((:link/tx-fn link-defaults) link)))))
 
-        ; Shadow the fiddle
-        c (condp contains? rel
-            #{:hf/rel :hf/self :hf/new :hf/iframe} (update-existing b :link/fiddle #(data-defaults (into {} %))) ; default form and title
-            b)
-
-        ; Formula inference needs known query value
-        d (let [{{query :fiddle/query :as fiddle} :link/fiddle} c]
-            (condp contains? rel
-
-              #{:hf/iframe}
-              (update c :link/formula or-str (cond
-                                               query (infer-query-formula query)
-                                               fiddle "(constantly nil)" ; why?
-                                               :else nil))
-
-              #{:hf/rel :hf/self}
-              (update c :link/formula or-str (cond
-                                               query (infer-query-formula query)
-                                               fiddle "identity"
-                                               :else nil))
-              c))]
-    d))
-
-(defn data-defaults [fiddle]
+(defn apply-defaults [fiddle]
   (-> fiddle
       (update :fiddle/links (partial map auto-link))
+      (update :fiddle/type #(or % ((:fiddle/type fiddle-defaults) fiddle)))
       (cond->
-        (= :query (:fiddle/type fiddle)) (update :fiddle/query or-str "[:find (pull ?e [:db/id *]) :where\n [?e :db/ident :db/add]]")
-        (= :entity (:fiddle/type fiddle)) (-> (update :fiddle/pull or-str "[:db/id *]")
-                                              (update :fiddle/pull-database or-str "$"))
-        (nil? (:fiddle/type fiddle)) (assoc :fiddle/type :blank))))
-
-(defn fiddle-defaults [fiddle route]
-  (-> (data-defaults fiddle)
-      (update :fiddle/markdown or-str (str/fmt "### %s" (some-> fiddle :fiddle/ident str)))
-      (update :fiddle/renderer or-str #?(:clj nil :cljs (-> hyperfiddle.ui/fiddle meta :expr-str)))))
+        (= :query (:fiddle/type fiddle)) (update :fiddle/query or-str ((:fiddle/query fiddle-defaults) fiddle))
+        (= :entity (:fiddle/type fiddle)) (-> (update :fiddle/pull or-str ((:fiddle/pull fiddle-defaults) fiddle))
+                                              (update :fiddle/pull-database or-str ((:fiddle/pull-database fiddle-defaults) fiddle))))
+      (update :fiddle/markdown or-str ((:fiddle/markdown fiddle-defaults) fiddle))
+      (update :fiddle/renderer or-str ((:fiddle/renderer fiddle-defaults) fiddle))))

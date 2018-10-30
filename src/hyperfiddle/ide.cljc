@@ -33,7 +33,6 @@
 
     ; pull in the entire ide app for reference from user-land
     #?(:cljs [hyperfiddle.ide.fiddles.domain])
-    #?(:cljs [hyperfiddle.ide.fiddles.fiddle-links.renderer])
     #?(:cljs [hyperfiddle.ide.fiddles.fiddle-src :refer [fiddle-src-renderer]])
     [hyperfiddle.ide.fiddles.schema]
     #?(:cljs [hyperfiddle.ide.fiddles.schema-attribute])

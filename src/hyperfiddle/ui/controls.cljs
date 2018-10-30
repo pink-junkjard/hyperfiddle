@@ -202,7 +202,8 @@
                     (fn [option-props]
                       [contrib.ui/radio-with-label
                        (-> (merge props option-props)
-                           (assoc :checked (= (:value option-props) val)
+                           (assoc :checked (or (= (:value option-props) val)
+                                               (and (nil? val) (= (:value option-props) (:default-value props))))
                                   :on-change (with-entity-change! ctx)))]))))))
 
 (defn -magic-new-change! [state ctx #_ov v]

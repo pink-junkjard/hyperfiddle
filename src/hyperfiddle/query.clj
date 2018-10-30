@@ -22,7 +22,7 @@
   (<= e-attr 62))
 
 (defn entrypoint-fiddle? [$ e-fiddle]
-  (let [fiddle (fiddle/fiddle-defaults (d/pull $ base/meta-pull-exp-for-link e-fiddle) nil)]
+  (let [fiddle (fiddle/apply-defaults (d/pull $ base/meta-pull-exp-for-link e-fiddle))]
     (condp = (:fiddle/type fiddle)
       :blank true
       :entity false
