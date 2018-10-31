@@ -69,11 +69,13 @@
   ([zero coll] (concat coll (repeat zero)))
   ([n zero coll] (take n (pad zero coll))))
 
-(defn map-pad [zero]
+(defn with-pad [reducer zero]
   (fn [f & cols]
     (let [n (apply max (map count cols))
           cols (map #(pad n zero %) cols)]
-      (apply map f cols))))
+      (apply reducer f cols))))
+
+(def map-pad (partial with-pad map))
 
 ;(defn fallback [p v not-found]
 ;  (if-not (p v) v not-found))
