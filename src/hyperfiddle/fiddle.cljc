@@ -54,7 +54,7 @@
   {:fiddle/markdown (fn [fiddle] (str/fmt "### %s" (some-> fiddle :fiddle/ident str)))
    :fiddle/pull (constantly "[:db/id *]")
    :fiddle/pull-database (constantly "$")
-   :fiddle/query (constantly "[:find (pull ?e [:db/id *]) :where\n [?e :db/ident :db/add]]")
+   :fiddle/query (constantly (template/load-resource "fiddle-query-default.edn"))
    :fiddle/renderer (fn [fiddle]
                       #?(:cljs (-> hyperfiddle.ui/fiddle meta :expr-str)
                          :clj  nil))

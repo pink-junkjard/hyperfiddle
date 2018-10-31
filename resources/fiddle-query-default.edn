@@ -1,0 +1,4 @@
+[:find
+ (pull ?e [:db/id *])
+ :where
+ [?e :db/ident :db/add]]
