@@ -68,7 +68,7 @@
                                        (on-change value))))))))
 
          (.on ref "blur" (fn [_ e]
-                           (when (= (.getValue ref) "")
+                           (when (and (some? (:default-value props)) (= (.getValue ref) ""))
                              (.setValue ref (:default-value props)))))))
 
      :component-will-unmount
