@@ -109,7 +109,8 @@
              [hyperfiddle.ui/ui-from-link link ctx props "remove"])
 
            (if-let [link (data/select-here ctx :hf/detach)]
-             [hyperfiddle.ui/ui-from-link link ctx props "detach"])]))
+             (if val
+               [hyperfiddle.ui/ui-from-link link ctx props "detach"]))]))
 
 (defn ^:export id-or-ident [val ctx & [props]]
   ; id control uses links from parent ctx (parent ref and parent path)
