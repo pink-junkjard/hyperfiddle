@@ -58,6 +58,14 @@
                  (dispatch! [:partition-error branch error])
                  (throw error)))))
 
+(defn hydrate-partition-schema [rt branch dispatch! get-state]
+  (-> (runtime/hydrate-schemas rt branch)
+      (p/then (fn [schema]
+                (dispatch! [:partition-schema branch schema])))
+      (p/catch (fn [error]
+                 (dispatch! [:partition-error branch error])
+                 (throw error)))))
+
 (defn refresh-domain [rt dispatch! get-state]
   (-> (runtime/domain rt)
       (p/then (fn [domain]
@@ -109,6 +117,7 @@
       (do
         (dispatch! (apply batch (conj (vec on-start) [:add-partition branch route branch-aux])))
         (-> (refresh-partition-basis rt branch dispatch! get-state)
+            (p/then #(hydrate-partition-schema rt branch dispatch! get-state))
             (p/then #(hydrate-partition rt branch nil dispatch! get-state)))))))
 
 (defn discard-partition [branch]
@@ -139,6 +148,7 @@
           (dispatch! (apply batch actions))
           ; should just call foundation/bootstrap-data
           (-> (refresh-partition-basis rt branch dispatch! get-state)
+              (p/then #(hydrate-partition-schema rt branch dispatch! get-state))
               (p/then #(hydrate-partition rt branch nil dispatch! get-state))))))))
 
 (defn update-to-tempids [get-state branch uri tx]

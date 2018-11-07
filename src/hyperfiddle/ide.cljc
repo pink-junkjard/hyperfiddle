@@ -29,6 +29,7 @@
     [hyperfiddle.foundation :as foundation]
     [hyperfiddle.io.hydrate-requests :refer [hydrate-one!]]
     [hyperfiddle.runtime :as runtime]
+    [hyperfiddle.schema :as schema]
     [taoensso.timbre :as timbre]
 
     ; pull in the entire ide app for reference from user-land
@@ -155,6 +156,16 @@
     (timbre/debug (pr-str basis))
     #_(determine-local-basis (hydrate-route route ...))
     basis))
+
+(defn hydrate-schemas [rt branch]
+  (if (:active-ide? (runtime/host-env rt))
+    (let [uris (concat [foundation/domain-uri
+                        (->URI "datomic:free://datomic:4334/hyperfiddle-users")
+                        @(runtime/state rt [::runtime/domain :domain/fiddle-database :database/uri])]
+                       @(r/fmap->> (runtime/state rt [::runtime/domain :domain/databases])
+                                   (map (fn [hf-db] (get-in hf-db [:domain.database/record :database/uri])))))]
+      (schema/hydrate-schemas-for-uris rt branch uris))
+    (schema/hydrate-schemas rt branch)))
 
 ; todo should summon route via context/target-route. but there is still tension in the data api for deferred popovers
 (defn api [[fiddle :as route] ctx]

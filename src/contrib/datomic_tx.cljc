@@ -1,6 +1,7 @@
 (ns contrib.datomic-tx
   (:require
-    [clojure.set :as set]))
+    [clojure.set :as set]
+    [hyperfiddle.tempid :refer [tempid?]]))
 
 
 (defn edit-entity [id attribute o n]
@@ -17,29 +18,73 @@
         (vec (concat (map (fn [v] [:db/retract id a v]) (set/difference o n))
                      (map (fn [v] [:db/add id a v]) (set/difference n o))))))))
 
-(defn simplify [simplified-tx next-stmt]
+(defn- simplify-oeav [simplified-tx next-stmt]
   (let [[op e a v] next-stmt
         g (group-by (fn [[op' e' a' v']] (and (= e' e) (= a' a) (= v' v)))
                     simplified-tx)
         [op' e' a' v'] (first (get g true))                 ;if this count > 1, we have duplicate stmts, they are harmless and discard dups here.
-        non-related (get g false)]
+        unrelated (get g false)]
     (case op
       :db/add (if (= op' :db/retract)
-                non-related                                 ;we have a related previous stmt that cancels us and it out
-                (conj non-related next-stmt))
+                unrelated                                   ;we have a related previous stmt that cancels us and it out
+                (conj unrelated next-stmt))
       :db/retract (if (= op' :db/add)
-                    non-related                             ;we have a related previous stmt that cancels us and it out
-                    (conj non-related next-stmt))
+                    unrelated                               ;we have a related previous stmt that cancels us and it out
+                    (conj unrelated next-stmt)))))
 
-      ; else probably a :db.fn
-      (conj non-related next-stmt))))
+(defn- retract-entity [schema tx-data e]
+  (let [{:keys [tx child-entids orphaned-parent-check]}
+        (reduce (fn [acc next-stmt]
+                  (if (contains? #{:db/add :db/retract} (first next-stmt))
+                    (let [[op' e' a' v'] next-stmt]
+                      (cond
+                        (= e e') (if (and (:db/isComponent (get schema a')) (tempid? v'))
+                                   (update acc :child-entids conj v')
+                                   acc)
+                        (= e v') (if (tempid? e')
+                                   (update acc :orphaned-parent-check conj e')
+                                   acc)
+                        :else (update acc :tx conj next-stmt)))
+                    (update acc :tx conj next-stmt)))
+                {:tx []
+                 :child-entids []
+                 :orphaned-parent-check []}
+                tx-data)
+        tx (loop [[entid & rest] orphaned-parent-check
+                  tx tx]
+             (if entid
+               (if (some #(and (= :db/add (first %)) (= entid (second %))) tx)
+                 (recur rest tx)                            ; entid used in entity position in statements
+                 (let [{:keys [tx orphaned-parent-check]}
+                       (reduce (fn [acc next-stmt]
+                                 (if (and (= :db/add (first next-stmt)) (= entid (last next-stmt)))
+                                   (update acc :orphaned-parent-check conj (second next-stmt))
+                                   (update acc :tx conj next-stmt)))
+                               {:tx []
+                                :orphaned-parent-check []}
+                               tx)]
+                   (recur (concat rest orphaned-parent-check) tx)))
+               tx))]
+    (loop [[entid & rest] child-entids
+           tx tx]
+      (if entid
+        (recur rest (retract-entity schema tx entid))
+        tx))))
 
-(defn into-tx [tx more-statements]
+(defn- simplify [schema simplified-tx next-stmt]
+  (condp contains? (first next-stmt)
+    #{:db/add :db/retract} (simplify-oeav simplified-tx next-stmt)
+    #{:db/retractEntity :db.fn/retractEntity} (let [e (second next-stmt)]
+                                                (cond-> (retract-entity schema simplified-tx e)
+                                                  (not (tempid? e)) (conj next-stmt)))
+    (conj simplified-tx next-stmt)))
+
+(defn into-tx [schema tx more-statements]
   "We don't care about the cardinality (schema) because the UI code is always
   retracting values before adding new value, even in cardinality one case. This is a very
   convenient feature and makes the local datoms cancel out properly always to not cause
   us to re-assert datoms needlessly in datomic"
-  (reduce simplify tx more-statements))
+  (reduce (partial simplify schema) tx more-statements))
 
 (letfn [(update-v [id->tempid schema a v]
           (if (= :db.type/ref (get-in schema [a :db/valueType :db/ident]))

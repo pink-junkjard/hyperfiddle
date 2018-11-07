@@ -4,6 +4,8 @@
     [contrib.reactive :as r]
     [contrib.datomic-tx :as tx]
     [contrib.ui :refer [debounced]]
+    [hypercrud.browser.context :as context]
+    [hyperfiddle.runtime :as runtime]
     [hyperfiddle.ui :refer [field markdown]]
     [hyperfiddle.ui.util :refer [entity-change->tx with-tx!]]))
 
@@ -23,14 +25,17 @@
 
 (defn valueType-and-cardinality-with-tx! [special-attrs-state ctx tx]
   (let [entity @(get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data])
+        uri @(r/fmap-> (:hypercrud.browser/fiddle ctx) :fiddle/ident name
+                       (context/uri ctx))
+        schema @(runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :schemas uri])
         new-entity (merge-in-tx entity tx ctx)]
     (case [(completed? entity) (completed? new-entity)]
       [false false]
-      (swap! special-attrs-state tx/into-tx tx)
+      (swap! special-attrs-state (partial tx/into-tx schema) tx)
 
       [false true]
       (do
-        (with-tx! ctx (tx/into-tx @special-attrs-state tx))
+        (with-tx! ctx (tx/into-tx schema @special-attrs-state tx))
         (reset! special-attrs-state nil))
 
       [true false]
@@ -42,6 +47,9 @@
 
 (defn ident-with-tx! [special-attrs-state ctx tx]
   (let [entity @(get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data])
+        uri @(r/fmap-> (:hypercrud.browser/fiddle ctx) :fiddle/ident name
+                       (context/uri ctx))
+        schema @(runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :schemas uri])
         new-entity (merge-in-tx entity tx ctx)]
     (case [(completed? entity) (completed? new-entity)]
       [false false]
@@ -49,7 +57,7 @@
 
       [false true]
       (do
-        (with-tx! ctx (tx/into-tx @special-attrs-state tx))
+        (with-tx! ctx (tx/into-tx schema @special-attrs-state tx))
         (reset! special-attrs-state nil))
 
       [true false]

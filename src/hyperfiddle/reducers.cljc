@@ -55,8 +55,9 @@
     (or display-mode :hypercrud.browser.browser-ui/user)))
 
 (defn partitions-reducer [partitions action & args]
-  (let [with (fn [partitions branch uri tx]
-               (update-in partitions [branch :stage uri] tx/into-tx tx))]
+  (let [with (fn [partition uri tx]
+               (let [schema (get-in partition [:schemas uri])]
+                 (update-in partition [:stage uri] (partial tx/into-tx schema) tx)))]
     (->> (case action
            :transact!-success
            (let [[uris] args]
@@ -78,6 +79,9 @@
            :partition-basis (let [[branch local-basis] args]
                               (assoc-in partitions [branch :local-basis] local-basis))
 
+           :partition-schema (let [[branch schemas] args]
+                               (assoc-in partitions [branch :schemas] schemas))
+
            :partition-route (let [[branch route] args]
                               (if (= route (get-in partitions [branch :route]))
                                 partitions
@@ -86,12 +90,12 @@
                                     #_(dissoc :error :ptm :tempid-lookups))))
 
            :with (let [[branch uri tx] args]
-                   (with partitions branch uri tx))
+                   (update partitions branch with uri tx))
 
            :merge (let [[branch] args
                         parent-branch (branch/decode-parent-branch branch)]
                     (-> (reduce (fn [partitions [uri tx]]
-                                  (with partitions parent-branch uri tx))
+                                  (update partitions parent-branch with uri tx))
                                 partitions
                                 (get-in partitions [branch :stage]))
                         (update branch dissoc :stage)))
@@ -144,13 +148,14 @@
                        ; apply defaults
                        (->> {:hydrate-id identity
                              :popovers #(or % #{})
+                             :schemas identity
 
                              ; data needed to hydrate a partition
                              :route identity
                              :hyperfiddle.runtime/branch-aux identity
                              :stage (fn [multi-color-tx]
                                       (->> multi-color-tx
-                                           (remove (fn [[uri tx]] (nil? tx)))
+                                           (remove (fn [[uri tx]] (empty? tx)))
                                            (into {})))
                              :local-basis identity
 

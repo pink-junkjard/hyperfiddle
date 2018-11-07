@@ -43,8 +43,9 @@
      (entity-change->tx ctx o n)))
   ([ctx o n]
    (let [id @(r/fmap (r/partial smart-entity-identifier ctx) (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data]))
-         attribute @(context/hydrate-attribute ctx (last (:hypercrud.browser/path ctx)))]
-     (tx/edit-entity id attribute o (empty->nil n)))))
+         attribute @(context/hydrate-attribute ctx (last (:hypercrud.browser/path ctx)))
+         n (empty->nil n)]                                  ; hack for garbage string controls
+     (tx/edit-entity id attribute o n))))
 
 (defn with-tx! [ctx tx]
   (let [uri (context/uri ctx)]

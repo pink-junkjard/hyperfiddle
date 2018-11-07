@@ -36,6 +36,9 @@
   (encode-route [rt v])
   (decode-route [rt s]))
 
+(defprotocol Schema
+  (hydrate-schemas [rt branch]))
+
 (defprotocol DomainRegistry
   (domain [rt]))
 

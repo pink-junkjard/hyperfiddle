@@ -1,4 +1,4 @@
-(ns hypercrud.client.schema
+(ns hypercrud.client.schema                                 ; legacy to be removed
   (:require
     [cats.core :as cats]
     [contrib.data :refer [group-by-assume-unique map-values]]

@@ -236,7 +236,8 @@
 (def LEVEL-USER 3)
 (def LEVEL-ROUTE 4)
 (def LEVEL-LOCAL-BASIS 5)
-(def LEVEL-HYDRATE-PAGE 6)
+(def LEVEL-SCHEMA 6)
+(def LEVEL-HYDRATE-PAGE 7)
 
 ; this needs to be a bit smarter; this should be invoked by everyone (all service endpoints, ssr, browser)
 ; e.g. for service/hydrate-route, we have route, and local-basis, just need to fetch domain & hydrate
@@ -259,6 +260,7 @@
                                (runtime/dispatch! rt [:set-error e])
                                (p/rejected e))))
           LEVEL-LOCAL-BASIS (actions/refresh-partition-basis rt nil (partial runtime/dispatch! rt) #(deref (runtime/state rt)))
+          LEVEL-SCHEMA (actions/hydrate-partition-schema rt nil (partial runtime/dispatch! rt) #(deref (runtime/state rt)))
           LEVEL-HYDRATE-PAGE (if (or (not= initial-global-basis @(runtime/state rt [::runtime/global-basis])) dirty-stage?)
                                (actions/hydrate-partition rt nil nil (partial runtime/dispatch! rt) #(deref (runtime/state rt)))
                                (p/resolved nil)))
