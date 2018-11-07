@@ -24,8 +24,7 @@
      #(some-> % :db/valueType :db/ident name)
      #(some-> % :db/cardinality :db/ident name)
      #(some-> % :db/isComponent (if :component) name)
-     #(some-> % :db/unique :db/ident name)
-     #(some-> % :attribute/renderer fqn->name))
+     #(some-> % :db/unique :db/ident name))
     attr))
 
 (defn semantic-docstring [ctx & [doc-override]]

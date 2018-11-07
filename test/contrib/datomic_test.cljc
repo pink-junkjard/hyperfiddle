@@ -3,7 +3,7 @@
     [clojure.test :refer [deftest is]]
     [contrib.datomic :refer [pull-shape pulled-tree-derivative enclosing-pull-shape
                              pull-traverse pull-shape-union]]
-    [fixtures.ctx :refer [ctx schema result-coll]]))
+    [fixtures.ctx :refer [schema result-coll]]))
 
 
 (def pull-pattern-2

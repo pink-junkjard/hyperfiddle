@@ -46,9 +46,8 @@
 
 (defn attr-renderer-control [val ctx & [props]]
   ; The only way to stabilize this is for this type signature to become a react class.
-  (when-let [user-f @(r/fmap-> (context/hydrate-attribute ctx (last (:hypercrud.browser/path ctx)))
-                               :attribute/renderer
-                               blank->nil)]
+  (when-let [user-f (-> @(r/cursor (:hypercrud.browser/attr-renderers ctx) [(last (:hypercrud.browser/path ctx))])
+                        blank->nil)]
     [user-portal (ui-error/error-comp ctx)
      ; ?user-f is stable due to memoizing eval (and only due to this)
      [eval-renderer-comp user-f val ctx props]]))
@@ -146,9 +145,10 @@
                (map css-slugify)
                (string/join "/"))]
          (when (context/attribute-segment? (last (:hypercrud.browser/path ctx)))
-           (let [attr (context/hydrate-attribute ctx (last (:hypercrud.browser/path ctx)))]
+           (let [attr-ident (last (:hypercrud.browser/path ctx))
+                 attr (context/hydrate-attribute ctx attr-ident)]
              [@(r/cursor attr [:db/valueType :db/ident])
-              @(r/cursor attr [:attribute/renderer])  #_label/fqn->name
+              @(r/cursor (:hypercrud.browser/attr-renderers ctx) [attr-ident])  #_label/fqn->name
               @(r/cursor attr [:db/cardinality :db/ident])
               (some-> @(r/cursor attr [:db/isComponent]) (if :component))])))
        (map css-slugify)))
@@ -222,7 +222,7 @@ User renderers should not be exposed to the reaction."
        (fn [e]
          (reagent/after-render
            (fn []
-             (when (and (exists? js/Sentry)                ; todo hide behind interface on runtime
+             (when (and (exists? js/Sentry)                 ; todo hide behind interface on runtime
                         (not @(stale/can-be-loading? ctx)))
                (.withScope js/Sentry (fn [scope]
                                        (.setExtra scope "ex-data" (clj->js (ex-data e)))

@@ -32,10 +32,10 @@
 
 (defn console-link [qfind [rel path]]
   (let [ix (condp = (type qfind)
-                 FindColl 0
-                 FindScalar 0
-                 FindRel (first path)
-                 FindTuple (first path))
+             FindColl 0
+             FindScalar 0
+             FindRel (first path)
+             FindTuple (first path))
         source (get-in (parser/find-elements qfind) [ix :source :symbol])]
     {:db/id (keyword "hyperfiddle.browser.system-link" (str (name rel) "-" (hash path)))
      :link/rel rel
@@ -77,7 +77,7 @@
         ))))
 
 (defn console-links-e [schemas qfind ix e collection]
-  (let [schema (get schemas (str (get-in e [:source :symbol])))
+  (let [schema @(get schemas (str (get-in e [:source :symbol])))
         all-paths (element-spread schema e collection)
         all-links (->> all-paths (map (partial console-links-rules schema qfind e)))
         all-paths (->> all-paths (map (fn [path]
@@ -129,5 +129,5 @@
 (let [f (fn [new-links fiddle]
           (update fiddle :fiddle/links (partial merge-by (juxt :link/rel (comp blank->nil :link/path)) new-links)))]
   (defn inject-console-links [ctx]
-    (let [links (console-links-fiddle @(:hypercrud.browser/schemas ctx) @(:hypercrud.browser/fiddle ctx) @(:hypercrud.browser/data ctx))]
+    (let [links (console-links-fiddle (:hypercrud.browser/schemas ctx) @(:hypercrud.browser/fiddle ctx) @(:hypercrud.browser/data ctx))]
       (update ctx :hypercrud.browser/fiddle #(r/fmap->> % (f links))))))

@@ -1,16 +1,11 @@
 (ns hypercrud.client.schema                                 ; legacy to be removed
   (:require
     [cats.core :as cats]
-    [contrib.data :refer [group-by-assume-unique map-values]]
+    [contrib.data :as data]
     [contrib.reactive :as r]
     [hypercrud.client.core :as hc]
     [hypercrud.types.QueryRequest :refer [->QueryRequest]]))
 
-
-(defn hc-attr-request [ctx]
-  (->QueryRequest '[:find [(pull ?attr [:attribute/ident :attribute/renderer :db/doc]) ...]
-                    :where [?attr :attribute/ident]]
-                  [(hc/db (:peer ctx) (get-in ctx [:hypercrud.browser/domain :domain/fiddle-database :database/uri]) (:branch ctx))]))
 
 (defn schema-request [dbval]
   (->QueryRequest '[:find [(pull ?attr [*
@@ -27,28 +22,14 @@
        (map (fn [hf-db]
               (let [uri (get-in hf-db [:domain.database/record :database/uri])]
                 (-> (hc/db (:peer ctx) uri (:branch ctx))
-                    schema-request))))
-       (concat [(hc-attr-request ctx)])))
+                    schema-request))))))
 
-(letfn [(with-root-data [ctx either-root-data]
-          (cats/bind either-root-data
-                     (fn [root-data]
-                       (let [indexed-root (->> root-data
-                                               (group-by-assume-unique :attribute/ident)
-                                               (map-values #(dissoc % :attribute/ident :db/id)))]
-
-                         (->> (get-in ctx [:hypercrud.browser/domain :domain/databases])
-                              (mapv (fn [hf-db]
-                                      (let [uri (get-in hf-db [:domain.database/record :database/uri])
-                                            request (schema-request (hc/db (:peer ctx) uri (:branch ctx)))]
-                                        (->> @(hc/hydrate (:peer ctx) (:branch ctx) request)
-                                             (cats/fmap (fn [schema]
-                                                          [(:domain.database/name hf-db)
-                                                           (->> schema
-                                                                (group-by-assume-unique :db/ident)
-                                                                (merge-with #(merge %2 %1) indexed-root))]))))))
-                              (cats/sequence)
-                              (cats/fmap #(into {} %)))))))]
-  (defn hydrate-schema [ctx]
-    (r/fmap->> (hc/hydrate (:peer ctx) (:branch ctx) (hc-attr-request ctx))
-               (with-root-data ctx))))
+(defn hydrate-schema [ctx]
+  (let [dbnames (map :domain.database/name (get-in ctx [:hypercrud.browser/domain :domain/databases]))]
+    (->> (schema-requests-for-link ctx)
+         (mapv (fn [request]
+                 @(r/apply-inner-r
+                    (r/fmap->> (hc/hydrate (:peer ctx) (:branch ctx) request)
+                               (cats/fmap (r/partial data/group-by-unique :db/ident))))))
+         (cats/sequence)
+         (cats/fmap (partial zipmap dbnames)))))

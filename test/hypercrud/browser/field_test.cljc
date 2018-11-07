@@ -77,7 +77,7 @@
 (defn build-ctx [fiddle result]                             ; this is starting to look a lot like base/process-results
   {:hypercrud.browser/fiddle (r/atom fiddle)
    :hypercrud.browser/data (r/atom result)
-   :hypercrud.browser/schemas (r/atom {"$" test-schema})})
+   :hypercrud.browser/schemas {"$" (r/atom test-schema)}})
 
 #?(:clj
    (defmacro test-defined-pull [fiddle pull->request]
@@ -223,7 +223,7 @@
             (test-partial-splat ~fiddle ~pull->request ~result-builder)))))
 
 (deftest blank []
-  (is (nil? @(auto-field nil {:hypercrud.browser/schemas (r/atom nil)
+  (is (nil? @(auto-field nil {:hypercrud.browser/schemas nil
                               :hypercrud.browser/fiddle (r/atom {:fiddle/type :blank})}))))
 
 (letfn [(f [a b]

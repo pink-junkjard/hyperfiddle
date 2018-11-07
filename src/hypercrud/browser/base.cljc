@@ -12,6 +12,7 @@
             [hyperfiddle.ide.system-fiddle :as system-fiddle]
             [hypercrud.client.core :as hc]
             [hypercrud.client.schema :as schema-util]
+            [hyperfiddle.project :as project]
             [hypercrud.types.EntityRequest :refer [->EntityRequest]]
             [hypercrud.types.QueryRequest :refer [->QueryRequest]]
             [hyperfiddle.domain :as domain]
@@ -107,14 +108,15 @@
                          @(hc/hydrate peer branch ?request)
                          (either/right nil)))]
   (defn process-results [fiddle request ctx]                ; todo rename to (context/result)
-    (mlet [reactive-schemas @(r/apply-inner-r (schema-util/hydrate-schema ctx))
+    (mlet [schemas (schema-util/hydrate-schema ctx)
+           reactive-attrs @(r/apply-inner-r (project/hydrate-attrs ctx))
            reactive-result @(r/apply-inner-r (r/track nil-or-hydrate (:peer ctx) (:branch ctx) request))
            :let [ctx (assoc ctx
+                       :hypercrud.browser/attr-renderers reactive-attrs
                        :hypercrud.browser/data reactive-result
                        :hypercrud.browser/fiddle fiddle     ; for :db/doc
                        :hypercrud.browser/path []
-                       ; For tx/entity->statements in userland.
-                       :hypercrud.browser/schemas reactive-schemas)]
+                       :hypercrud.browser/schemas schemas)]
            reactive-field @(r/apply-inner-r (r/track field/auto-field request ctx))]
       (return (assoc ctx :hypercrud.browser/field reactive-field)))))
 

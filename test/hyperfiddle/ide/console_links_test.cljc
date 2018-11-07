@@ -91,20 +91,20 @@
 
 (deftest console-link-internals
   []
-  (is (= (console-links-e @(:hypercrud.browser/schemas ctx)
+  (is (= (console-links-e (:hypercrud.browser/schemas ctx)
                           (:qfind (qparsed FindColl))
                           0
                           (first (parser/find-elements (:qfind (qparsed FindColl))))
                           (results FindColl))
-         (query-links-impl @(:hypercrud.browser/schemas ctx)
+         (query-links-impl (:hypercrud.browser/schemas ctx)
                            (:qfind (qparsed FindColl))
                            (results FindColl))
 
          ; Check empty case, doesn't impact links with this result
-         (query-links-impl @(:hypercrud.browser/schemas ctx)
+         (query-links-impl (:hypercrud.browser/schemas ctx)
                            (:qfind (qparsed FindColl))
                            [])
-         (query-links @(:hypercrud.browser/schemas ctx)
+         (query-links (:hypercrud.browser/schemas ctx)
                       (queries FindColl)
                       (results FindColl))
          '([[] #{:hf/new :hf/remove :hf/self}]
@@ -213,7 +213,7 @@
 (deftest console-links-rules-
   []
   (for [[comment query result links] matrix]
-    (is (= (query-links @(:hypercrud.browser/schemas ctx) query result)
+    (is (= (query-links (:hypercrud.browser/schemas ctx) query result)
            links)
         comment))
   )

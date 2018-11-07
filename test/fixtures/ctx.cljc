@@ -199,9 +199,8 @@
                                               :reg/shirt-size {:db/ident :shirt-size/mens-medium}}),
    :hypercrud.browser/invert-route nil,
    :hypercrud.browser/schemas
-   (r/track
-     identity
-     {"$" {:db/excise {:db/id 15, :db/ident :db/excise, :db/valueType {:db/ident :db.type/ref}, :db/cardinality {:db/ident :db.cardinality/one}},
+   {"$" (r/atom
+          {:db/excise {:db/id 15, :db/ident :db/excise, :db/valueType {:db/ident :db.type/ref}, :db/cardinality {:db/ident :db.cardinality/one}},
            :hypercrud/props {:db/id 88, :db/ident :hypercrud/props, :db/valueType {:db/ident :db.type/string}, :db/cardinality {:db/ident :db.cardinality/one}, :db/doc "Map of extra user props for the renderer, e.g. `:disabled` `:label-fn` `:tooltip`"},
            :db/fn {:db/id 52, :db/ident :db/fn, :db/valueType {:db/ident :db.type/fn}, :db/cardinality {:db/ident :db.cardinality/one}, :db/doc "A function-valued attribute for direct use by transactions and queries."},
            :db/index {:db/id 44, :db/ident :db/index, :db/valueType {:db/ident :db.type/boolean}, :db/cardinality {:db/ident :db.cardinality/one}, :db/doc "Property of an attribute. If true, create an AVET index for the attribute. Defaults to false."},
@@ -258,7 +257,7 @@
            :fressian/tag {:db/id 39, :db/ident :fressian/tag, :db/valueType {:db/ident :db.type/keyword}, :db/cardinality {:db/ident :db.cardinality/one}, :db/index true, :db/doc "Keyword-valued attribute of a value type that specifies the underlying fressian type used for serialization."},
            :fiddle/query {:db/id 98, :db/ident :fiddle/query, :db/valueType {:db/ident :db.type/string}, :db/cardinality {:db/ident :db.cardinality/one}, :db/doc "Datomic query. Database inputs are resolved by name through the `:domain/environment`. Pull `:db/id` for editable forms. Currently no support yet for rules, d/history or d/log."},
            :db.sys/partiallyIndexed {:db/id 8, :db/ident :db.sys/partiallyIndexed, :db/valueType {:db/ident :db.type/boolean}, :db/cardinality {:db/ident :db.cardinality/one}, :db/doc "System-assigned attribute set to true for transactions not fully incorporated into the index"},
-           :hyperblog.post/draft-placeholder {:db/id 120, :db/ident :hyperblog.post/draft-placeholder, :db/valueType {:db/ident :db.type/boolean}, :db/cardinality {:db/ident :db.cardinality/one}, :db/doc "Show in rendered view, but disabled (no link)"}}})}
+           :hyperblog.post/draft-placeholder {:db/id 120, :db/ident :hyperblog.post/draft-placeholder, :db/valueType {:db/ident :db.type/boolean}, :db/cardinality {:db/ident :db.cardinality/one}, :db/doc "Show in rendered view, but disabled (no link)"}})}}
   )
 
-(def schema (-> ctx :hypercrud.browser/schemas deref (get "$")))
+(def schema (-> ctx :hypercrud.browser/schemas (get "$") deref))

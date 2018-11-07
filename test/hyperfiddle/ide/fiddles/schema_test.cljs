@@ -12,6 +12,7 @@
     [hyperfiddle.core]
     [hyperfiddle.ide]
     [hyperfiddle.ide.fiddles.schema :as schema-fiddle]
+    [hyperfiddle.project :as project]
     [hyperfiddle.runtime :as runtime]
     [hyperfiddle.ui :refer [iframe]]
     [reagent.dom.server :as dom-server]))
@@ -41,7 +42,7 @@
                                                              :domain.database/record {:database/uri (->URI "$-db")}}}}
              :hypercrud.ui/display-mode (r/atom :hypercrud.browser.browser-ui/user)}
         ptm {req res
-             (schema/hc-attr-request ctx) []
+             (project/attrs-request ctx) []
              (schema/schema-request (peer/db-pointer (->URI "$-db") nil)) nil}
         ctx (assoc ctx :peer (->TestRuntime (r/atom {::runtime/partitions {nil {:ptm ptm}}})))]
     (render [iframe ctx {:route route}])))

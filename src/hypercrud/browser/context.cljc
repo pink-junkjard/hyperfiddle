@@ -70,7 +70,7 @@
    @(runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :tempid-lookups uri])))
 
 (defn hydrate-attribute [ctx ident & ?more-path]
-  (r/cursor (:hypercrud.browser/schemas ctx) (concat [(dbname ctx) ident] ?more-path)))
+  (r/cursor (get-in ctx [:hypercrud.browser/schemas (dbname ctx)]) (cons ident ?more-path)))
 
 (defn- set-parent [ctx]
   (assoc ctx :hypercrud.browser/parent (dissoc ctx :hypercrud.browser/data)))
@@ -83,7 +83,7 @@
            (filter #(= (::field/path-segment %) path-segment))
            first)
       (when (keyword? path-segment)
-        (field/summon @(r/cursor schemas [(str (::field/source-symbol field))]) (::field/source-symbol field) path-segment))))
+        (field/summon @(get schemas (str (::field/source-symbol field))) (::field/source-symbol field) path-segment))))
 
 (defn find-parent-field [ctx]
   (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/field]))

@@ -160,7 +160,7 @@
 
 (defn- pull-one [schemas cell source-symbol label pull-pattern]
   {::cardinality :db.cardinality/one
-   ::children (pull->fields (get schemas (str source-symbol)) source-symbol pull-pattern cell [])
+   ::children (pull->fields @(get schemas (str source-symbol)) source-symbol pull-pattern cell [])
    ::data-has-id? (entity-pull? pull-pattern)
    ::get-value identity
    ::label label
@@ -190,7 +190,7 @@
    ::source-symbol nil})
 
 (defn auto-field [request {:keys [:hypercrud.browser/data] :as ctx}]
-  (let [schemas @(:hypercrud.browser/schemas ctx)]          ; todo tighter reactivity
+  (let [schemas (:hypercrud.browser/schemas ctx)]
     (case @(r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/type])
       :entity (let [dbname @(r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/pull-database])
                     source-symbol (symbol dbname)
@@ -217,7 +217,7 @@
                                                                      (let [source-symbol (get-in element [:source :symbol])
                                                                            pull-pattern (get-in element [:pattern :value])]
                                                                        {::cardinality :db.cardinality/one
-                                                                        ::children (pull->fields (get schemas (str source-symbol)) source-symbol pull-pattern (get results-by-column fe-pos) [])
+                                                                        ::children (pull->fields @(get schemas (str source-symbol)) source-symbol pull-pattern (get results-by-column fe-pos) [])
                                                                         ::data-has-id? (entity-pull? pull-pattern)
                                                                         ::get-value (r/partial r/last-arg-first get fe-pos)
                                                                         ::label (get-in element [:variable :symbol])
@@ -243,7 +243,7 @@
                                 (let [source-symbol (get-in qfind [:element :source :symbol])
                                       pull-pattern (get-in qfind [:element :pattern :value])]
                                   {::cardinality :db.cardinality/many
-                                   ::children (pull->fields (get schemas (str source-symbol)) source-symbol pull-pattern @data [])
+                                   ::children (pull->fields @(get schemas (str source-symbol)) source-symbol pull-pattern @data [])
                                    ::data-has-id? (entity-pull? pull-pattern)
                                    ::get-value identity
                                    ::label (get-in qfind [:element :variable :symbol])
@@ -268,7 +268,7 @@
                                                                 (let [source-symbol (get-in element [:source :symbol])
                                                                       pull-pattern (get-in element [:pattern :value])]
                                                                   {::cardinality :db.cardinality/one
-                                                                   ::children (pull->fields (get schemas (str source-symbol)) source-symbol pull-pattern (get @data fe-pos) [])
+                                                                   ::children (pull->fields @(get schemas (str source-symbol)) source-symbol pull-pattern (get @data fe-pos) [])
                                                                    ::data-has-id? (entity-pull? pull-pattern)
                                                                    ::get-value (r/partial r/last-arg-first get fe-pos)
                                                                    ::label (get-in element [:variable :symbol])

@@ -10,7 +10,8 @@
     [hypercrud.browser.routing :as routing]
     [hypercrud.client.peer :refer [-quiet-unwrap]]
     [hypercrud.client.schema :as schema-util]
-    [hyperfiddle.data :as data]))
+    [hyperfiddle.data :as data]
+    [hyperfiddle.project :as project]))
 
 
 (declare requests)
@@ -21,7 +22,8 @@
                 (routing/route route))]
     (when-let [meta-fiddle-request (-quiet-unwrap @(r/apply-inner-r (r/track base/meta-request-for-fiddle ctx)))]
       (assert (r/reactive? meta-fiddle-request))
-      (concat [@meta-fiddle-request]
+      (concat [@meta-fiddle-request
+               (project/attrs-request ctx)]
               (-quiet-unwrap
                 (mlet [fiddle @(r/apply-inner-r (r/track base/hydrate-fiddle meta-fiddle-request ctx))
                        fiddle-request @(r/apply-inner-r (r/track base/request-for-fiddle fiddle ctx))]

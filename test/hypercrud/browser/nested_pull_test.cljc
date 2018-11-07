@@ -4,7 +4,6 @@
             [contrib.data :as data]
             [contrib.reactive :as r]
             [hypercrud.browser.field :as field :refer [auto-field]]
-            [hyperfiddle.ide.console-links :refer [console-links-fiddle]]
             [hypercrud.types.QueryRequest :refer [->QueryRequest]]))
 
 
@@ -29,7 +28,7 @@
 (defn build-ctx [fiddle result]                             ; this is starting to look a lot like base/process-results
   {:hypercrud.browser/fiddle (r/atom fiddle)
    :hypercrud.browser/data (r/atom result)
-   :hypercrud.browser/schemas (r/atom {"$" test-schema})})
+   :hypercrud.browser/schemas {"$" (r/atom test-schema)}})
 
 (deftest nested-tests []
   (let [fiddle {:fiddle/type :query
