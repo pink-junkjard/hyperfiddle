@@ -1,6 +1,7 @@
 (ns hyperfiddle.fiddle
   (:require
     [cats.core :as cats]
+    [clojure.spec.alpha :as s]
     [contrib.ct :refer [unwrap]]
     [contrib.reader :as reader]
     [contrib.string :refer [or-str]]
@@ -11,6 +12,58 @@
     #_[hyperfiddle.ui]
     [taoensso.timbre :as timbre]))
 
+
+(defmulti fiddle-type :fiddle/type)
+
+(s/def ::fiddle
+  (s/and (s/multi-spec fiddle-type :fiddle/type)
+         (s/keys :req [:fiddle/ident]
+                 :opt [:fiddle/type
+                       :fiddle/links
+                       :fiddle/markdown
+                       :fiddle/renderer
+                       :fiddle/css
+                       :fiddle/cljs-ns
+                       :fiddle/hydrate-result-as-fiddle
+                       :hyperfiddle/owners])))
+
+(defmulti fiddle-link :link/rel)
+
+(s/def :fiddle/ident keyword?)
+(s/def :fiddle/type #{:blank :entity :query})
+(s/def :fiddle/query string?)
+(s/def :fiddle/pull string?)
+(s/def :fiddle/pull-database string?)
+(s/def :fiddle/links (s/coll-of (s/and (s/multi-spec fiddle-link :link/rel)
+                                       (s/keys :req [:link/rel :link/fiddle]
+                                               :opt [:link/class :link/path :link/formula :link/tx-fn]))))
+(s/def :fiddle/markdown string?)
+(s/def :fiddle/renderer string?)
+(s/def :fiddle/css string?)
+(s/def :fiddle/cljs-ns string?)
+(s/def :fiddle/hydrate-result-as-fiddle string?)
+
+(s/def :link/rel #{:hf/self :hf/rel :hf/new :hf/remove :hf/affix :hf/detach :hf/iframe})
+(s/def :link/class keyword?)
+(s/def :link/fiddle (s/keys))
+(s/def :link/path string?)
+(s/def :link/formula string?)
+(s/def :link/tx-fn string?)
+
+(s/def :hyperfiddle/owners (s/coll-of uuid?))
+
+(defmethod fiddle-type :blank [_] (s/keys))
+(defmethod fiddle-type :query [_] (s/keys :req [:fiddle/query]))
+(defmethod fiddle-type :entity [_] (s/keys :req [:fiddle/pull] :opt [:fiddle/pull-database]))
+(defmethod fiddle-type nil [_] (s/keys))
+
+(defmethod fiddle-link :hf/self [_] (s/keys))
+(defmethod fiddle-link :hf/rel [_] (s/keys :req [:link/class]))
+(defmethod fiddle-link :hf/new [_] (s/keys))
+(defmethod fiddle-link :hf/remove [_] (s/keys))
+(defmethod fiddle-link :hf/affix [_] (s/keys))
+(defmethod fiddle-link :hf/detach [_] (s/keys))
+(defmethod fiddle-link :hf/iframe [_] (s/keys :req [:link/class]))
 
 (declare fiddle-defaults)
 (declare apply-defaults)
@@ -77,3 +130,31 @@
                                               (update :fiddle/pull-database or-str ((:fiddle/pull-database fiddle-defaults) fiddle))))
       (update :fiddle/markdown or-str ((:fiddle/markdown fiddle-defaults) fiddle))
       (update :fiddle/renderer or-str ((:fiddle/renderer fiddle-defaults) fiddle))))
+
+(def browser-pull
+  [:db/id
+   :db/doc
+   :fiddle/css
+   :fiddle/ident
+   {:fiddle/links [:db/id
+                   :link/class
+                   {:link/fiddle [:db/id
+                                  :fiddle/ident             ; routing
+                                  :fiddle/query             ; validation
+                                  :fiddle/type              ; validation
+                                  ]}
+                   :link/formula
+                   :link/ident                              ; legacy
+                   :link/path
+                   :link/rel
+                   :link/tx-fn]}
+   :fiddle/markdown
+   :fiddle/pull
+   :fiddle/pull-database
+   :fiddle/query
+   :fiddle/cljs-ns
+   :fiddle/renderer
+   :fiddle/type
+   :fiddle/hydrate-result-as-fiddle
+   '*                                                       ; For hyperblog, so we can access :hyperblog.post/title etc from the fiddle renderer
+   ])

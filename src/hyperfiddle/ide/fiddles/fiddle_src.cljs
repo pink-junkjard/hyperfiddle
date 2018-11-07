@@ -1,6 +1,8 @@
 (ns hyperfiddle.ide.fiddles.fiddle-src
   (:require
     [cats.core :refer [mlet return]]
+    [cats.monad.either :as either]
+    [clojure.spec.alpha :as s]
     [contrib.reactive :as r]
     [hypercrud.browser.context :as context]
     [hypercrud.browser.field :as field]
@@ -10,8 +12,7 @@
     [hyperfiddle.ui :refer [anchor field hyper-control link table]]
     [re-com.tabs :refer [horizontal-tabs]]
     [hypercrud.browser.base :as base]
-    [cats.monad.either :as either]
-    [hyperfiddle.data :as data]))
+    [hyperfiddle.fiddle :as fiddle]))
 
 
 (defn with-fiddle-default [props fiddle-val attr]
@@ -136,21 +137,24 @@
                     [field [segment] ctx nil]))
              (doall))
         (field [:db/id] ctx (fn [val ctx props]
-                              [:div (link :hf/remove :fiddle ctx "Remove fiddle" {:class "btn-outline-danger"})]))]))})
+                              [:div (link :hf/remove :fiddle ctx "Remove fiddle" {:class "btn-outline-danger"})]))
+        [:div.p "Validation (experimental)"]
+        [:pre (js/pprint-str (::problems ctx))]]))})
 
 (defn fiddle-src-renderer [val ctx props]
   (let [tab-state (r/atom (if (contains? tabs (:initial-tab props)) (:initial-tab props) :hf.src/query))]
     (fn [val ctx {:keys [:embed-mode] :as props}]
-      [:div (select-keys props [:class])
-       #_(if-not embed-mode
-           [:h3 "Source: " (str @(r/cursor (:hypercrud.browser/data ctx) [:fiddle/ident]))])
-       ; Design constraint: one codemirror per tab, and it will expand to fill height.
-       [horizontal-tabs
-        ; F U recom: Validation failed: Expected 'vector of tabs | atom'. Got '[:query :links :view :css :fiddle]'
-        :tabs [{:id :hf.src/query} {:id :hf.src/links} {:id :hf.src/markdown}
-               {:id :hf.src/view} {:id :hf.src/css} {:id :hf.src/fiddle}]
-        :id-fn :id
-        :label-fn (comp name :id)
-        :model tab-state
-        :on-change (r/partial reset! tab-state)]
-       [(get tabs @tab-state) val ctx {:embed-mode embed-mode}]])))
+      (let [ctx (assoc ctx ::problems (::s/problems (s/explain-data ::fiddle/fiddle val)))]
+        [:div (select-keys props [:class])
+         #_(if-not embed-mode
+             [:h3 "Source: " (str @(r/cursor (:hypercrud.browser/data ctx) [:fiddle/ident]))])
+         ; Design constraint: one codemirror per tab, and it will expand to fill height.
+         [horizontal-tabs
+          ; F U recom: Validation failed: Expected 'vector of tabs | atom'. Got '[:query :links :view :css :fiddle]'
+          :tabs [{:id :hf.src/query} {:id :hf.src/links} {:id :hf.src/markdown}
+                 {:id :hf.src/view} {:id :hf.src/css} {:id :hf.src/fiddle}]
+          :id-fn :id
+          :label-fn (comp name :id)
+          :model tab-state
+          :on-change (r/partial reset! tab-state)]
+         [(get tabs @tab-state) val ctx {:embed-mode embed-mode}]]))))

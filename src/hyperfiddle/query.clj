@@ -4,7 +4,6 @@
     [contrib.try$ :refer [try-either]]
     [datomic.api :as d]
     [hypercrud.browser.q-util :as q-util]
-    [hypercrud.browser.base :as base]
     [hyperfiddle.fiddle :as fiddle]))
 
 
@@ -22,7 +21,7 @@
   (<= e-attr 62))
 
 (defn entrypoint-fiddle? [$ e-fiddle]
-  (let [fiddle (fiddle/apply-defaults (d/pull $ base/meta-pull-exp-for-link e-fiddle))]
+  (let [fiddle (fiddle/apply-defaults (d/pull $ fiddle/browser-pull e-fiddle))]
     (condp = (:fiddle/type fiddle)
       :blank true
       :entity false

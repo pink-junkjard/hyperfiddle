@@ -19,34 +19,6 @@
             [hyperfiddle.fiddle :as fiddle]))
 
 
-(def meta-pull-exp-for-link
-  [:db/id
-   :db/doc
-   :fiddle/css
-   :fiddle/ident
-   {:fiddle/links [:db/id
-                   :link/class
-                   {:link/fiddle [:db/id
-                                  :fiddle/ident             ; routing
-                                  :fiddle/query             ; validation
-                                  :fiddle/type              ; validation
-                                  ]}
-                   :link/formula
-                   :link/ident
-                   :link/path
-                   :link/rel
-                   :link/tx-fn]}
-   :fiddle/markdown
-   :fiddle/pull
-   :fiddle/pull-database
-   :fiddle/query
-   :fiddle/cljs-ns
-   :fiddle/renderer
-   :fiddle/type
-   :fiddle/hydrate-result-as-fiddle
-   '*                                                       ; For hyperblog, so we can access :hyperblog.post/title etc from the fiddle renderer
-   ])
-
 (defn legacy-fiddle-ident->lookup-ref [fiddle]              ; SHould be an ident but sometimes is a long today
   ; Keywords are not a db/ident, turn it into the fiddle-id lookup ref.
   ; Otherwise, pass it through, its already a lookup-ref or eid or whatever.
@@ -62,7 +34,7 @@
             _ (assert fiddle "missing fiddle-id")
             _ (assert (:hypercrud.browser/domain ctx) "missing domain")
             dbval (hc/db (:peer ctx) (get-in ctx [:hypercrud.browser/domain :domain/fiddle-database :database/uri]) (:branch ctx))]
-        (->EntityRequest (legacy-fiddle-ident->lookup-ref fiddle) dbval meta-pull-exp-for-link)))))
+        (->EntityRequest (legacy-fiddle-ident->lookup-ref fiddle) dbval fiddle/browser-pull)))))
 
 (defn validate-fiddle [fiddle]
   (if-not (:db/id fiddle)
