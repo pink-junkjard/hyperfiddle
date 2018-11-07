@@ -121,15 +121,15 @@
         (update :link/tx-fn or-str ((:link/tx-fn link-defaults) link)))))
 
 (defn apply-defaults [fiddle]
-  (-> fiddle
-      (update :fiddle/links (partial map auto-link))
-      (update :fiddle/type #(or % ((:fiddle/type fiddle-defaults) fiddle)))
-      (cond->
-        (= :query (:fiddle/type fiddle)) (update :fiddle/query or-str ((:fiddle/query fiddle-defaults) fiddle))
-        (= :entity (:fiddle/type fiddle)) (-> (update :fiddle/pull or-str ((:fiddle/pull fiddle-defaults) fiddle))
-                                              (update :fiddle/pull-database or-str ((:fiddle/pull-database fiddle-defaults) fiddle))))
-      (update :fiddle/markdown or-str ((:fiddle/markdown fiddle-defaults) fiddle))
-      (update :fiddle/renderer or-str ((:fiddle/renderer fiddle-defaults) fiddle))))
+  (as-> fiddle fiddle
+    (update fiddle :fiddle/links (partial map auto-link))
+    (update fiddle :fiddle/type #(or % ((:fiddle/type fiddle-defaults) fiddle)))
+    (cond-> fiddle
+      (= :query (:fiddle/type fiddle)) (update :fiddle/query or-str ((:fiddle/query fiddle-defaults) fiddle))
+      (= :entity (:fiddle/type fiddle)) (-> (update :fiddle/pull or-str ((:fiddle/pull fiddle-defaults) fiddle))
+                                            (update :fiddle/pull-database or-str ((:fiddle/pull-database fiddle-defaults) fiddle))))
+    (update fiddle :fiddle/markdown or-str ((:fiddle/markdown fiddle-defaults) fiddle))
+    (update fiddle :fiddle/renderer or-str ((:fiddle/renderer fiddle-defaults) fiddle))))
 
 (def browser-pull
   [:db/id
