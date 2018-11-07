@@ -1,8 +1,7 @@
 (ns hyperfiddle.ui.sort
-  (:require [contrib.css :refer [css-slugify css]]
-            [contrib.reactive :as r]
-            [hypercrud.browser.context :as context]
-            [hypercrud.browser.link :as link]))
+  (:require
+    [contrib.reactive :as r]
+    [hypercrud.browser.context :as context]))
 
 
 (defn sortable? [ctx]
