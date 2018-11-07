@@ -28,8 +28,7 @@
 ; user beware
 (defn batch [& action-list] (cons :batch action-list))
 
-(defn hydrate-partition [rt branch on-start dispatch! get-state]
-  (dispatch! (apply batch (conj on-start [:hydrate!-start branch])))
+(defn hydrate-partition [rt branch dispatch! get-state]
   (let [{:keys [hydrate-id]} (get-in (get-state) [::runtime/partitions branch])]
     (-> (runtime/hydrate-route rt branch)
         (p/then (fn [{:keys [local-basis ptm tempid-lookups]}]
@@ -117,8 +116,9 @@
       (do
         (dispatch! (apply batch (conj (vec on-start) [:add-partition branch route branch-aux])))
         (-> (refresh-partition-basis rt branch dispatch! get-state)
+            (p/then #(dispatch! [:hydrate!-start branch]))
             (p/then #(hydrate-partition-schema rt branch dispatch! get-state))
-            (p/then #(hydrate-partition rt branch nil dispatch! get-state)))))))
+            (p/then #(hydrate-partition rt branch dispatch! get-state)))))))
 
 (defn discard-partition [branch]
   [:discard-partition branch])
@@ -148,8 +148,9 @@
           (dispatch! (apply batch actions))
           ; should just call foundation/bootstrap-data
           (-> (refresh-partition-basis rt branch dispatch! get-state)
+              (p/then #(dispatch! [:hydrate!-start branch]))
               (p/then #(hydrate-partition-schema rt branch dispatch! get-state))
-              (p/then #(hydrate-partition rt branch nil dispatch! get-state))))))))
+              (p/then #(hydrate-partition rt branch dispatch! get-state))))))))
 
 (defn update-to-tempids [get-state branch uri tx]
   (let [{:keys [tempid-lookups ptm]} (get-in (get-state) [::runtime/partitions branch])
@@ -227,7 +228,8 @@
           (let [actions (cond-> with-actions
                           ; what about local-basis? why not specify branch?
                           route (conj [:partition-route nil route]))]
-            (hydrate-partition rt branch actions dispatch! get-state)))))))
+            (dispatch! (apply batch (conj actions [:hydrate!-start branch])))
+            (hydrate-partition rt branch dispatch! get-state)))))))
 
 (defn open-popover [branch popover-id]
   [:open-popover branch popover-id])
@@ -266,13 +268,15 @@
                                        ; what about local-basis? why not specify branch?
                                        [:partition-route nil app-route])
                                      (discard-partition branch)]]
-                        (hydrate-partition rt parent-branch actions dispatch! get-state))))))))))
+                        (dispatch! (apply batch (conj actions [:hydrate!-start parent-branch])))
+                        (hydrate-partition rt parent-branch dispatch! get-state))))))))))
 
 (defn reset-stage-uri [rt branch uri tx]
   (fn [dispatch! get-state]
     ; check if auto-tx is OFF first?
     (when (not= tx (get-in (get-state) [::runtime/partitions branch :stage uri]))
-      (hydrate-partition rt nil [[:reset-stage-uri branch uri tx]] dispatch! get-state))))
+      (dispatch! (batch [:reset-stage-uri branch uri tx] [:hydrate!-start nil]))
+      (hydrate-partition rt nil dispatch! get-state))))
 
 (defn manual-transact-uri! [peer invert-route nil-branch-aux uri]
   (fn [dispatch! get-state]

@@ -259,9 +259,10 @@
                              (catch #?(:cljs :default :clj Exception) e
                                (runtime/dispatch! rt [:set-error e])
                                (p/rejected e))))
-          LEVEL-LOCAL-BASIS (actions/refresh-partition-basis rt nil (partial runtime/dispatch! rt) #(deref (runtime/state rt)))
+          LEVEL-LOCAL-BASIS (-> (actions/refresh-partition-basis rt nil (partial runtime/dispatch! rt) #(deref (runtime/state rt)))
+                                (p/then #(runtime/dispatch! rt [:hydrate!-start nil])))
           LEVEL-SCHEMA (actions/hydrate-partition-schema rt nil (partial runtime/dispatch! rt) #(deref (runtime/state rt)))
           LEVEL-HYDRATE-PAGE (if (or (not= initial-global-basis @(runtime/state rt [::runtime/global-basis])) dirty-stage?)
-                               (actions/hydrate-partition rt nil nil (partial runtime/dispatch! rt) #(deref (runtime/state rt)))
-                               (p/resolved nil)))
+                               (actions/hydrate-partition rt nil (partial runtime/dispatch! rt) #(deref (runtime/state rt)))
+                               (p/resolved (runtime/dispatch! rt [:hydrate!-shorted nil]))))
         (p/then #(bootstrap-data rt (inc init-level) load-level encoded-route initial-global-basis dirty-stage?)))))

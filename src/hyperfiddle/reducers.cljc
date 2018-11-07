@@ -115,6 +115,9 @@
                                              (assoc :ptm ptm
                                                     :tempid-lookups tempid-lookups)))))
 
+           :hydrate!-shorted (let [[branch] args]
+                               (update partitions branch dissoc :hydrate-id))
+
            :hydrate!-route-success (let [[branch ptm tempid-lookups new-basis] args]
                                      (update partitions branch
                                              (fn [partition]
