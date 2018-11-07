@@ -16,7 +16,7 @@
 (defmulti fiddle-type :fiddle/type)
 
 (s/def ::fiddle
-  (s/and (s/multi-spec fiddle-type :fiddle/type)
+  (s/and #_(s/multi-spec fiddle-type :fiddle/type)
          (s/keys :req [:fiddle/ident]
                  :opt [:fiddle/type
                        :fiddle/links
@@ -45,7 +45,7 @@
 
 (s/def :link/rel #{:hf/self :hf/rel :hf/new :hf/remove :hf/affix :hf/detach :hf/iframe})
 (s/def :link/class keyword?)
-(s/def :link/fiddle (s/keys))
+;(s/def :link/fiddle (s/keys))
 (s/def :link/path string?)
 (s/def :link/formula string?)
 (s/def :link/tx-fn string?)
@@ -53,8 +53,8 @@
 (s/def :hyperfiddle/owners (s/coll-of uuid?))
 
 (defmethod fiddle-type :blank [_] (s/keys))
-(defmethod fiddle-type :query [_] (s/keys :req [:fiddle/query]))
-(defmethod fiddle-type :entity [_] (s/keys :req [:fiddle/pull] :opt [:fiddle/pull-database]))
+(defmethod fiddle-type :query [_] (s/keys :opt [:fiddle/query]))
+(defmethod fiddle-type :entity [_] (s/keys :opt [:fiddle/pull :fiddle/pull-database]))
 (defmethod fiddle-type nil [_] (s/keys))
 
 (defmethod fiddle-link :hf/self [_] (s/keys))

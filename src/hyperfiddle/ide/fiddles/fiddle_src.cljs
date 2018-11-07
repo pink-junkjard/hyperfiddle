@@ -144,7 +144,7 @@
 (defn fiddle-src-renderer [val ctx props]
   (let [tab-state (r/atom (if (contains? tabs (:initial-tab props)) (:initial-tab props) :hf.src/query))]
     (fn [val ctx {:keys [:embed-mode] :as props}]
-      (let [ctx (assoc ctx ::problems (::s/problems (s/explain-data ::fiddle/fiddle val)))]
+      (let [ctx (assoc ctx ::problems (::s/problems (s/explain-data ::fiddle/fiddle #_(fiddle/apply-defaults) val)))]
         [:div (select-keys props [:class])
          #_(if-not embed-mode
              [:h3 "Source: " (str @(r/cursor (:hypercrud.browser/data ctx) [:fiddle/ident]))])
