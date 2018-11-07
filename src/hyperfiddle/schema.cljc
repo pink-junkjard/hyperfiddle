@@ -18,7 +18,8 @@
                   [dbval]))
 
 (defn hydrate-schemas-for-uris [rt branch uris]
-  (let [local-basis @(runtime/state rt [::runtime/partitions branch :local-basis])
+  (let [uris (vec (distinct uris))
+        local-basis @(runtime/state rt [::runtime/partitions branch :local-basis])
         stage nil
         requests (map (fn [uri] (request (hc/db rt uri branch))) uris)]
     (-> (hydrate-requests/hydrate-all-or-nothing! rt local-basis stage requests)
