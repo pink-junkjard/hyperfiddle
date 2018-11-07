@@ -3,6 +3,7 @@
     [cats.core :refer [mlet return]]
     [cats.monad.either :as either]
     [clojure.spec.alpha :as s]
+    [clojure.pprint]
     [contrib.reactive :as r]
     [hypercrud.browser.context :as context]
     [hypercrud.browser.field :as field]
@@ -138,8 +139,13 @@
              (doall))
         (field [:db/id] ctx (fn [val ctx props]
                               [:div (link :hf/remove :fiddle ctx "Remove fiddle" {:class "btn-outline-danger"})]))
-        [:div.p "Validation (experimental)"]
-        [:pre (js/pprint-str (::problems ctx))]]))})
+        [:div.p "Spec problems (experimental)"]
+        [:pre
+         (with-out-str
+           (clojure.pprint/print-table
+             (->> (::problems ctx)
+                  (map #(update % :pred s/abbrev))
+                  (map #(select-keys % [:in :pred])))))]]))})
 
 (defn fiddle-src-renderer [val ctx props]
   (let [tab-state (r/atom (if (contains? tabs (:initial-tab props)) (:initial-tab props) :hf.src/query))]
