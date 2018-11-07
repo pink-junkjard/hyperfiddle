@@ -78,6 +78,10 @@
   (sync [rt dbs]
     (sync-rpc! (:service-uri host-env) (:build host-env) dbs jwt))
 
+  runtime/Schema
+  (hydrate-schemas [rt branch]
+    (ide/hydrate-schemas rt branch))
+
   hc/Peer
   (hydrate [this branch request]
     (peer/hydrate state-atom branch request))

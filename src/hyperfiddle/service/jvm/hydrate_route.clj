@@ -96,6 +96,10 @@
     (let [staged-branches (stage-val->staged-branches stage)]
       (p/resolved (hydrate-requests/hydrate-requests local-basis requests staged-branches ?subject))))
 
+  runtime/Schema
+  (hydrate-schemas [rt branch]
+    (ide/hydrate-schemas rt branch))
+
   hc/Peer
   (db [this uri branch]
     (peer/db-pointer uri branch)))
