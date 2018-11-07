@@ -12,6 +12,7 @@
           :hypercrud.ui/error
           :hyperfiddle.ui/layout
 
+          :hypercrud.browser/attr-renderers
           :hypercrud.browser/data
           :hypercrud.browser/fiddle
           :hypercrud.browser/field
