@@ -36,8 +36,8 @@
         get-secure-db-with (build-get-secure-db-with staged-branches (atom {}) local-basis)
         $ (:db (get-secure-db-with test-uri "nil"))]
     (is (= (as-> (d/touch (d/entity $ :x/y)) entity
-                                             (into {} entity)
-                                             (dissoc entity :db/id))
+             (into {} entity)
+             (dissoc entity :db/id))
            {:db/ident :x/y
             :db/valueType :db.type/string
             :db/cardinality :db.cardinality/one}))))
