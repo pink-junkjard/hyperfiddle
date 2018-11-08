@@ -1,12 +1,14 @@
 (ns hypercrud.transit
-  (:require [cognitect.transit :as t]
-            [hypercrud.types.DbVal :refer [->DbVal #?(:cljs DbVal)]]
-            [hypercrud.types.EntityRequest :refer [->EntityRequest #?(:cljs EntityRequest)]]
-            [hypercrud.types.Err :refer [->Err #?(:cljs Err)]]
-            [hypercrud.types.QueryRequest :refer [->QueryRequest #?(:cljs QueryRequest)]]
-            [hypercrud.types.ThinEntity :refer [->ThinEntity #?(:cljs ThinEntity)]]
-            [contrib.uri :refer [->URI #?(:cljs URI)]]
-            [hyperfiddle.runtime :refer [map->HostEnvironment #?(:cljs HostEnvironment)]])
+  (:require
+    [cognitect.transit :as t]
+    [com.cognitect.transit.types]
+    [contrib.uri :refer [->URI #?(:cljs URI)]]
+    [hypercrud.types.DbVal :refer [->DbVal #?(:cljs DbVal)]]
+    [hypercrud.types.EntityRequest :refer [->EntityRequest #?(:cljs EntityRequest)]]
+    [hypercrud.types.Err :refer [->Err #?(:cljs Err)]]
+    [hypercrud.types.QueryRequest :refer [->QueryRequest #?(:cljs QueryRequest)]]
+    [hypercrud.types.ThinEntity :refer [->ThinEntity #?(:cljs ThinEntity)]]
+    [hyperfiddle.runtime :refer [map->HostEnvironment #?(:cljs HostEnvironment)]])
   #?(:clj
      (:import (hypercrud.types.DbVal DbVal)
               (hypercrud.types.EntityRequest EntityRequest)
@@ -71,3 +73,5 @@
              (.toString out))
      :cljs (let [wrtr (t/writer type opts)]
              (t/write wrtr x))))
+
+#?(:cljs (extend-type com.cognitect.transit.types/UUID IUUID)) ; https://github.com/hyperfiddle/hyperfiddle/issues/728
