@@ -36,8 +36,8 @@
 (defn error-block-with-stage [ctx e & [?class]]
   [:<>
    [error-block e ?class]
-   #_(if (some-> e e->map :data :ident (= :db.error/datoms-conflict)))
-   [foundation/staging ctx]])
+   (when (:branch ctx)
+     [foundation/staging ctx])])
 
 (defn error-comp [ctx]
   ; :find-element :attribute :value
