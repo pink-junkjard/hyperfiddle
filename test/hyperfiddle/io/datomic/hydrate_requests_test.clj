@@ -1,7 +1,9 @@
 (ns hyperfiddle.io.datomic.hydrate-requests-test
-  (:require [clojure.test :refer [deftest is use-fixtures]]
-            [datomic.api :as d]
-            [hyperfiddle.io.datomic.hydrate-requests :as datomic-hydrate-requests]))
+  (:require
+    [cats.monad.exception :as exception]
+    [clojure.test :refer [deftest is use-fixtures]]
+    [datomic.api :as d]
+    [hyperfiddle.io.datomic.hydrate-requests :as datomic-hydrate-requests]))
 
 
 (def test-uri "datomic:mem://test")
@@ -19,6 +21,10 @@
                       (f)
                       (d/delete-database test-uri)))
 
+(defn build-get-secure-db-with [& args]
+  (let [get-secure-db-with+ (apply datomic-hydrate-requests/build-get-secure-db-with+ args)]
+    (fn [& args] (exception/extract (apply get-secure-db-with+ args)))))
+
 (deftest schema-alteration []
   (let [conn (d/connect test-uri)
         staged-branches [{:branch-ident nil
@@ -27,11 +33,11 @@
                                [:db/add "-1" :db/valueType :db.type/string]
                                [:db/add "-1" :db/cardinality :db.cardinality/one]]}]
         local-basis {test-uri (d/basis-t (d/db conn))}
-        get-secure-db-with (datomic-hydrate-requests/build-get-secure-db-with staged-branches (atom {}) local-basis)
+        get-secure-db-with (build-get-secure-db-with staged-branches (atom {}) local-basis)
         $ (:db (get-secure-db-with test-uri "nil"))]
     (is (= (as-> (d/touch (d/entity $ :x/y)) entity
-                 (into {} entity)
-                 (dissoc entity :db/id))
+                                             (into {} entity)
+                                             (dissoc entity :db/id))
            {:db/ident :x/y
             :db/valueType :db.type/string
             :db/cardinality :db.cardinality/one}))))
@@ -42,7 +48,7 @@
                           :uri test-uri
                           :tx [{:db/id "-1" :person/name "John" :person/age 30}]}]
         local-basis {test-uri (d/basis-t (d/db conn))}
-        get-secure-db-with (datomic-hydrate-requests/build-get-secure-db-with staged-branches (atom {}) local-basis)
+        get-secure-db-with (build-get-secure-db-with staged-branches (atom {}) local-basis)
         $ (:db (get-secure-db-with test-uri "nil"))]
     (is (= (d/q '[:find ?age . :where [?person :person/age ?age] [?person :person/name "John"]] $) 30))))
 
@@ -53,7 +59,7 @@
                           :tx [{:db/id "-1" :person/name "John" :person/age 30}]}]
         local-basis {test-uri (d/basis-t (d/db conn))}      ; get a stale basis before another user transacts
         _ @(d/transact conn [{:db/id "-1" :person/name "Bob" :person/age 50}])
-        get-secure-db-with (datomic-hydrate-requests/build-get-secure-db-with staged-branches (atom {}) local-basis)]
+        get-secure-db-with (build-get-secure-db-with staged-branches (atom {}) local-basis)]
     (is (thrown-with-msg? RuntimeException (re-pattern datomic-hydrate-requests/ERROR-BRANCH-PAST)
                           (get-secure-db-with test-uri "nil")))))
 
@@ -66,7 +72,7 @@
                           :uri test-uri
                           :tx [{:db/id "-1" :person/name "John" :person/age 30}]}]
         local-basis {test-uri (d/basis-t (d/db conn))}
-        get-secure-db-with (datomic-hydrate-requests/build-get-secure-db-with staged-branches (atom {}) local-basis)
+        get-secure-db-with (build-get-secure-db-with staged-branches (atom {}) local-basis)
         $-nil (:db (get-secure-db-with test-uri "nil"))
         $-2 (:db (get-secure-db-with test-uri "2"))]
     (is (= (d/q '[:find ?age . :where [?person :person/age ?age] [?person :person/name "John"]] $-nil) nil))
@@ -82,7 +88,7 @@
                           :tx [{:db/id "-1" :person/name "John" :person/age 30}]}]
         local-basis {test-uri (d/basis-t (d/db conn))}      ; get a stale basis before another user transacts
         _ @(d/transact conn [{:db/id "-1" :person/name "Bob" :person/age 50}])
-        get-secure-db-with (datomic-hydrate-requests/build-get-secure-db-with staged-branches (atom {}) local-basis)
+        get-secure-db-with (build-get-secure-db-with staged-branches (atom {}) local-basis)
         $-nil (:db (get-secure-db-with test-uri "nil"))]
     (is (= (d/q '[:find ?age . :where [?person :person/age ?age] [?person :person/name "John"]] $-nil) nil))
     (is (thrown-with-msg? RuntimeException (re-pattern datomic-hydrate-requests/ERROR-BRANCH-PAST)
@@ -97,7 +103,7 @@
                           :uri test-uri
                           :tx [{:db/id "-2" :person/name "Alice" :person/age 40}]}]
         local-basis {test-uri (d/basis-t (d/db conn))}
-        get-secure-db-with (datomic-hydrate-requests/build-get-secure-db-with staged-branches (atom {}) local-basis)
+        get-secure-db-with (build-get-secure-db-with staged-branches (atom {}) local-basis)
         $-nil (:db (get-secure-db-with test-uri "nil"))
         $-2 (:db (get-secure-db-with test-uri "2"))]
     (is (= (d/q '[:find ?age . :where [?person :person/age ?age] [?person :person/name "John"]] $-nil) 30))
@@ -115,7 +121,7 @@
                           :tx [{:db/id "-2" :person/name "Alice" :person/age 40}]}]
         local-basis {test-uri (d/basis-t (d/db conn))}      ; get a stale basis before another user transacts
         _ @(d/transact conn [{:db/id "-1" :person/name "Bob" :person/age 50}])
-        get-secure-db-with (datomic-hydrate-requests/build-get-secure-db-with staged-branches (atom {}) local-basis)]
+        get-secure-db-with (build-get-secure-db-with staged-branches (atom {}) local-basis)]
     (is (thrown-with-msg? RuntimeException (re-pattern datomic-hydrate-requests/ERROR-BRANCH-PAST)
                           (get-secure-db-with test-uri "nil")))
     (is (thrown-with-msg? RuntimeException (re-pattern datomic-hydrate-requests/ERROR-BRANCH-PAST)
