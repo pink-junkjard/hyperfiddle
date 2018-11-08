@@ -13,13 +13,16 @@
     [hyperfiddle.tempid :refer [stable-relation-key]]))
 
 
-(defn row-keyfn [ctx row]
+(defn row-keyfn' [f row]
   {:pre [(not (r/reactive? row))]}
   ; This keyfn is very tricky, read https://github.com/hyperfiddle/hyperfiddle/issues/341
   (-> (if (or (vector? row) (seq? row))                     ; todo should probably inspect fields instead of seq
-        (map (partial stable-relation-key ctx) row)
-        (stable-relation-key ctx row))
+        (map f row)
+        (f row))
       hash))
+
+(defn row-keyfn [ctx row]
+  (row-keyfn' (partial stable-relation-key ctx) row))
 
 (defn form-with-naked-legacy "Field is invoked as fn"       ; because it unifies with request fn side
   [ctx]                                                     ; f-field :: (relative-path ctx) => Any

@@ -15,7 +15,7 @@
 
 (defmulti fiddle-type :fiddle/type)
 
-(s/def ::fiddle
+(s/def :hyperfiddle/ide                                     ; !! fiddle/ident overlap with attributes
   (s/and #_(s/multi-spec fiddle-type :fiddle/type)
          (s/keys :req [:fiddle/ident]
                  :opt [:fiddle/type
@@ -131,7 +131,7 @@
     (update fiddle :fiddle/markdown or-str ((:fiddle/markdown fiddle-defaults) fiddle))
     (update fiddle :fiddle/renderer or-str ((:fiddle/renderer fiddle-defaults) fiddle))))
 
-(def browser-pull
+(def browser-pull                                           ; synchronized with http://hyperfiddle.hyperfiddle.net/:hyperfiddle!ide/
   [:db/id
    :db/doc
    :fiddle/css

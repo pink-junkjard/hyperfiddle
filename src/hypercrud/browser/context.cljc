@@ -1,5 +1,6 @@
 (ns hypercrud.browser.context
   (:require
+    [clojure.spec.alpha :as s]
     [contrib.data :refer [ancestry-common ancestry-divergence]]
     [contrib.reactive :as r]
     [hypercrud.browser.field :as field]
@@ -102,6 +103,8 @@
             (if-not (:hypercrud.browser/data ctx)
               ctx                                           ; head
               (-> (set-parent-data ctx)                     ; body
+                  (update :hypercrud.browser/validation-hints #(for [[[p & ps] hint] % :when (= p path-segment)]
+                                                                 [ps hint]))
                   (assoc :hypercrud.browser/data
                          (let [f (r/fmap ::field/get-value field)]
                            #_(assert @f (str "focusing on a non-pulled attribute: " (pr-str (:hypercrud.browser/path ctx)) "."))
@@ -109,7 +112,8 @@
   (defn focus "Throws if you focus a higher dimension" [ctx relative-path]
     (reduce focus-segment ctx relative-path)))
 
-(defn row "Toggle :many into :one as we spread through the rows" [ctx rval]
+(defn row "Toggle :many into :one as we spread through the rows. k is used for filtering validation hints"
+  [ctx rval & [k]]
   {:pre [(r/reactive? rval)]}
   (assert @(r/fmap->> (:hypercrud.browser/field ctx) ::field/cardinality (= :db.cardinality/many))
           (str "`context/row` is only valid on cardinality/many. current path: " (pr-str (:hypercrud.browser/path ctx))))
@@ -117,6 +121,8 @@
       (set-parent)
       (set-parent-data)
       (assoc :hypercrud.browser/data rval)
+      (update :hypercrud.browser/validation-hints #(for [[[p & ps] hint] % :when (= k p)]
+                                                     [ps hint]))
       (update :hypercrud.browser/field
               #(r/fmap-> % (assoc ::field/cardinality :db.cardinality/one)))))
 
@@ -140,3 +146,8 @@
 (defn has-entity-identity? [ctx]
   (::field/data-has-id? @(:hypercrud.browser/field ctx))
   #_(and (context/dbname ctx) (last (:hypercrud.browser/path ctx))))
+
+(defn invalid? [ctx]
+  (->> (:hypercrud.browser/validation-hints ctx)
+       (filter (comp nil? first))
+       (seq)))

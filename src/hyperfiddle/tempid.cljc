@@ -1,5 +1,6 @@
 (ns hyperfiddle.tempid
   (:require
+    [contrib.datomic]
     [contrib.reactive :as r]
     [hypercrud.browser.context :as context]
     [hypercrud.browser.field :as field]
@@ -42,8 +43,13 @@
   (or (underlying-tempid ctx id)                            ; prefer the tempid for stability
       (smart-entity-identifier ctx v)))
 
-(defn stable-relation-key "Stable key that works on scalars too." [ctx v]
+(defn stable-relation-key "Stable key that works on scalars too. ctx is for tempid-reversing"
+  [ctx v]
   (or (stable-entity-key ctx v) v))
+
+(defn consistent-relation-key "Key that the dbval has, but unstable in views with a branch"
+  [v]
+  (or (contrib.datomic/smart-lookup-ref-no-tempids v) v))
 
 (defn hash-data [ctx]                                       ; todo there are collisions when two links share the same 'location'
   (when-let [data (:hypercrud.browser/data ctx)]

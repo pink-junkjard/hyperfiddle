@@ -4,6 +4,7 @@
     [cats.core :as cats :refer [fmap mlet >>=]]
     [cats.monad.either :as either :refer [branch]]
     [clojure.core.match :refer [match match*]]
+    [clojure.spec.alpha :as s]
     [clojure.string :as string]
     [contrib.ct :refer [unwrap]]
     [contrib.css :refer [css css-slugify]]
@@ -15,6 +16,7 @@
     [contrib.ui]
     [contrib.ui.safe-render :refer [user-portal]]
     [contrib.ui.tooltip :refer [tooltip tooltip-props]]
+    [contrib.validation]
     [datascript.parser :refer [FindRel FindColl FindTuple FindScalar Variable Aggregate Pull]]
     [hypercrud.browser.context :as context]
     [hypercrud.browser.base :as base]
@@ -32,7 +34,7 @@
     [hyperfiddle.ide.console-links :refer [inject-console-links system-link?]]
     [hyperfiddle.runtime :as runtime]
     [hyperfiddle.security.client :as security]
-    [hyperfiddle.tempid :refer [smart-entity-identifier stable-relation-key]]
+    [hyperfiddle.tempid :refer [smart-entity-identifier consistent-relation-key stable-relation-key]]
     [hyperfiddle.ui.api]
     [hyperfiddle.ui.controls :as controls :refer [label-with-docs dbid-label magic-new]]
     [hyperfiddle.ui.docstring :refer [semantic-docstring]]
@@ -175,26 +177,33 @@ User renderers should not be exposed to the reaction."
                   (css-slugify ident)])))
         (build-wrapped-render-expr-str [user-str] (str "(fn [val ctx props]\n" user-str ")"))
         (ui-comp [ctx & [props]]                            ; user-renderer comes through here
-          (let [props' (update props :class css (auto-ui-css-class ctx))
-                props (select-keys props' [:class :initial-tab #_:disabled]) ; https://github.com/hyperfiddle/hyperfiddle/issues/698
+          (let [fiddle (:hypercrud.browser/fiddle ctx)
                 value @(:hypercrud.browser/data ctx)
+                ctx (if-let [spec (s/get-spec (:fiddle/ident @fiddle))]
+                      (assoc ctx :hypercrud.browser/validation-hints
+                                 (-> (s/explain-data spec value)
+                                     (->> (contrib.validation/explained-for-view (partial data/row-keyfn ctx))) ; this keyfn hashes, but aligns with the view
+                                     ::s/problems
+                                     contrib.validation/form-validation-hints))
+                      ctx)
+                props' (update props :class css (auto-ui-css-class ctx))
+                props (select-keys props' [:class :initial-tab #_:disabled]) ; https://github.com/hyperfiddle/hyperfiddle/issues/698
                 display-mode @(:hypercrud.ui/display-mode ctx)]
             ^{:key (str display-mode)}
             [user-portal (ui-error/error-comp ctx)
              (case display-mode
                :hypercrud.browser.browser-ui/user (if-let [user-renderer (:user-renderer props')]
                                                     [user-renderer value ctx props]
-                                                    (let [fiddle (:hypercrud.browser/fiddle ctx)]
-                                                      [:<>
-                                                       [ui-util/eval-cljs-ns fiddle]
-                                                       [eval-renderer-comp
-                                                        (build-wrapped-render-expr-str @(r/cursor fiddle [:fiddle/renderer]))
-                                                        value ctx props
-                                                        ; If userland crashes, reactions don't take hold, we need to reset here.
-                                                        ; Cheaper to pass this as a prop than to hash everything
-                                                        ; Userland will never see this param as it isn't specified in the wrapped render expr.
-                                                        @(:hypercrud.browser/fiddle ctx) ; for good luck
-                                                        ]]))
+                                                    [:<>
+                                                     [ui-util/eval-cljs-ns fiddle]
+                                                     [eval-renderer-comp
+                                                      (build-wrapped-render-expr-str (:fiddle/renderer @fiddle))
+                                                      value ctx props
+                                                      ; If userland crashes, reactions don't take hold, we need to reset here.
+                                                      ; Cheaper to pass this as a prop than to hash everything
+                                                      ; Userland will never see this param as it isn't specified in the wrapped render expr.
+                                                      @fiddle
+                                                      ]])
                :hypercrud.browser.browser-ui/xray [fiddle-xray value ctx props]
                :hypercrud.browser.browser-ui/api [fiddle-api value ctx props])]))
         (fiddle-css-renderer [s] [:style {:dangerouslySetInnerHTML {:__html @s}}])
@@ -378,7 +387,7 @@ User renderers should not be exposed to the reaction."
                              (update :class css (when (sort/sortable? ctx) "sortable") (some-> (sort/sort-direction relative-path ctx) name))
                              (assoc :on-click (r/partial sort/toggle-sort! relative-path ctx)))]]
     ; Field omits [] but table does not, because we use it to specifically draw repeating anchors with a field renderer.
-    :body [:td {:class (css "field" (:class props))
+    :body [:td {:class (css "field" (:class props) (if (context/invalid? ctx) "invalid"))
                 :style {:border-color (connection-color ctx)}}
            (let [props (update props :disabled #(or % (not @(r/track writable-entity? ctx))))
                  props (update props :class css (if (:disabled props) "disabled"))]
@@ -410,7 +419,7 @@ User renderers should not be exposed to the reaction."
                         (sort/sort-fn sort-col))
               (r/unsequence (r/partial data/row-keyfn ctx))
               (map (fn [[row k]]
-                     (->> (columns (context/row ctx row) props)
+                     (->> (columns (context/row ctx row k) props)
                           (into ^{:key k} [:tr]))))         ; strict
               (into [:tbody]))]))))
 
