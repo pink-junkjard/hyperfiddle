@@ -52,14 +52,14 @@
     {:subject-can-transact? (fn [hf-db subject user] (some? subject))
      :can-create? (fn [hf-db subject ctx] (some? subject))
      :writable-entity? (fn [hf-db subject ctx]
-                          (and (some? subject)
-                               (or (contains? (set (:hyperfiddle/owners hf-db)) subject)
-                                   (-> (mlet [m (maybe (parent-m ctx))
-                                              uri (maybe (context/uri ctx))]
-                                         (return (or (new-entity? (:peer ctx) uri (:db/id m) (:branch ctx))
-                                                     (contains? (set (:hyperfiddle/owners m)) subject))))
-                                       ; ui probably in an invalid/error state when m or uri are nil
-                                       (maybe/from-maybe false)))))}))
+                         (and (some? subject)
+                              (or (contains? (set (:hyperfiddle/owners hf-db)) subject)
+                                  (-> (mlet [m (maybe (parent-m ctx))
+                                             uri (maybe (context/uri ctx))]
+                                        (return (or (new-entity? (:peer ctx) uri (:db/id m) (:branch ctx))
+                                                    (contains? (set (:hyperfiddle/owners m)) subject))))
+                                      ; ui probably in an invalid/error state when m or uri are nil
+                                      (maybe/from-maybe false)))))}))
 
 (let [memoized-safe-eval-string (memoize eval-expr-str!+)]
   (defn- eval-client-sec [hf-db]
