@@ -4,15 +4,17 @@
     [clojure.core.match :refer [match #?(:cljs match*)]]
     [clojure.string :as string]
     [contrib.ct :refer [unwrap]]
-    [contrib.data :refer [merge-by transpose pad ungroup]]
+    [contrib.data :as data :refer [merge-by transpose pad ungroup]]
     [contrib.datomic :refer [valueType ref? pull-shape enclosing-pull-shape pull-traverse]]
     [contrib.reactive :as r]
     [contrib.reader :refer [memoized-read-edn-string+]]
     [contrib.string :refer [blank->nil]]
     [contrib.try$ :refer [try-either]]
     [datascript.parser :as parser #?@(:cljs [:refer [FindRel FindColl FindTuple FindScalar Variable Aggregate Pull]])]
+    [hyperfiddle.domain :as domain]
     [hyperfiddle.ide.system-fiddle :as system-fiddle]
-    [hyperfiddle.fiddle :as fiddle])
+    [hyperfiddle.fiddle :as fiddle]
+    [hyperfiddle.runtime :as runtime])
   #?(:clj (:import (datascript.parser FindRel FindColl FindTuple FindScalar Variable Aggregate Pull))))
 
 
@@ -77,7 +79,7 @@
         ))))
 
 (defn console-links-e [schemas qfind ix e collection]
-  (let [schema @(get schemas (str (get-in e [:source :symbol])))
+  (let [schema (get schemas (str (get-in e [:source :symbol])))
         all-paths (element-spread schema e collection)
         all-links (->> all-paths (map (partial console-links-rules schema qfind e)))
         all-paths (->> all-paths (map (fn [path]
@@ -129,5 +131,8 @@
 (let [f (fn [new-links fiddle]
           (update fiddle :fiddle/links (partial merge-by (juxt :link/rel (comp blank->nil :link/path)) new-links)))]
   (defn inject-console-links [ctx]
-    (let [links (console-links-fiddle (:hypercrud.browser/schemas ctx) @(:hypercrud.browser/fiddle ctx) @(:hypercrud.browser/data ctx))]
+    (let [schemas (-> (->> @(runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :schemas])
+                           (data/map-keys #(domain/uri->dbname % (:hypercrud.browser/domain ctx))))
+                      (dissoc nil))
+          links (console-links-fiddle schemas @(:hypercrud.browser/fiddle ctx) @(:hypercrud.browser/data ctx))]
       (update ctx :hypercrud.browser/fiddle #(r/fmap->> % (f links))))))

@@ -18,8 +18,7 @@
           :hypercrud.browser/field
           :hypercrud.browser/parent
           :hypercrud.browser/path
-          :hypercrud.browser/route
-          :hypercrud.browser/schemas))
+          :hypercrud.browser/route))
 
 (defn source-mode [ctx]
   (-> ctx
@@ -71,7 +70,7 @@
    @(runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :tempid-lookups uri])))
 
 (defn hydrate-attribute [ctx ident & ?more-path]
-  (r/cursor (get-in ctx [:hypercrud.browser/schemas (dbname ctx)]) (cons ident ?more-path)))
+  (runtime/state (:peer ctx) (concat [::runtime/partitions (:branch ctx) :schemas (uri ctx)] (cons ident ?more-path))))
 
 (defn- set-parent [ctx]
   (assoc ctx :hypercrud.browser/parent (dissoc ctx :hypercrud.browser/data)))
@@ -79,12 +78,14 @@
 (defn- set-parent-data [ctx]
   (update ctx :hypercrud.browser/parent (fnil into {}) (select-keys ctx [:hypercrud.browser/data])))
 
-(defn find-child-field [path-segment schemas field]
-  (or (->> (::field/children field)
+(defn find-child-field [field path-segment ctx]
+  (or (->> (::field/children @field)
            (filter #(= (::field/path-segment %) path-segment))
            first)
       (when (keyword? path-segment)
-        (field/summon @(get schemas (str (::field/source-symbol field))) (::field/source-symbol field) path-segment))))
+        (let [uri (uri (str (::field/source-symbol @field)) ctx)
+              schema @(runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :schemas uri])]
+          (field/summon schema (::field/source-symbol @field) path-segment)))))
 
 (defn find-parent-field [ctx]
   (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/field]))
@@ -93,7 +94,7 @@
           #_(assert (or (not (:hypercrud.browser/data ctx)) ; head has no data, can focus without calling row
                         @(r/fmap->> (:hypercrud.browser/field ctx) ::field/cardinality (not= :db.cardinality/many)))
                     (str "Cannot focus directly from a cardinality/many (do you need a table wrap?). current path: " (:hypercrud.browser/path ctx) ", attempted segment: " path-segment))
-          (let [field (r/fmap->> (:hypercrud.browser/field ctx) (find-child-field path-segment (:hypercrud.browser/schemas ctx)))
+          (let [field (r/track find-child-field (:hypercrud.browser/field ctx) path-segment ctx)
                 ctx (-> ctx
                         (set-parent)
                         (update :hypercrud.browser/path conj path-segment)

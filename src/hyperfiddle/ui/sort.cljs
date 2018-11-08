@@ -1,7 +1,7 @@
 (ns hyperfiddle.ui.sort
   (:require
-    [contrib.reactive :as r]
-    [hypercrud.browser.context :as context]))
+    [hypercrud.browser.context :as context]
+    [hyperfiddle.runtime :as runtime]))
 
 
 (defn sortable? [ctx]
@@ -9,7 +9,8 @@
         ?last-segment (last (:hypercrud.browser/path ctx))]
     ; Used to check links dont break sorting, but those cases don't happen anymore.
     (if (and ?dbname (context/attribute-segment? ?last-segment)) ; [fe attr] or [attr], NOT [fe] or []
-      (let [{:keys [:db/cardinality :db/valueType]} @(r/cursor (get (:hypercrud.browser/schemas ctx) ?dbname) [?last-segment])]
+      (let [uri (context/uri ?dbname ctx)
+            {:keys [:db/cardinality :db/valueType]} @(runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :schemas uri ?last-segment])]
         (and
           (= (:db/ident cardinality) :db.cardinality/one)
           ; ref requires more work (inspect label-prop)

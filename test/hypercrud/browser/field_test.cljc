@@ -3,12 +3,14 @@
   (:require [clojure.test :refer [deftest is testing]]
             [contrib.data :as data]
             [contrib.reactive :as r]
+            [contrib.uri :refer [->URI]]
             [hypercrud.browser.context :as context]
             [hypercrud.browser.field :as field :refer [auto-field infer-attrs]]
             [hypercrud.types.DbVal :refer [->DbVal]]
             [hypercrud.types.EntityRequest :refer [->EntityRequest]]
             [hypercrud.types.QueryRequest :refer [->QueryRequest]]
-            [hypercrud.types.ThinEntity :refer [->ThinEntity]]))
+            [hypercrud.types.ThinEntity :refer [->ThinEntity]]
+            [hyperfiddle.runtime :as runtime]))
 
 
 (deftest test-infer-attr []
@@ -21,14 +23,14 @@
                      :b/y [{:asdf2 1}]
                      :b/z {:c/b 2}}]
               :a/z {:c/x 5}}]
-   (doseq [[get-values expected] [[[] #{:a/x :a/y :a/z}]
-                                  [[:a/y] #{:b/x :b/y :b/z}]
-                                  [[:a/y :b/y] #{:asdf :qwerty :asdf2}]
-                                  [[:a/y :b/z] #{:c/a :c/b}]
-                                  [[:a/z] #{:c/x}]]]
-     (is (= expected (infer-attrs data get-values)))
-     (is (= expected (infer-attrs [data data] get-values))) ; test resultsets
-     )))
+    (doseq [[get-values expected] [[[] #{:a/x :a/y :a/z}]
+                                   [[:a/y] #{:b/x :b/y :b/z}]
+                                   [[:a/y :b/y] #{:asdf :qwerty :asdf2}]
+                                   [[:a/y :b/z] #{:c/a :c/b}]
+                                   [[:a/z] #{:c/x}]]]
+      (is (= expected (infer-attrs data get-values)))
+      (is (= expected (infer-attrs [data data] get-values))) ; test resultsets
+      )))
 
 (def test-schema
   (->> [{:db/ident :a/j
@@ -74,10 +76,16 @@
          :db/valueType {:db/ident :db.type/string}}]
        (data/group-by-assume-unique :db/ident)))
 
+(def $uri (->URI "example.com/$"))
+
 (defn build-ctx [fiddle result]                             ; this is starting to look a lot like base/process-results
-  {:hypercrud.browser/fiddle (r/atom fiddle)
+  {:hypercrud.browser/domain {:domain/databases [{:domain.database/name "$" :domain.database/record {:database/uri $uri}}]}
+   :hypercrud.browser/fiddle (r/atom fiddle)
    :hypercrud.browser/data (r/atom result)
-   :hypercrud.browser/schemas {"$" (r/atom test-schema)}})
+   :peer (let [state (r/atom {::runtime/partitions {nil {:schemas {$uri test-schema}}}})]
+           (reify runtime/State
+             (runtime/state [_] state)
+             (runtime/state [_ path] (r/cursor state path))))})
 
 #?(:clj
    (defmacro test-defined-pull [fiddle pull->request]
@@ -223,8 +231,7 @@
             (test-partial-splat ~fiddle ~pull->request ~result-builder)))))
 
 (deftest blank []
-  (is (nil? @(auto-field nil {:hypercrud.browser/schemas nil
-                              :hypercrud.browser/fiddle (r/atom {:fiddle/type :blank})}))))
+  (is (nil? @(auto-field nil (build-ctx {:fiddle/type :blank} nil)))))
 
 (letfn [(f [a b]
           (cond
@@ -250,9 +257,9 @@
                     identity))
 
 (deftest query-tuple []
-                     (pull->attr-tests {:fiddle/type :query}
-                                       #(->QueryRequest [:find [(list 'pull '?e %)] :in '$ '?e] {"$" nil "?e" 1})
-                                       (comp vector merge-into-one)))
+  (pull->attr-tests {:fiddle/type :query}
+                    #(->QueryRequest [:find [(list 'pull '?e %)] :in '$ '?e] {"$" nil "?e" 1})
+                    (comp vector merge-into-one)))
 
 (deftest query-scalar []
   (pull->attr-tests {:fiddle/type :query}

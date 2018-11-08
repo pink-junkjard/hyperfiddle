@@ -2,11 +2,12 @@
   (:require [cats.core :as cats :refer [mlet]]
             [cats.monad.either :as either]
             [clojure.set :as set]
-            [contrib.data :refer [transpose]]
+            [contrib.data :as data :refer [transpose]]
             [contrib.reactive :as r]
             [contrib.try$ :refer [try-either]]
-            [datascript.parser :as parser
-             #?@(:cljs [:refer [FindRel FindColl FindTuple FindScalar Variable Aggregate Pull]])])
+            [datascript.parser :as parser #?@(:cljs [:refer [FindRel FindColl FindTuple FindScalar Variable Aggregate Pull]])]
+            [hyperfiddle.domain :as domain]
+            [hyperfiddle.runtime :as runtime])
   #?(:clj (:import (datascript.parser FindRel FindColl FindTuple FindScalar Variable Aggregate Pull))))
 
 
@@ -160,7 +161,7 @@
 
 (defn- pull-one [schemas cell source-symbol label pull-pattern]
   {::cardinality :db.cardinality/one
-   ::children (pull->fields @(get schemas (str source-symbol)) source-symbol pull-pattern cell [])
+   ::children (pull->fields (get schemas (str source-symbol)) source-symbol pull-pattern cell [])
    ::data-has-id? (entity-pull? pull-pattern)
    ::get-value identity
    ::label label
@@ -190,7 +191,9 @@
    ::source-symbol nil})
 
 (defn auto-field [request {:keys [:hypercrud.browser/data] :as ctx}]
-  (let [schemas (:hypercrud.browser/schemas ctx)]
+  (let [schemas (-> (->> @(runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :schemas])
+                         (data/map-keys #(domain/uri->dbname % (:hypercrud.browser/domain ctx))))
+                    (dissoc nil))]
     (case @(r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/type])
       :entity (let [dbname @(r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/pull-database])
                     source-symbol (symbol dbname)
@@ -217,7 +220,7 @@
                                                                      (let [source-symbol (get-in element [:source :symbol])
                                                                            pull-pattern (get-in element [:pattern :value])]
                                                                        {::cardinality :db.cardinality/one
-                                                                        ::children (pull->fields @(get schemas (str source-symbol)) source-symbol pull-pattern (get results-by-column fe-pos) [])
+                                                                        ::children (pull->fields (get schemas (str source-symbol)) source-symbol pull-pattern (get results-by-column fe-pos) [])
                                                                         ::data-has-id? (entity-pull? pull-pattern)
                                                                         ::get-value (r/partial r/last-arg-first get fe-pos)
                                                                         ::label (get-in element [:variable :symbol])
@@ -243,7 +246,7 @@
                                 (let [source-symbol (get-in qfind [:element :source :symbol])
                                       pull-pattern (get-in qfind [:element :pattern :value])]
                                   {::cardinality :db.cardinality/many
-                                   ::children (pull->fields @(get schemas (str source-symbol)) source-symbol pull-pattern @data [])
+                                   ::children (pull->fields (get schemas (str source-symbol)) source-symbol pull-pattern @data [])
                                    ::data-has-id? (entity-pull? pull-pattern)
                                    ::get-value identity
                                    ::label (get-in qfind [:element :variable :symbol])
@@ -268,7 +271,7 @@
                                                                 (let [source-symbol (get-in element [:source :symbol])
                                                                       pull-pattern (get-in element [:pattern :value])]
                                                                   {::cardinality :db.cardinality/one
-                                                                   ::children (pull->fields @(get schemas (str source-symbol)) source-symbol pull-pattern (get @data fe-pos) [])
+                                                                   ::children (pull->fields (get schemas (str source-symbol)) source-symbol pull-pattern (get @data fe-pos) [])
                                                                    ::data-has-id? (entity-pull? pull-pattern)
                                                                    ::get-value (r/partial r/last-arg-first get fe-pos)
                                                                    ::label (get-in element [:variable :symbol])

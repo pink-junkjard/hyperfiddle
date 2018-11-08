@@ -3,7 +3,7 @@
     [clojure.core.match :refer [match]]
     [clojure.string :as string]
     [clojure.test :refer [deftest is]]
-    [contrib.data :refer [ungroup transpose]]
+    [contrib.data :as data :refer [ungroup transpose]]
     [contrib.ct :refer [unwrap]]
     [contrib.eval :as eval]
     [contrib.reactive :as r]
@@ -14,8 +14,10 @@
     [datascript.parser :as parser #?@(:cljs [:refer [FindRel FindColl FindTuple FindScalar Variable Aggregate Pull]])]
     [fixtures.ctx :refer [ctx result-coll query-coll]]
     [hypercrud.browser.field :as field]
+    [hyperfiddle.domain :as domain]
     [hyperfiddle.ide.console-links :refer [console-link console-links-e
-                                           query-links normalize-result console-links-rules query-links-impl]])
+                                           query-links normalize-result console-links-rules query-links-impl]]
+    [hyperfiddle.runtime :as runtime])
   #?(:clj (:import (datascript.parser FindRel FindColl FindTuple FindScalar Variable Aggregate Pull))))
 
 
@@ -91,26 +93,29 @@
 
 (deftest console-link-internals
   []
-  (is (= (console-links-e (:hypercrud.browser/schemas ctx)
-                          (:qfind (qparsed FindColl))
-                          0
-                          (first (parser/find-elements (:qfind (qparsed FindColl))))
-                          (results FindColl))
-         (query-links-impl (:hypercrud.browser/schemas ctx)
-                           (:qfind (qparsed FindColl))
-                           (results FindColl))
+  (let [schemas (-> (->> @(runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :schemas])
+                         (data/map-keys #(domain/uri->dbname % (:hypercrud.browser/domain ctx))))
+                    (dissoc nil))]
+    (is (= (console-links-e schemas
+                            (:qfind (qparsed FindColl))
+                            0
+                            (first (parser/find-elements (:qfind (qparsed FindColl))))
+                            (results FindColl))
+           (query-links-impl schemas
+                             (:qfind (qparsed FindColl))
+                             (results FindColl))
 
-         ; Check empty case, doesn't impact links with this result
-         (query-links-impl (:hypercrud.browser/schemas ctx)
-                           (:qfind (qparsed FindColl))
-                           [])
-         (query-links (:hypercrud.browser/schemas ctx)
-                      (queries FindColl)
-                      (results FindColl))
-         '([[] #{:hf/new :hf/remove :hf/self}]
-            [[:reg/gender] #{:hf/affix :hf/detach :hf/self}]
-            [[:reg/shirt-size] #{:hf/affix :hf/detach :hf/self}])
-         ))
+           ; Check empty case, doesn't impact links with this result
+           (query-links-impl schemas
+                             (:qfind (qparsed FindColl))
+                             [])
+           (query-links schemas
+                        (queries FindColl)
+                        (results FindColl))
+           '([[] #{:hf/new :hf/remove :hf/self}]
+              [[:reg/gender] #{:hf/affix :hf/detach :hf/self}]
+              [[:reg/shirt-size] #{:hf/affix :hf/detach :hf/self}])
+           )))
 
   ;(contrib.data/transpose (normalize-result (:qfind (qparsed FindColl)) (results FindColl)))
   ;(normalize-result (:qfind (qparsed FindColl)) [])
@@ -212,10 +217,13 @@
 
 (deftest console-links-rules-
   []
-  (for [[comment query result links] matrix]
-    (is (= (query-links (:hypercrud.browser/schemas ctx) query result)
-           links)
-        comment))
+  (let [schemas (-> (->> @(runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :schemas])
+                         (data/map-keys #(domain/uri->dbname % (:hypercrud.browser/domain ctx))))
+                    (dissoc nil))]
+    (for [[comment query result links] matrix]
+      (is (= (query-links schemas query result)
+             links)
+          comment)))
   )
 
 (comment
