@@ -11,7 +11,6 @@
             [hypercrud.browser.routing :as routing]
             [hyperfiddle.ide.system-fiddle :as system-fiddle]
             [hypercrud.client.core :as hc]
-            [hypercrud.client.schema :as schema-util]
             [hyperfiddle.project :as project]
             [hypercrud.types.EntityRequest :refer [->EntityRequest]]
             [hypercrud.types.QueryRequest :refer [->QueryRequest]]

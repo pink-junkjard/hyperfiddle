@@ -9,7 +9,6 @@
     [hypercrud.browser.link :as link]
     [hypercrud.browser.routing :as routing]
     [hypercrud.client.peer :refer [-quiet-unwrap]]
-    [hypercrud.client.schema :as schema-util]
     [hyperfiddle.data :as data]
     [hyperfiddle.project :as project]))
 
@@ -31,7 +30,6 @@
                   (cats/return
                     (concat
                       (some-> @fiddle-request vector)
-                      (schema-util/schema-requests-for-link ctx)
                       (->> (base/process-results fiddle fiddle-request ctx)
                            (cats/fmap requests)
                            (-quiet-unwrap))))))))))

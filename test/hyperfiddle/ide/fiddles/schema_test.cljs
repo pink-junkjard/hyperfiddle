@@ -6,7 +6,6 @@
     [contrib.uri :refer [->URI]]
     [hypercrud.client.core :refer [Peer]]
     [hypercrud.client.peer :as peer]
-    [hypercrud.client.schema :as schema]
     [hypercrud.types.EntityRequest :refer [->EntityRequest]]
     [hypercrud.types.QueryRequest :refer [->QueryRequest]]
     [hyperfiddle.core]
@@ -42,8 +41,7 @@
                                                              :domain.database/record {:database/uri (->URI "$-db")}}}}
              :hypercrud.ui/display-mode (r/atom :hypercrud.browser.browser-ui/user)}
         ptm {req res
-             (project/attrs-request ctx) []
-             (schema/schema-request (peer/db-pointer (->URI "$-db") nil)) nil}
+             (project/attrs-request ctx) []}
         ctx (assoc ctx :peer (->TestRuntime (r/atom {::runtime/partitions {nil {:ptm ptm}}})))]
     (render [iframe ctx {:route route}])))
 

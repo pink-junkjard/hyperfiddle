@@ -8,7 +8,6 @@
             [hypercrud.browser.router :as router]
             [hypercrud.client.core :as hc]
             [hypercrud.client.peer :as peer]
-            [hypercrud.client.schema :as schema]
             [hypercrud.types.DbVal :refer [->DbVal]]
             [hypercrud.types.EntityRequest :refer [->EntityRequest]]
             [hypercrud.types.Err :as Err]
@@ -153,11 +152,8 @@
               (p/then #(hydrate-partition rt branch dispatch! get-state))))))))
 
 (defn update-to-tempids [get-state branch uri tx]
-  (let [{:keys [tempid-lookups ptm]} (get-in (get-state) [::runtime/partitions branch])
-        dbval (->DbVal uri branch)
-        schema (let [schema-request (schema/schema-request dbval)]
-                 (-> (peer/hydrate-val+ schema-request ptm)
-                     (either/branch (fn [e] (throw e)) identity)))
+  (let [{:keys [tempid-lookups schemas]} (get-in (get-state) [::runtime/partitions branch])
+        schema (get schemas uri)
         id->tempid (get tempid-lookups uri)]
     (map (partial tx/stmt-id->tempid id->tempid schema) tx)))
 
