@@ -13,6 +13,7 @@
     contrib.reactive-test
     contrib.rfc3986-test
     contrib.string-test
+    contrib.validation
     hypercrud.browser.field-test
     hypercrud.browser.nested-pull-test
     hypercrud.browser.router-test
@@ -36,6 +37,7 @@
     'contrib.reactive-test
     'contrib.rfc3986-test
     'contrib.string-test
+    'contrib.validation
     'hypercrud.browser.field-test
     'hypercrud.browser.nested-pull-test
     'hypercrud.browser.router-test
