@@ -7,16 +7,11 @@
     [contrib.validation :refer [explained-for-view form-validation-hints]]))
 
 
-(def result [{:foo/bar 1 :db/id 123}
+(def r1 [{:foo/bar 1 :db/id 123}
              {:foo/baz 42 :db/id 124}])
-(def e (s/explain-data (s/coll-of (s/keys :req [:foo/bar])) result))
+(def e1 (s/explain-data (s/coll-of (s/keys :req [:foo/bar])) r1))
 
-(require '[hyperfiddle.data])
-(-> (explained-for-view contrib.datomic/smart-lookup-ref-no-tempids e)
-    ::s/problems
-    form-validation-hints)
-
-(def result {:db/id 17592186061847,
+(def r2 {:db/id 17592186061847,
              :fiddle/renderer
              "hyperfiddle.ide.fiddles.fiddle-src/fiddle-src-renderer",
              :fiddle/links
@@ -59,4 +54,16 @@
              :fiddle/css
              "table.hyperfiddle.-fiddle-links { table-layout: fixed; }\ntable.-fiddle-links th.-link-formula,\ntable.-fiddle-links th.-link-tx-fn { width: 40px; }\ntable.-fiddle-links th.-hypercrud-browser-path--fiddle-links { width: 60px; }\n\ntable.-fiddle-links td.-hypercrud-browser-path--fiddle-links--link-fiddle { display: flex; }\ntable.hyperfiddle.-fiddle-links td.field.-link-fiddle > select { flex: 0 1 80% !important; } /* line up :new */\n",
              :fiddle/ident :hyperfiddle/ide})
-(def e (s/explain-data :hyperfiddle/ide result))
+(def e2 (s/explain-data :hyperfiddle/ide r2))
+
+(deftest fiddle-validates
+  []
+  (is (= (-> (explained-for-view contrib.datomic/smart-lookup-ref-no-tempids e1) ::s/problems form-validation-hints)
+         ' ([[124 :foo/bar] :contrib.validation/missing])))
+
+  (is (= (-> (explained-for-view contrib.datomic/smart-lookup-ref-no-tempids e2) ::s/problems form-validation-hints)
+         '([[:fiddle/links 17592186061848 :link/fiddle] :contrib.validation/missing]
+            [[:fiddle/links 17592186061849 :link/fiddle] :contrib.validation/missing]
+            [[:fiddle/links 17592186061852] fiddle-link])
+         ))
+  )
