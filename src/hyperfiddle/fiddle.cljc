@@ -44,7 +44,7 @@
 (s/def :fiddle/hydrate-result-as-fiddle string?)
 
 (s/def :link/rel #{:hf/self :hf/rel :hf/new :hf/remove :hf/affix :hf/detach :hf/iframe})
-(s/def :link/class keyword?)
+(s/def :link/class (s/coll-of keyword?))
 ;(s/def :link/fiddle (s/keys))
 (s/def :link/path string?)
 (s/def :link/formula string?)
