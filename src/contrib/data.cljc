@@ -31,6 +31,13 @@
        vals
        (apply concat)))
 
+(defn collect
+  "Pour kvs into a map, collecting key collisions"
+  [kvs]
+  (reduce (fn [acc [k v]]
+            (update acc k (fnil conj []) v))
+          {} kvs))
+
 (defn update-existing [m k f & args]
   (if (get m k)
     (apply update m k f args)

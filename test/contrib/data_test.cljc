@@ -3,7 +3,7 @@
     [clojure.test :refer [deftest is]]
     [contrib.string :refer [blank->nil]]
     [contrib.data :refer [cond-let map-pad pad rtrim-coll fix-arity fvor take-to ungroup
-                          compare-by-index ancestry-common ancestry-divergence merge-by orp]]))
+                          compare-by-index ancestry-common ancestry-divergence merge-by collect orp]]))
 
 
 (comment
@@ -109,6 +109,13 @@
          '({:link/rel :hf/edit, :link/path nil}
             {:link/rel :hf/edit, :link/path ":reg/gender", :link/extra-stuff true}
             {:link/rel :hf/edit, :link/path ":reg/gender :reg/shirt-size"}))))
+
+(deftest collect-
+  []
+  (is (= (collect [[[0 :foo/bar] :missing]
+                   [[0 :foo/bar] :b]])
+         {[0 :foo/bar] [:missing :b]}))
+  )
 
 (deftest orp-test []
   (is (= false (orp some? nil false 1)))
