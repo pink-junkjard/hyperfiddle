@@ -210,7 +210,8 @@
                                     deref)]
        (if-let [e (or @(runtime/state (:peer ctx) [::runtime/fatal-error])
                       (some-> @(runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :error]))
-                      (when (either/left? source-domain) @source-domain))]
+                      (when (either/left? source-domain) @source-domain)
+                      (when (either/left? user-domain-insecure) @user-domain-insecure))]
          [:div                                              ; necessary wrapper div, it is the react root
           [error-cmp e]
           [staging ctx]]
