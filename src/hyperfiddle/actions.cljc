@@ -154,7 +154,8 @@
 (defn update-to-tempids [get-state branch uri tx]
   (let [{:keys [tempid-lookups schemas]} (get-in (get-state) [::runtime/partitions branch])
         schema (get schemas uri)
-        id->tempid (get tempid-lookups uri)]
+        id->tempid (some-> (get tempid-lookups uri)
+                           (either/branch #(throw (ex-info % {})) identity))]
     (map (partial tx/stmt-id->tempid id->tempid schema) tx)))
 
 (defn transact! [rt invert-route tx-groups dispatch! get-state & {:keys [route post-tx]}]

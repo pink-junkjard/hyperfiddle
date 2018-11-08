@@ -1,6 +1,6 @@
 (ns hypercrud.browser.context
   (:require
-    [clojure.spec.alpha :as s]
+    [cats.monad.either :as either]
     [contrib.data :refer [ancestry-common ancestry-divergence]]
     [contrib.reactive :as r]
     [hypercrud.browser.field :as field]
@@ -68,7 +68,8 @@
   ([ctx] (ctx->id-lookup (uri ctx) ctx))
   ([uri ctx]
     ; todo what about if the tempid is on a higher branch in the uri?
-   @(runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :tempid-lookups uri])))
+   (some-> @(runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :tempid-lookups uri])
+           (either/branch #(throw (ex-info % {})) identity))))
 
 (defn hydrate-attribute [ctx ident & ?more-path]
   (runtime/state (:peer ctx) (concat [::runtime/partitions (:branch ctx) :schemas (uri ctx)] (cons ident ?more-path))))

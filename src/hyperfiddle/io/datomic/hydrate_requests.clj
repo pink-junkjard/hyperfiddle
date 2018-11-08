@@ -1,6 +1,7 @@
 (ns hyperfiddle.io.datomic.hydrate-requests
   (:require
     [cats.core :as cats :refer [mlet]]
+    [cats.monad.either :as either]
     [cats.monad.exception :as exception]
     [clojure.set :as set]
     [datomic.api :as d]
@@ -105,14 +106,20 @@
              (cats/fmap (fn [internal-secure-db]
                           (->SecureDbWith (:secure-db internal-secure-db) (:id->tempid internal-secure-db)))))))))
 
+(defn extract-tempid-lookup [internal-secure-db+]
+  (if (exception/success? internal-secure-db+)
+    (either/right (:id->tempid @internal-secure-db+))
+    (let [e (cats/extract internal-secure-db+)]
+      (timbre/error e)
+      (either/left (str e)))))
+
 (defn extract-tempid-lookups [db-with-lookup branch-ident]
   ; oof these are crap data structures
-  (reduce (fn [acc [branch internal-secure-db]]
-            (if (= branch-ident (:branch-ident branch))
-              (assoc acc (:uri branch) (:id->tempid internal-secure-db))
-              acc))
-          {}
-          @db-with-lookup))
+  (->> @db-with-lookup
+       (filter #(= branch-ident (:branch-ident (first %))))
+       (reduce (fn [acc [branch internal-secure-db+]]
+                 (assoc acc (:uri branch) (extract-tempid-lookup internal-secure-db+)))
+               {})))
 
 (defn hydrate-request [get-secure-db-with+ request ?subject]
   {:pre [(or (instance? EntityRequest request) (instance? QueryRequest request))]}
@@ -132,8 +139,8 @@
         pulled-trees (->> requests
                           (map #(hydrate-request get-secure-db-with+ % ?subject))
                           (doall))
-        tempid-lookups (reduce (fn [acc [branch internal-secure-db]]
-                                 (assoc-in acc [(:branch-ident branch) (:uri branch)] (:id->tempid internal-secure-db)))
+        tempid-lookups (reduce (fn [acc [branch internal-secure-db+]]
+                                 (assoc-in acc [(:branch-ident branch) (:uri branch)] (extract-tempid-lookup internal-secure-db+)))
                                {}
                                @db-with-lookup)]
     {:pulled-trees pulled-trees

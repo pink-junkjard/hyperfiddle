@@ -42,7 +42,9 @@
                      (some-> (:hypercrud.browser/data ctx) deref))))
       new-entity? (fn new-entity? [peer uri dbid branch]
                     (or (tempid? dbid)
-                        (some? @(runtime/state peer [::runtime/partitions branch :tempid-lookups uri dbid]))
+                        (some-> @(runtime/state peer [::runtime/partitions branch :tempid-lookups uri])
+                                (either/branch #(throw (ex-info % {})) #(get % dbid))
+                                some?)
                         (if (some? branch)
                           (new-entity? peer uri dbid (branch/decode-parent-branch branch))
                           false)))]

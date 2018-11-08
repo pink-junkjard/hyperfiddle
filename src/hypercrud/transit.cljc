@@ -1,5 +1,6 @@
 (ns hypercrud.transit
   (:require
+    [cats.monad.either :as either #?@(:cljs [:refer [Left Right]])]
     [cognitect.transit :as t]
     #?(:cljs [com.cognitect.transit.types])
     [contrib.uri :refer [->URI #?(:cljs URI)]]
@@ -10,13 +11,15 @@
     [hypercrud.types.ThinEntity :refer [->ThinEntity #?(:cljs ThinEntity)]]
     [hyperfiddle.runtime :refer [map->HostEnvironment #?(:cljs HostEnvironment)]])
   #?(:clj
-     (:import (hypercrud.types.DbVal DbVal)
-              (hypercrud.types.EntityRequest EntityRequest)
-              (hypercrud.types.Err Err)
-              (hypercrud.types.QueryRequest QueryRequest)
-              (hypercrud.types.ThinEntity ThinEntity)
-              (hyperfiddle.runtime HostEnvironment)
-              (java.io ByteArrayInputStream ByteArrayOutputStream))))
+     (:import
+       (cats.monad.either Left Right)
+       (hypercrud.types.DbVal DbVal)
+       (hypercrud.types.EntityRequest EntityRequest)
+       (hypercrud.types.Err Err)
+       (hypercrud.types.QueryRequest QueryRequest)
+       (hypercrud.types.ThinEntity ThinEntity)
+       (hyperfiddle.runtime HostEnvironment)
+       (java.io ByteArrayInputStream ByteArrayOutputStream))))
 
 
 (def read-handlers
@@ -26,7 +29,9 @@
    "QReq" (t/read-handler #(apply ->QueryRequest %))
    "entity" (t/read-handler #(apply ->ThinEntity %))
    "r" (t/read-handler ->URI)
-   "HostEnvironment" (t/read-handler map->HostEnvironment)})
+   "HostEnvironment" (t/read-handler map->HostEnvironment)
+   "left" (t/read-handler #(either/left %))
+   "right" (t/read-handler #(either/right %))})
 
 (def write-handlers
   {DbVal
@@ -46,6 +51,12 @@
 
    HostEnvironment
    (t/write-handler (constantly "HostEnvironment") #(into {} %))
+
+   Left
+   (t/write-handler (constantly "left") deref)
+
+   Right
+   (t/write-handler (constantly "right") deref)
 
    #?@(:cljs
        [URI

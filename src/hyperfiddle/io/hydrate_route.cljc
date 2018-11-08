@@ -1,6 +1,7 @@
 (ns hyperfiddle.io.hydrate-route
   (:require
     [bidi.bidi :as bidi]
+    [cats.core :as cats]
     [clojure.set :as set]
     [contrib.performance :as perf]
     [hypercrud.browser.router :as router]
@@ -45,7 +46,7 @@
                 (fn [{:keys [pulled-trees] :as resp}]
                   (let [new-ptm (zipmap missing-requests pulled-trees)
                         ptm (merge ptm new-ptm)
-                        data-cache {:tempid-lookups (merge-with merge tempid-lookups (get-in resp [:tempid-lookups branch]))
+                        data-cache {:tempid-lookups (merge-with (cats/lift-a 2 merge) tempid-lookups (get-in resp [:tempid-lookups branch]))
                                     :ptm ptm}]
                     (hydrate-loop-impl rt request-fn local-basis branch stage data-cache (inc total-loops) loop-limit))))))))
 
