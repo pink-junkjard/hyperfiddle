@@ -1,7 +1,7 @@
 (ns hypercrud.transit
   (:require
     [cognitect.transit :as t]
-    [com.cognitect.transit.types]
+    #?(:cljs [com.cognitect.transit.types])
     [contrib.uri :refer [->URI #?(:cljs URI)]]
     [hypercrud.types.DbVal :refer [->DbVal #?(:cljs DbVal)]]
     [hypercrud.types.EntityRequest :refer [->EntityRequest #?(:cljs EntityRequest)]]
