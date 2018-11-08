@@ -209,6 +209,7 @@
                                     (->> (hc/hydrate (:peer ctx) (:branch ctx)))
                                     deref)]
        (if-let [e (or @(runtime/state (:peer ctx) [::runtime/fatal-error])
+                      (some-> @(runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :error]))
                       (when (either/left? source-domain) @source-domain))]
          [:div                                              ; necessary wrapper div, it is the react root
           [error-cmp e]
