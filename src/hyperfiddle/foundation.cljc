@@ -15,7 +15,6 @@
     [contrib.try$ :refer [try-either]]
     #?(:cljs [contrib.ui :refer [code debounced markdown validated-cmp]])
     [hypercrud.browser.context :as context]
-    [hypercrud.browser.routing :as routing]
     [hypercrud.browser.router :as router]
     [hypercrud.client.core :as hc]
     [hypercrud.client.peer :refer [-quiet-unwrap]]
@@ -108,7 +107,6 @@
   (let [domain (into @(runtime/state (:peer ctx) [::runtime/domain]) user-domain-insecure)]
     (assoc ctx
       :hypercrud.browser/domain domain                      ; already processed
-      :hypercrud.browser/invert-route (r/partial routing/invert-route domain)
       :hypercrud.browser/source-domain (process-domain source-domain))))
 
 (defn local-basis [page-or-leaf global-basis route ctx f]

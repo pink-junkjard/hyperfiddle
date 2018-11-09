@@ -6,6 +6,7 @@
             [contrib.datomic-tx :as tx]
             [contrib.uri :refer [->URI]]
             [hypercrud.browser.router :as router]
+            [hypercrud.browser.routing :as routing]
             [hypercrud.client.core :as hc]
             [hypercrud.client.peer :as peer]
             [hypercrud.types.DbVal :refer [->DbVal]]
@@ -158,7 +159,7 @@
                            (either/branch #(throw (ex-info % {})) identity))]
     (map (partial tx/stmt-id->tempid id->tempid schema) tx)))
 
-(defn transact! [rt invert-route tx-groups dispatch! get-state & {:keys [route post-tx]}]
+(defn transact! [rt tx-groups dispatch! get-state & {:keys [route post-tx]}]
   (dispatch! [:transact!-start])
   (-> (runtime/transact! rt tx-groups)
       (p/catch (fn [e]
@@ -181,7 +182,7 @@
                                          (get-in tempid->id [uri temp-id] temp-id))
                              current-route (get-in (get-state) [::runtime/partitions nil :route])
                              route' (-> (or route current-route)
-                                        (invert-route invert-id))
+                                        (routing/invert-route (::runtime/domain (get-state)) invert-id))
                              keep-popovers? (or (nil? route) (router/compare-routes route current-route))]]
                   ; todo we want to overwrite our current browser location with this new url
                   ; currently this new route breaks the back button
@@ -199,7 +200,7 @@
               false)
            identity))))
 
-(defn with-groups [rt invert-route branch tx-groups & {:keys [route post-tx]}]
+(defn with-groups [rt branch tx-groups & {:keys [route post-tx]}]
   {:pre [(not-any? nil? (keys tx-groups))]}
   (fn [dispatch! get-state]
     (let [tx-groups (->> tx-groups
@@ -213,7 +214,7 @@
                             (mapv (fn [[uri tx]] [:with branch uri tx])))]
       (if (not (empty? transact-groups))
         ; todo what if transact throws?
-        (transact! rt invert-route transact-groups dispatch! get-state
+        (transact! rt transact-groups dispatch! get-state
                    :post-tx (let [clear-uris (->> (keys transact-groups)
                                                   (map (fn [uri] [:reset-stage-uri branch uri nil]))
                                                   vec)]
@@ -231,7 +232,7 @@
 (defn open-popover [branch popover-id]
   [:open-popover branch popover-id])
 
-(defn stage-popover [rt invert-route branch swap-fn-async & on-start] ; todo rewrite in terms of with-groups
+(defn stage-popover [rt branch swap-fn-async & on-start]    ; todo rewrite in terms of with-groups
   (fn [dispatch! get-state]
     (p/then (swap-fn-async (get-in (get-state) [::runtime/partitions branch :stage] {}))
             (fn [{:keys [tx app-route]}]
@@ -248,7 +249,7 @@
                                      (into {}))]
                   (if (and (nil? parent-branch) (not (empty? tx-groups)))
                     ; todo what if transact throws?
-                    (transact! rt invert-route tx-groups dispatch! get-state
+                    (transact! rt tx-groups dispatch! get-state
                                :post-tx (let [clear-uris (->> (keys tx-groups)
                                                               (map (fn [uri] [:reset-stage-uri branch uri nil]))
                                                               vec)]
@@ -275,10 +276,10 @@
       (dispatch! (batch [:reset-stage-uri branch uri tx] [:hydrate!-start nil]))
       (hydrate-partition rt nil dispatch! get-state))))
 
-(defn manual-transact-uri! [peer invert-route nil-branch-aux uri]
+(defn manual-transact-uri! [rt nil-branch-aux uri]
   (fn [dispatch! get-state]
     ; todo do something when child branches exist and are not nil: hyperfiddle/hyperfiddle#99
     ; can only transact one branch
     (let [tx-groups (-> (get-in (get-state) [::runtime/partitions nil :stage])
                         (select-keys [uri]))]
-      (transact! peer invert-route tx-groups dispatch! get-state :post-tx [[:reset-stage-uri nil uri]]))))
+      (transact! rt tx-groups dispatch! get-state :post-tx [[:reset-stage-uri nil uri]]))))

@@ -49,7 +49,7 @@
 
 (defn with-tx! [ctx tx]
   (let [uri (context/uri ctx)]
-    (->> (actions/with-groups (:peer ctx) (:hypercrud.browser/invert-route ctx) (:branch ctx) {uri tx})
+    (->> (actions/with-groups (:peer ctx) (:branch ctx) {uri tx})
          (runtime/dispatch! (:peer ctx)))))
 
 (defn with-entity-change! [ctx] (r/comp (r/partial with-tx! ctx) (r/partial entity-change->tx ctx)))

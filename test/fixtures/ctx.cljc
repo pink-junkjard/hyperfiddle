@@ -261,5 +261,4 @@
                                               :reg/age 32,
                                               :reg/birthdate #inst "1985-09-21T00:05:00.000-00:00",
                                               :reg/gender {:db/ident :gender/male},
-                                              :reg/shirt-size {:db/ident :shirt-size/mens-medium}}),
-   :hypercrud.browser/invert-route nil})
+                                              :reg/shirt-size {:db/ident :shirt-size/mens-medium}})})

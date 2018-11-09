@@ -103,10 +103,8 @@
           [:button {:disabled disabled?
                     :style (if disabled? {:pointer-events "none"})
                     :on-click (fn []
-                                (let [invert-route (:hypercrud.browser/invert-route ctx)
-                                      ; specifically dont use the SplitRuntime protocol here. the only thing that makes sense is whats in the context from the route
-                                      nil-branch-aux {:hyperfiddle.ide/foo "page"}
-                                      action (actions/manual-transact-uri! (:peer ctx) invert-route nil-branch-aux @selected-uri)]
+                                (let [nil-branch-aux {:hyperfiddle.ide/foo "page"}
+                                      action (actions/manual-transact-uri! (:peer ctx) nil-branch-aux @selected-uri)]
                                   (runtime/dispatch! (:peer ctx) action)))}
            "transact!"])]
        " "
