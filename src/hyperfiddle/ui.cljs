@@ -208,16 +208,16 @@ User renderers should not be exposed to the reaction."
                :hypercrud.browser.browser-ui/api [fiddle-api value ctx props])]))
         (fiddle-css-renderer [s] [:style {:dangerouslySetInnerHTML {:__html @s}}])
         (src-mode [route ctx]
-          (mlet [:let [ctx (-> (context/clean ctx)
-                               (routing/route route))]
+          (mlet [ctx (-> (context/clean ctx)
+                         (routing/route+ route))
                  request @(r/apply-inner-r (r/track base/meta-request-for-fiddle ctx))
                  :let [fiddle (let [fiddle {:fiddle/type :entity
                                             :fiddle/pull-database "$"}]
                                 ; turns out we dont need fiddle for much if we already know the request
-                                (r/track fiddle/apply-defaults fiddle))
-                       ctx (-> (context/source-mode ctx)
-                               (context/clean)
-                               (routing/route [nil [(->ThinEntity "$" [:fiddle/ident @(r/fmap first (:hypercrud.browser/route ctx))])]]))]]
+                                (r/track fiddle/apply-defaults fiddle))]
+                 ctx (-> (context/source-mode ctx)
+                         (context/clean)
+                         (routing/route+ [nil [(->ThinEntity "$" [:fiddle/ident @(r/fmap first (:hypercrud.browser/route ctx))])]]))]
             (base/process-results fiddle request ctx)))]
   (defn ^:export iframe [ctx {:keys [route hf-live] :as props}] ; :: [route ctx & [?f props]]
     (let [click-fn (or (:hyperfiddle.ui/iframe-on-click ctx) (constantly nil)) ; parent ctx receives click event, not child frame

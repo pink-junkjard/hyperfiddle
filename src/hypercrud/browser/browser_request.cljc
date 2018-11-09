@@ -18,7 +18,8 @@
 
 (defn request-from-route [route ctx]
   (let [ctx (-> (context/clean ctx)
-                (routing/route route))]
+                (routing/route+ route)
+                -quiet-unwrap)]
     (when-let [meta-fiddle-request (-quiet-unwrap @(r/apply-inner-r (r/track base/meta-request-for-fiddle ctx)))]
       (assert (r/reactive? meta-fiddle-request))
       (concat [@meta-fiddle-request

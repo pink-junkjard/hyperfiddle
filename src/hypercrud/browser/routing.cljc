@@ -16,7 +16,7 @@
     [hypercrud.browser.router :as router]
     [hypercrud.types.ThinEntity :refer [->ThinEntity #?(:cljs ThinEntity)]]
     [hyperfiddle.domain :as domain]
-    [hyperfiddle.tempid :refer [smart-entity-identifier]]
+    [hyperfiddle.tempid :refer [smart-entity-identifier tempid?]]
     [taoensso.timbre :as timbre])
   #?(:clj
      (:import (hypercrud.types.ThinEntity ThinEntity))))
@@ -33,26 +33,32 @@
                   :request-params)]
     (assoc route 1 args)))
 
-(defn id->tempid [route ctx]
+(defn id->tempid+ [route ctx]
   (let [invert-id (fn [id uri]
-                    (let [id->tempid (context/ctx->id-lookup uri ctx)]
-                      (get id->tempid id id)))]
-    (invert-route (:hypercrud.browser/domain ctx) route invert-id)))
+                    (if (tempid? id)
+                      id
+                      (let [id->tempid (context/ctx->id-lookup uri ctx)]
+                        (get id->tempid id id))))]
+    (try-either (invert-route (:hypercrud.browser/domain ctx) route invert-id))))
 
-(defn tempid->id [route ctx]
+(defn tempid->id+ [route ctx]
   (let [invert-id (fn [temp-id uri]
-                    (let [tempid->id (-> (context/ctx->id-lookup uri ctx)
-                                         (set/map-invert))]
-                      (get tempid->id temp-id temp-id)))]
-    (invert-route (:hypercrud.browser/domain ctx) route invert-id)))
+                    (if (tempid? temp-id)
+                      (let [tempid->id (-> (context/ctx->id-lookup uri ctx)
+                                           (set/map-invert))]
+                        (get tempid->id temp-id temp-id))
+                      temp-id))]
+    (try-either (invert-route (:hypercrud.browser/domain ctx) route invert-id))))
 
-(defn route [ctx route]                                     ; circular, this can be done sooner
-  {:pre [(if-let [params (second route)] (vector? params) true)]} ; validate normalized already
-  (assoc ctx :hypercrud.browser/route
-             ; route should be a ref, provided by the caller, that we fmap over
-             ; because it is not, this is obviously fragile and will break on any change to the route
-             ; this is acceptable today (Sep-2018) because changing a route in ANY way assumes the entire iframe will be re-rendered
-             (r/track tempid->id route ctx)))
+(defn route+ [ctx [_ params :as route]]                     ; circular, this can be done sooner
+  (mlet [_ (if (or (nil? params) (vector? params))          ; validate normalized already
+             (either/right nil)
+             (either/left (ex-info "Route not normalized, params must be nil or vector" {:params params})))
+         ; route should be a ref, provided by the caller, that we fmap over
+         ; because it is not, this is obviously fragile and will break on any change to the route
+         ; this is acceptable today (Sep-2018) because changing a route in ANY way assumes the entire iframe will be re-rendered
+         reactive-route @(r/apply-inner-r (r/track tempid->id+ route ctx))]
+    (cats/return (assoc ctx :hypercrud.browser/route reactive-route))))
 
 (defn validated-route+ [?fiddle ?route ctx]                 ; can validate with link, not just fiddle
   ; We specifically hydrate this deep just so we can validate anchors like this.
@@ -99,7 +105,7 @@
              colored-args (try-either @(r/fmap->> (or (:hypercrud.browser/data ctx) (r/track identity nil))
                                                   (pull->colored-eid ctx)
                                                   f))
-             :let [route (id->tempid (router/canonicalize fiddle-id (normalize-args colored-args)) ctx)]]
+             route (id->tempid+ (router/canonicalize fiddle-id (normalize-args colored-args)) ctx)]
         (return route)))))
 
 (def encode router/encode)

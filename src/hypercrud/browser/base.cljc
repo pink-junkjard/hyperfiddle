@@ -90,13 +90,13 @@
       (return (assoc ctx :hypercrud.browser/field reactive-field)))))
 
 (defn data-from-route [route ctx]                           ; todo rename
-  (let [ctx (-> (context/clean ctx)
-                (routing/route route))]
-    (mlet [meta-fiddle-request @(r/apply-inner-r (r/track meta-request-for-fiddle ctx))
-           fiddle @(r/apply-inner-r (r/track hydrate-fiddle meta-fiddle-request ctx))
-           fiddle-request @(r/apply-inner-r (r/track request-for-fiddle fiddle ctx))]
-      ; fiddle request can be nil for no-arg pulls (just draw readonly form)
-      (process-results fiddle fiddle-request ctx))))
+  (mlet [ctx (-> (context/clean ctx)
+                 (routing/route+ route))
+         meta-fiddle-request @(r/apply-inner-r (r/track meta-request-for-fiddle ctx))
+         fiddle @(r/apply-inner-r (r/track hydrate-fiddle meta-fiddle-request ctx))
+         fiddle-request @(r/apply-inner-r (r/track request-for-fiddle fiddle ctx))]
+    ; fiddle request can be nil for no-arg pulls (just draw readonly form)
+    (process-results fiddle fiddle-request ctx)))
 
 (defn from-link [link ctx with-route]                       ; ctx is for formula and routing (tempids and domain)
   (let [ctx (context/refocus ctx (link/read-path (:link/path link)))] ; symmetry with UI - popovers, txfn etc
