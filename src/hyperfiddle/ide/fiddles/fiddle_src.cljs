@@ -127,6 +127,7 @@
      (let [props (dissoc props :embed-mode)]
        [:<>
         (field [:fiddle/ident] ctx hyper-control (assoc props :disabled true))
+        (field [:fiddle/uuid] ctx hyper-control (assoc props :disabled true))
         (field [:fiddle/hydrate-result-as-fiddle] ctx hyper-control props)
         [:div.p "Additional attributes"]
         (->> @(r/fmap->> (:hypercrud.browser/field ctx)

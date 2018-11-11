@@ -16,20 +16,23 @@
 (defmulti fiddle-type :fiddle/type)
 
 (s/def :hyperfiddle/ide                                     ; !! fiddle/ident overlap with attributes
-  (s/and #_(s/multi-spec fiddle-type :fiddle/type)
-         (s/keys :req [:fiddle/ident]
-                 :opt [:fiddle/type
-                       :fiddle/links
-                       :fiddle/markdown
-                       :fiddle/renderer
-                       :fiddle/css
-                       :fiddle/cljs-ns
-                       :fiddle/hydrate-result-as-fiddle
-                       :hyperfiddle/owners])))
+  (s/and
+    #_(s/multi-spec fiddle-type :fiddle/type)
+    (s/or :ident (s/keys :req [:fiddle/ident])
+          :uuid (s/keys :req [:fiddle/uuid]))
+    (s/keys :opt [:fiddle/type
+                  :fiddle/links
+                  :fiddle/markdown
+                  :fiddle/renderer
+                  :fiddle/css
+                  :fiddle/cljs-ns
+                  :fiddle/hydrate-result-as-fiddle
+                  :hyperfiddle/owners])))
 
 (defmulti fiddle-link :link/rel)
 
 (s/def :fiddle/ident keyword?)
+(s/def :fiddle/uuid uuid?)
 (s/def :fiddle/type #{:blank :entity :query})
 (s/def :fiddle/query string?)
 (s/def :fiddle/pull string?)
@@ -136,6 +139,7 @@
    :db/doc
    :fiddle/css
    :fiddle/ident
+   :fiddle/uuid
    {:fiddle/links [:db/id
                    :link/class
                    {:link/fiddle [:db/id

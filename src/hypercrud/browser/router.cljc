@@ -68,7 +68,7 @@
   (if-let [msg (cond
                  (map? route) "legacy format"
                  (nil? fiddle) "missing fiddle"
-                 (not (keyword? fiddle)) "fiddle must be a keyword")]
+                 (not (or (keyword? fiddle) (uuid? fiddle))) "fiddle must be a keyword")]
     (ex-info (str "Invalid route: " msg)
              {:hyperfiddle.io/http-status-code 400 :route route})))
 

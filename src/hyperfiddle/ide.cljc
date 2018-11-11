@@ -61,7 +61,8 @@
 
 (defn magic-ide-fiddle? [fiddle-ident domain-ident]
   (and (not= foundation/source-domain-ident domain-ident)
-       (= "hyperfiddle.ide" (namespace fiddle-ident))))
+       ; Write this as s/conform
+       (if (keyword? fiddle-ident) (= "hyperfiddle.ide" (namespace fiddle-ident)))))
 
 (defn topnav-route [[fiddle datomic-args service-args frag :as route] ctx]
   ; Don't impact the request! Topnav can always use :target-route

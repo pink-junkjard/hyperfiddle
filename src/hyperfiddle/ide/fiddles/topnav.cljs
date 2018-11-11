@@ -28,9 +28,11 @@
     [:div props
      [:div.left-nav
       [tooltip {:label "Home"} [:a {:href "/"} @(runtime/state (:peer ctx) [::runtime/domain :domain/ident])]]
-      (let [fiddle-ident (first target-route)]
-        [tooltip {:label (str fiddle-ident)}
-         [:span (some-> fiddle-ident name) #_"domain editor doesn't target a fiddle"]])
+      (let [fiddle-ident (first target-route)
+            ; domain editor doesn't target a fiddle at all, and some fiddles are named by uuid
+            fiddle-name (if (keyword? fiddle-ident) (name fiddle-ident))]
+        [tooltip {:label fiddle-name}
+         [:span fiddle-name]])
       (let [props {:tooltip [nil "Fiddles in this domain"]
                    :iframe-as-popover true}]
         [ui/link :hf/iframe :fiddle-shortcuts ctx "index" props])]

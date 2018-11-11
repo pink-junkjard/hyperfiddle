@@ -21,9 +21,10 @@
 (defn legacy-fiddle-ident->lookup-ref [fiddle]              ; SHould be an ident but sometimes is a long today
   ; Keywords are not a db/ident, turn it into the fiddle-id lookup ref.
   ; Otherwise, pass it through, its already a lookup-ref or eid or whatever.
-  (if (keyword? fiddle)
-    [:fiddle/ident fiddle]
-    fiddle))
+  (cond
+    (keyword? fiddle) [:fiddle/ident fiddle]
+    (uuid? fiddle) [:fiddle/uuid fiddle]
+    :else fiddle))
 
 (defn meta-request-for-fiddle [ctx]
   (if @(r/fmap-> (:hypercrud.browser/route ctx) first system-fiddle/system-fiddle?)
