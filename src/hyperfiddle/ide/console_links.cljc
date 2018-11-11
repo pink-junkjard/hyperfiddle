@@ -113,20 +113,21 @@
 (defn console-links-fiddle
   "All sys links can be matched and merged with user-links. Matching is determined by link/rel and link/path"
   [schemas {:keys [fiddle/type fiddle/query fiddle/pull fiddle/pull-database]} data]
-  (let [qfind (->> (case type
+  (let [?query (->> (case type
                      :blank nil
                      :entity (->> (memoized-read-edn-string+ pull)
                                   (fmap (fn [pull]
                                           (let [source (symbol pull-database)
                                                 fake-q `[:find (~'pull ~source ~'?e ~pull) . :where [~'?e]]]
-                                            (parser/parse-query fake-q)))))
+                                            (parser/parse-query fake-q))))
+                                  (unwrap (constantly nil)))
                      :query (->> (memoized-read-edn-string+ query)
-                                 (=<< #(try-either (parser/parse-query %)))))
-                   (unwrap (constantly nil))
-                   :qfind)]
-    (map (comp fiddle/auto-link console-link)
-         (repeat qfind)
-         (ungroup (query-links-impl schemas qfind data)))))
+                                 (=<< #(try-either (parser/parse-query %)))
+                                 (unwrap (constantly nil)))))]
+    (if-let [qfind (:qfind ?query)]
+      (map (comp fiddle/auto-link console-link)
+           (repeat qfind)
+           (ungroup (query-links-impl schemas qfind data))))))
 
 (let [f (fn [new-links fiddle]
           (update fiddle :fiddle/links (partial merge-by (juxt :link/rel (comp blank->nil :link/path)) new-links)))]
