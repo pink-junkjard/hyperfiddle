@@ -58,7 +58,9 @@
 
 (defn target-route [ctx] @(runtime/state (:peer ctx) [::runtime/partitions nil :route]))
 
-(defn dbname [ctx] (some->> (:hypercrud.browser/field ctx) (r/fmap ::field/source-symbol) deref str))
+(defn dbname [ctx]
+  (str (or (some-> (:hypercrud.browser/field ctx) (->> (r/fmap ::field/source-symbol)) deref)
+           '$)))
 
 (defn uri
   ([ctx] (uri (dbname ctx) ctx))
