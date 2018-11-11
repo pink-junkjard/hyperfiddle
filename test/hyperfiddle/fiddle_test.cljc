@@ -18,8 +18,7 @@
        (is (not (nil? (:fiddle/renderer fiddle-val)))))))
 
 (def r2 {:db/id 17592186061847,
-         :fiddle/renderer
-         "hyperfiddle.ide.fiddles.fiddle-src/fiddle-src-renderer",
+         :fiddle/renderer "hyperfiddle.ide.fiddles.fiddle-src/fiddle-src-renderer",
          :fiddle/links
          [{:db/id 17592186061848,
            :link/class [:fiddle],
@@ -34,8 +33,7 @@
            {:db/id 17592186045605,
             :fiddle/ident
             :hyperfiddle.ide/fiddle-options,
-            :fiddle/query
-            "[:find (pull ?link [:db/id :fiddle/ident])\n :where (or [?link :fiddle/ident] [?link :fiddle/type])]",
+            :fiddle/query "[:find (pull ?link [:db/id :fiddle/ident])\n :where (or [?link :fiddle/ident] [?link :fiddle/type])]",
             :fiddle/type :query},
            :link/rel :hf/iframe}
           {:db/id 17592186061851,
@@ -55,10 +53,8 @@
            :link/path ":fiddle/links",
            :link/rel :hf/affix1}],
          :fiddle/type :entity,
-         :fiddle/pull
-         "; copied from hypercrud.browser.base/meta-pull-exp-for-link\n[:db/id\n :db/doc\n :fiddle/css\n :fiddle/ident\n {:fiddle/links [:db/id\n                 :link/class\n                 {:link/fiddle [:db/id\n                                :fiddle/ident               ; routing\n                                :fiddle/query               ; validation\n                                :fiddle/type                ; validation\n                                ]}\n                 :link/formula\n                 :link/path\n                 :link/rel\n                 :link/tx-fn]}\n :fiddle/markdown\n :fiddle/pull\n :fiddle/pull-database\n :fiddle/query\n :fiddle/cljs-ns\n :fiddle/renderer\n :fiddle/type\n :fiddle/hydrate-result-as-fiddle\n *                                                          ; For hyperblog, so we can access :hyperblog.post/title etc from the fiddle renderer\n ]",
-         :fiddle/css
-         "table.hyperfiddle.-fiddle-links { table-layout: fixed; }\ntable.-fiddle-links th.-link-formula,\ntable.-fiddle-links th.-link-tx-fn { width: 40px; }\ntable.-fiddle-links th.-hypercrud-browser-path--fiddle-links { width: 60px; }\n\ntable.-fiddle-links td.-hypercrud-browser-path--fiddle-links--link-fiddle { display: flex; }\ntable.hyperfiddle.-fiddle-links td.field.-link-fiddle > select { flex: 0 1 80% !important; } /* line up :new */\n",
+         :fiddle/pull "; copied from hypercrud.browser.base/meta-pull-exp-for-link\n[:db/id\n :db/doc\n :fiddle/css\n :fiddle/ident\n {:fiddle/links [:db/id\n                 :link/class\n                 {:link/fiddle [:db/id\n                                :fiddle/ident               ; routing\n                                :fiddle/query               ; validation\n                                :fiddle/type                ; validation\n                                ]}\n                 :link/formula\n                 :link/path\n                 :link/rel\n                 :link/tx-fn]}\n :fiddle/markdown\n :fiddle/pull\n :fiddle/pull-database\n :fiddle/query\n :fiddle/cljs-ns\n :fiddle/renderer\n :fiddle/type\n :fiddle/hydrate-result-as-fiddle\n *                                                          ; For hyperblog, so we can access :hyperblog.post/title etc from the fiddle renderer\n ]",
+         :fiddle/css "table.hyperfiddle.-fiddle-links { table-layout: fixed; }\ntable.-fiddle-links th.-link-formula,\ntable.-fiddle-links th.-link-tx-fn { width: 40px; }\ntable.-fiddle-links th.-hypercrud-browser-path--fiddle-links { width: 60px; }\n\ntable.-fiddle-links td.-hypercrud-browser-path--fiddle-links--link-fiddle { display: flex; }\ntable.hyperfiddle.-fiddle-links td.field.-link-fiddle > select { flex: 0 1 80% !important; } /* line up :new */\n",
          :fiddle/ident :hyperfiddle/ide})
 (def e2 (s/explain-data :hyperfiddle/ide r2))
 
