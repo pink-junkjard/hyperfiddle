@@ -43,3 +43,9 @@
   [problems]                                                ; destructure ::s/problems at call site
   ; Don't collect here, they get filtered down later
   (map form-cell-problem problems))
+
+(defn validate [spec value keyfn]
+  (-> (s/explain-data spec value)
+      (->> (explained-for-view keyfn))
+      ::s/problems
+      form-validation-hints))

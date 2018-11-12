@@ -40,8 +40,9 @@
 (s/def :fiddle/pull string?)
 (s/def :fiddle/pull-database string?)
 (s/def :fiddle/links (s/coll-of (s/and (s/multi-spec fiddle-link :link/rel)
-                                       (s/keys :req [:link/rel :link/fiddle]
-                                               :opt [:link/class :link/path :link/formula :link/tx-fn]))))
+                                       (s/keys :req [:link/rel]
+                                               :opt [:link/class
+                                                     :link/path :link/fiddle :link/formula :link/tx-fn]))))
 (s/def :fiddle/markdown string?)
 (s/def :fiddle/renderer string?)
 (s/def :fiddle/css string?)
@@ -63,12 +64,12 @@
 (defmethod fiddle-type nil [_] (s/keys))
 
 (defmethod fiddle-link :hf/self [_] (s/keys))
-(defmethod fiddle-link :hf/rel [_] (s/keys :req [:link/class]))
+(defmethod fiddle-link :hf/rel [_] (s/keys))
 (defmethod fiddle-link :hf/new [_] (s/keys))
 (defmethod fiddle-link :hf/remove [_] (s/keys))
 (defmethod fiddle-link :hf/affix [_] (s/keys))
 (defmethod fiddle-link :hf/detach [_] (s/keys))
-(defmethod fiddle-link :hf/iframe [_] (s/keys :req [:link/class]))
+(defmethod fiddle-link :hf/iframe [_] (s/keys))
 
 (declare fiddle-defaults)
 (declare apply-defaults)

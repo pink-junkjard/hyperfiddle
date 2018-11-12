@@ -1,9 +1,8 @@
 (ns hyperfiddle.fiddle-test
   (:require
-    [clojure.spec.alpha :as s]
     [clojure.test :refer [deftest is]]
-    [contrib.datomic]
-    [contrib.validation :refer [explained-for-view form-validation-hints]]
+    [contrib.datomic :refer [smart-lookup-ref-no-tempids]]
+    [contrib.validation :refer [validate]]
     [hyperfiddle.fiddle :refer [apply-defaults]]))
 
 
@@ -56,13 +55,27 @@
          :fiddle/pull "; copied from hypercrud.browser.base/meta-pull-exp-for-link\n[:db/id\n :db/doc\n :fiddle/css\n :fiddle/ident\n {:fiddle/links [:db/id\n                 :link/class\n                 {:link/fiddle [:db/id\n                                :fiddle/ident               ; routing\n                                :fiddle/query               ; validation\n                                :fiddle/type                ; validation\n                                ]}\n                 :link/formula\n                 :link/path\n                 :link/rel\n                 :link/tx-fn]}\n :fiddle/markdown\n :fiddle/pull\n :fiddle/pull-database\n :fiddle/query\n :fiddle/cljs-ns\n :fiddle/renderer\n :fiddle/type\n :fiddle/hydrate-result-as-fiddle\n *                                                          ; For hyperblog, so we can access :hyperblog.post/title etc from the fiddle renderer\n ]",
          :fiddle/css "table.hyperfiddle.-fiddle-links { table-layout: fixed; }\ntable.-fiddle-links th.-link-formula,\ntable.-fiddle-links th.-link-tx-fn { width: 40px; }\ntable.-fiddle-links th.-hypercrud-browser-path--fiddle-links { width: 60px; }\n\ntable.-fiddle-links td.-hypercrud-browser-path--fiddle-links--link-fiddle { display: flex; }\ntable.hyperfiddle.-fiddle-links td.field.-link-fiddle > select { flex: 0 1 80% !important; } /* line up :new */\n",
          :fiddle/ident :hyperfiddle/ide})
-(def e2 (s/explain-data :hyperfiddle/ide r2))
 
 (deftest fiddle-validates
   []
-  (is (= (-> (explained-for-view contrib.datomic/smart-lookup-ref-no-tempids e2) ::s/problems form-validation-hints)
-         '([[:fiddle/links 17592186061848 :link/fiddle] :contrib.validation/missing]
-            [[:fiddle/links 17592186061849 :link/fiddle] :contrib.validation/missing]
+  (is (= (validate :hyperfiddle/ide r2 smart-lookup-ref-no-tempids)
+         '(#_[[:fiddle/links 17592186061848 :link/fiddle] :contrib.validation/missing]
+            #_[[:fiddle/links 17592186061849 :link/fiddle] :contrib.validation/missing]
             [[:fiddle/links 17592186061852] fiddle-link])
          ))
+  )
+
+(def links
+  [{:link/rel :hf/remove}
+   {:link/rel :hf/affix}
+   {:link/rel :hf/affix :link/fiddle {:fiddle/ident :yo}}])
+
+(deftest biz-logic
+  []
+  (is (= (validate :fiddle/links links smart-lookup-ref-no-tempids)
+         '()))
+
+  #_(for [t links]
+    (is (= (validate :fiddle/links t smart-lookup-ref-no-tempids)
+           nil)))
   )

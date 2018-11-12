@@ -180,11 +180,7 @@ User renderers should not be exposed to the reaction."
           (let [fiddle (:hypercrud.browser/fiddle ctx)
                 value @(:hypercrud.browser/data ctx)
                 ctx (if-let [spec (s/get-spec (:fiddle/ident @fiddle))]
-                      (assoc ctx :hypercrud.browser/validation-hints
-                                 (-> (s/explain-data spec value)
-                                     (->> (contrib.validation/explained-for-view (partial data/row-keyfn ctx))) ; this keyfn hashes, but aligns with the view
-                                     ::s/problems
-                                     contrib.validation/form-validation-hints))
+                      (assoc ctx :hypercrud.browser/validation-hints (contrib.validation/validate spec value (partial data/row-keyfn ctx)))
                       ctx)
                 props' (update props :class css (auto-ui-css-class ctx))
                 props (select-keys props' [:class :initial-tab #_:disabled]) ; https://github.com/hyperfiddle/hyperfiddle/issues/698
