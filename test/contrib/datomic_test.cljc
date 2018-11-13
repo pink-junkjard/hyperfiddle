@@ -3,7 +3,8 @@
     [clojure.test :refer [deftest is]]
     [contrib.datomic :refer [pull-shape pulled-tree-derivative enclosing-pull-shape
                              pull-traverse pull-shape-union]]
-    [fixtures.ctx :refer [schema result-coll]]))
+    [fixtures.ctx :refer [schema result-coll]]
+    [fixtures.domains]))
 
 
 (def pull-pattern-2
@@ -47,6 +48,30 @@
                      :db/ident :shirt-size/womens-medium,
                      :hyperfiddle/owners [#uuid "acd054a8-4e36-4d6c-a9ec-95bdc47f0d39"],
                      :reg/gender {:db/id 17592186046204}}})
+
+(def derivative-tests
+  [["nested :many"
+    fixtures.domains/schema
+    {:db/id 17592186045942,
+     :domain/home-route "",
+     :domain/databases
+     [{:db/id 17592186046525,
+       :domain.database/name "$",
+       :domain.database/record
+       {:db/id 17592186046087,
+        :database/uri
+        #uri "datomic:free://datomic:4334/~alexandr.kozyrev@gmail.com+1"}}],}
+    [:db/id :domain/home-route {:domain/databases [:db/id :domain.database/name {:domain.database/record [:db/id :database/uri]}]}]]
+   ])
+
+(deftest pulled-tree-derivative-2
+  []
+  (let [t derivative-tests]
+    (for [[doc schema tree derivative] t]
+      (is (= (pulled-tree-derivative schema tree)
+             derivative)
+          doc)))
+  )
 
 (deftest pulled-tree-derivative-1
   []

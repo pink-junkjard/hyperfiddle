@@ -10,14 +10,12 @@
     [contrib.reader]
     [contrib.template :as template]
     [contrib.try$ :refer [try-either]]
-    [contrib.uri :refer [->URI]]
     [datascript.parser :as parser #?@(:cljs [:refer [FindRel FindColl FindTuple FindScalar Variable Aggregate Pull]])]
     [fixtures.ctx :refer [ctx result-coll query-coll]]
+    [fixtures.domains]
     [hypercrud.browser.field :as field]
-    [hyperfiddle.domain :as domain]
     [hyperfiddle.ide.console-links :refer [console-link console-links-e
-                                           query-links normalize-result console-links-rules query-links-impl]]
-    [hyperfiddle.runtime :as runtime])
+                                           query-links normalize-result console-links-rules query-links-impl]])
   #?(:clj (:import (datascript.parser FindRel FindColl FindTuple FindScalar Variable Aggregate Pull))))
 
 
@@ -91,34 +89,30 @@
          (results FindRel)))
   )
 
+(def schemas {"$" fixtures.ctx/schema
+              "$domains" fixtures.domains/schema})
 (deftest console-link-internals
   []
-  (let [schemas (-> (->> @(runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :schemas])
-                         (data/map-keys #(domain/uri->dbname % (:hypercrud.browser/domain ctx))))
-                    (dissoc nil))]
-    (is (= (console-links-e schemas
-                            (:qfind (qparsed FindColl))
-                            0
-                            (first (parser/find-elements (:qfind (qparsed FindColl))))
-                            (results FindColl))
-           (query-links-impl schemas
-                             (:qfind (qparsed FindColl))
-                             (results FindColl))
+  (is (= (console-links-e schemas
+                          (:qfind (qparsed FindColl))
+                          0
+                          (first (parser/find-elements (:qfind (qparsed FindColl))))
+                          (results FindColl))
+         (query-links-impl schemas
+                           (:qfind (qparsed FindColl))
+                           (results FindColl))
 
-           ; Check empty case, doesn't impact links with this result
-           (query-links-impl schemas
-                             (:qfind (qparsed FindColl))
-                             [])
-           (query-links schemas
-                        (queries FindColl)
-                        (results FindColl))
-           '([[] #{:hf/new :hf/remove :hf/self}]
-              [[:reg/gender] #{:hf/affix :hf/detach :hf/self}]
-              [[:reg/shirt-size] #{:hf/affix :hf/detach :hf/self}])
-           )))
-
-  ;(contrib.data/transpose (normalize-result (:qfind (qparsed FindColl)) (results FindColl)))
-  ;(normalize-result (:qfind (qparsed FindColl)) [])
+         ; Check empty case, doesn't impact links with this result
+         (query-links-impl schemas
+                           (:qfind (qparsed FindColl))
+                           [])
+         (query-links schemas
+                      (queries FindColl)
+                      (results FindColl))
+         '([[] #{:hf/new :hf/remove :hf/self}]
+            [[:reg/gender] #{:hf/affix :hf/detach :hf/self}]
+            [[:reg/shirt-size] #{:hf/affix :hf/detach :hf/self}])
+         ))
   )
 
 (def links '([[] #{:hf/new :hf/remove :hf/self}]
@@ -213,17 +207,80 @@
        [(2 :reg/gender) #{:hf/affix :hf/detach :hf/self}])
      ]
 
+    ["scalar"
+     [:in $ ?ident
+      :find (pull ?domain [:db/id]) .
+      :where [?domain :domain/ident ?ident]]
+     {:db/id 17592186045942,
+      :domain/home-route "[:hello-world]",
+      :domain/databases
+      [{:db/id 17592186046525,
+        :domain.database/name "$",
+        :domain.database/record {:db/id 17592186046087, :database/uri #uri "datomic:free://datomic:4334/~alexandr.kozyrev@gmail.com+1"}}],
+      :hyperfiddle/owners [#uuid "acd054a8-4e36-4d6c-a9ec-95bdc47f0d39" #uuid "c7fda234-a872-4a84-9c40-95633a92ac46"],
+      :domain/fiddle-database {:db/id 17592186046087},
+      :domain/ident "alexandrkozyrev"}
+     ([[] #{:hf/remove :hf/self}])
+     ]
+
+    ["secondary data source"
+     [:in $domain ?ident
+      :find (pull $domain ?domain [:db/id]) .
+      :where [$domain ?domain :domain/ident ?ident]]
+     {:db/id 17592186045942,
+      :domain/home-route "[:hello-world]",
+      :domain/databases
+      [{:db/id 17592186046525,
+        :domain.database/name "$",
+        :domain.database/record {:db/id 17592186046087, :database/uri #uri "datomic:free://datomic:4334/~alexandr.kozyrev@gmail.com+1"}}],
+      :hyperfiddle/owners [#uuid "acd054a8-4e36-4d6c-a9ec-95bdc47f0d39" #uuid "c7fda234-a872-4a84-9c40-95633a92ac46"],
+      :domain/fiddle-database {:db/id 17592186046087},
+      :domain/ident "alexandrkozyrev"}
+     ([[] #{:hf/remove :hf/self}])
+     ]
+
+    ["pull with nested :many"
+     [:in $domains ?ident
+      :find
+      (pull $domains ?domain
+            [:db/id
+             :db/doc
+             :domain/ident
+             :domain/home-route
+             :domain/router
+             :domain/code
+             :domain/css
+             {:domain/databases [:db/id
+                                 :domain.database/name
+                                 {:domain.database/record [:db/id
+                                                           :database/uri]}]}
+             :domain/fiddle-database
+             :domain/environment
+             :domain/aliases
+             :domain/disable-javascript
+             :hyperfiddle/owners])
+      .
+      :where
+      [$domains ?domain :domain/ident ?ident]]
+     {:db/id 17592186045942,
+      :domain/home-route "[:hello-world]",
+      :domain/databases
+      [{:db/id 17592186046525,
+        :domain.database/name "$",
+        :domain.database/record {:db/id 17592186046087, :database/uri #uri "datomic:free://datomic:4334/~alexandr.kozyrev@gmail.com+1"}}],
+      :hyperfiddle/owners [#uuid "acd054a8-4e36-4d6c-a9ec-95bdc47f0d39" #uuid "c7fda234-a872-4a84-9c40-95633a92ac46"],
+      :domain/fiddle-database {:db/id 17592186046087},
+      :domain/ident "alexandrkozyrev"}
+     ([[] #{:hf/remove :hf/self}])]
+
     ])
 
 (deftest console-links-rules-
   []
-  (let [schemas (-> (->> @(runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :schemas])
-                         (data/map-keys #(domain/uri->dbname % (:hypercrud.browser/domain ctx))))
-                    (dissoc nil))]
-    (for [[comment query result links] matrix]
-      (is (= (query-links schemas query result)
-             links)
-          comment)))
+  (for [[comment query result links] matrix]
+    (is (= (query-links schemas query result)
+           links)
+        comment))
   )
 
 (comment

@@ -20,12 +20,13 @@
         )))
 
 (defn valueType [schema-by-attr k]
+  {:pre [(map? schema-by-attr) (keyword? k)]}
   ; :db/id is nil
   (-> schema-by-attr (get k) :db/valueType smart-lookup-ref-no-tempids))
 
 (defn ref? [schema-by-attr k]                               ; Nasty treeish client code. Should this use dynamic scope to hide schema?
-  {:pre [schema-by-attr (keyword? k)]}
-  (-> schema-by-attr (get k) :db/valueType smart-lookup-ref-no-tempids (= :db.type/ref)))
+  {:pre [(map? schema-by-attr) (keyword? k)]}
+  (= :db.type/ref (valueType schema-by-attr k)))
 
 (declare pull-shape)
 
@@ -50,19 +51,6 @@
        (remove nil?)
        vec))
 
-(defn pulled-tree-derivative "Derive a pull-shape which describes a pulled-tree"
-  [schema-by-attr pulled-tree]
-  {:pre [schema-by-attr (map? pulled-tree)]}
-  (let [ref? (partial ref? schema-by-attr)]
-    (->> pulled-tree
-         (reduce-kv
-           (fn [acc k v]
-             (conj acc (cond
-                         (= :db/id k) k
-                         (ref? k) {k (pulled-tree-derivative schema-by-attr v)}
-                         :else k)))
-           []))))
-
 (defn pull-shape-union [& vs]
   ; they have to be the same data-shape, which if this is a valid pull, they are
   (cond
@@ -77,6 +65,21 @@
 
     (map? (first vs))
     (apply merge-with pull-shape-union vs)))
+
+(defn pulled-tree-derivative "Derive a pull-shape which describes a pulled-tree"
+  [schema pulled-tree]
+  {:pre [(map? schema) (map? pulled-tree)]}
+  (let [ref? (partial ref? schema)]
+    (->> pulled-tree
+         (reduce-kv
+           (fn [acc k v]
+             (conj acc (cond
+                         (= :db/id k) k
+                         (ref? k) {k (condp = (smart-lookup-ref-no-tempids (:db/cardinality (schema k)))
+                                       :db.cardinality/one (pulled-tree-derivative schema v)
+                                       :db.cardinality/many (apply pull-shape-union (map (partial pulled-tree-derivative schema) v)))}
+                         :else k)))
+           []))))
 
 (defn enclosing-pull-shape "Union the requested pull-pattern-shape with the actual result shape"
   [schema shape coll]

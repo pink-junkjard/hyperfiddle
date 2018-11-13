@@ -2,7 +2,6 @@
   (:require
     [contrib.reactive :as r]
     [contrib.reader]
-    [contrib.uri :refer [->URI]]
     [hyperfiddle.runtime :as runtime]))
 
 (def query-coll
@@ -105,7 +104,7 @@
 (def ctx
   {:hyperfiddle.ui/debug-tooltips true,
    :hypercrud.browser/path [],
-   :peer (let [state (r/atom {::runtime/partitions {nil {:schemas {(->URI "datomic:free://datomic:4334/hyperfiddle-blog-source") schema}}}})]
+   :peer (let [state (r/atom {::runtime/partitions {nil {:schemas {#uri "datomic:free://datomic:4334/hyperfiddle-blog-source" schema}}}})]
            (reify runtime/State
              (runtime/state [_] state)
              (runtime/state [_ path] (r/cursor state path)))),

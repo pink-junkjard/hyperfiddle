@@ -63,7 +63,7 @@
     (let [?attr (last path)]
       (#?(:cljs match* :clj match)
 
-        [(type qfind) (type e) ?attr (valueType schema ?attr)]
+        [(type qfind) (type e) ?attr (some->> ?attr (valueType schema))]
         ; nil attr means the pulled entity at the root of pulledtree
 
         ; Only findcoll gets hf/new at root, because if there is >1 findelement it won't show up with the relation
