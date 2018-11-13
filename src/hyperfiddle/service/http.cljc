@@ -1,14 +1,17 @@
 (ns hyperfiddle.service.http
-  (:require [contrib.reactive :as r]
-            [hypercrud.browser.router :as router]
-            [hypercrud.types.Err :refer [->Err]]
-            [contrib.uri :refer [->URI]]
-            [hyperfiddle.actions :as actions]
-            [hyperfiddle.io.rpc-router :refer [decode-basis]]
-            [hyperfiddle.reducers :as reducers]
-            [hyperfiddle.runtime :as runtime :refer [map->HostEnvironment]]
-            [promesa.core :as p]
-            [taoensso.timbre :as timbre]))
+  (:require
+    [cats.monad.either :as either]
+    [contrib.reactive :as r]
+    [contrib.uri :refer [->URI]]
+    [hypercrud.browser.router :as router]
+    [hypercrud.types.Err :refer [->Err]]
+    [hyperfiddle.actions :as actions]
+    [hyperfiddle.io.rpc-router :refer [decode-basis]]
+    [hyperfiddle.reducers :as reducers]
+    [hyperfiddle.route :as route]
+    [hyperfiddle.runtime :as runtime :refer [map->HostEnvironment]]
+    [promesa.core :as p]
+    [taoensso.timbre :as timbre]))
 
 
 (defmulti handle-route (fn [handler & rest] handler))
@@ -60,7 +63,10 @@
   (try
     (let [global-basis (decode-basis (:global-basis route-params)) ; todo this can throw
           route (router/decode (str "/" (:encoded-route route-params)))
-          _ (when-let [e (router/invalid-route? route)] (throw e))
+          _ (either/branch
+              (route/validate-route+ route)
+              (fn [e] (throw (ex-info "Invalid encoded-route" {:route route :hyperfiddle.io/http-status-code 400} e)))
+              (constantly nil))
           branch (some-> (:branch route-params) router/-decode-url-ednish)
           branch-aux (some-> (:branch-aux route-params) router/-decode-url-ednish)
           initial-state {::runtime/user-id user-id
@@ -88,7 +94,10 @@
   (try
     (let [local-basis (decode-basis (:local-basis route-params)) ; todo this can throw
           route (-> (str "/" (:encoded-route route-params)) router/decode)
-          _ (when-let [e (router/invalid-route? route)] (throw e))
+          _ (either/branch
+              (route/validate-route+ route)
+              (fn [e] (throw (ex-info "Invalid encoded-route" {:route route :hyperfiddle.io/http-status-code 400} e)))
+              (constantly nil))
           branch (some-> (:branch route-params) router/-decode-url-ednish)
           branch-aux (some-> (:branch-aux route-params) router/-decode-url-ednish)
           initial-state (reduce (fn [state [branch v]]
