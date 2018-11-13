@@ -91,7 +91,7 @@
       (*-ide-context)))
 
 #?(:cljs
-   (defn frame-on-click [route event]
+   (defn frame-on-click [rt route event]
      (when route                                            ; under what circimstances is this nil?
        (let [is-alt-pressed (.-altKey event)]
          (when is-alt-pressed
@@ -99,11 +99,11 @@
                  anchor-descendant (-> (.composedPath event) (aget 0) (.matches "a *"))]
              (when-not (or anchor anchor-descendant)
                (.stopPropagation event)
-               (js/window.open (router/encode route) "_blank"))))))))
+               (js/window.open (runtime/encode-route rt route) "_blank"))))))))
 
 (defn- *-target-context [ctx]
   (assoc ctx
-    :hyperfiddle.ui/iframe-on-click #?(:cljs frame-on-click :clj nil)
+    :hyperfiddle.ui/iframe-on-click #?(:cljs (r/partial frame-on-click (:peer ctx)) :clj nil)
     :hypercrud.ui/display-mode (runtime/state (:peer ctx) [:display-mode])
     :hyperfiddle.ui/debug-tooltips (:active-ide? (runtime/host-env (:peer ctx)))))
 
