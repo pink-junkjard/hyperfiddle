@@ -45,6 +45,7 @@
     (let [name' (name ident)]
       (case (namespace ident)
         "hyperfiddle.system" (cond
+                               (= name' "invalid-route") errors/invalid-route
                                (= name' "not-found") errors/not-found
                                (= name' "unauthorized") errors/unauthorized
                                (= name' "live") hf-live

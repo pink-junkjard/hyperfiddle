@@ -3,6 +3,7 @@
     [cats.core :refer [mlet return]]
     [cats.monad.either :as either]
     [cats.labs.promise]
+    [clojure.spec.alpha :as s]
     [clojure.string :as str]
     #?(:cljs [contrib.css :refer [css]])
     [contrib.ct :refer [unwrap]]
@@ -118,17 +119,16 @@
   (let [[path frag] (split-fragment path-and-frag)
         domain @(runtime/state rt [::runtime/domain])
         home-route (some-> domain :domain/home-route read-edn-string+ (->> (unwrap #(timbre/error %)))) ; in hf format
-        router (some-> domain :domain/router read-edn-string+ (->> (unwrap #(timbre/error %))))]
-
-    ;(if (= "/!ide/" (subs path-and-frag 0 6)) (routing/decode (subs path-and-frag 5)))
-    (or
-      (case path
-        "/" (if home-route (router/assoc-frag home-route frag))
-        (or (if (= "/_/" (subs path-and-frag 0 3)) (routing/decode (subs path-and-frag 2) #_"include leading /"))
-            ; fiddle namespace, hyperfiddle.ide, overlays userland route space
-            (if router (router-bidi/decode router path-and-frag))
-            (routing/decode path-and-frag)))
-      [:hyperfiddle.system/not-found])))
+        router (some-> domain :domain/router read-edn-string+ (->> (unwrap #(timbre/error %))))
+        route (case path
+                "/" (if home-route (router/assoc-frag home-route frag))
+                (or (if (= "/_/" (subs path-and-frag 0 3)) (routing/decode (subs path-and-frag 2) #_"include leading /"))
+                    ; fiddle namespace, hyperfiddle.ide, overlays userland route space
+                    (if router (router-bidi/decode router path-and-frag))
+                    (routing/decode path-and-frag)))]
+    (if (some->> route (s/valid? :hyperfiddle/route))
+      route
+      [:hyperfiddle.system/invalid-route [route]])))
 
 (defn route-encode [rt [fiddle _ _ frag :as route]]
   {:post [(str/starts-with? % "/")]}

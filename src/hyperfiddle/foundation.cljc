@@ -15,7 +15,6 @@
     [contrib.try$ :refer [try-either]]
     #?(:cljs [contrib.ui :refer [code debounced markdown validated-cmp]])
     [hypercrud.browser.context :as context]
-    [hypercrud.browser.router :as router]
     [hypercrud.client.core :as hc]
     [hypercrud.client.peer :refer [-quiet-unwrap]]
     [hypercrud.types.EntityRequest :refer [->EntityRequest]]
@@ -24,6 +23,7 @@
     [hyperfiddle.actions :as actions]
     [hyperfiddle.domain]
     [hyperfiddle.io.http :refer [build-routes]]
+    [hyperfiddle.route :as route]
     [hyperfiddle.runtime :as runtime]
     [hyperfiddle.security.domains]
     [promesa.core :as p]
@@ -253,8 +253,10 @@
           LEVEL-USER (actions/refresh-user rt (partial runtime/dispatch! rt) #(deref (runtime/state rt)))
           LEVEL-ROUTE (let [branch-aux {:hyperfiddle.ide/foo "page"}] ;ide
                         (try (let [route (runtime/decode-route rt encoded-route)]
-                               (when-let [e (router/invalid-route? route)] (throw e))
-                               (runtime/dispatch! rt [:add-partition nil route branch-aux]))
+                               (either/branch
+                                 (route/validate-route+ route)
+                                 (fn [e] (throw e))
+                                 (fn [route] (runtime/dispatch! rt [:add-partition nil route branch-aux]))))
                              (p/resolved nil)
                              (catch #?(:cljs :default :clj Exception) e
                                (runtime/dispatch! rt [:set-error e])

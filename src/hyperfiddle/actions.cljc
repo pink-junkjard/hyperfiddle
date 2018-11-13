@@ -1,24 +1,23 @@
 (ns hyperfiddle.actions
-  (:require [cats.core :refer [mlet]]
-            [cats.labs.promise]
-            [cats.monad.either :as either]
-            [contrib.data :refer [map-values]]
-            [contrib.datomic-tx :as tx]
-            [contrib.uri :refer [->URI]]
-            [hypercrud.browser.router :as router]
-            [hypercrud.browser.routing :as routing]
-            [hypercrud.client.core :as hc]
-            [hypercrud.client.peer :as peer]
-            [hypercrud.types.DbVal :refer [->DbVal]]
-            [hypercrud.types.EntityRequest :refer [->EntityRequest]]
-            [hypercrud.types.Err :as Err]
-            [hypercrud.util.branch :as branch]
-            [hyperfiddle.io.hydrate-requests :refer [hydrate-all-or-nothing!]]
-            [hyperfiddle.domain :as domain]
-            [hyperfiddle.runtime :as runtime]
-            [hyperfiddle.security.client :as security]
-            [promesa.core :as p]
-            [taoensso.timbre :as timbre]))
+  (:require
+    [cats.core :refer [mlet]]
+    [cats.labs.promise]
+    [cats.monad.either :as either]
+    [contrib.datomic-tx :as tx]
+    [contrib.uri :refer [->URI]]
+    [hypercrud.browser.router :as router]
+    [hypercrud.browser.routing :as routing]
+    [hypercrud.client.core :as hc]
+    [hypercrud.types.EntityRequest :refer [->EntityRequest]]
+    [hypercrud.types.Err :as Err]
+    [hypercrud.util.branch :as branch]
+    [hyperfiddle.io.hydrate-requests :refer [hydrate-all-or-nothing!]]
+    [hyperfiddle.domain :as domain]
+    [hyperfiddle.route :as route]
+    [hyperfiddle.runtime :as runtime]
+    [hyperfiddle.security.client :as security]
+    [promesa.core :as p]
+    [taoensso.timbre :as timbre]))
 
 
 (defn set-display-mode [display-mode]
@@ -109,11 +108,12 @@
 
 (defn add-partition [rt route branch branch-aux & on-start]
   (fn [dispatch! get-state]
-    (if-let [e (router/invalid-route? route)]
-      (do
+    (either/branch
+      (route/validate-route+ route)
+      (fn [e]
         (dispatch! [:partition-error e])
         (p/rejected e))
-      (do
+      (fn [route]
         (dispatch! (apply batch (conj (vec on-start) [:add-partition branch route branch-aux])))
         (-> (refresh-partition-basis rt branch dispatch! get-state)
             (p/then #(dispatch! [:hydrate!-start branch]))
@@ -131,26 +131,29 @@
   (let [current-route (get-in (get-state) [::runtime/partitions branch :route])]
     (if (and (not force) (router/compare-routes route current-route) (not= route current-route))
       (dispatch! [:partition-route branch route])           ; just update state without re-hydrating
-      (if-let [e (router/invalid-route? route)]
-        (do (dispatch! [:set-error e])
-            (p/rejected e))
-        ; currently branches only have relationships to parents, need to be able to find all children from a parent
-        ; this would allow us to discard/close ourself and our children
-        ; for now we are always nil branch, so blast everything
-        (let [actions (->> (::runtime/partitions (get-state))
-                           (mapcat (fn [[ident partition]]
-                                     (conj (if (and (= branch ident) keep-popovers?)
-                                             (vector)
-                                             (mapv (partial close-popover ident) (:popovers partition)))
-                                           (if (= branch ident)
-                                             [:partition-route ident route] ; dont blast nil stage
-                                             (discard-partition ident))))))]
-          (dispatch! (apply batch actions))
-          ; should just call foundation/bootstrap-data
-          (-> (refresh-partition-basis rt branch dispatch! get-state)
-              (p/then #(dispatch! [:hydrate!-start branch]))
-              (p/then #(hydrate-partition-schema rt branch dispatch! get-state))
-              (p/then #(hydrate-partition rt branch dispatch! get-state))))))))
+      (either/branch
+        (route/validate-route+ route)
+        (fn [e]
+          (dispatch! [:set-error e])
+          (p/rejected e))
+        (fn [route]
+          ; currently branches only have relationships to parents, need to be able to find all children from a parent
+          ; this would allow us to discard/close ourself and our children
+          ; for now we are always nil branch, so blast everything
+          (let [actions (->> (::runtime/partitions (get-state))
+                             (mapcat (fn [[ident partition]]
+                                       (conj (if (and (= branch ident) keep-popovers?)
+                                               (vector)
+                                               (mapv (partial close-popover ident) (:popovers partition)))
+                                             (if (= branch ident)
+                                               [:partition-route ident route] ; dont blast nil stage
+                                               (discard-partition ident))))))]
+            (dispatch! (apply batch actions))
+            ; should just call foundation/bootstrap-data
+            (-> (refresh-partition-basis rt branch dispatch! get-state)
+                (p/then #(dispatch! [:hydrate!-start branch]))
+                (p/then #(hydrate-partition-schema rt branch dispatch! get-state))
+                (p/then #(hydrate-partition rt branch dispatch! get-state)))))))))
 
 (defn update-to-tempids [get-state branch uri tx]
   (let [{:keys [tempid-lookups schemas]} (get-in (get-state) [::runtime/partitions branch])
@@ -221,13 +224,16 @@
                               (concat clear-uris            ; clear the uris that were transacted
                                       with-actions))
                    :route route)
-        (if-let [e (some-> route router/invalid-route?)]
-          (dispatch! (apply batch (conj with-actions [:set-error e])))
-          (let [actions (cond-> with-actions
-                          ; what about local-basis? why not specify branch?
-                          route (conj [:partition-route nil route]))]
-            (dispatch! (apply batch (conj actions [:hydrate!-start branch])))
-            (hydrate-partition rt branch dispatch! get-state)))))))
+        (either/branch
+          (or (some-> route route/validate-route+) (either/right nil))
+          (fn [e]
+            (dispatch! (apply batch (conj with-actions [:set-error e]))))
+          (fn [route]
+            (let [actions (cond-> with-actions
+                            ; what about local-basis? why not specify branch?
+                            route (conj [:partition-route nil route]))]
+              (dispatch! (apply batch (conj actions [:hydrate!-start branch])))
+              (hydrate-partition rt branch dispatch! get-state))))))))
 
 (defn open-popover [branch popover-id]
   [:open-popover branch popover-id])
@@ -257,17 +263,20 @@
                                                   [[:merge branch] ; merge the untransacted uris up
                                                    (discard-partition branch)])) ; clean up the partition
                                :route app-route)
-                    (if-let [e (some-> app-route router/invalid-route?)]
-                      (dispatch! (batch [:merge branch]
-                                        [:set-error e]
-                                        (discard-partition branch)))
-                      (let [actions [[:merge branch]
-                                     (when app-route
-                                       ; what about local-basis? why not specify branch?
-                                       [:partition-route nil app-route])
-                                     (discard-partition branch)]]
-                        (dispatch! (apply batch (conj actions [:hydrate!-start parent-branch])))
-                        (hydrate-partition rt parent-branch dispatch! get-state))))))))))
+                    (either/branch
+                      (or (some-> app-route route/validate-route+) (either/right nil))
+                      (fn [e]
+                        (dispatch! (batch [:merge branch]
+                                          [:set-error e]
+                                          (discard-partition branch))))
+                      (fn [app-route]
+                        (let [actions [[:merge branch]
+                                       (when app-route
+                                         ; what about local-basis? why not specify branch?
+                                         [:partition-route nil app-route])
+                                       (discard-partition branch)]]
+                          (dispatch! (apply batch (conj actions [:hydrate!-start parent-branch])))
+                          (hydrate-partition rt parent-branch dispatch! get-state)))))))))))
 
 (defn reset-stage-uri [rt branch uri tx]
   (fn [dispatch! get-state]
