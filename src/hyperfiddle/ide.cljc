@@ -3,23 +3,16 @@
     [cats.core :refer [mlet return]]
     [cats.monad.either :as either]
     [cats.labs.promise]
-    [clojure.spec.alpha :as s]
-    [clojure.string :as str]
     #?(:cljs [contrib.css :refer [css]])
     [contrib.ct :refer [unwrap]]
-    [contrib.ednish :refer [decode-ednish encode-ednish]]
+    [contrib.ednish :refer [decode-ednish]]
     [contrib.reactive :as r]
     [contrib.reader :refer [read-edn-string+]]
-    [contrib.rfc3986 :refer [split-fragment encode-rfc3986-pchar]]
-    [contrib.string :refer [empty->nil]]
     #?(:cljs [contrib.ui :refer [easy-checkbox radio-with-label]])
     [contrib.uri :refer [->URI]]
     [hypercrud.browser.base :as base]
     [hypercrud.browser.browser-request :refer [request-from-route]]
     [hypercrud.browser.context :as context]
-    [hypercrud.browser.routing :as routing]
-    [hypercrud.browser.router :as router]
-    [hypercrud.browser.router-bidi :as router-bidi]
     [hyperfiddle.actions :as actions]
     [hyperfiddle.ide.system-fiddle :refer [system-fiddle?]]
     #?(:cljs [hyperfiddle.ui :as ui])
@@ -29,6 +22,7 @@
     [hyperfiddle.data]
     [hyperfiddle.foundation :as foundation]
     [hyperfiddle.io.hydrate-requests :refer [hydrate-one!]]
+    [hyperfiddle.route :as route]
     [hyperfiddle.runtime :as runtime]
     [hyperfiddle.schema :as schema]
     [taoensso.timbre :as timbre]
@@ -99,7 +93,7 @@
                  anchor-descendant (-> (.composedPath event) (aget 0) (.matches "a *"))]
              (when-not (or anchor anchor-descendant)
                (.stopPropagation event)
-               (js/window.open (runtime/encode-route rt route) "_blank"))))))))
+               (js/window.open (foundation/route-encode rt route) "_blank"))))))))
 
 (defn- *-target-context [ctx]
   (assoc ctx
@@ -113,36 +107,6 @@
 (defn page-target-context [ctx]
   (-> (assoc ctx ::runtime/branch-aux {::foo "user"})
       (*-target-context)))
-
-(defn route-decode [rt path-and-frag]
-  {:pre [(string? path-and-frag)]}
-  (let [[path frag] (split-fragment path-and-frag)
-        domain @(runtime/state rt [::runtime/domain])
-        home-route (some-> domain :domain/home-route read-edn-string+ (->> (unwrap #(timbre/error %)))) ; in hf format
-        router (some-> domain :domain/router read-edn-string+ (->> (unwrap #(timbre/error %))))
-        route (case path
-                "/" (if home-route (router/assoc-frag home-route frag))
-                (or (if (= "/_/" (subs path-and-frag 0 3)) (routing/decode (subs path-and-frag 2) #_"include leading /"))
-                    ; fiddle namespace, hyperfiddle.ide, overlays userland route space
-                    (if router (router-bidi/decode router path-and-frag))
-                    (routing/decode path-and-frag)))]
-    (if (some->> route (s/valid? :hyperfiddle/route))
-      route
-      [:hyperfiddle.system/invalid-route [route]])))
-
-(defn route-encode [rt [fiddle _ _ frag :as route]]
-  {:post [(str/starts-with? % "/")]}
-  (let [domain @(runtime/state rt [::runtime/domain])
-        router (some-> domain :domain/router read-edn-string+ (->> (unwrap #(timbre/error %))))
-        home-route (some-> domain :domain/home-route read-edn-string+ (->> (unwrap #(timbre/error %))))
-        home-route (if router (router-bidi/bidi->hf home-route) home-route)]
-    ;(case (namespace fiddle)) "hyperfiddle.ide" (str "/!ide/" (routing/encode route))
-    (or
-      (if (system-fiddle? fiddle) (str "/_" (routing/encode route)))
-      (if (= (router/dissoc-frag route) home-route) (if (empty->nil frag) (str "/#" frag) "/"))
-      ; fiddle namespace, hyperfiddle.ide, overlays userland route space
-      (if router (router-bidi/encode router route))
-      (routing/encode route))))
 
 (defn local-basis [global-basis route ctx]
   ;local-basis-ide and local-basis-user
@@ -226,7 +190,7 @@
    (defn primary-content-production "No ide layout markup" [content-ctx route]
      ^{:key :primry-content}
      [ui/iframe content-ctx
-      {:route (router/dissoc-frag route)
+      {:route (route/dissoc-frag route)
        :class (css "hyperfiddle-user"
                    "hyperfiddle-ide"
                    (some-> content-ctx :hypercrud.ui/display-mode deref name (->> (str "display-mode-"))))}]
@@ -278,7 +242,7 @@
         (when (and (either/left? code+) (:active-ide? (runtime/host-env (:peer ctx))))
           (let [e @code+]
             (timbre/error e)
-            (let [href (runtime/encode-route (:peer ctx) [:hyperfiddle.ide/domain [[:domain/ident (get-in ctx [:hypercrud.browser/domain :domain/ident])]]])
+            (let [href (foundation/route-encode (:peer ctx) [:hyperfiddle.ide/domain [[:domain/ident (get-in ctx [:hypercrud.browser/domain :domain/ident])]]])
                   message (if-let [cause-message (some-> e ex-cause ex-message)]
                             cause-message
                             (ex-message e))]

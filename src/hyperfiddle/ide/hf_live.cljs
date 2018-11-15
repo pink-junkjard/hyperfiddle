@@ -2,15 +2,13 @@
   (:require
     [cats.monad.either :as either]
     [contrib.css :refer [css]]
-    [contrib.data :refer [compare-by-index]]
     [contrib.pprint]
     [contrib.reactive :as r]
     [contrib.ui]
     [hypercrud.ui.error :refer [error-comp]]
-    [hypercrud.browser.router :as router]
     [hyperfiddle.data :as data]
     [hyperfiddle.ide.fiddles.fiddle-src :as fiddle-src]
-    [hyperfiddle.ui :refer [fiddle-api field]]))
+    [hyperfiddle.ui :refer [fiddle-api]]))
 
 ; This is an entity in the project namespace in the IDE fiddle-repo, probably
 (def attr-order [:fiddle/ident :fiddle/type :fiddle/pull-database :fiddle/pull :fiddle/query

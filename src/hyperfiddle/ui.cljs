@@ -22,7 +22,6 @@
     [hypercrud.browser.base :as base]
     [hypercrud.browser.field :as field]
     [hypercrud.browser.link :as link]
-    [hypercrud.browser.router :as router]
     [hypercrud.browser.routing :as routing]
     [hypercrud.types.Err :as Err]
     [hypercrud.types.ThinEntity :refer [->ThinEntity]]
@@ -32,6 +31,7 @@
     [hyperfiddle.data :as data]
     [hyperfiddle.fiddle :as fiddle]
     [hyperfiddle.ide.console-links :refer [inject-console-links system-link?]]
+    [hyperfiddle.route :as route]
     [hyperfiddle.runtime :as runtime]
     [hyperfiddle.security.client :as security]
     [hyperfiddle.tempid :refer [smart-entity-identifier consistent-relation-key stable-relation-key]]
@@ -167,7 +167,7 @@ User renderers should not be exposed to the reaction."
   (let [props (-> props
                   (update :class css "hyperfiddle")
                   (dissoc :route)
-                  (assoc :href (some->> (:route props) (runtime/encode-route (:peer ctx)))))]
+                  (assoc :href (some->> (:route props) (hyperfiddle.foundation/route-encode (:peer ctx)))))]
     (into [:a props] children)))
 
 (letfn [(auto-ui-css-class [ctx]                            ; semantic css
@@ -326,7 +326,7 @@ User renderers should not be exposed to the reaction."
           [popover-cmp link-ref ctx visual-ctx props label])
 
         is-iframe
-        [stale/loading (stale/can-be-loading? ctx) (fmap #(router/assoc-frag % (:frag props)) @r+?route) ; what is this frag noise?
+        [stale/loading (stale/can-be-loading? ctx) (fmap #(route/assoc-frag % (:frag props)) @r+?route) ; what is this frag noise?
          (fn [e] [error-comp e])
          (fn [route]
            (let [iframe (or (::custom-iframe props) iframe)]

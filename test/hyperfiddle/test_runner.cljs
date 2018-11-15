@@ -16,13 +16,13 @@
     contrib.validation
     hypercrud.browser.field-test
     hypercrud.browser.nested-pull-test
-    hypercrud.browser.router-test
     hyperfiddle.data-test
     hyperfiddle.fiddle-test
-    hyperfiddle.ide-test
+    hyperfiddle.foundation-test
     hyperfiddle.ide.console-links-test
     hyperfiddle.ide.fiddles.schema_test
     hyperfiddle.readers-test
+    hyperfiddle.route-test
     ))
 
 (defn run []
@@ -40,11 +40,11 @@
     'contrib.validation
     'hypercrud.browser.field-test
     'hypercrud.browser.nested-pull-test
-    'hypercrud.browser.router-test
     'hyperfiddle.data-test
     'hyperfiddle.fiddle-test
-    'hyperfiddle.ide-test
+    'hyperfiddle.foundation-test
     'hyperfiddle.ide.console-links-test
     'hyperfiddle.ide.fiddles.schema_test
     'hyperfiddle.readers-test
+    'hyperfiddle.route-test
     ))

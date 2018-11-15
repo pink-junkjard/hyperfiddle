@@ -45,13 +45,15 @@
     (let [name' (name ident)]
       (case (namespace ident)
         "hyperfiddle.system" (cond
-                               (= name' "invalid-route") errors/invalid-route
-                               (= name' "not-found") errors/not-found
                                (= name' "unauthorized") errors/unauthorized
                                (= name' "live") hf-live
                                (str/starts-with? name' "self-") (console-self (str/strip-prefix name' "self-"))
                                (str/starts-with? name' "new-") (console-new (str/strip-prefix name' "new-"))
                                (str/starts-with? name' "affix-") (console-affix (str/strip-prefix name' "affix-")))
+        "hyperfiddle.system.route" (cond
+                                     (= name' "decoding-error") errors/decoding-error
+                                     (= name' "home-route-error") errors/home-route-error
+                                     (= name' "not-found") errors/not-found)
         "hyperfiddle.schema" (schema/schema name')
         "hyperfiddle.schema.db-cardinality-options" (schema/db-cardinality-options name')
         "hyperfiddle.schema.db-unique-options" (schema/db-unique-options name')

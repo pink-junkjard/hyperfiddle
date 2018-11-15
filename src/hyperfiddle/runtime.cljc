@@ -30,12 +30,6 @@
   (dispatch! [rt action-or-func])
   (state [rt] [rt path]))
 
-(defprotocol Route
-  ; let the call site sort out how to get domain-basis.
-  ; maybe from global-basis, maybe from local-basis, depends what we were sent up.
-  (encode-route [rt v])
-  (decode-route [rt s]))
-
 (defprotocol Schema
   (hydrate-schemas [rt branch]))
 

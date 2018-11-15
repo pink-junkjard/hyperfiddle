@@ -21,8 +21,8 @@
   (is (= (decode router "/:capitalism#:src") [:hyperblog/post [#entity["$" :capitalism]] nil ":src"]))
 
   ; Unhandled routes are not handled here
-  (is (= (decode router "/:hyperblog.2!tag/:hyperfiddle") nil))
-  (is (= (decode router "/:hyperblog.2!tag/:hyperfiddle#:src") nil))
+  (is (= (decode router "/:hyperblog.2!tag/:hyperfiddle") [:hyperfiddle.system.route/not-found]))
+  (is (= (decode router "/:hyperblog.2!tag/:hyperfiddle#:src") [:hyperfiddle.system.route/not-found]))
   )
 
 (comment

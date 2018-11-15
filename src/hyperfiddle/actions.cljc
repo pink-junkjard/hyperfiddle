@@ -3,9 +3,9 @@
     [cats.core :refer [mlet]]
     [cats.labs.promise]
     [cats.monad.either :as either]
+    [clojure.spec.alpha :as s]
     [contrib.datomic-tx :as tx]
     [contrib.uri :refer [->URI]]
-    [hypercrud.browser.router :as router]
     [hypercrud.browser.routing :as routing]
     [hypercrud.client.core :as hc]
     [hypercrud.types.EntityRequest :refer [->EntityRequest]]
@@ -107,18 +107,13 @@
                    (throw error))))))
 
 (defn add-partition [rt route branch branch-aux & on-start]
+  {:pre [(s/valid? :hyperfiddle/route route)]}
   (fn [dispatch! get-state]
-    (either/branch
-      (route/validate-route+ route)
-      (fn [e]
-        (dispatch! [:partition-error e])
-        (p/rejected e))
-      (fn [route]
-        (dispatch! (apply batch (conj (vec on-start) [:add-partition branch route branch-aux])))
-        (-> (refresh-partition-basis rt branch dispatch! get-state)
-            (p/then #(dispatch! [:hydrate!-start branch]))
-            (p/then #(hydrate-partition-schema rt branch dispatch! get-state))
-            (p/then #(hydrate-partition rt branch dispatch! get-state)))))))
+    (dispatch! (apply batch (conj (vec on-start) [:add-partition branch route branch-aux])))
+    (-> (refresh-partition-basis rt branch dispatch! get-state)
+        (p/then #(dispatch! [:hydrate!-start branch]))
+        (p/then #(hydrate-partition-schema rt branch dispatch! get-state))
+        (p/then #(hydrate-partition rt branch dispatch! get-state)))))
 
 (defn discard-partition [branch]
   [:discard-partition branch])
@@ -127,33 +122,28 @@
   [:close-popover branch popover-id])
 
 (defn set-route [rt route branch keep-popovers? force dispatch! get-state]
+  {:pre [(s/valid? :hyperfiddle/route route)]}
   (assert (nil? branch) "Non-nil branches currently unsupported")
   (let [current-route (get-in (get-state) [::runtime/partitions branch :route])]
-    (if (and (not force) (router/compare-routes route current-route) (not= route current-route))
+    (if (and (not force) (route/compare-routes route current-route) (not= route current-route))
       (dispatch! [:partition-route branch route])           ; just update state without re-hydrating
-      (either/branch
-        (route/validate-route+ route)
-        (fn [e]
-          (dispatch! [:set-error e])
-          (p/rejected e))
-        (fn [route]
-          ; currently branches only have relationships to parents, need to be able to find all children from a parent
-          ; this would allow us to discard/close ourself and our children
-          ; for now we are always nil branch, so blast everything
-          (let [actions (->> (::runtime/partitions (get-state))
-                             (mapcat (fn [[ident partition]]
-                                       (conj (if (and (= branch ident) keep-popovers?)
-                                               (vector)
-                                               (mapv (partial close-popover ident) (:popovers partition)))
-                                             (if (= branch ident)
-                                               [:partition-route ident route] ; dont blast nil stage
-                                               (discard-partition ident))))))]
-            (dispatch! (apply batch actions))
-            ; should just call foundation/bootstrap-data
-            (-> (refresh-partition-basis rt branch dispatch! get-state)
-                (p/then #(dispatch! [:hydrate!-start branch]))
-                (p/then #(hydrate-partition-schema rt branch dispatch! get-state))
-                (p/then #(hydrate-partition rt branch dispatch! get-state)))))))))
+      ; currently branches only have relationships to parents, need to be able to find all children from a parent
+      ; this would allow us to discard/close ourself and our children
+      ; for now we are always nil branch, so blast everything
+      (let [actions (->> (::runtime/partitions (get-state))
+                         (mapcat (fn [[ident partition]]
+                                   (conj (if (and (= branch ident) keep-popovers?)
+                                           (vector)
+                                           (mapv (partial close-popover ident) (:popovers partition)))
+                                         (if (= branch ident)
+                                           [:partition-route ident route] ; dont blast nil stage
+                                           (discard-partition ident))))))]
+        (dispatch! (apply batch actions))
+        ; should just call foundation/bootstrap-data
+        (-> (refresh-partition-basis rt branch dispatch! get-state)
+            (p/then #(dispatch! [:hydrate!-start branch]))
+            (p/then #(hydrate-partition-schema rt branch dispatch! get-state))
+            (p/then #(hydrate-partition rt branch dispatch! get-state)))))))
 
 (defn update-to-tempids [get-state branch uri tx]
   (let [{:keys [tempid-lookups schemas]} (get-in (get-state) [::runtime/partitions branch])
@@ -181,15 +171,20 @@
                        _ (refresh-global-basis rt on-finally dispatch! get-state)
                        _ (refresh-domain rt dispatch! get-state)
                        _ (refresh-user rt dispatch! get-state)
-                       :let [invert-id (fn [temp-id uri]
-                                         (get-in tempid->id [uri temp-id] temp-id))
-                             current-route (get-in (get-state) [::runtime/partitions nil :route])
-                             route' (-> (or route current-route)
-                                        (routing/invert-route (::runtime/domain (get-state)) invert-id))
-                             keep-popovers? (or (nil? route) (router/compare-routes route current-route))]]
-                  ; todo we want to overwrite our current browser location with this new url
-                  ; currently this new route breaks the back button
-                  (set-route rt route' nil keep-popovers? true dispatch! get-state))))))
+                       :let [current-route (get-in (get-state) [::runtime/partitions nil :route])]]
+                  (either/branch
+                    (or (some-> route route/validate-route+) ; arbitrary user input, need to validate
+                        (either/right current-route))
+                    (fn [e]
+                      (dispatch! [:set-error e])
+                      (p/rejected e))
+                    (fn [route]
+                      (let [invert-id (fn [temp-id uri] (get-in tempid->id [uri temp-id] temp-id))
+                            route' (routing/invert-route (::runtime/domain (get-state)) route invert-id)
+                            keep-popovers? (or (nil? route) (route/compare-routes route current-route))]
+                        ; todo we want to overwrite our current browser location with this new url
+                        ; currently this new route breaks the back button
+                        (set-route rt route' nil keep-popovers? true dispatch! get-state)))))))))
 
 (defn should-transact!? [uri get-state]
   (and (get-in (get-state) [::runtime/auto-transact uri])
@@ -225,7 +220,7 @@
                                       with-actions))
                    :route route)
         (either/branch
-          (or (some-> route route/validate-route+) (either/right nil))
+          (or (some-> route route/validate-route+) (either/right nil)) ; arbitrary user input, need to validate
           (fn [e]
             (dispatch! (apply batch (conj with-actions [:set-error e]))))
           (fn [route]
@@ -264,7 +259,7 @@
                                                    (discard-partition branch)])) ; clean up the partition
                                :route app-route)
                     (either/branch
-                      (or (some-> app-route route/validate-route+) (either/right nil))
+                      (or (some-> app-route route/validate-route+) (either/right nil)) ; arbitrary user input, need to validate
                       (fn [e]
                         (dispatch! (batch [:merge branch]
                                           [:set-error e]

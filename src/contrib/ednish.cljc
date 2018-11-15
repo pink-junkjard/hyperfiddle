@@ -1,7 +1,9 @@
 (ns contrib.ednish
   (:require
     [clojure.set]
-    [clojure.string :as str]))
+    [clojure.string :as str]
+    [contrib.reader :as reader]
+    [contrib.rfc3986 :refer [encode-rfc3986-pchar decode-rfc3986-pchar]]))
 
 
 ; https://tools.ietf.org/html/rfc2396#section-2.4.3
@@ -32,3 +34,6 @@ coalesce into lists and are not disambiguated."
   (reduce (fn [a [k v]] (str/replace a k v))
           ednish-str
           (clojure.set/map-invert -edn-dialect-mappings)))
+
+(def encode-uri (comp encode-rfc3986-pchar encode-ednish pr-str))
+(def decode-uri (comp reader/read-edn-string! decode-ednish decode-rfc3986-pchar))

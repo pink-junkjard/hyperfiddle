@@ -1,9 +1,12 @@
-(ns hypercrud.browser.router-test
-  (:require [clojure.test :refer [deftest is]]
-            [contrib.reader]
-            [hypercrud.browser.router :refer [encode decode canonicalize]]
-            [hypercrud.browser.routing :refer [normalize-args]]))
+(ns hyperfiddle.route-test
+  (:require
+    [clojure.test :refer [deftest is]]
+    [contrib.reader]
+    [hyperfiddle.route :refer [canonicalize url-decode url-encode]]))
 
+
+(defn encode [route] (url-encode route [:foo]))
+(defn decode [s] (url-decode s [:foo]))
 
 (def route-args2 [:hyperfiddle.blog/post [#entity["$" [:user/sub "google-oauth2|116635422485042503270"]] #{"events" "news"}]])
 (def route-args1 [:hyperfiddle.blog/post #entity["$" [:user/sub "google-oauth2|116635422485042503270"]]])
@@ -19,16 +22,9 @@
   #_(is (= ((comp decode encode) route-args1) ((comp decode encode) route-args1-seq)))
   #?(:clj (is (not (nil? (java.net.URI. (encode route-args2))))))
   (is (= (encode [:hyperfiddle.blog/post])
-         (encode [:hyperfiddle.blog/post])
-         (encode [:hyperfiddle.blog/post])
-         (encode [:hyperfiddle.blog/post '()])
          "/:hyperfiddle.blog!post/"))
   (is (= (encode [17592186045502])
-         (encode [17592186045502 nil])
-         (encode [17592186045502 []])
-         (encode [17592186045502 '()])
          "/17592186045502/"))
-  (is (= (encode [:hyperfiddle.blog/post []]) "/:hyperfiddle.blog!post/"))
 
   (is (= (encode [:hyperblog/post [#entity["$" 17592186045826]]])
          "/:hyperblog!post/~entity('$',17592186045826)"))

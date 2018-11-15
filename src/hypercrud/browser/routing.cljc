@@ -16,6 +16,7 @@
     [hypercrud.browser.router :as router]
     [hypercrud.types.ThinEntity :refer [->ThinEntity #?(:cljs ThinEntity)]]
     [hyperfiddle.domain :as domain]
+    [hyperfiddle.route :as route]
     [hyperfiddle.tempid :refer [smart-entity-identifier tempid?]]
     [taoensso.timbre :as timbre])
   #?(:clj
@@ -105,13 +106,7 @@
              colored-args (try-either @(r/fmap->> (or (:hypercrud.browser/data ctx) (r/track identity nil))
                                                   (pull->colored-eid ctx)
                                                   f))
-             route (id->tempid+ (router/canonicalize fiddle-id (normalize-args colored-args)) ctx)]
+             route (id->tempid+ (route/canonicalize fiddle-id (normalize-args colored-args)) ctx)]
         (return route)))))
 
-(def encode router/encode)
-(def decode router/decode)
-
-(defn decode' [route]
-  (if route
-    (try-either (decode route))
-    (either/right nil)))
+(def encode router/encode)                                  ; todo yank; need user migrations

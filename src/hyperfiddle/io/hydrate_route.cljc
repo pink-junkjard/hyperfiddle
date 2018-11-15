@@ -3,8 +3,9 @@
     [bidi.bidi :as bidi]
     [cats.core :as cats]
     [clojure.set :as set]
+    [contrib.base-64-url-safe :as base-64-url-safe]
+    [contrib.ednish :as ednish]
     [contrib.performance :as perf]
-    [hypercrud.browser.router :as router]
     [hypercrud.types.EntityRequest :refer [#?(:cljs EntityRequest)]]
     [hypercrud.types.QueryRequest :refer [#?(:cljs QueryRequest)]]
     [hyperfiddle.io.http :refer [build-routes]]
@@ -88,9 +89,11 @@
                    (into {}))]
     (-> (merge {:url (str service-uri (bidi/path-for (build-routes build) :hydrate-route
                                                      :local-basis (encode-basis local-basis)
-                                                     :encoded-route (subs (router/encode route) 1) ; includes "/"
-                                                     :branch (router/-encode-pchar branch)
-                                                     :branch-aux (router/-encode-pchar branch-aux)))
+                                                     :encoded-route (base-64-url-safe/encode (pr-str route))
+                                                     ; todo this needs work
+                                                     #_#_:encoded-route (subs (foundation/route-encode rt route) 1) ; includes "/"
+                                                     :branch (ednish/encode-uri branch)
+                                                     :branch-aux (ednish/encode-uri branch-aux)))
                 :accept :application/transit+json :as :auto}
                (when jwt {:auth {:bearer jwt}})
                (if (empty? stage)

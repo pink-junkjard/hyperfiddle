@@ -1,8 +1,8 @@
-(ns hyperfiddle.ide-test
+(ns hyperfiddle.foundation-test
   (:require [clojure.test :refer [deftest is]]
             [contrib.reactive :as r]
             [contrib.reader]                                ; wrong dependency?
-            [hyperfiddle.ide :refer [route-encode]]
+            [hyperfiddle.foundation :refer [route-encode]]
             [hyperfiddle.runtime :as runtime]))
 
 

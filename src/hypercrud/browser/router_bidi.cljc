@@ -1,11 +1,13 @@
 (ns hypercrud.browser.router-bidi
   (:require
     [bidi.bidi :as bidi]
+    [clojure.spec.alpha :as s]
     [contrib.reader :refer [read-edn-string!]]
     [contrib.rfc3986 :refer [split-fragment]]
     [contrib.string :refer [abc split-first empty->nil]]
-    [hypercrud.browser.router :refer [assoc-frag]]
+    [cuerdas.core :as str]
     [hyperfiddle.ide.system-fiddle :refer [system-fiddle?]]
+    [hyperfiddle.route :refer [assoc-frag]]
     [hypercrud.types.ThinEntity :refer [->ThinEntity #?(:cljs ThinEntity)]])
   #?(:clj
      (:import (hypercrud.types.ThinEntity ThinEntity))))
@@ -30,7 +32,7 @@
   (transform-param [this]
     (fn [v]
       (let [$ (.-dbname this)                               ; the "$" is provided by entity placeholder in the route
-            e (read-edn-string! v)]                          ; the reader will need to subs ! to /
+            e (read-edn-string! v)]                         ; the reader will need to subs ! to /
         (->ThinEntity $ e))))
   (matches? [this s]
     (let [r (re-pattern
@@ -93,9 +95,13 @@
 
 
 (defn decode [router path-and-frag]
+  {:pre [(str/starts-with? path-and-frag "/")]
+   :post [(s/valid? :hyperfiddle/route %)]}
   (let [[path frag] (split-fragment path-and-frag)
         route (some-> (bidi/match-route router path) ->bidi-consistency-wrapper bidi->hf)]
-    (if route (assoc-frag route (empty->nil frag)))))
+    (if route
+      (assoc-frag route (empty->nil frag))
+      [:hyperfiddle.system.route/not-found])))
 
 (comment
   (def path-and-frag "/:hyperblog.2!tag/:hyperfiddle#:src")
@@ -110,8 +116,12 @@
   )
 
 (defn encode [router route]
+  {:pre [(s/valid? :hyperfiddle/route route)]
+   :post [(str/starts-with? % "/")]}
   (let [[_ _ _ frag] route]
     (if-let [url (apply bidi/path-for router (->bidi route))]
       (if (empty->nil frag)
         (str url "#" frag)
-        url))))
+        url)
+      ; todo attempt to write an error url in this else case
+      )))

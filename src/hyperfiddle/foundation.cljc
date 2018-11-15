@@ -2,7 +2,9 @@
   (:refer-clojure :exclude [read-string])
   (:require
     [bidi.bidi :as bidi]
+    [cats.core :as cats :refer [>>=]]
     [cats.monad.either :as either]
+    [clojure.spec.alpha :as s]
     [clojure.string :as string]
     #?(:cljs [contrib.css :refer [css]])
     [contrib.base-64-url-safe :as base64-url-safe]
@@ -11,10 +13,13 @@
     [contrib.reactive :as r]
     [contrib.reader :refer [read-string read-edn-string!]]
     [contrib.pprint :refer [pprint-datoms-str]]
-    [contrib.string :refer [or-str]]
+    [contrib.reader :refer [read-edn-string+]]
+    [contrib.string :refer [empty->nil or-str]]
     [contrib.try$ :refer [try-either]]
     #?(:cljs [contrib.ui :refer [code debounced markdown validated-cmp]])
+    [cuerdas.core :as str]
     [hypercrud.browser.context :as context]
+    [hypercrud.browser.router-bidi :as router-bidi]
     [hypercrud.client.core :as hc]
     [hypercrud.client.peer :refer [-quiet-unwrap]]
     [hypercrud.types.EntityRequest :refer [->EntityRequest]]
@@ -33,6 +38,37 @@
 (def domain-uri #uri "datomic:free://datomic:4334/domains")
 (def source-domain-ident "hyperfiddle")                     ; todo this needs to be configurable
 
+(defn home-route [domain]
+  (-> (or (some-> domain :domain/home-route read-edn-string+)
+          (either/right [:hyperfiddle.system.route/home-route-error ["Missing home route"]]))
+      (>>= route/validate-route+)
+      (either/branch
+        (fn [e] [:hyperfiddle.system.route/home-route-error [#?(:cljs (ex-message e) :clj (.getMessage e))]])
+        identity)))
+
+(defn route-encode [rt route]
+  {:pre [(s/valid? :hyperfiddle/route route)]}
+  (let [domain @(runtime/state rt [::runtime/domain])]
+    (if-let [?router+ (some-> domain :domain/router empty->nil read-edn-string+)]
+      (-> (cats/>>= ?router+ #(try-either (router-bidi/encode % route)))
+          (either/branch
+            (fn [e]
+              ; todo the :domain/router model needs work; currently there is not a lot that makes sense for us to do
+              ; how do we write an error URL, when the router is completely broken?
+              (throw e))
+            identity))
+      (route/url-encode route (home-route domain)))))
+
+(defn route-decode [rt s]
+  {:pre [(str/starts-with? s "/")]}
+  (let [domain @(runtime/state rt [::runtime/domain])]
+    (if-let [?router+ (some-> domain :domain/router empty->nil read-edn-string+)]
+      (-> (cats/>>= ?router+ #(try-either (router-bidi/decode % s)))
+          (either/branch
+            (fn [e] (route/decoding-error e s))
+            identity))
+      (route/url-decode s (home-route domain)))))
+
 #?(:cljs
    (defn stateless-login-url [ctx]
      (let [{:keys [build hostname :ide/root]} (runtime/host-env (:peer ctx))
@@ -40,7 +76,7 @@
        (str domain "/login?"
             "client=" client-id
             "&scope=" "openid email profile"
-            "&state=" (base64-url-safe/encode (runtime/encode-route (:peer ctx) (context/target-route ctx)))
+            "&state=" (base64-url-safe/encode (route-encode (:peer ctx) (context/target-route ctx)))
             "&redirect_uri=" (str "http://" hostname (bidi/path-for (build-routes build) :auth0-redirect))))))
 
 (defn domain-request [domain-eid peer]
@@ -93,7 +129,7 @@
          [:fieldset [:legend "(.-stack e)"]                 ; network error
           [:pre (.-stack e)]]])]))
 
-(defn shadow-domain [domain]
+(defn shadow-domain [domain]                                ; ide
   ; also called from the view, which wants database types, so separate from process-domain
   (update domain :domain/home-route or-str "[:hyperfiddle.ide/entry-point-fiddles]"))
 
@@ -251,16 +287,10 @@
           LEVEL-GLOBAL-BASIS (actions/refresh-global-basis rt nil (partial runtime/dispatch! rt) #(deref (runtime/state rt)))
           LEVEL-DOMAIN (actions/refresh-domain rt (partial runtime/dispatch! rt) #(deref (runtime/state rt)))
           LEVEL-USER (actions/refresh-user rt (partial runtime/dispatch! rt) #(deref (runtime/state rt)))
-          LEVEL-ROUTE (let [branch-aux {:hyperfiddle.ide/foo "page"}] ;ide
-                        (try (let [route (runtime/decode-route rt encoded-route)]
-                               (either/branch
-                                 (route/validate-route+ route)
-                                 (fn [e] (throw e))
-                                 (fn [route] (runtime/dispatch! rt [:add-partition nil route branch-aux]))))
-                             (p/resolved nil)
-                             (catch #?(:cljs :default :clj Exception) e
-                               (runtime/dispatch! rt [:set-error e])
-                               (p/rejected e))))
+          LEVEL-ROUTE (let [branch-aux {:hyperfiddle.ide/foo "page"} ;ide
+                            route (route-decode rt encoded-route)]
+                        (runtime/dispatch! rt [:add-partition nil route branch-aux])
+                        (p/resolved nil))
           LEVEL-LOCAL-BASIS (-> (actions/refresh-partition-basis rt nil (partial runtime/dispatch! rt) #(deref (runtime/state rt)))
                                 (p/then #(runtime/dispatch! rt [:hydrate!-start nil])))
           LEVEL-SCHEMA (actions/hydrate-partition-schema rt nil (partial runtime/dispatch! rt) #(deref (runtime/state rt)))
