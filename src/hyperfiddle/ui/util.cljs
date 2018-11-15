@@ -47,10 +47,14 @@
          n (empty->nil n)]                                  ; hack for garbage string controls
      (tx/edit-entity id attribute o n))))
 
-(defn with-tx! [ctx tx]
-  (let [uri (context/uri ctx)]
-    (->> (actions/with-groups (:peer ctx) (:branch ctx) {uri tx})
-         (runtime/dispatch! (:peer ctx)))))
+(defn with-tx!
+  ([ctx tx]
+   (with-tx! ctx (context/dbname ctx) tx))
+  ([ctx dbname tx]
+   (let [uri (context/uri dbname ctx)]
+     (assert uri)
+     (->> (actions/with-groups (:peer ctx) (:branch ctx) {uri tx})
+          (runtime/dispatch! (:peer ctx))))))
 
 (defn with-entity-change! [ctx] (r/comp (r/partial with-tx! ctx) (r/partial entity-change->tx ctx)))
 
