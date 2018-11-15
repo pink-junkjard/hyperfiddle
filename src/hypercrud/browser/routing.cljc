@@ -31,7 +31,7 @@
                                        (->ThinEntity (.-dbname v) id))
                                      v)))
                   :request-params)]
-    (assoc route 1 args)))
+    (apply route/canonicalize (assoc route 1 args))))
 
 (defn id->tempid+ [route ctx]
   (let [invert-id (fn [id uri]
