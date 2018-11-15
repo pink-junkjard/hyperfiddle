@@ -19,10 +19,8 @@
                   :dbid number?
                   ;:lookup ...
                   :uuid :fiddle/uuid))
-(s/def ::datomic-args (s/or
-                        :nil nil?
-                        :seq (s/and seqable? seq)))
-(s/def ::service-args any?)
+(s/def ::datomic-args seqable?)
+(s/def ::service-args some?)
 (s/def ::fragment some?)
 
 (s/def :hyperfiddle/route
@@ -33,8 +31,8 @@
   (s/or
     :a (s/tuple ::fiddle)
     :b (s/tuple ::fiddle ::datomic-args)
-    :c (s/tuple ::fiddle ::datomic-args ::service-args)
-    :d (s/tuple ::fiddle ::datomic-args ::service-args ::fragment)))
+    :c (s/tuple ::fiddle (s/or :nil nil? :args ::datomic-args) ::service-args)
+    :d (s/tuple ::fiddle (s/or :nil nil? :args ::datomic-args) (s/or :nil nil? :args ::service-args) ::fragment)))
 
 (defn validate-route+ [route]
   (if (s/valid? :hyperfiddle/route route)
