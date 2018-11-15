@@ -105,5 +105,6 @@
              colored-args (try-either @(r/fmap->> (or (:hypercrud.browser/data ctx) (r/track identity nil))
                                                   (pull->colored-eid ctx)
                                                   f))
-             route (id->tempid+ (route/canonicalize fiddle-id (normalize-args colored-args)) ctx)]
+             route (id->tempid+ (route/canonicalize fiddle-id (normalize-args colored-args)) ctx)
+             route (route/validate-route+ route)]
         (return route)))))
