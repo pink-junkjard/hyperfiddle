@@ -1,9 +1,11 @@
 (ns hyperfiddle.service.http
   (:require
     [cats.monad.either :as either]
+    [contrib.base-64-url-safe :as base-64-url-safe]
+    [contrib.ednish :as ednish]
     [contrib.reactive :as r]
+    [contrib.reader :refer [read-edn-string!]]
     [contrib.uri :refer [->URI]]
-    [hypercrud.browser.router :as router]
     [hypercrud.types.Err :refer [->Err]]
     [hyperfiddle.actions :as actions]
     [hyperfiddle.io.rpc-router :refer [decode-basis]]
@@ -62,13 +64,15 @@
 (defn local-basis-handler [->Runtime & {:keys [host-env route-params user-id jwt]}]
   (try
     (let [global-basis (decode-basis (:global-basis route-params)) ; todo this can throw
-          route (router/decode (str "/" (:encoded-route route-params)))
+          route (-> (:encoded-route route-params) base-64-url-safe/decode read-edn-string!)
+          ; todo this needs work, decoding should happen after the domain is hydrated
+          #_#_route (-> (str "/" (:encoded-route route-params)) (foundation/route-decode rt))
           _ (either/branch
               (route/validate-route+ route)
               (fn [e] (throw (ex-info "Invalid encoded-route" {:route route :hyperfiddle.io/http-status-code 400} e)))
               (constantly nil))
-          branch (some-> (:branch route-params) router/-decode-url-ednish)
-          branch-aux (some-> (:branch-aux route-params) router/-decode-url-ednish)
+          branch (some-> (:branch route-params) ednish/decode-uri)
+          branch-aux (some-> (:branch-aux route-params) ednish/decode-uri)
           initial-state {::runtime/user-id user-id
                          ::runtime/global-basis global-basis
                          ::runtime/partitions {branch {:route route
@@ -93,13 +97,15 @@
 (defn hydrate-route-handler [->Runtime & {:keys [host-env route-params request-body user-id jwt]}]
   (try
     (let [local-basis (decode-basis (:local-basis route-params)) ; todo this can throw
-          route (-> (str "/" (:encoded-route route-params)) router/decode)
+          route (-> (:encoded-route route-params) base-64-url-safe/decode read-edn-string!)
+          ; todo this needs work, decoding should happen after the domain is hydrated
+          #_#_route (-> (str "/" (:encoded-route route-params)) (foundation/route-decode rt))
           _ (either/branch
               (route/validate-route+ route)
               (fn [e] (throw (ex-info "Invalid encoded-route" {:route route :hyperfiddle.io/http-status-code 400} e)))
               (constantly nil))
-          branch (some-> (:branch route-params) router/-decode-url-ednish)
-          branch-aux (some-> (:branch-aux route-params) router/-decode-url-ednish)
+          branch (some-> (:branch route-params) ednish/decode-uri)
+          branch-aux (some-> (:branch-aux route-params) ednish/decode-uri)
           initial-state (reduce (fn [state [branch v]]
                                   (assoc-in state [::runtime/partitions branch :stage] v))
                                 {::runtime/user-id user-id

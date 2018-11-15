@@ -28,13 +28,6 @@
   (global-basis [rt]
     (global-basis rt (:domain-eid host-env)))
 
-  runtime/Route
-  (decode-route [rt s]
-    (ide/route-decode rt s))
-
-  (encode-route [rt v]
-    (ide/route-encode rt v))
-
   runtime/DomainRegistry
   (domain [rt]
     (ide/domain rt (:domain-eid host-env)))

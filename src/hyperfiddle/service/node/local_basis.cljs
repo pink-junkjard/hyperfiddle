@@ -25,13 +25,6 @@
   (global-basis [rt]
     (global-basis-rpc! (:service-uri host-env) (:build host-env) jwt))
 
-  runtime/Route
-  (encode-route [rt v]
-    (ide/route-encode rt v))
-
-  (decode-route [rt s]
-    (ide/route-decode rt s))
-
   runtime/DomainRegistry
   (domain [rt]
     (ide/domain rt (:domain-eid host-env)))
