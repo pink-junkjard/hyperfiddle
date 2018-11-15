@@ -94,7 +94,6 @@
                   datomic-args (->> (str/split datomic-args-segment "/"))] #_"careful: (str/split \"\" \"/\") => [\"\"]"
               (canonicalize
                 (ednish/decode-uri fiddle)
-                ;(mapv -decode-url-ednish fiddle-args)
                 (if-let [as (->> datomic-args (remove str/empty-or-nil?) seq)]
                   (mapv ednish/decode-uri as))
                 (ednish/decode-uri query)

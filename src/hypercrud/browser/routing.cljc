@@ -13,7 +13,6 @@
     [contrib.try$ :refer [try-either]]
     [hypercrud.browser.context :as context]
     [hypercrud.browser.q-util :as q-util]
-    [hypercrud.browser.router :as router]
     [hypercrud.types.ThinEntity :refer [->ThinEntity #?(:cljs ThinEntity)]]
     [hyperfiddle.domain :as domain]
     [hyperfiddle.route :as route]
@@ -108,5 +107,3 @@
                                                   f))
              route (id->tempid+ (route/canonicalize fiddle-id (normalize-args colored-args)) ctx)]
         (return route)))))
-
-(def encode router/encode)                                  ; todo yank; need user migrations
