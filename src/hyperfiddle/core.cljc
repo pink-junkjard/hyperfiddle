@@ -11,7 +11,6 @@
 
     ; UI helpers
     #?(:cljs [contrib.loader])
-    #?(:cljs [contrib.reagent])
     #?(:cljs [contrib.ui])
 
     ; These things can hardcode hyperfiddle.ui, like userland
