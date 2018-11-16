@@ -6,22 +6,22 @@
 (declare user-portal)
 
 (code-for-nodejs
-  (defn user-portal [with-error & children]
+  (defn user-portal [with-error ?error-class & children]
     ; No portal in SSR, so errors will crash the whole page.
     ; IDE doesn't SSR so use the IDE to fix it.
     (into [:<>] children)))
 
 (code-for-browser
-  (defn user-portal [with-error ?class & children]
+  (defn user-portal [with-error ?error-class & children]
     (let [show-error (atom false)
           e-state (reagent/atom nil)]
       (reagent/create-class
-        {:reagent-render (fn [with-error ?class & children]
+        {:reagent-render (fn [with-error ?error-class & children]
                            (let [e @e-state]
                              (if (and @show-error e)
                                (do
                                  (reset! show-error false)  ; only show the error once, retry after that
-                                 [with-error e ?class])
+                                 [with-error e ?error-class])
                                (into [:<>] children))))
 
          :component-did-catch (fn [this e info]
