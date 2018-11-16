@@ -106,11 +106,14 @@
                    (reset! os-ref {:old-values [b] :value b}))
                  (swap! os-ref assoc :old-values (vec rest))))))}))))
 
-(let [on-change (fn [state parse-string new-s-value]
+(let [on-change (fn [f state parse-string new-s-value]
                   (swap! state assoc :s-value new-s-value)
-                  (let [new-value (parse-string new-s-value)] ; todo this should be atomic, but we still want to throw
-                    (swap! state assoc :last-valid-value new-value)
-                    new-value))
+                  (try
+                    (let [new-value (parse-string new-s-value)] ; todo this should be atomic, but we still want to throw
+                      (swap! state assoc :last-valid-value new-value)
+                      (f new-value))
+                    ; this exception will be reported in the render as invalid
+                    (catch :default e)))
       initial-state-val (fn [to-string props]
                           {:s-value (to-string (:value props))
                            :last-valid-value (:value props)})
@@ -129,9 +132,7 @@
                            (update-existing :on-blur (fn [f]
                                                        (r/partial on-blur state f)))
                            (update :on-change (fn [f]
-                                                (r/comp
-                                                  (or f identity)
-                                                  (r/partial on-change state parse-string))))
+                                                (r/partial on-change f state parse-string)))
                            (dissoc :magic-new-mode))]
              (into [cmp props] args)))
          :component-did-update
