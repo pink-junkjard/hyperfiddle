@@ -169,15 +169,12 @@
                           v))
          to-string pprint-datoms-str
          on-change (fn [peer branch uri-ref o n]
-                     (runtime/dispatch! peer (actions/reset-stage-uri peer branch @uri-ref n)))
-         code-wrapper (fn [props]
-                        [:div.staging-cm-wrapper (select-keys props [:class])
-                         [code props]])]
+                     (runtime/dispatch! peer (actions/reset-stage-uri peer branch @uri-ref n)))]
      (defn staging-control [ctx uri-ref]
        (let [props {:value @(runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :stage @uri-ref])
                     :readOnly @(runtime/state (:peer ctx) [::runtime/auto-transact @uri-ref])
                     :on-change (r/partial on-change (:peer ctx) (:branch ctx) uri-ref)}]
-         [debounced props validated-cmp parse-string to-string code-wrapper]))))
+         [debounced props validated-cmp parse-string to-string code]))))
 
 #?(:cljs
    (defn ^:export staging [ctx & [child]]

@@ -1,6 +1,8 @@
 (ns contrib.ui.codemirror
   (:require
+    [contrib.css :refer [css]]
     [contrib.data :refer [orp]]
+    [clojure.string :as string]
     [cuerdas.core :as str]
     [goog.object :as object]
     [reagent.core :as reagent]))
@@ -16,6 +18,13 @@
           :let [option (str/camel (name prop))]             ; casing hacks see https://github.com/hyperfiddle/hyperfiddle/issues/497
           :when (not= val (.getOption ref option))]
     (.setOption ref option val)))
+
+(defn set-invalid! [cm is-invalid]
+  ; placeholder addon manipulates DOM node classname this way too:
+  ; https://codemirror.net/addon/display/placeholder.js
+  (let [wrapper (.getWrapperElement cm)
+        new-classname (str (string/replace (.-className wrapper) " invalid" "") (when is-invalid " invalid"))]
+    (set! (.-className wrapper) new-classname)))
 
 (defn ensure-mode [ref new-mode]
   (js/parinferCodeMirror.setMode ref new-mode)
@@ -33,15 +42,18 @@
   (reagent/create-class
     {:reagent-render
      (fn [props]
-       [contrib.ui/textarea (assoc (select-keys props [:id :class :default-value :on-change :value]) ; #318 Warning: React does not recognize the `lineNumbers` prop on a DOM element
-                              :auto-complete "off")])
+       [contrib.ui/textarea
+        (-> props
+            (select-keys [:id :class :default-value :on-change :value]) ; #318 Warning: React does not recognize the `lineNumbers` prop on a DOM element
+            (assoc :auto-complete "off")
+            (cond-> (:is-invalid props) (update :class css "invalid")))])
 
      :component-did-mount
      (fn [this]
        ; Codemirror will default to the first mode loaded in preamble
        (let [[_ props] (reagent/argv this)
              ref (js/CodeMirror.fromTextArea (reagent/dom-node this)
-                                             (-> (dissoc props :on-change)
+                                             (-> (dissoc props :on-change :is-invalid)
                                                  camel-keys ; casing hacks see https://github.com/hyperfiddle/hyperfiddle/issues/497
                                                  clj->js))]
 
@@ -51,6 +63,8 @@
            (ensure-mode ref "paren")                        ; sets up css
            (.addKeyMap ref #js {"Ctrl-1" #(let [cur-mode (goog.object/getValueByKeys ref "__parinfer__" "mode")]
                                             (ensure-mode ref (case cur-mode "paren" "indent" "paren")))}))
+
+         (set-invalid! ref (:is-invalid props))
 
          ; Props are a shitshow. Remark is stringly, and codemirror wants js types.
          ; set `lineNumber=` to disable line numbers (empty string is falsey).
@@ -86,4 +100,5 @@
                     (not (and (= "" current-value) (= (:default-value props) new-value)))
                     (not (and (= "" new-value) (= (:default-value props) current-value))))
            (.setValue ref new-value))
-         (sync-changed-props! ref (dissoc props :default-value :value :on-change))))}))
+         (set-invalid! ref (:is-invalid props))
+         (sync-changed-props! ref (dissoc props :default-value :value :on-change :is-invalid))))}))

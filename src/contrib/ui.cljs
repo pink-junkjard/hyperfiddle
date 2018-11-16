@@ -1,17 +1,18 @@
 (ns contrib.ui
   (:refer-clojure :exclude [keyword long])
   (:require
+    [cats.core :as cats]
     [contrib.css :refer [css]]
     [contrib.data :refer [orp update-existing]]
     [contrib.pprint :refer [pprint-str]]
     [contrib.reactive :as r]
     [contrib.reader]
     [contrib.string :refer [blank->nil]]
+    [contrib.try$ :refer [try-either]]
     [contrib.ui.codemirror :refer [-codemirror]]
     [contrib.ui.tooltip :refer [tooltip]]
     [contrib.ui.remark :as remark]
     [goog.functions :as functions]
-    [goog.object :as object]
     [re-com.core :as re-com]
     [reagent.core :as reagent]
     [taoensso.timbre :as timbre]))
@@ -108,12 +109,12 @@
 
 (let [on-change (fn [f state parse-string new-s-value]
                   (swap! state assoc :s-value new-s-value)
-                  (try
-                    (let [new-value (parse-string new-s-value)] ; todo this should be atomic, but we still want to throw
-                      (swap! state assoc :last-valid-value new-value)
-                      (f new-value))
-                    ; this exception will be reported in the render as invalid
-                    (catch :default e)))
+                  (->> (try-either
+                         (let [new-value (parse-string new-s-value)] ; todo this should be atomic, but we still want to throw
+                           (swap! state assoc :last-valid-value new-value)
+                           new-value))
+                       (cats/fmap f))
+                  nil)
       initial-state-val (fn [to-string props]
                           {:s-value (to-string (:value props))
                            :last-valid-value (:value props)})
@@ -126,9 +127,8 @@
          (fn [props parse-string to-string cmp & args]
            (let [s-value @(r/cursor state [:s-value])
                  props (-> (assoc props :value s-value)
-                           (update :class css (let [valid? (try (parse-string s-value) true
-                                                                (catch :default e false))]
-                                                (when-not valid? "invalid")))
+                           (assoc :is-invalid (try (parse-string s-value) false
+                                                   (catch :default e true)))
                            (update-existing :on-blur (fn [f]
                                                        (r/partial on-blur state f)))
                            (update :on-change (fn [f]
@@ -154,6 +154,8 @@
 (let [target-value (fn [e] (.. e -target -value))]          ; letfn not working #470
   (defn text [props]
     [:input (-> (assoc props :type "text")
+                (dissoc :is-invalid)
+                (cond-> (:is-invalid props) (update :class css "invalid"))
                 (update-existing :on-change r/comp target-value))]))
 
 (let [parse-string (fn [s]                                  ; letfn not working #470
@@ -213,7 +215,8 @@
         :showing? showing?
         :position :below-center
         :anchor [:a {:href "javascript:void 0;" :on-click (r/partial swap! showing? not)}
-                 [:span (orp seq (:value props) (:default-value props) "-")]]
+                 [:span (when (:is-invalid props) {:class "invalid"})
+                  (orp seq (:value props) (:default-value props) "-")]]
         :popover [re-com/popover-content-wrapper
                   :close-button? true
                   :on-cancel (r/partial reset! showing? false)
@@ -221,21 +224,11 @@
                   :width "600px"
                   :body (code props)]]])))
 
-(letfn [(read-edn-string [user-edn-str]
-          ; parent on-change can catch exceptions if they care
-          ; otherwise this will bubble up to the console appropriately
-          (some-> user-edn-str contrib.reader/read-edn-string!))]
-  (defn- adapt-edn-props [props]
-    ; Must validate since invalid edn means there's no value to stage.
-    ; Code editors are different since you are permitted to stage broken code (and see the error and fix it)
-    (-> props
-        (assoc :mode "clojure")
-        (update :value pprint-str)
-        (update-existing :on-change r/comp read-edn-string))))
+(defn ^:export cm-edn [props]
+  [validated-cmp (assoc props :mode "clojure") contrib.reader/read-edn-string! pprint-str code])
 
-(defn ^:export cm-edn [props] [code (adapt-edn-props props)])
-
-(defn ^:export cm-edn-inline-block [props] [code-inline-block (adapt-edn-props props)])
+(defn ^:export cm-edn-inline-block [props]
+  [validated-cmp (assoc props :mode "clojure") contrib.reader/read-edn-string! pprint-str code-inline-block])
 
 (def ^:export markdown (remark/remark!))
 
