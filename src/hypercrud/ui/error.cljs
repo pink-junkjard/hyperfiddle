@@ -25,9 +25,9 @@
     [:span {:class ?class}
      (str message #_#_" " (str " -- " (ex-data->human-detail data)))]))
 
-(defn error-block [e]
+(defn error-block [e & [?class]]
   (let [{:keys [cause data message]} (e->map e)]            ; we don't always return an error with a message
-    [:pre
+    [:div {:class ?class}
      [:h3 message]
      [markdown (str "```\n" (ex-data->human-detail data) "\n```\n")]
      (if (:human-hint data) [markdown (:human-hint data)])

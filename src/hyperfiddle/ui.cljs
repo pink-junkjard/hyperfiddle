@@ -50,7 +50,7 @@
   ; The only way to stabilize this is for this type signature to become a react class.
   (when-let [user-f (-> @(r/cursor (:hypercrud.browser/attr-renderers ctx) [(last (:hypercrud.browser/path ctx))])
                         blank->nil)]
-    [user-portal (ui-error/error-comp ctx)
+    [user-portal (ui-error/error-comp ctx) nil
      ; ?user-f is stable due to memoizing eval (and only due to this)
      [eval-renderer-comp user-f val ctx props]]))
 
@@ -190,7 +190,7 @@ User renderers should not be exposed to the reaction."
                 props (select-keys props' [:class :initial-tab #_:disabled]) ; https://github.com/hyperfiddle/hyperfiddle/issues/698
                 display-mode @(:hypercrud.ui/display-mode ctx)]
             ^{:key (str display-mode)}
-            [user-portal (ui-error/error-comp ctx)
+            [user-portal (ui-error/error-comp ctx) (css "hyperfiddle-error" (:class props))
              (case display-mode
                :hypercrud.browser.browser-ui/user (if-let [user-renderer (:user-renderer props')]
                                                     [user-renderer value ctx props]

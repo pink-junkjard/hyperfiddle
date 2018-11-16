@@ -12,16 +12,16 @@
     (into [:<>] children)))
 
 (code-for-browser
-  (defn user-portal [with-error & children]
+  (defn user-portal [with-error ?class & children]
     (let [show-error (atom false)
           e-state (reagent/atom nil)]
       (reagent/create-class
-        {:reagent-render (fn [with-error & children]
+        {:reagent-render (fn [with-error ?class & children]
                            (let [e @e-state]
                              (if (and @show-error e)
                                (do
                                  (reset! show-error false)  ; only show the error once, retry after that
-                                 [with-error e])
+                                 [with-error e ?class])
                                (into [:<>] children))))
 
          :component-did-catch (fn [this e info]
