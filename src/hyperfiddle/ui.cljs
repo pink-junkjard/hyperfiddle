@@ -23,6 +23,7 @@
     [hypercrud.browser.field :as field]
     [hypercrud.browser.link :as link]
     [hypercrud.browser.routing :as routing]
+    [hypercrud.client.peer :as peer]
     [hypercrud.types.Err :as Err]
     [hypercrud.types.ThinEntity :refer [->ThinEntity]]
     [hypercrud.ui.connection-color :refer [connection-color]]
@@ -228,6 +229,7 @@ User renderers should not be exposed to the reaction."
          (reagent/after-render
            (fn []
              (when (and (exists? js/Sentry)                 ; todo hide behind interface on runtime
+                        (peer/loading? e)
                         (not @(stale/can-be-loading? ctx)))
                (.withScope js/Sentry (fn [scope]
                                        (.setExtra scope "ex-data" (clj->js (ex-data e)))
