@@ -12,6 +12,7 @@
     [hypercrud.browser.context :as context]
     [hypercrud.util.branch :as branch]
     [hyperfiddle.actions :as actions]
+    [hyperfiddle.api]
     [hyperfiddle.runtime :as runtime]
     [hyperfiddle.tempid :as tempid :refer [stable-entity-key]]
     [promesa.core :as p]
@@ -24,14 +25,14 @@
   (defn- with-swap-fn [link-ref ?route ctx f]
     (let [{:keys [:link/tx-fn] :as link} @link-ref]
       (-> (if (and (string? tx-fn) (not (string/blank? tx-fn)))
-            (memoized-eval-string tx-fn)
+            (memoized-eval-string tx-fn)                    ; TODO migrate type to keyword
             (p/resolved (constantly nil)))
           (p/then
             (fn [user-txfn]
               (p/promise
                 (fn [resolve! reject!]
                   (let [swap-fn-async (fn [multi-color-tx]
-                                        (let [result (let [result (user-txfn ctx multi-color-tx ?route)]
+                                        (let [result (let [result ((hyperfiddle.api/txfn user-txfn) ctx multi-color-tx ?route)]
                                                        ; txfn may be sync or async
                                                        (if-not (p/promise? result) (p/resolved result) result))]
                                           ; let the caller of this :stage fn know the result
@@ -69,7 +70,7 @@
   [:div.hyperfiddle-popover-body                            ; wrpaper helps with popover max-width, hard to layout without this
    ; NOTE: this ctx logic and structure is the same as the popover branch of browser-request/recurse-request
    (let [ctx (cond-> (context/clean ctx)                    ; hack clean for block level errors
-               child-branch (assoc :branch child-branch))]
+                     child-branch (assoc :branch child-branch))]
      [hyperfiddle.ui/iframe ctx {:route route}])            ; cycle
    (when child-branch
      [:button {:on-click (r/partial stage! link-ref route popover-id child-branch ctx)} "stage"])

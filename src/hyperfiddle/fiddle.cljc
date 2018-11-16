@@ -99,10 +99,10 @@
                      nil))
    :link/tx-fn (fn [link]
                  (case (:link/rel link)
-                   :hf/new "(constantly {:tx []})"          ; hack to draw as popover
-                   :hf/remove (template/load-resource "auto-txfn/remove.edn")
-                   :hf/affix (template/load-resource "auto-txfn/affix.edn")
-                   :hf/detach (template/load-resource "auto-txfn/detach.edn")
+                   :hf/new ":zero"                            ; hack to draw as popover
+                   :hf/remove ":db.fn/retractEntity"
+                   :hf/affix ":db/add"
+                   :hf/detach ":db/retract"
                    :hf/self nil
                    :hf/iframe nil
                    :hf/rel nil
