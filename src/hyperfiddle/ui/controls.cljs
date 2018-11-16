@@ -2,7 +2,9 @@
   (:refer-clojure :exclude [boolean keyword long])
   (:require
     [cats.monad.either :refer [branch]]
+    [contrib.pprint :refer [pprint-str]]
     [contrib.reactive :as r]
+    [contrib.reader :as reader]
     [contrib.ui :refer [debounced]]                         ; avoid collisions
     [contrib.ui.recom-date :refer [recom-date]]
     [contrib.ui.tooltip :refer [tooltip-thick]]
@@ -16,6 +18,23 @@
     [hyperfiddle.ui.select$ :refer [select]]
     [hyperfiddle.ui.util :refer [with-entity-change! with-tx!]]))
 
+
+(defn value-validator [ctx]
+  (case @(context/hydrate-attribute ctx (last (:hypercrud.browser/path ctx)) :db/valueType :db/ident)
+    :db.type/bigdec any?                                    ;  todo
+    :db.type/bigint any?                                    ;  todo
+    :db.type/boolean boolean?
+    :db.type/bytes any?                                     ;  todo
+    :db.type/double number?
+    :db.type/float number?
+    :db.type/fn any?                                        ;  todo
+    :db.type/instant any?                                   ;  todo
+    :db.type/keyword keyword?
+    :db.type/long any?                                      ;  todo
+    :db.type/ref any?                                       ;  todo
+    :db.type/string string?
+    :db.type/uri any?                                       ;  todo
+    :db.type/uuid uuid?))
 
 (defn ^:export keyword [val ctx & [props]]
   (let [props (-> (assoc props
@@ -177,24 +196,35 @@
                     :lineWrapping true))]
     [debounced props (code-comp ctx)]))
 
-(defn- edn-comp [ctx]
-  (case (:hyperfiddle.ui/layout ctx :hyperfiddle.ui.layout/block)
-    :hyperfiddle.ui.layout/block contrib.ui/cm-edn
-    :hyperfiddle.ui.layout/table contrib.ui/cm-edn-inline-block))
+(let [parse-string (fn [value-pred s]
+                     (let [v (reader/read-edn-string! s)]
+                       (assert (every? value-pred v))
+                       v))]
+  (defn ^:export edn-many [val ctx & [props]]
+    (let [valueType @(context/hydrate-attribute ctx (last (:hypercrud.browser/path ctx)) :db/valueType :db/ident)
+          val (set (if (= valueType :db.type/ref) (map (r/partial smart-entity-identifier ctx) val) val))
+          props (-> (assoc props
+                      :value val
+                      :mode "clojure"
+                      :on-change (with-entity-change! ctx)))]
+      [debounced props contrib.ui/validated-cmp (r/partial parse-string (value-validator ctx)) pprint-str
+       (case (:hyperfiddle.ui/layout ctx :hyperfiddle.ui.layout/block)
+         :hyperfiddle.ui.layout/block contrib.ui/code
+         :hyperfiddle.ui.layout/table contrib.ui/code-inline-block)])))
 
-(defn ^:export edn-many [val ctx & [props]]
-  (let [valueType @(context/hydrate-attribute ctx (last (:hypercrud.browser/path ctx)) :db/valueType :db/ident)
-        val (set (if (= valueType :db.type/ref) (map (r/partial smart-entity-identifier ctx) val) val))
-        props (-> (assoc props
-                    :value val
-                    :on-change (with-entity-change! ctx)))]
-    [debounced props (edn-comp ctx)]))
-
-(defn ^:export edn [val ctx & [props]]
-  (let [props (-> (assoc props
-                    :value val
-                    :on-change (with-entity-change! ctx)))]
-    [debounced props (edn-comp ctx)]))
+(let [parse-string (fn [value-pred s]
+                     (let [v (reader/read-edn-string! s)]
+                       (assert ((some-fn nil? value-pred) v))
+                       v))]
+  (defn ^:export edn [val ctx & [props]]
+    (let [props (-> (assoc props
+                      :value val
+                      :mode "clojure"
+                      :on-change (with-entity-change! ctx)))]
+      [debounced props contrib.ui/validated-cmp (r/partial parse-string (value-validator ctx)) pprint-str
+       (case (:hyperfiddle.ui/layout ctx :hyperfiddle.ui.layout/block)
+         :hyperfiddle.ui.layout/block contrib.ui/code
+         :hyperfiddle.ui.layout/table contrib.ui/code-inline-block)])))
 
 (defn ^:export radio-group [val ctx & [props]]
   (into [:span.radio-group (select-keys props [:class])]
