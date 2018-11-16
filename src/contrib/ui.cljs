@@ -213,7 +213,7 @@
         :showing? showing?
         :position :below-center
         :anchor [:a {:href "javascript:void 0;" :on-click (r/partial swap! showing? not)}
-                 [:code (orp seq (:value props) (:default-value props) "-")]]
+                 [:span (orp seq (:value props) (:default-value props) "-")]]
         :popover [re-com/popover-content-wrapper
                   :close-button? true
                   :on-cancel (r/partial reset! showing? false)
