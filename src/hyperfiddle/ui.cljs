@@ -11,7 +11,6 @@
     [contrib.data :refer [map-keys map-values take-to]]
     [contrib.pprint :refer [pprint-str]]
     [contrib.reactive :as r]
-    [contrib.reagent-native-events :refer [native-click-listener]]
     [contrib.string :refer [blank->nil]]
     [contrib.ui]
     [contrib.ui.safe-render :refer [user-portal]]
@@ -183,26 +182,28 @@ User renderers should not be exposed to the reaction."
                 ctx (if-let [spec (s/get-spec (:fiddle/ident @fiddle))]
                       (assoc ctx :hypercrud.browser/validation-hints (contrib.validation/validate spec value (partial data/row-keyfn ctx)))
                       ctx)
-                props' (update props :class css (auto-ui-css-class ctx))
-                props (select-keys props' [:class :initial-tab #_:disabled]) ; https://github.com/hyperfiddle/hyperfiddle/issues/698
-                display-mode @(:hypercrud.ui/display-mode ctx)]
+                props (update props :class css (auto-ui-css-class ctx))
+                view-props (select-keys props [:class :initial-tab :on-click #_:disabled]) ; https://github.com/hyperfiddle/hyperfiddle/issues/698
+                display-mode @(:hypercrud.ui/display-mode ctx)
+                error-props (-> (select-keys props [:class :on-click])
+                                (update :class css "hyperfiddle-error"))]
             ^{:key (str display-mode)}
-            [user-portal (ui-error/error-comp ctx) (css "hyperfiddle-error" (:class props))
+            [user-portal (ui-error/error-comp ctx) error-props
              (case display-mode
-               :hypercrud.browser.browser-ui/user (if-let [user-renderer (:user-renderer props')]
-                                                    [user-renderer value ctx props]
+               :hypercrud.browser.browser-ui/user (if-let [user-renderer (:user-renderer props)]
+                                                    [user-renderer value ctx view-props]
                                                     [:<>
                                                      [ui-util/eval-cljs-ns fiddle]
                                                      [eval-renderer-comp
                                                       (build-wrapped-render-expr-str (:fiddle/renderer @fiddle))
-                                                      value ctx props
+                                                      value ctx view-props
                                                       ; If userland crashes, reactions don't take hold, we need to reset here.
                                                       ; Cheaper to pass this as a prop than to hash everything
                                                       ; Userland will never see this param as it isn't specified in the wrapped render expr.
                                                       @fiddle
                                                       ]])
-               :hypercrud.browser.browser-ui/xray [fiddle-xray value ctx props]
-               :hypercrud.browser.browser-ui/api [fiddle-api value ctx props])]))
+               :hypercrud.browser.browser-ui/xray [fiddle-xray value ctx view-props]
+               :hypercrud.browser.browser-ui/api [fiddle-api value ctx view-props])]))
         (fiddle-css-renderer [s] [:style {:dangerouslySetInnerHTML {:__html @s}}])
         (src-mode [route ctx]
           (mlet [ctx (-> (context/clean ctx)
@@ -247,22 +248,19 @@ User renderers should not be exposed to the reaction."
                                                                          (map? e) (:message e)
                                                                          (string? e) e
                                                                          :else (ex-message e)))))))))
-         (let [on-click (r/partial click-fn route)]
-           [native-click-listener {:on-click on-click}
-            [error-comp e (css "hyperfiddle-error" (:class props) "ui")]]))
+         [error-comp e {:class (css "hyperfiddle-error" (:class props) "ui")
+                        :on-click (r/partial click-fn route)}])
        (fn [ctx]                                            ; fresh clean ctx
-         (let [on-click (r/partial click-fn @(:hypercrud.browser/route ctx))]
-           [native-click-listener {:on-click on-click}
-            [:<>
-             [ui-comp ctx (update props :class css "ui")]
-             [fiddle-css-renderer (r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/css])]]]))
+         [:<>
+          [ui-comp ctx (-> (update props :class css "ui")
+                           (assoc :on-click (r/partial click-fn @(:hypercrud.browser/route ctx))))]
+          [fiddle-css-renderer (r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/css])]])
        (fn [ctx]
-         (let [on-click (r/partial click-fn @(:hypercrud.browser/route ctx))]
-           ; use the stale ctx's route, otherwise alt clicking while loading could take you to the new route, which is jarring
-           [native-click-listener {:on-click on-click}
-            [:<>
-             [ui-comp ctx (update props :class css "hyperfiddle-loading" "ui")]
-             [fiddle-css-renderer (r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/css])]]]))])))
+         [:<>
+          [ui-comp ctx (-> (update props :class css "hyperfiddle-loading" "ui")
+                           ; use the stale ctx's route, otherwise alt clicking while loading could take you to the new route, which is jarring
+                           (assoc :on-click (r/partial click-fn @(:hypercrud.browser/route ctx))))]
+          [fiddle-css-renderer (r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/css])]])])))
 
 (letfn [(prompt [link-ref ?label]
           (or ?label (->> (conj (set @(r/fmap :link/class link-ref))

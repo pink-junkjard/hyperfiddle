@@ -20,22 +20,22 @@
 (defn ex-data->human-detail [{:keys [ident error-msg] :as data}]
   (or error-msg (pprint-str data)))
 
-(defn error-inline [e & [?class]]
+(defn error-inline [e & [props]]
   (let [{:keys [cause data message]} (e->map e)]
-    [:span {:class ?class}
+    [:span props
      (str message #_#_" " (str " -- " (ex-data->human-detail data)))]))
 
-(defn error-block [e & [?class]]
+(defn error-block [e & [props]]
   (let [{:keys [cause data message]} (e->map e)]            ; we don't always return an error with a message
-    [:div {:class ?class}
+    [:div props
      [:h3 message]
      [markdown (str "```\n" (ex-data->human-detail data) "\n```\n")]
      (if (:human-hint data) [markdown (:human-hint data)])
      #_(if (:query data) [markdown (str "```\n" (:query data) "\n```")])]))
 
-(defn error-block-with-stage [ctx e & [?class]]
+(defn error-block-with-stage [ctx e & [props]]
   [:<>
-   [error-block e ?class]
+   [error-block e props]
    (when (:branch ctx)
      [foundation/staging ctx])])
 
