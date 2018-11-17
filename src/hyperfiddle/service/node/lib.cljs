@@ -1,5 +1,6 @@
 (ns hyperfiddle.service.node.lib
   (:require
+    [contrib.uuid :refer [read-uuid]]
     [goog.object :as object]
     [hypercrud.transit :as transit]
     [hypercrud.types.Err :refer [->Err]]
@@ -36,7 +37,7 @@
       (try
         (let [jwt-cookie (some-> req .-cookies .-jwt)]
           (object/set req "jwt" jwt-cookie)
-          (object/set req "user-id" (some-> jwt-cookie verify :user-id uuid))
+          (object/set req "user-id" (some-> jwt-cookie verify :user-id read-uuid))
           (next))
         (catch js/Error e
           (timbre/error e)
