@@ -3,6 +3,7 @@
     ;["@hyperfiddle/remark-generic-extensions/lib/browser.min" :as remark-generic-extensions] ; works in node
     [clojure.set]
     [clojure.string]
+    [contrib.string :refer [blank->nil]]
     [goog.object]
     [prop-types]
     [reagent.core :as reagent]
@@ -16,15 +17,15 @@
       (dissoc :content :argument)                           ; need children downstack
       (clojure.set/rename-keys {:className :class})))
 
-(defn extension [name f]
+(defn extension [k f]
   (reagent/create-class
-    {:display-name (str "markdown-" name)
+    {:display-name (str "markdown-" (name k))
      :context-types #js {:ctx (.-object prop-types)}
      :reagent-render (fn [{:keys [content argument] :as props}]
                        (let [ctx (goog.object/get (.-context (reagent/current-component)) "ctx")
                              content (if-not (= content "undefined") content)
                              argument (if-not (= argument "undefined") argument)]
-                         (f content argument (adapt-props props) ctx)))}))
+                         (f k content argument (adapt-props props) ctx)))}))
 
 (defn -remark-render [remark-instance value]
   (let [c (-> remark-instance (.processSync value #js {"commonmark" true}) .-contents)
@@ -54,7 +55,8 @@
 
 (defn -remark-instance! [extensions]
   (let [extensions (reduce-kv (fn [acc k v]
-                                (assoc acc k (extension k v)))
+                                (assoc acc k (reagent/reactify-component
+                                               (extension k v))))
                               (empty extensions)
                               extensions)]
     (-> (remark)
@@ -63,9 +65,7 @@
                 {"elements" (into {} (map vector (keys extensions) (repeat {"html" {"properties" {"content" "::content::" "argument" "::argument::"}}})))}))
         (.use remark-react (clj->js
                              {"sanitize" false
-                              "remarkReactComponents" (reduce-kv (fn [m k v]
-                                                                   (assoc m k (reagent/reactify-component v)))
-                                                                 {} extensions)}))
+                              "remarkReactComponents" extensions}))
         (cond->
           (exists? js/remarkComments) (.use js/remarkComments #js {"beginMarker" "" "endMarker" ""})
           (exists? js/remarkToc) (.use js/remarkToc)))))
@@ -79,7 +79,7 @@
       {:display-name "markdown"
        :reagent-render
        (fn [value & [?ctx]]
-         (when-not (clojure.string/blank? value)
+         (when (blank->nil value)
            (-remark-render remark-instance value)))
 
        :get-child-context
