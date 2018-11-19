@@ -27,7 +27,7 @@
       memoized-eval-string (memoize safe-eval-string)]
   (defn- with-swap-fn [link-ref eav ctx f]
     (let [{:keys [:link/tx-fn] :as link} @link-ref]
-      (-> (if (and (string? tx-fn) (not (string/blank? tx-fn)))
+      (-> (if (blank->nil tx-fn)
             (memoized-eval-string tx-fn)                    ; TODO migrate type to keyword
             (p/resolved (constantly nil)))
           (p/then
