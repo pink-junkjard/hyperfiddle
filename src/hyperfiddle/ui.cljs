@@ -370,7 +370,7 @@ User renderers should not be exposed to the reaction."
            :style {:border-color (connection-color ctx)}}
      [Head nil (dissoc ctx :hypercrud.browser/data) props]
      (let [props (update props :disabled #(or % (not @(r/track writable-entity? ctx))))
-           props (update props :class css (if (:disabled props) "disabled"))]
+           props (update props :class css (if (:disabled props) "disabled") (if (context/invalid? ctx) "invalid"))]
        [Body @(:hypercrud.browser/data ctx) ctx props])]
     (when (= '* (last relative-path))                       ; :hypercrud.browser/path
       ; guard against crashes for nil data

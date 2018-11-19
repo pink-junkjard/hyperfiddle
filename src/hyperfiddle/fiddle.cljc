@@ -32,6 +32,8 @@
                   :fiddle/hydrate-result-as-fiddle
                   :hyperfiddle/owners])))
 
+(s/def :hyperfiddle.ide/new-fiddle (s/keys :req [:fiddle/ident]))
+
 (defmulti fiddle-link :link/rel)
 
 (s/def :fiddle/ident keyword?)
