@@ -30,11 +30,13 @@
 
 ; Promise[List[Response]]
 (defn hydrate-all-or-nothing! [rt local-basis stage requests]
-  (-> (runtime/hydrate-requests rt local-basis stage requests)
-      (p/then (fn [{:keys [pulled-trees]}]
-                (-> (map process-result pulled-trees requests)
-                    (cats/sequence)
-                    (either/branch p/rejected p/resolved))))))
+  (if (empty? requests)
+    (p/resolved nil)
+    (-> (runtime/hydrate-requests rt local-basis stage requests)
+        (p/then (fn [{:keys [pulled-trees]}]
+                  (-> (map process-result pulled-trees requests)
+                      (cats/sequence)
+                      (either/branch p/rejected p/resolved)))))))
 
 (defn hydrate-requests-rpc! [service-uri build local-basis stage-val requests & [jwt]]
   (let [staged-branches (stage-val->staged-branches stage-val)
