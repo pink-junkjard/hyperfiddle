@@ -59,9 +59,9 @@
 (deftest fiddle-validates
   []
   (is (= (validate :hyperfiddle/ide r2 smart-lookup-ref-no-tempids)
-         '(#_[[:fiddle/links 17592186061848 :link/fiddle] :contrib.validation/missing]
-            #_[[:fiddle/links 17592186061849 :link/fiddle] :contrib.validation/missing]
-            [[:fiddle/links 17592186061852] fiddle-link])
+         '([[:fiddle/links 17592186061852 :link/rel] #{:hf/affix :hf/new :hf/detach :hf/remove :hf/iframe :hf/rel :hf/self}]
+            #_[[:fiddle/links 17592186061848 :link/fiddle] :contrib.validation/missing]
+            #_[[:fiddle/links 17592186061849 :link/fiddle] :contrib.validation/missing])
          ))
   )
 
