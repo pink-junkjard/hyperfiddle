@@ -369,8 +369,10 @@ User renderers should not be exposed to the reaction."
     [:div {:class (css "field" (:class props))
            :style {:border-color (connection-color ctx)}}
      [Head nil (dissoc ctx :hypercrud.browser/data) props]
-     (let [props (update props :disabled #(or % (not @(r/track writable-entity? ctx))))
-           props (update props :class css (if (:disabled props) "disabled") (if (context/invalid? ctx) "invalid"))]
+     (let [props (as-> props props
+                       (update props :disabled #(or % (not @(r/track writable-entity? ctx))))
+                       (update props :is-invalid #(or % (context/invalid? ctx)))
+                       (update props :class css (if (:disabled props) "disabled")))]
        [Body @(:hypercrud.browser/data ctx) ctx props])]
     (when (= '* (last relative-path))                       ; :hypercrud.browser/path
       ; guard against crashes for nil data
@@ -388,10 +390,12 @@ User renderers should not be exposed to the reaction."
                              (update :class css (when (sort/sortable? ctx) "sortable") (some-> (sort/sort-direction relative-path ctx) name))
                              (assoc :on-click (r/partial sort/toggle-sort! relative-path ctx)))]]
     ; Field omits [] but table does not, because we use it to specifically draw repeating anchors with a field renderer.
-    :body [:td {:class (css "field" (:class props) (if (context/invalid? ctx) "invalid"))
+    :body [:td {:class (css "field" (:class props))
                 :style {:border-color (connection-color ctx)}}
-           (let [props (update props :disabled #(or % (not @(r/track writable-entity? ctx))))
-                 props (update props :class css (if (:disabled props) "disabled"))]
+           (let [props (as-> props props
+                             (update props :disabled #(or % (not @(r/track writable-entity? ctx))))
+                             (update props :is-invalid #(or % (context/invalid? ctx)))
+                             (update props :class css (if (:disabled props) "disabled")))]
              [Body @(:hypercrud.browser/data ctx) ctx props])]))
 
 (defn ^:export field "Works in a form or table context. Draws label and/or value."

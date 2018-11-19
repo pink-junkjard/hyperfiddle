@@ -127,8 +127,8 @@
          (fn [props parse-string to-string cmp & args]
            (let [s-value @(r/cursor state [:s-value])
                  props (-> (assoc props :value s-value)
-                           (assoc :is-invalid (try (parse-string s-value) false
-                                                   (catch :default e true)))
+                           (assoc :is-invalid (or (try (parse-string s-value) false (catch :default e true))
+                                                  (:is-invalid props)))
                            (update-existing :on-blur (fn [f]
                                                        (r/partial on-blur state f)))
                            (update :on-change (fn [f]

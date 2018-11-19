@@ -42,10 +42,11 @@
 (s/def :fiddle/query string?)
 (s/def :fiddle/pull string?)
 (s/def :fiddle/pull-database string?)
-(s/def :fiddle/links (s/coll-of (s/and (s/multi-spec fiddle-link :link/rel)
-                                       (s/keys :req [:link/rel]
+(s/def :fiddle/links (s/coll-of (s/and (s/keys :req [:link/rel]
                                                :opt [:link/class
-                                                     :link/path :link/fiddle :link/formula :link/tx-fn]))))
+                                                     :link/path :link/fiddle :link/formula :link/tx-fn])
+                                       ; Second, validate link/rel first
+                                       (s/multi-spec fiddle-link :link/rel))))
 (s/def :fiddle/markdown string?)
 (s/def :fiddle/renderer string?)
 (s/def :fiddle/css string?)
