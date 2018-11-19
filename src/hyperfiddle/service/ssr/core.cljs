@@ -41,7 +41,7 @@
         [foundation/view :page ctx (if (:active-ide? (runtime/host-env rt))
                                      (constantly [:div.loading-page>div.logo-callout
                                                   [:img {:src "https://i.imgur.com/DtMAeuM.png"}]
-                                                  [:span.brand "hyperfiddle"]])
+                                                  [:span.brand ":hyperfiddle"]])
                                      ide/view)])
       (catch :default e
         (reagent-server/render-to-string [:div
