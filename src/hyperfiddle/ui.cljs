@@ -476,7 +476,7 @@ nil. call site must wrap with a Reagent component"          ; is this just hyper
 
 (defn ^:export fiddle-xray [val ctx & [props]]
   (let [ctx (inject-console-links ctx)]
-    [:div (select-keys props [:class])
+    [:div (select-keys props [:class :on-click])
      [:h3 (pr-str @(:hypercrud.browser/route ctx))]
      (result val ctx {})
      [field [] ctx entity-links-iframe (assoc props :label-fn (r/constantly nil))]]))
