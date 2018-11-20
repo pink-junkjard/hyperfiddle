@@ -1,9 +1,11 @@
 (ns hypercrud.browser.base
   (:require [cats.core :refer [mlet return]]
             [cats.monad.either :as either]
+            [clojure.spec.alpha :as s]
             [contrib.reactive :as r]
             [contrib.reader :as reader :refer [memoized-read-edn-string+]]
             [contrib.try$ :refer [try-either]]
+            [contrib.validation]
             [hypercrud.browser.context :as context]
             [hypercrud.browser.field :as field]
             [hypercrud.browser.link :as link]
@@ -15,7 +17,8 @@
             [hypercrud.types.EntityRequest :refer [->EntityRequest]]
             [hypercrud.types.QueryRequest :refer [->QueryRequest]]
             [hyperfiddle.domain :as domain]
-            [hyperfiddle.fiddle :as fiddle]))
+            [hyperfiddle.fiddle :as fiddle]
+            [hyperfiddle.tempid]))
 
 
 (defn legacy-fiddle-ident->lookup-ref [fiddle]              ; SHould be an ident but sometimes is a long today
@@ -79,7 +82,7 @@
                        (if-let [?request @request]
                          @(hc/hydrate peer branch ?request)
                          (either/right nil)))]
-  (defn process-results "reaction" [fiddle request ctx]                ; todo rename to (context/result)
+  (defn process-results "either ctx" [fiddle request ctx]                ; todo rename to (context/result)
     (mlet [reactive-attrs @(r/apply-inner-r (project/hydrate-attrs ctx))
            reactive-result @(r/apply-inner-r (r/track nil-or-hydrate (:peer ctx) (:branch ctx) request))
            :let [ctx (assoc ctx
@@ -88,9 +91,12 @@
                        :hypercrud.browser/fiddle fiddle     ; for :db/doc
                        :hypercrud.browser/path [])]
            reactive-field @(r/apply-inner-r (r/track field/auto-field request ctx))]
-      (return (assoc ctx :hypercrud.browser/field reactive-field)))))
+      (return (assoc ctx :hypercrud.browser/field reactive-field
+                         :hypercrud.browser/validation-hints
+                         (if-let [spec (s/get-spec (:fiddle/ident @fiddle))]
+                           (contrib.validation/validate spec @reactive-result (partial hyperfiddle.tempid/row-keyfn ctx))))))))
 
-(defn data-from-route "reaction, ctx-from-route" [route ctx]                           ; todo rename
+(defn data-from-route "either ctx, ctx-from-route" [route ctx]                           ; todo rename
   (mlet [ctx (-> (context/clean ctx)
                  (routing/route+ route))
          meta-fiddle-request @(r/apply-inner-r (r/track meta-request-for-fiddle ctx))

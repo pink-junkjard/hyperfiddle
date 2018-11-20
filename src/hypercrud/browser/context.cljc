@@ -19,7 +19,8 @@
           :hypercrud.browser/field
           :hypercrud.browser/parent
           :hypercrud.browser/path
-          :hypercrud.browser/route))
+          :hypercrud.browser/route
+          :hypercrud.browser/validation-hints))
 
 (defn source-mode [ctx]
   (-> ctx
@@ -149,7 +150,11 @@
   (::field/data-has-id? @(:hypercrud.browser/field ctx))
   #_(and (context/dbname ctx) (last (:hypercrud.browser/path ctx))))
 
-(defn invalid? [ctx]
+(defn tree-invalid? "For popover buttons (fiddle level)" [ctx]
+  (->> (:hypercrud.browser/validation-hints ctx)
+       seq boolean))
+
+(defn leaf-invalid? "The thing that styles red" [ctx]
   (->> (:hypercrud.browser/validation-hints ctx)
        (filter (comp nil? first))
-       (seq)))
+       seq boolean))

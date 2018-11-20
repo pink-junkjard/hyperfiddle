@@ -2,6 +2,7 @@
   (:require
     [cats.core :refer [fmap]]
     [contrib.css :refer [css]]
+    [contrib.ct :refer [unwrap]]
     [contrib.data :refer [dissoc-nils]]
     [contrib.eval :as eval]
     [contrib.keypress :refer [with-keychord]]
@@ -10,7 +11,6 @@
     [contrib.string :refer [blank->nil]]
     [contrib.try$ :refer [try-promise]]
     [contrib.ui.tooltip :refer [tooltip tooltip-props]]
-    [cuerdas.core :as string]
     [hypercrud.browser.context :as context]
     [hypercrud.util.branch :as branch]
     [hyperfiddle.actions :as actions]
@@ -76,16 +76,17 @@
                                    (actions/discard-partition child-branch))))
 
 (defn managed-popover-body [route popover-id ?child-branch link-ref ctx eav props]
-  (let [popover-ctx (cond-> (context/clean ctx)             ; hack clean for block level errors
-                            ?child-branch (assoc :branch ?child-branch))
-
-        r-popover-data (->> (base/data-from-route route popover-ctx)
-                            (r/>>= :hypercrud.browser/data))]
+  (let [popover-ctx-pre (cond-> (context/clean ctx)         ; hack clean for block level errors
+                                ?child-branch (assoc :branch ?child-branch))
+        +popover-ctx-post (base/data-from-route route popover-ctx-pre)
+        r-popover-data (r/>>= :hypercrud.browser/data +popover-ctx-post)
+        popover-invalid  (->> +popover-ctx-post (unwrap (constantly nil)) context/tree-invalid?)]
     [:div.hyperfiddle-popover-body                          ; wrpaper helps with popover max-width, hard to layout without this
      ; NOTE: this ctx logic and structure is the same as the popover branch of browser-request/recurse-request
-     [hyperfiddle.ui/iframe popover-ctx {:route route}]     ; cycle
+     [hyperfiddle.ui/iframe popover-ctx-pre {:route route}] ; cycle
      (when ?child-branch
-       [:button {:on-click (r/partial stage! link-ref eav popover-id ?child-branch ctx r-popover-data props)} "stage"])
+       [:button {:on-click (r/partial stage! link-ref eav popover-id ?child-branch ctx r-popover-data props)
+                 :disabled popover-invalid} "stage"])
      (if ?child-branch
        [:button {:on-click #(cancel! popover-id ?child-branch ctx)} "cancel"]
        [:button {:on-click #(close! popover-id ctx)} "close"])]))

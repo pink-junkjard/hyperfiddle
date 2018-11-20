@@ -179,9 +179,6 @@ User renderers should not be exposed to the reaction."
         (ui-comp [ctx & [props]]                            ; user-renderer comes through here
           (let [fiddle (:hypercrud.browser/fiddle ctx)
                 value @(:hypercrud.browser/data ctx)
-                ctx (if-let [spec (s/get-spec (:fiddle/ident @fiddle))]
-                      (assoc ctx :hypercrud.browser/validation-hints (contrib.validation/validate spec value (partial data/row-keyfn ctx)))
-                      ctx)
                 props (update props :class css (auto-ui-css-class ctx))
                 view-props (select-keys props [:class :initial-tab :on-click #_:disabled]) ; https://github.com/hyperfiddle/hyperfiddle/issues/698
                 display-mode @(:hypercrud.ui/display-mode ctx)
@@ -371,7 +368,7 @@ User renderers should not be exposed to the reaction."
      [Head nil (dissoc ctx :hypercrud.browser/data) props]
      (let [props (as-> props props
                        (update props :disabled #(or % (not @(r/track writable-entity? ctx))))
-                       (when (context/invalid? ctx) (assoc props :is-invalid true))
+                       (update props :is-invalid #(or % (context/leaf-invalid? ctx)))
                        (update props :class css (if (:disabled props) "disabled")))]
        [Body @(:hypercrud.browser/data ctx) ctx props])]
     (when (= '* (last relative-path))                       ; :hypercrud.browser/path
@@ -394,7 +391,7 @@ User renderers should not be exposed to the reaction."
                 :style {:border-color (connection-color ctx)}}
            (let [props (as-> props props
                              (update props :disabled #(or % (not @(r/track writable-entity? ctx))))
-                             (when (context/invalid? ctx) (assoc props :is-invalid true))
+                             (update props :is-invalid #(or % (context/leaf-invalid? ctx)))
                              (update props :class css (if (:disabled props) "disabled")))]
              [Body @(:hypercrud.browser/data ctx) ctx props])]))
 
@@ -435,7 +432,7 @@ User renderers should not be exposed to the reaction."
      [:a {:href "~entity('$','tempid')"} [:code "~entity('$','tempid')"]] "."]))
 
 (defn form "Not an abstraction." [fields val ctx & [props]]
-  (into [:<> {:key (str (data/row-keyfn ctx val))}]
+  (into [:<> {:key (str (hyperfiddle.tempid/row-keyfn ctx val))}]
         (fields (assoc ctx ::layout :hyperfiddle.ui.layout/block))))
 
 (defn columns [m-field relative-path field ctx & [props]]

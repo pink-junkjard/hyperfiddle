@@ -187,3 +187,12 @@
    (let [lookup (fmap (partial util/group-by-unique key-fn) rv)]
      (->> @(fmap (partial map key-fn) rv)
           (map (fn [key] [(cursor lookup [key]) key]))))))
+
+(defn row-keyfn' "See hyperfiddle.tempid/row-keyfn"
+  [f row]
+  {:pre [(not (reactive? row))]}
+  ; This keyfn is very tricky, read https://github.com/hyperfiddle/hyperfiddle/issues/341
+  (-> (if (or (vector? row) (seq? row))                     ; todo should probably inspect fields instead of seq
+        (map f row)
+        (f row))
+      hash))

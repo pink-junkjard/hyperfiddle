@@ -51,6 +51,9 @@
   [v]
   (or (contrib.datomic/smart-lookup-ref-no-tempids v) v))
 
+(defn row-keyfn [ctx row]
+  (r/row-keyfn' (partial stable-relation-key ctx) row))
+
 (defn hash-data [ctx]                                       ; todo there are collisions when two links share the same 'location'
   (when-let [data (:hypercrud.browser/data ctx)]
     (case @(r/fmap ::field/cardinality (:hypercrud.browser/field ctx))
