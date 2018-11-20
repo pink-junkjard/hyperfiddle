@@ -37,8 +37,9 @@
     (keyword? a) a
     (#{'* "*"} a) nil
     (map? a) (reduce-kv (fn [m k v]
-                          (assoc m (attr-spec->shape k)
-                                   (pull-shape v)))
+                          (when-not (number? v)             ; bail on recursive specs https://github.com/hyperfiddle/hyperfiddle/issues/363
+                            (assoc m (attr-spec->shape k)
+                                     (pull-shape v))))
                         {} a)
     (and (sequential? a) (keyword? (first a))) (first a)
     (and (sequential? a) (#{'limit "limit" 'default "default"} (first a))) (second a)

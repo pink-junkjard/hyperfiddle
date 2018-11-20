@@ -36,7 +36,21 @@
           #:reg{:gender [:db/ident],
                 :shirt-size [:db/ident]}
           :db/id]
-         (pull-shape pull-pattern-1))))
+         (pull-shape pull-pattern-1)))
+  (is (= (pull-shape [:db/id
+                      :hyperblog.post/sort-index1
+                      :hyperblog.post/published
+                      :hyperblog.post/hidden
+                      :fiddle/ident
+                      {:hyperblog.nav/children 1}
+                      {:hyperblog.post/related 1}
+                      :hyperblog.post/title])
+         [:db/id
+          :hyperblog.post/sort-index1
+          :hyperblog.post/published
+          :hyperblog.post/hidden
+          :fiddle/ident
+          :hyperblog.post/title])))
 
 (def pulled-tree-1 {:db/id 17592186046765,
                     :hyperfiddle/owners [#uuid "acd054a8-4e36-4d6c-a9ec-95bdc47f0d39"],
