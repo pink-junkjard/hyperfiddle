@@ -23,7 +23,7 @@
   (if @(r/track any-loading? (:peer ctx))
     [:div.display-inline-flex [re-com.core/throbber]]))
 
-(defn renderer [val ctx props]
+(defn renderer' [val ctx props]
   (let [target-route (context/target-route ctx)]
     [:div props
      [:div.left-nav
@@ -75,6 +75,20 @@
                        :iframe-as-popover true}]
             [ui/link :hf/iframe :account ctx @(r/fmap :user/name data) props]))
         [:a {:href (foundation/stateless-login-url ctx)} "login"])]]))
+
+(defn hack-login-renderer [val ctx props]
+  [:div props
+   [:div.left-nav
+    [tooltip {:label "Home"} [:a @(runtime/state (:peer ctx) [::runtime/domain :domain/ident])]]]
+   [:div.right-nav {:key "right-nav"}                       ; CAREFUL; this key prevents popover flickering
+    [loading-spinner ctx]]])
+
+(defn renderer [val ctx props]
+  (let [f (if (and (= :hyperfiddle.ide/please-login (first (context/target-route ctx)))
+                   (not= [:domain/ident foundation/source-domain-ident] (:domain-eid (runtime/host-env (:peer ctx)))))
+            hack-login-renderer
+            renderer')]
+    [f val ctx props]))
 
 (defn ^:export qe-picker-control [val ctx props]            ; not topnav
   (let [props (assoc props

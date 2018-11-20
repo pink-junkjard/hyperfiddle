@@ -70,14 +70,16 @@
       (route/url-decode s (home-route domain)))))
 
 #?(:cljs
-   (defn stateless-login-url [ctx]
-     (let [{:keys [build hostname :ide/root]} (runtime/host-env (:peer ctx))
-           {:keys [domain client-id]} (get-in ctx [:hypercrud.browser/domain :domain/environment :auth0 root])]
-       (str domain "/login?"
-            "client=" client-id
-            "&scope=" "openid email profile"
-            "&state=" (base64-url-safe/encode (route-encode (:peer ctx) (context/target-route ctx)))
-            "&redirect_uri=" (str "http://" hostname (bidi/path-for (build-routes build) :auth0-redirect))))))
+   (defn stateless-login-url
+     ([ctx] (stateless-login-url ctx (route-encode (:peer ctx) (context/target-route ctx))))
+     ([ctx state]
+      (let [{:keys [build hostname :ide/root]} (runtime/host-env (:peer ctx))
+            {:keys [domain client-id]} (get-in ctx [:hypercrud.browser/domain :domain/environment :auth0 root])]
+        (str domain "/login?"
+             "client=" client-id
+             "&scope=" "openid email profile"
+             "&state=" (base64-url-safe/encode state)
+             "&redirect_uri=" (str "http://" hostname (bidi/path-for (build-routes build) :auth0-redirect)))))))
 
 (defn domain-request [domain-eid peer]
   (->EntityRequest domain-eid
