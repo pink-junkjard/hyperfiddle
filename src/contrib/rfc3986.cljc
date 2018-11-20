@@ -1,8 +1,8 @@
 (ns contrib.rfc3986
-  (:require [clojure.string :as str]
-            [clojure.set :as set]
-            [contrib.char$ :refer [char-code dec->hex hex->dec char->hex-str hex-str->char]]
-            [contrib.string :refer [split-first]]))
+  (:require
+    [clojure.set :as set]
+    [clojure.string :as string]
+    [contrib.char$ :refer [char-code char->hex-str hex-str->char]]))
 
 
 ; https://tools.ietf.org/html/rfc3986#appendix-A
@@ -28,7 +28,7 @@ are probably safe today."
               (if (-pchar c)                                ; whitelist
                 c
                 (str "%" (char->hex-str c)))))
-       (str/join)))
+       (string/join)))
 
 (defn decode-rfc3986-pchar [s]
   (-> (loop [decoded []
@@ -36,14 +36,6 @@ are probably safe today."
         (if-not c
           decoded                                           ; done
           (if (= 37 (char-code c))                          ; 37 is \% written portably
-            (recur (conj decoded (hex-str->char (str/join (take 2 ss)))) (drop 2 ss))
+            (recur (conj decoded (hex-str->char (string/join (take 2 ss)))) (drop 2 ss))
             (recur (conj decoded c) ss))))
-      str/join))
-
-
-
-(defn split-fragment [s]
-  (split-first s "#"))
-
-(defn parse-fragment [s]                                 ; user gets full control of this value?
-  (second (split-fragment s)))
+      string/join))

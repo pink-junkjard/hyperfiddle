@@ -2,9 +2,9 @@
   (:require
     [bidi.bidi :as bidi]
     [clojure.spec.alpha :as s]
+    [clojure.string :as string]
     [contrib.reader :refer [read-edn-string!]]
-    [contrib.rfc3986 :refer [split-fragment]]
-    [contrib.string :refer [abc split-first empty->nil]]
+    [contrib.string :refer [abc empty->nil]]
     [cuerdas.core :as str]
     [hyperfiddle.ide.system-fiddle :refer [system-fiddle?]]
     [hyperfiddle.route :refer [assoc-frag]]
@@ -97,7 +97,7 @@
 (defn decode [router path-and-frag]
   {:pre [(str/starts-with? path-and-frag "/")]
    :post [(s/valid? :hyperfiddle/route %)]}
-  (let [[path frag] (split-fragment path-and-frag)
+  (let [[path frag] (string/split path-and-frag #"#" 2)
         route (some-> (bidi/match-route router path) ->bidi-consistency-wrapper bidi->hf)]
     (if route
       (assoc-frag route (empty->nil frag))

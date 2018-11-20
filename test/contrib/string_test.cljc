@@ -22,16 +22,18 @@
 (def s "0/1/2?3?4#5#6")
 (deftest split-first-1
   []
-  (is (= (split-first s "/") ["0" "1/2?3?4#5#6"]))
-  (is (= (split-first s "?") ["0/1/2" "3?4#5#6"]))
-  (is (= (split-first s "#") ["0/1/2?3?4" "5#6"])))
+  (is (= (split-first s #"/") ["0" "1/2?3?4#5#6"]))
+  (is (= (split-first s #"\?") ["0/1/2" "3?4#5#6"]))
+  (is (= (split-first s #"#") ["0/1/2?3?4" "5#6"])))
 
 (deftest split-first-2
-  (is (= (split-first "a" "#") ["a" nil]))
-  (is (= (split-first "a#" "#") ["a" nil]))
-  (is (= (split-first "a#b" "#") ["a" "b"]))
-  (is (= (split-first "#b" "#") [nil "b"]))
-  (is (= (split-first "#" "#") [nil nil])))
+  (is (= (split-first nil #"#") [nil nil]))
+  (is (= (split-first "" #"#") [nil nil]))
+  (is (= (split-first "a" #"#") ["a" nil]))
+  (is (= (split-first "a#" #"#") ["a" nil]))
+  (is (= (split-first "a#b" #"#") ["a" "b"]))
+  (is (= (split-first "#b" #"#") [nil "b"]))
+  (is (= (split-first "#" #"#") [nil nil])))
 
 (deftest abc-1
   []

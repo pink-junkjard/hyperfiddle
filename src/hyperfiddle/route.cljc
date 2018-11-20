@@ -3,10 +3,11 @@
     [cats.core :refer [>>=]]
     [cats.monad.either :as either]
     [clojure.spec.alpha :as s]
+    [clojure.string :as string]
     [contrib.data :refer [orp rtrim-coll]]
     [contrib.ednish :as ednish :refer [decode-ednish encode-ednish]]
     [contrib.pprint :refer [pprint-str]]
-    [contrib.rfc3986 :as rfc3986 :refer [decode-rfc3986-pchar encode-rfc3986-pchar]]
+    [contrib.rfc3986 :refer [decode-rfc3986-pchar encode-rfc3986-pchar]]
     [contrib.string :refer [empty->nil split-first]]
     [contrib.try$ :refer [try-either]]
     [cuerdas.core :as str]
@@ -80,16 +81,16 @@
 (defn url-decode [s home-route]
   {:pre [(str/starts-with? s "/") (s/valid? :hyperfiddle/route home-route)]
    :post [(s/valid? :hyperfiddle/route %)]}
-  (let [[path frag] (rfc3986/split-fragment s)]
+  (let [[path frag] (string/split s #"#" 2)]
     (if (= "/" path)
       (assoc-frag home-route frag)
       (-> (try-either
-            (let [[root s] (split-first s "/")
-                  [fiddle-segment s] (split-first s "/")
+            (let [s (subs s 1)
+                  [fiddle-segment s] (split-first s #"/")
                   [fiddle & fiddle-args] (str/split fiddle-segment ";")
-                  [s frag] (split-first s "#")
-                  [datomic-args-segment query] (split-first s "?")
-                  datomic-args (->> (str/split datomic-args-segment "/"))] #_"careful: (str/split \"\" \"/\") => [\"\"]"
+                  [s frag] (split-first s #"#")
+                  [datomic-args-segment query] (split-first s #"\?")
+                  datomic-args (->> (str/split datomic-args-segment "/"))] ; careful: (str/split "" "/") => [""]
               (canonicalize
                 (ednish/decode-uri fiddle)
                 (if-let [as (->> datomic-args (remove str/empty-or-nil?) seq)]

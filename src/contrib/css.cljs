@@ -1,5 +1,6 @@
 (ns contrib.css
-  (:require [cuerdas.core :as str]))
+  (:require
+    [clojure.string :as string]))
 
 
 (defn css-slugify [s]
@@ -9,18 +10,10 @@
   ; or a hyphen followed by a digit.
   ; http://stackoverflow.com/a/449000/959627
   ; https://mathiasbynens.be/notes/css-escapes
-  (let [s (cond
-            (number? s) (str "n" s)                         ; "0" and "-0" is not legal css but "n0" is
-            :else (str s))]                                 ; coerce keywords etc
-    (-> s
-        (str/replace ":" "-")
-        (str/replace "/" "-")
-        (str/replace "?" "-")                               ; legal but syntax highlighting issues
-        (str/replace " " "-")
-        (str/replace "." "-")
-        (str/replace ")" "-")
-        (str/replace "(" "-")
-        )))
+  (-> (if (number? s)
+        (str "n" s)                                         ; "0" and "-0" is not legal css but "n0" is
+        (str s))                                            ; coerce keywords etc
+      (string/replace #"[:/? .)(]" "-")))
 
 (defn css
   "&args will be flattened"
@@ -29,4 +22,4 @@
        flatten
        (remove nil?)
        #_(map css-slugify)                                  ; cannot do this because sometimes we pass pre-concat css strings here
-       (str/join " ")))
+       (string/join " ")))

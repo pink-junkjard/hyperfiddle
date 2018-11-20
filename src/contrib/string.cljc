@@ -1,5 +1,6 @@
 (ns contrib.string
   (:require
+    [clojure.string :as string]
     [contrib.data :refer [orp]]
     [cuerdas.core :as str]))
 
@@ -32,8 +33,10 @@
   )
 
 (defn split-first [s sep]
-  (let [[x & xs] (str/split s sep)]
-    [(empty->nil x) (empty->nil (str/join sep xs))]))
+  (if (nil? s)
+    [nil nil]
+    (let [[a b] (string/split s sep 2)]
+      [(empty->nil a) (empty->nil b)])))
 
 (defn abc []
   (map (comp keyword str) "abcdefghijklmnopqrstuvwxyz")     ; this version works in clojurescript
