@@ -11,6 +11,12 @@
     ;[remark-react] ; works in node
     ))
 
+(def propTypes
+  (cond
+    (exists? js/propTypes) js/propTypes
+    (exists? js/require) (set! js/propTypes (or (js/require "prop-types")
+                                                (throw (js/Error. "require('prop-yypes') failed"))))
+    :else (throw (js/Error. "js/propTypes is missing"))))
 
 (def remark                                                 ; todo need browser shim for path (path-browserify)
   (cond
