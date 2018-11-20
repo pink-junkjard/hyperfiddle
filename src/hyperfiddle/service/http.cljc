@@ -1,6 +1,7 @@
 (ns hyperfiddle.service.http
   (:require
     [cats.monad.either :as either]
+    [clojure.string :as string]
     [contrib.base-64-url-safe :as base-64-url-safe]
     [contrib.ednish :as ednish]
     [contrib.reactive :as r]
@@ -136,3 +137,11 @@
     (catch #?(:cljs :default :clj Exception) e
       (timbre/error e)
       (p/resolved (e->platform-response e)))))
+
+(defn ssr-auth-hack [host-env user-id path redirect next]
+  (if (and (= [:domain/ident "tank"] (:domain-eid host-env))
+           (nil? user-id)
+           (not (string/starts-with? path "/:hyperfiddle.ide!please-login/")))
+    (let [url (route/url-encode [:hyperfiddle.ide/please-login [path]] [:hacky-hack-hack])]
+      (redirect url))
+    (next)))
