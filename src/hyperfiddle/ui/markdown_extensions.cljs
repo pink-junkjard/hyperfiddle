@@ -73,7 +73,7 @@
 (defmethod md-ext :img [_ content argument {:keys [children alt src]} ctx]
   ; Jacks the image ![alt](src) syntax to repurpose to something more general. Doesn't support props!
   ; Eats img alt-text, but that can be fixed.
-  (md-ext "f" (or alt ":img") src {} ctx))
+  (md-ext :f (or alt ":img") src {} ctx))
 
 ; Is this comment true?::
 ;   Div is not needed, use it with block syntax and it hits React.createElement and works
