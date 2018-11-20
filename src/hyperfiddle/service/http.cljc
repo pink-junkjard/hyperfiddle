@@ -139,7 +139,7 @@
       (p/resolved (e->platform-response e)))))
 
 (defn ssr-auth-hack [host-env user-id path redirect next]
-  (if (and (= [:domain/ident "tank"] (:domain-eid host-env))
+  (if (and (= [:domain/ident "demo"] (:domain-eid host-env))
            (nil? user-id)
            (not (string/starts-with? path "/:hyperfiddle.ide!please-login/")))
     (let [url (route/url-encode [:hyperfiddle.ide/please-login [path]] [:hacky-hack-hack])]
