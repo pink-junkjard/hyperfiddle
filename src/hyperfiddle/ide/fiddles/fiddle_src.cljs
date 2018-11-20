@@ -107,8 +107,8 @@
    (fn [val ctx props]
      (let [props (-> (dissoc props :embed-mode))]
        [:<>
-        (field [:fiddle/cljs-ns] ctx hyper-control (with-fiddle-default props val :fiddle/cljs-ns))
-        (field [:fiddle/renderer] ctx hyper-control (with-fiddle-default props val :fiddle/renderer))]))
+        (field [:fiddle/renderer] ctx hyper-control (with-fiddle-default props val :fiddle/renderer))
+        (field [:fiddle/cljs-ns] ctx hyper-control (with-fiddle-default props val :fiddle/cljs-ns))]))
 
    :hf.src/markdown
    (fn [val ctx props]
