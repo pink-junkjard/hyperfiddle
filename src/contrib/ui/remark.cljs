@@ -3,7 +3,7 @@
     ;["@hyperfiddle/remark-generic-extensions/lib/browser.min" :as remark-generic-extensions] ; works in node
     [clojure.set]
     [clojure.string]
-    [contrib.string :refer [blank->nil]]
+    ; Refrain from contrib imports so this is more suitable for userland
     [goog.object]
     [prop-types]
     [reagent.core :as reagent]
@@ -11,26 +11,6 @@
     ;[remark-react] ; works in node
     ))
 
-
-(defn adapt-props [props]
-  (-> props
-      (dissoc :content :argument)                           ; need children downstack
-      (clojure.set/rename-keys {:className :class})))
-
-(defn extension [k f]
-  (reagent/create-class
-    {:display-name (str "markdown-" (name k))
-     :context-types #js {:ctx (.-object prop-types)}
-     :reagent-render (fn [{:keys [content argument] :as props}]
-                       (let [ctx (goog.object/get (.-context (reagent/current-component)) "ctx")
-                             content (if-not (= content "undefined") content)
-                             argument (if-not (= argument "undefined") argument)]
-                         (f k content argument (adapt-props props) ctx)))}))
-
-(defn -remark-render [remark-instance value]
-  (let [c (-> remark-instance (.processSync value #js {"commonmark" true}) .-contents)
-        content (-> c .-props .-children) #_"Throw away remark wrapper div"]
-    content))
 
 (def remark                                                 ; todo need browser shim for path (path-browserify)
   (cond
@@ -52,6 +32,21 @@
     (exists? js/require) (or (js/require "@hyperfiddle/remark-generic-extensions/lib/browser")
                              (throw (js/Error. "require('remark-generic-extensions') failed")))
     :else (throw (js/Error. "js/remarkGenericExtensions is missing"))))
+
+(defn adapt-props [props]
+  (-> props
+      (dissoc :content :argument)                           ; need children downstack
+      (clojure.set/rename-keys {:className :class})))
+
+(defn extension [k f]
+  (reagent/create-class
+    {:display-name (str "markdown-" (name k))
+     :context-types #js {:ctx (.-object prop-types)}
+     :reagent-render (fn [{:keys [content argument] :as props}]
+                       (let [ctx (goog.object/get (.-context (reagent/current-component)) "ctx")
+                             content (if-not (= content "undefined") content)
+                             argument (if-not (= argument "undefined") argument)]
+                         (f k content argument (adapt-props props) ctx)))}))
 
 (defn -remark-instance! [extensions]
   (let [extensions (reduce-kv (fn [acc k v]
@@ -79,8 +74,10 @@
       {:display-name "markdown"
        :reagent-render
        (fn [value & [?ctx]]
-         (when (blank->nil value)
-           (-remark-render remark-instance value)))
+         (when-not (clojure.string/blank? value)
+           (let [c (-> remark-instance (.processSync value #js {"commonmark" true}) .-contents)
+                 content (-> c .-props .-children) #_"Throw away remark wrapper div"]
+             content)))
 
        :get-child-context
        (fn []
