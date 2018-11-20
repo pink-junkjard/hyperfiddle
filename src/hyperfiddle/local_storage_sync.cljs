@@ -9,7 +9,7 @@
     [taoensso.timbre :as timbre]))
 
 
-(def running-ls-schema-version 3)
+(def running-ls-schema-version 4)
 
 (def ls-migrations
   {2 (fn [ls-state]                                         ; v3 removed non-nil stage from localstorage
@@ -20,6 +20,9 @@
                                   :stage])
            (update :stage get nil)
            (assoc :version 3)))
+   3 (fn [ls-state]                                         ; v4 add :last-modified
+       (assert (= 3 (:version ls-state)))
+       (assoc ls-state :version 4 :last-modified 0))        ; just use the epoch
    })
 
 (defn- state->local-storage [state-val]
@@ -37,7 +40,7 @@
       (let [ls-state (try (local-storage/get-item :STATE) (catch :default e nil))]
         ; implied trust that the localstorage listener has already synced other tabs with this one
         (when-not (= ls-state n)
-          (local-storage/set-item! :STATE n))))))
+          (local-storage/set-item! :STATE (assoc n :last-modified (.now js/Date))))))))
 
 (defn- local-storage-event-action [rt e dispatch! get-state]
   (let [{:keys [::runtime/auto-transact ::runtime/global-basis ::runtime/user-id :stage :version]} (local-storage/get-item (.-storageArea e) :STATE)]
@@ -91,6 +94,7 @@
                            (-> (select-keys ls-state [::runtime/auto-transact
                                                       ::runtime/global-basis
                                                       ::runtime/user-id
+                                                      :last-modified
                                                       :stage
                                                       :version])
                                (update ::runtime/auto-transact init-auto-tx (::runtime/auto-transact initial-state) (runtime/host-env rt))
@@ -104,12 +108,13 @@
                              (do
                                (when-not (nil? ls-state) (timbre/error "Unable to migrate local-storage: " ls-state))
                                (-> (state->local-storage initial-state)
+                                   (assoc :last-modified (.now js/Date))
                                    (update ::runtime/auto-transact #(init-auto-tx nil % (runtime/host-env rt))))))))]
       (when-not (= ls-state new-ls-state)
         (local-storage/set-item! :STATE new-ls-state))
       ; todo, we should be dispatching
       (reset! (runtime/state rt)
-              (-> (merge initial-state (dissoc new-ls-state :stage :version))
+              (-> (merge initial-state (dissoc new-ls-state :stage :version :last-modified))
                   (assoc-in [::runtime/partitions nil :stage] (:stage new-ls-state)))))
 
     (let [event-listener (fn [e] (runtime/dispatch! rt (partial local-storage-event-action rt e)))]
