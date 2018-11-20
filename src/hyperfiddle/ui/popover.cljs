@@ -142,7 +142,7 @@
         child-branch (when @(r/fmap (r/comp some? blank->nil :link/tx-fn) link-ref)
                        child-branch)
         btn-props (-> props
-                      (dissoc :route :tooltip)
+                      (dissoc :route :tooltip ::redirect)
                       (assoc :on-click (r/partial open! (:route props) popover-id child-branch ctx))
                       ; use twbs btn coloring but not "btn" itself
                       (update :class css "btn-default"))]
