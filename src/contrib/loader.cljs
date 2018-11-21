@@ -9,8 +9,8 @@
 
 
 (defn script! [href & [{:keys [defer async]
-                        :or {defer true
-                             async true}}]]
+                        :or {defer false
+                             async false}}]]
   (p/promise
     (fn [resolve reject]
       (code-for-browser                                     ; can be called from domain/cljs
