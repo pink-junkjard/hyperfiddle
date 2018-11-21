@@ -8,7 +8,7 @@
     [contrib.ednish :as ednish :refer [decode-ednish encode-ednish]]
     [contrib.pprint :refer [pprint-str]]
     [contrib.rfc3986 :refer [decode-rfc3986-pchar encode-rfc3986-pchar]]
-    [contrib.string :refer [empty->nil split-first]]
+    [contrib.string :refer [empty->nil]]
     [contrib.try$ :refer [try-either]]
     [cuerdas.core :as str]
     [hyperfiddle.fiddle]                                    ; for ::fiddle spec
@@ -78,6 +78,8 @@
              (if (seq service-args) (str "?" (str/join "&" (->> service-args (map (fn [[k v]] (ednish/encode-uri k "=" (ednish/encode-uri v))))))))
              (if (empty->nil frag) (str "#" (-> frag encode-ednish encode-rfc3986-pchar))))))))
 
+(def url-regex #"/([^;/?#]*)(?:;([^/?#]*))?(?:/([^?#]*))?(?:\?([^#]*))?(?:#(.*))?")
+
 (defn url-decode [s home-route]
   {:pre [(str/starts-with? s "/") (s/valid? :hyperfiddle/route home-route)]
    :post [(s/valid? :hyperfiddle/route %)]}
@@ -85,15 +87,11 @@
     (if (= "/" path)
       (assoc-frag home-route frag)
       (-> (try-either
-            (let [s (subs s 1)
-                  [fiddle-segment s] (split-first s #"/")
-                  [fiddle & fiddle-args] (str/split fiddle-segment ";")
-                  [s frag] (split-first s #"#")
-                  [datomic-args-segment query] (split-first s #"\?")
-                  datomic-args (->> (str/split datomic-args-segment "/"))] ; careful: (str/split "" "/") => [""]
+            (let [[_ fiddle fiddle-args datomic-args query frag] (re-find url-regex s)]
               (canonicalize
                 (ednish/decode-uri fiddle)
-                (if-let [as (->> datomic-args (remove str/empty-or-nil?) seq)]
+                (if-let [as (->> (str/split datomic-args "/") ; careful: (str/split "" "/") => [""]
+                                 (remove str/empty-or-nil?) seq)]
                   (mapv ednish/decode-uri as))
                 (ednish/decode-uri query)
                 (-> frag decode-rfc3986-pchar decode-ednish empty->nil))))
