@@ -126,34 +126,27 @@
               [:relation :naked-or-element _ _] (label-with-docs "*relation*" (semantic-docstring ctx) props)
               [:tuple :naked-or-element _ _] (label-with-docs "*tuple*" (semantic-docstring ctx) props)))))
 
-(defn auto-link-css [link]
-  (->> (:link/class link)
-       (interpose " ")
-       (apply str)))
 
 (defn ^:export semantic-css [ctx]
   ; Include the fiddle level ident css.
   ; Semantic css needs to be prefixed with - to avoid collisions. todo
-  (->> (:hypercrud.browser/path ctx)
-       (concat
+  (->> (concat
          ["hyperfiddle"
           (context/dbname ctx)                              ; color
           (name (context/segment-type-2 (last (:hypercrud.browser/path ctx))))
-          (->> (:hypercrud.browser/path ctx)                ; legacy unique selector for each location
-               (map css-slugify)
-               (string/join "/"))
+          (string/join "/" (:hypercrud.browser/path ctx))   ; legacy unique selector for each location
           (->> (:hypercrud.browser/path ctx)                ; actually generate a unique selector for each location
                (cons :hypercrud.browser/path)               ; need to prefix the path with something to differentiate between attr and single attr paths
-               (map css-slugify)
                (string/join "/"))]
          (when (context/attribute-segment? (last (:hypercrud.browser/path ctx)))
-           (let [attr-ident (last (:hypercrud.browser/path ctx))
-                 attr (context/hydrate-attribute ctx attr-ident)]
-             [@(r/cursor attr [:db/valueType :db/ident])
+           (let [attr-ident (last (:hypercrud.browser/path ctx))]
+             [@(context/hydrate-attribute ctx attr-ident :db/valueType :db/ident)
               @(r/cursor (:hypercrud.browser/attr-renderers ctx) [attr-ident])  #_label/fqn->name
-              @(r/cursor attr [:db/cardinality :db/ident])
-              (some-> @(r/cursor attr [:db/isComponent]) (if :component))])))
-       (map css-slugify)))
+              @(context/hydrate-attribute ctx attr-ident :db/cardinality :db/ident)
+              (some-> @(context/hydrate-attribute ctx attr-ident :db/isComponent) (if :component))]))
+         (:hypercrud.browser/path ctx))
+       (map css-slugify)
+       (apply css)))
 
 (defn ^:export value "Relation level value renderer. Works in forms and lists but not tables (which need head/body structure).
 User renderers should not be exposed to the reaction."
@@ -171,10 +164,11 @@ User renderers should not be exposed to the reaction."
     (into [:a props] children)))
 
 (letfn [(auto-ui-css-class [ctx]                            ; semantic css
-          (css (let [ident @(r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/ident])]
-                 ["hyperfiddle"
+          (let [ident @(r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/ident])]
+            (->> ["hyperfiddle"
                   (css-slugify (some-> ident namespace))
-                  (css-slugify ident)])))
+                  (css-slugify ident)]
+                 (apply css))))
         (build-wrapped-render-expr-str [user-str] (str "(fn [val ctx props]\n" user-str ")"))
         (ui-comp [ctx & [props]]                            ; user-renderer comes through here
           (let [fiddle (:hypercrud.browser/fiddle ctx)
@@ -302,7 +296,7 @@ User renderers should not be exposed to the reaction."
           r+?route (r/fmap->> link-ref (routing/build-route' +args ctx)) ; need to re-focus from the top
           eav [(some-> ctx :hypercrud.browser/parent hypercrud.browser.context/id) ; Todo move into refocus. Also might not have one, txfn understands this
                (last (:hypercrud.browser/path ctx))         ; todo chop off FE todo
-               (->> +args (unwrap (constantly nil)) first :db/id)]                               ; Todo for :hf/new, the focused data is now eschewed in favor of this new tempid
+               (->> +args (unwrap (constantly nil)) first :db/id)] ; Todo for :hf/new, the focused data is now eschewed in favor of this new tempid
           style {:color nil #_(connection-color ctx (cond (system-link? (:db/id @link-ref)) 60 :else 40))}
           props (update props :style #(or % style))
           has-tx-fn @(r/fmap-> link-ref :link/tx-fn blank->nil boolean)
@@ -330,7 +324,9 @@ User renderers should not be exposed to the reaction."
              [iframe ctx (-> props                          ; flagged - :class
                              (assoc :route route)
                              (dissoc props ::custom-iframe)
-                             (update :class css (css-slugify @(r/fmap auto-link-css link-ref))))]))]
+                             (update :class css (->> @(r/fmap :link/class link-ref)
+                                                     (string/join " ")
+                                                     css-slugify)))]))]
 
         :else (let [props @(r/track validated-route-tooltip-props r+?route link-ref ctx props)]
                 [tooltip (tooltip-props (:tooltip props))
@@ -367,9 +363,9 @@ User renderers should not be exposed to the reaction."
            :style {:border-color (connection-color ctx)}}
      [Head nil (dissoc ctx :hypercrud.browser/data) props]
      (let [props (as-> props props
-                       (update props :disabled #(or % (not @(r/track writable-entity? ctx))))
-                       (update props :is-invalid #(or % (context/leaf-invalid? ctx)))
-                       (update props :class css (if (:disabled props) "disabled")))]
+                   (update props :disabled #(or % (not @(r/track writable-entity? ctx))))
+                   (update props :is-invalid #(or % (context/leaf-invalid? ctx)))
+                   (update props :class css (if (:disabled props) "disabled")))]
        [Body @(:hypercrud.browser/data ctx) ctx props])]
     (when (= '* (last relative-path))                       ; :hypercrud.browser/path
       ; guard against crashes for nil data
@@ -390,9 +386,9 @@ User renderers should not be exposed to the reaction."
     :body [:td {:class (css "field" (:class props))
                 :style {:border-color (connection-color ctx)}}
            (let [props (as-> props props
-                             (update props :disabled #(or % (not @(r/track writable-entity? ctx))))
-                             (update props :is-invalid #(or % (context/leaf-invalid? ctx)))
-                             (update props :class css (if (:disabled props) "disabled")))]
+                         (update props :disabled #(or % (not @(r/track writable-entity? ctx))))
+                         (update props :is-invalid #(or % (context/leaf-invalid? ctx)))
+                         (update props :class css (if (:disabled props) "disabled")))]
              [Body @(:hypercrud.browser/data ctx) ctx props])]))
 
 (defn ^:export field "Works in a form or table context. Draws label and/or value."
