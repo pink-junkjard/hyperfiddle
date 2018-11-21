@@ -39,7 +39,7 @@
 (defn load-asset! [href props]
   (condp #(clojure.string/ends-with? %2 %1) href
     ".css" (style! href props)
-    ".js" (script! href props)))
+    (script! href props)))
 
 (def ^:export Loader!
   (reagent.core/create-class
