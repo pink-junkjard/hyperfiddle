@@ -12,8 +12,7 @@
     [hyperfiddle.foundation :as foundation]
     [hyperfiddle.runtime :as runtime]
     [hyperfiddle.security.client :as security]
-    [hyperfiddle.ui :as ui :refer [markdown]]
-    [hyperfiddle.ui.controls :refer [radio-group]]))
+    [hyperfiddle.ui :as ui :refer [markdown]]))
 
 
 (defn any-loading? [peer]
@@ -89,14 +88,6 @@
             hack-login-renderer
             renderer')]
     [f val ctx props]))
-
-(defn ^:export qe-picker-control [val ctx props]            ; not topnav
-  (let [props (assoc props
-                :class "qe"
-                :options [{:value :query :label "query"}
-                          {:value :entity :label "pull"}
-                          {:value :blank :label "static"}])]
-    [radio-group val ctx props]))
 
 (letfn [(toggle-auto-transact! [ctx selected-uri]
           (runtime/dispatch! (:peer ctx) [:toggle-auto-transact @selected-uri]))]
