@@ -210,7 +210,7 @@
 (defn ^:export code-inline-block [props]
   (let [showing? (r/atom false)]
     (fn [props]
-      [:div.truncate
+      [:div.truncate.code-inline-block
        [re-com/popover-anchor-wrapper
         :showing? showing?
         :position :below-center

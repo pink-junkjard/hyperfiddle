@@ -141,7 +141,6 @@
          (when (context/attribute-segment? (last (:hypercrud.browser/path ctx)))
            (let [attr-ident (last (:hypercrud.browser/path ctx))]
              [@(context/hydrate-attribute ctx attr-ident :db/valueType :db/ident)
-              @(r/cursor (:hypercrud.browser/attr-renderers ctx) [attr-ident])  #_label/fqn->name
               @(context/hydrate-attribute ctx attr-ident :db/cardinality :db/ident)
               (some-> @(context/hydrate-attribute ctx attr-ident :db/isComponent) (if :component))]))
          (:hypercrud.browser/path ctx))
