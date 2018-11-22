@@ -69,7 +69,10 @@
   ([ctx] (ctx->id-lookup (uri ctx) ctx))
   ([uri ctx]
     ; todo what about if the tempid is on a higher branch in the uri?
-   (some-> @(runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :tempid-lookups uri])
+   (some-> uri
+           (->> (conj [::runtime/partitions (:branch ctx) :tempid-lookups])
+                (runtime/state (:peer ctx))
+                deref)
            (either/branch #(throw (ex-info % {})) identity))))
 
 (defn hydrate-attribute [ctx ident & ?more-path]
