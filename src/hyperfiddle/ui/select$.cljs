@@ -88,7 +88,8 @@
     :entity [select-error-cmp "Only fiddle type `query` is supported for select options"]
     :blank [select-error-cmp "Only fiddle type `query` is supported for select options"]
     :query (if (= :db.cardinality/many @(r/fmap ::field/cardinality (:hypercrud.browser/field ctx)))
-             [select-anchor-renderer' props option-props ctx]
+             (let [props (into props (select-keys props2 [:on-click]))]
+               [select-anchor-renderer' props option-props ctx])
              [select-error-cmp "Tuples and scalars are unsupported for select options. Please fix your options query to return a relation or collection"])
     ; default
     [select-error-cmp "Only fiddle type `query` is supported for select options"]))
