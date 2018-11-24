@@ -6,7 +6,7 @@
     #?(:cljs [hyperfiddle.ui])
 
     ; Query helpers
-    #?(:clj [contrib.datomic-peer])
+    #?(:clj [contrib.datomic])
     #?(:clj [hyperfiddle.query])
 
     ; UI helpers

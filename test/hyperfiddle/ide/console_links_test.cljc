@@ -1,19 +1,14 @@
 (ns hyperfiddle.ide.console-links-test
   (:require
     [clojure.core.match :refer [match]]
-    [clojure.string :as string]
     [clojure.test :refer [deftest is]]
-    [contrib.data :as data :refer [ungroup transpose]]
+    [contrib.data :refer [ungroup transpose]]
     [contrib.ct :refer [unwrap]]
-    [contrib.eval :as eval]
-    [contrib.reactive :as r]
     [contrib.reader]
-    [contrib.template :as template]
     [contrib.try$ :refer [try-either]]
     [datascript.parser :as parser #?@(:cljs [:refer [FindRel FindColl FindTuple FindScalar Variable Aggregate Pull]])]
     [fixtures.ctx :refer [ctx result-coll query-coll]]
     [fixtures.domains]
-    [hypercrud.browser.field :as field]
     [hyperfiddle.api]
     [hyperfiddle.ide.console-links :refer [console-link console-links-e
                                            query-links normalize-result console-links-rules query-links-impl]])

@@ -1,7 +1,16 @@
 (ns contrib.datomic
   (:require
-    [contrib.data :refer [group-by-pred]]))
+    [contrib.data :refer [group-by-pred]]
+    [contrib.platform]
+    [clojure.walk :refer [prewalk]]
+    ;#?(:clj [datomic.api :as d]) ; breaks cljs compile-time macros
+    #?(:clj [loom.alg-generic])
+    ))
 
+
+#?(:clj
+   (contrib.platform/code-for-jvm
+     (require '[datomic.api])))
 
 (defn identity-segment? [attr-spec]
   ; Not necessarily a keyword
@@ -11,22 +20,38 @@
 (defn smart-lookup-ref-no-tempids "see hyperfiddle.tempid/smart-entity-identifier"
   [{:keys [:db/id :db/ident] :as v}]
   (let [identity-lookup nil]
-    (or #_(if (underlying-tempid ctx id) id)                  ; the lookups are no good yet, must use the dbid (not the tempid, actions/with will handle that reversal)
-        ident
-        identity-lookup
-        id
-        (if-not (map? v) v)                                 ; id-scalar
-        nil                                                 ; This is an entity but you didn't pull any identity - error?
-        )))
+    (or #_(if (underlying-tempid ctx id) id)                ; the lookups are no good yet, must use the dbid (not the tempid, actions/with will handle that reversal)
+      ident
+      identity-lookup
+      id
+      (if-not (map? v) v)                                   ; id-scalar
+      nil                                                   ; This is an entity but you didn't pull any identity - error?
+      )))
 
 (defn valueType [schema-by-attr k]
   {:pre [(map? schema-by-attr) (keyword? k)]}
   ; :db/id is nil
   (-> schema-by-attr (get k) :db/valueType smart-lookup-ref-no-tempids))
 
-(defn ref? [schema-by-attr k]                               ; Nasty treeish client code. Should this use dynamic scope to hide schema?
-  {:pre [(map? schema-by-attr) (keyword? k)]}
-  (= :db.type/ref (valueType schema-by-attr k)))
+#?(:clj
+   (defn ref? [$ k]
+     (= :db.type/ref (->> k (datomic.api/entity $) :db/valueType))))
+
+(defn ref?' [schema k]                                      ; Nasty treeish client code. Should this use dynamic scope to hide schema?
+  {:pre [(map? schema) (keyword? k)]}
+  (= :db.type/ref (valueType schema k)))
+
+#?(:clj
+   (defn one? [$ k]
+     (= :db.cardinality/one (->> k (datomic.api/entity $) :db/cardinality))))
+
+#?(:clj
+   (defn many? [$ k]
+     (= :db.cardinality/many (->> k (datomic.api/entity $) :db/cardinality))))
+
+#?(:clj
+   (defn component? [$ k]
+     (->> k (datomic.api/entity $) :db/isComponent)))
 
 (declare pull-shape)
 
@@ -61,7 +86,7 @@
       (vec
         (concat
           (distinct bs)
-          (if-let [as (apply pull-shape-union as)]         ; don't concat [nil]
+          (if-let [as (apply pull-shape-union as)]          ; don't concat [nil]
             [as]))))
 
     (map? (first vs))
@@ -70,7 +95,7 @@
 (defn pulled-tree-derivative "Derive a pull-shape which describes a pulled-tree"
   [schema pulled-tree]
   {:pre [(map? schema) (map? pulled-tree)]}
-  (let [ref? (partial ref? schema)]
+  (let [ref? (partial ref?' schema)]
     (->> pulled-tree
          (reduce-kv
            (fn [acc k v]
@@ -101,3 +126,80 @@
                                          distinct))))
        distinct))
 
+(defn tempids [es]
+  (zipmap es (->> (iterate inc 0) (map str))))
+
+; Cloning an entity is shallow - it includes components, but not connections
+; Forking a subgraph makes a copy, including all connections.
+
+#?(:clj
+   (defn datomic-entity-successors [$ e]
+     (->> (-> (datomic.api/pull $ ['*] e) (dissoc :db/id))
+          (mapcat (fn [[k v]]
+                    (if (and (ref? $ k) (not (component? $ k)))
+                      (cond (one? $ k) [(:db/id v)]
+                            (many? $ k) (mapv :db/id v))
+
+                      ))))))
+
+(defn alter-ids [m #_":: id -> tempid" tree]
+  (prewalk (fn [tree]
+             (if (map? tree)
+               (if-let [id (m (:db/id tree))]
+                 (assoc tree :db/id id)
+                 (dissoc tree :db/id))
+               tree))
+           tree))
+
+#?(:clj
+   (defn connected-entities [$ es]
+     (->> es (mapcat #(loom.alg-generic/bf-traverse (partial datomic-entity-successors $) %)) set)))
+
+#?(:clj
+   (defn clone-entities
+     "Shallow clone a Datomic entity and any reachable entities by walking the entity graph breadth-first with Loom."
+     [$ es]
+     (let [xs (connected-entities $ es)]
+       (->> (seq xs)
+            (datomic.api/pull-many $ ['*])
+            (mapv (partial alter-ids (tempids xs)))))))
+
+;(defn lookup-id [lookup id]
+;  (if-let [tid (get-in lookup [:lookup id])]
+;    [lookup tid]
+;    (let [tid (str id)]
+;      [(assoc-in lookup [:lookup id] tid)
+;       tid])))
+
+(defn attr-datomic? [$ e-attr]
+  (<= e-attr 62))
+
+#?(:clj
+   (defn export-schema [$]
+     (->> (datomic.api/q '[:find [?attr ...] :where
+                           [:db.part/db :db.install/attribute ?attr]
+                           [(> ?attr 62)]] $)
+          (datomic.api/pull-many $ ['*])
+          (sort-by :db/ident))))
+
+#?(:clj
+   (defn entity-creation-tx [$ e]
+     (->> (datomic.api/q '[:find (min ?tx) .
+                           :in $ ?e
+                           :where
+                           [?e _ _ ?tx]]
+                         $ e))))
+
+(comment
+  (def $ (db! "datomic:free://datomic:4334/hyperfiddle-users"))
+  (->> (datomic.api/q
+         '[:find
+           ?name
+           ?t
+           :where
+           [?user :user/user-id]
+           [?user :user/name ?name]
+           [(user/entity-creation-tx $ ?user) ?t]]
+         $)
+       (sort-by first))
+  )

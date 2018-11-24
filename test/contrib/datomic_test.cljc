@@ -2,7 +2,9 @@
   (:require
     [clojure.test :refer [deftest is]]
     [contrib.datomic :refer [pull-shape pulled-tree-derivative enclosing-pull-shape
-                             pull-traverse pull-shape-union]]
+                             pull-traverse pull-shape-union
+                             #?@(:clj [datomic-entity-successors clone-entities ref? many? one?])]]
+    #?(:clj [datomic.api :as d])
     [fixtures.ctx :refer [schema result-coll]]
     [fixtures.domains]))
 
@@ -184,15 +186,63 @@
 
 
   (is (= (pull-traverse [:reg/gender
-                         :db/id ; In place order
+                         :db/id                             ; In place order
                          {:reg/shirt-size [:db/ident
                                            :reg/gender
                                            :db/ident
                                            :db/id]}
-                         :db/id ; Ignored, use first
+                         :db/id                             ; Ignored, use first
                          ])
          '([:reg/gender]
             []
             [:reg/shirt-size]
             [:reg/shirt-size :reg/gender])))
   )
+
+#?(:clj
+   (do
+     (def uri "datomic:mem://empty")
+     (d/create-database uri)
+     (def $ (d/db (d/connect uri)))))
+
+#?(:clj
+   (deftest schema-helpers-1
+     []
+     (is (= ((juxt #(ref? $ %)
+                   #(many? $ %)
+                   #(one? $ %))
+              :db/ident)
+            [false false true]))))
+
+#?(:clj
+   (deftest datomic-graph-traverse-1
+     []
+     ; :db/ident's cardinality is the only reachable entity from :db/ident
+     (is (= (->> (d/entity $ :db/ident)
+                 (loom.alg-generic/bf-traverse (partial datomic-entity-successors $))
+                 set
+                 count)
+            1))))
+
+#?(:clj
+   (deftest clone-entities-1
+     []
+     (=
+       (->> (d/q '[:find [?e ...] :where [?e :db/ident :db/ident]] $)
+            (clone-entities $))
+       [{:db/id "0",
+         :db/ident :db.type/keyword,
+         :fressian/tag :key,
+         :db/doc "Value type for keywords. Keywords are used as names, and are interned for efficiency. Keywords map to the native interned-name type in languages that support them."}
+        {:db/id "1",
+         :db/ident :db.cardinality/one,
+         :db/doc "One of two legal values for the :db/cardinality attribute. Specify :db.cardinality/one for single-valued attributes, and :db.cardinality/many for many-valued attributes."}
+        {:db/id "2",
+         :db/ident :db.unique/identity,
+         :db/doc "Specifies that an attribute's value is unique. Attempts to create a new entity with a colliding value for a :db.unique/value will become upserts."}
+        {:db/id "3",
+         :db/ident :db/ident,
+         :db/valueType {:db/id "0"},
+         :db/cardinality {:db/id "1"},
+         :db/unique {:db/id "2"},
+         :db/doc "Attribute used to uniquely name an entity."}])))

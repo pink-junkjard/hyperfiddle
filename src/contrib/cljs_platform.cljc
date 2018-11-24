@@ -3,6 +3,13 @@
   #?(:cljs (:require-macros [contrib.cljs-platform])))
 
 
+
+
+
+;(defmacro not-in-cljs-clj-macroexpansion-phase [body]
+;  (when (boolean (find-ns 'cljs.env))
+;    body))
+
 (defmacro nodejs-target? "only works in macros" []
   '(= :nodejs (get-in @cljs.env/*compiler* [:options :target])))
 

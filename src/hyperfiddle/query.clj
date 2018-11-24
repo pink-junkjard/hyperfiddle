@@ -1,7 +1,5 @@
 (ns hyperfiddle.query
   (:require
-    [contrib.ct :refer [unwrap]]
-    [contrib.try$ :refer [try-either]]
     [datomic.api :as d]
     [hypercrud.browser.q-util :as q-util]
     [hyperfiddle.fiddle :as fiddle]))
@@ -17,36 +15,9 @@
 ; https://forum.datomic.com/t/is-this-a-bug-in-datalog-symbol-resolution-with-not/613
 (def attr-not-archived? (complement attr-archived?))
 
-(defn attr-datomic? [$ e-attr]
-  (<= e-attr 62))
-
 (defn entrypoint-fiddle? [$ e-fiddle]
   (let [fiddle (fiddle/apply-defaults (d/pull $ fiddle/browser-pull e-fiddle))]
     (condp = (:fiddle/type fiddle)
       :blank true
       :entity false
       :query (empty? (q-util/args (:fiddle/query fiddle))))))
-
-(defn entity-creation-tx [$ e]
-  (->> (d/q '[:find [?time ...]
-              :in $ ?e
-              :where
-              [?e _ _ ?tx]
-              [?tx :db/txInstant ?time]]
-            $ e)
-       sort
-       first))
-
-(comment
-  (def $ (db! "datomic:free://datomic:4334/hyperfiddle-users"))
-  (->> (d/q
-         '[:find
-           ?name
-           ?t
-           :where
-           [?user :user/user-id]
-           [?user :user/name ?name]
-           [(user/entity-creation-tx $ ?user) ?t]]
-         $)
-       (sort-by first))
-  )

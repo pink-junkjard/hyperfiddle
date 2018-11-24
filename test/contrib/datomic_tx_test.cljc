@@ -1,44 +1,9 @@
 (ns contrib.datomic-tx-test
   #?(:cljs (:require-macros [contrib.datomic-tx-test :refer [test-into-tx]]))
   (:require
-    [contrib.data :as data]
-    [contrib.datomic-tx :refer [edit-entity into-tx]]
-    [clojure.set :as set]
+    [contrib.datomic-tx :refer [edit-entity]]
     [clojure.test :refer [deftest is testing]]))
 
-
-(def schema
-  (->> [{:db/ident :foo
-         :db/valueType :db.type/string
-         :db/cardinality :db.cardinality/one}
-
-        {:db/ident :bar
-         :db/valueType :db.type/string
-         :db/cardinality :db.cardinality/one}
-
-        {:db/ident :ref
-         :db/valueType :db.type/ref
-         :db/cardinality :db.cardinality/one}
-
-        {:db/ident :component
-         :db/valueType :db.type/ref
-         :db/cardinality :db.cardinality/one
-         :db/isComponent true}]
-       (data/group-by-unique :db/ident)))
-
-#?(:clj
-   (defmacro test-into-tx
-     ([more-statements expected-out]
-      (list 'test-into-tx [] more-statements expected-out))
-     ([tx more-statements expected-out]
-      (list 'test-into-tx schema tx more-statements expected-out))
-     ([schema tx more-statements expected-out]
-      `(let [out# (into-tx ~schema ~tx ~more-statements)
-             s-expected-out# (set ~expected-out)
-             s-out# (set out#)]
-         (is (~'= (count ~expected-out) (count out#)))
-         (is (~'empty? (set/difference s-out# s-expected-out#)) "Unexpected datoms")
-         (is (~'empty? (set/difference s-expected-out# s-out#)) "Missing datoms")))))
 
 (deftest no-op []
   (test-into-tx [] []))

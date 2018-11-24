@@ -5,7 +5,7 @@
     [clojure.string :as string]
     [contrib.ct :refer [unwrap]]
     [contrib.data :as data :refer [merge-by transpose pad ungroup]]
-    [contrib.datomic :refer [valueType ref? pull-shape enclosing-pull-shape pull-traverse]]
+    [contrib.datomic :refer [valueType pull-shape enclosing-pull-shape pull-traverse]]
     [contrib.reactive :as r]
     [contrib.reader :refer [memoized-read-edn-string+]]
     [contrib.string :refer [blank->nil]]
