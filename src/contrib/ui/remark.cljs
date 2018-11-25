@@ -62,7 +62,10 @@
     (-> (js/remark)
         (.use js/remarkGenericExtensions
               (clj->js
-                {"elements" (into {} (map vector (keys extensions) (repeat {"html" {"properties" {"content" "::content::" "argument" "::argument::"}}})))}))
+                {"elements" (into {} (map vector
+                                          (keys extensions)
+                                          (repeat {"html" {"properties" {"content" "::content::"
+                                                                         "argument" "::argument::"}}})))}))
         (.use js/remarkReact (clj->js
                                {"sanitize" false
                                 "remarkReactComponents" extensions}))
@@ -70,10 +73,11 @@
           (exists? js/remarkComments) (.use js/remarkComments #js {"beginMarker" "" "endMarker" ""})
           (exists? js/remarkToc) (.use js/remarkToc)))))
 
+; remark creates react components which don't evaluate in this stack frame
+; so dynamic scope is not helpful to communicate values to remark plugins
+; Reagent + react-context: https://github.com/reagent-project/reagent/commit/a8ec0d219bbd507f51a4d9276c4a1dcc020245af
+
 (defn remark! [& [extensions]]
-  ; remark creates react components which don't evaluate in this stack frame
-  ; so dynamic scope is not helpful to communicate values to remark plugins
-  ; Reagent + react-context: https://github.com/reagent-project/reagent/commit/a8ec0d219bbd507f51a4d9276c4a1dcc020245af
   (let [remark-instance (remark-instance! extensions)]
     (reagent.core/create-class
       {:display-name "markdown"
