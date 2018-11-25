@@ -142,6 +142,7 @@
   (if (and (= [:domain/ident "demo"] (:domain-eid host-env))
            (nil? user-id)
            (not (string/starts-with? path "/:hyperfiddle.ide!please-login/")))
-    (let [url (route/url-encode [:hyperfiddle.ide/please-login [path]] [:hacky-hack-hack])]
+    (let [inner-route (route/url-decode path [:hacky-hack-hack]) ; fake home-route
+          url (route/url-encode [:hyperfiddle.ide/please-login inner-route] [:hacky-hack-hack])]
       (redirect url))
     (next)))
