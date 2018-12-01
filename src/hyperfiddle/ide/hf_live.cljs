@@ -35,16 +35,17 @@
           (let [ctx (if f
                       ctx
                       (dissoc ctx :hyperfiddle.ui.markdown-extensions/unp))]
-            [hyperfiddle.ui/iframe ctx (-> props (update :class css "hf-live") (assoc :user-renderer f))])])
+            [hyperfiddle.ui.iframe/iframe-cmp ctx (-> props (update :class css "hf-live") (assoc :user-renderer f))])])
        (let [as-edn (r/cursor state [:edn-fiddle])]
          [:div.src.col-sm
           [:div "Interactive Hyperfiddle editor:" [contrib.ui/easy-checkbox-boolean " EDN?" as-edn {:class "hf-live"}]]
-          [hyperfiddle.ui/iframe ctx {:class (css (:class props) "devsrc hf-live")
-                                      :route (:route props)
-                                      :hf-live true
-                                      :initial-tab (:initial-tab props)
-                                      :embed-mode true
-                                      :user-renderer (if @as-edn result-edn fiddle-src/fiddle-src-renderer)}]])])))
+          [hyperfiddle.ui.iframe/iframe-cmp ctx
+           {:class (css (:class props) "devsrc hf-live")
+            :route (:route props)
+            :hf-live true
+            :initial-tab (:initial-tab props)
+            :embed-mode true
+            :user-renderer (if @as-edn result-edn fiddle-src/fiddle-src-renderer)}]])])))
 
 (defn browse [rel class ctx props]
   (either/branch

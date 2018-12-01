@@ -13,18 +13,19 @@
     [hypercrud.browser.base :as base]
     [hypercrud.browser.browser-request :refer [request-from-route]]
     [hypercrud.browser.context :as context]
-    [hyperfiddle.actions :as actions]
-    [hyperfiddle.ide.system-fiddle :refer [system-fiddle?]]
-    #?(:cljs [hyperfiddle.ui :as ui])
-    #?(:cljs [hyperfiddle.ide.hf-live :as hf-live])
     #?(:cljs [hypercrud.ui.error :as ui-error])
-    #?(:cljs [hypercrud.ui.stale :as stale])
+    [hyperfiddle.actions :as actions]
     [hyperfiddle.data]
     [hyperfiddle.foundation :as foundation]
+    #?(:cljs [hyperfiddle.ide.hf-live :as hf-live])
+    [hyperfiddle.ide.system-fiddle :refer [system-fiddle?]]
     [hyperfiddle.io.hydrate-requests :refer [hydrate-one!]]
     [hyperfiddle.route :as route]
     [hyperfiddle.runtime :as runtime]
     [hyperfiddle.schema :as schema]
+    #?(:cljs [hyperfiddle.ui :as ui])
+    #?(:cljs [hyperfiddle.ui.iframe :refer [iframe-cmp]])
+    #?(:cljs [hypercrud.ui.stale :as stale])
     [taoensso.timbre :as timbre]
 
     ; pull in the entire ide app for reference from user-land
@@ -96,7 +97,7 @@
 
 (defn- *-target-context [ctx]
   (assoc ctx
-    :hyperfiddle.ui/iframe-on-click #?(:cljs (r/partial frame-on-click (:peer ctx)) :clj nil)
+    :hyperfiddle.ui.iframe/on-click #?(:cljs (r/partial frame-on-click (:peer ctx)) :clj nil)
     :hypercrud.ui/display-mode (runtime/state (:peer ctx) [:display-mode])
     :hyperfiddle.ui/debug-tooltips (:active-ide? (runtime/host-env (:peer ctx)))))
 
@@ -170,7 +171,7 @@
                               [radio-with-label
                                (assoc props :checked (= (:value props) @(runtime/state (:peer ide-ctx) [:display-mode]))
                                             :on-change (r/comp (r/partial runtime/dispatch! (:peer ide-ctx)) actions/set-display-mode))]))))]
-           [ui/iframe content-ctx
+           [iframe-cmp content-ctx
             {:route route
              :class (css "hyperfiddle-user"
                          "hyperfiddle-ide"
@@ -179,7 +180,7 @@
           (let [as-edn (r/cursor state [:edn-fiddle])]
             [:div.src.col-sm
              [:div "Interactive Hyperfiddle editor:" [contrib.ui/easy-checkbox-boolean " edn" as-edn {:class "hyperfiddle hf-live"}]]
-             [ui/iframe ide-ctx
+             [iframe-cmp ide-ctx
               {:route (ide-route route content-ctx)
                :initial-tab (let [[_ _ _ frag] route] (read-fragment-only-hf-src frag))
                :user-renderer (if @as-edn hf-live/result-edn fiddle-src-renderer)
@@ -188,7 +189,7 @@
 #?(:cljs
    (defn primary-content-production "No ide layout markup" [content-ctx route]
      ^{:key :primry-content}
-     [ui/iframe content-ctx
+     [iframe-cmp content-ctx
       {:route (route/dissoc-frag route)
        :class (css "hyperfiddle-user"
                    "hyperfiddle-ide"
@@ -209,7 +210,7 @@
 
         ; Topnav
         (when active-ide?
-          [ui/iframe
+          [iframe-cmp
            (assoc ide-ctx :hypercrud.ui/error (r/constantly ui-error/error-inline))
            {:route (topnav-route route ctx)
             :class "hidden-print"}])
@@ -217,7 +218,7 @@
         ; Primary content area
         (cond
           ; tunneled ide route like /hyperfiddle.ide/domain - primary, blue background (IDE),
-          is-magic-ide-fiddle ^{:key :primary-content} [ui/iframe ide-ctx {:route route :class "devsrc"}]
+          is-magic-ide-fiddle ^{:key :primary-content} [iframe-cmp ide-ctx {:route route :class "devsrc"}]
 
           is-editor [primary-content-ide ide-ctx (page-target-context ctx) route]
 
@@ -231,8 +232,8 @@
          "page" (view-page route ctx)                       ; component, seq-component or nil
          ; On SSR side this is only ever called as "page", but it could be differently (e.g. turbolinks)
          ; On Browser side, also only ever called as "page", but it could be configured differently (client side render the ide, server render userland...?)
-         "ide" [ui/iframe (leaf-ide-context ctx) {:route route}]
-         "user" [ui/iframe (leaf-target-context ctx) {:route route}]))))
+         "ide" [iframe-cmp (leaf-ide-context ctx) {:route route}]
+         "user" [iframe-cmp (leaf-target-context ctx) {:route route}]))))
 
 #?(:cljs
    (defn view [ctx]

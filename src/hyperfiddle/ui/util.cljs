@@ -1,34 +1,14 @@
 (ns hyperfiddle.ui.util
   (:require
-    [cats.core :refer [>>=]]
-    [cats.monad.either :as either]
-    [clojure.set :refer [rename-keys]]
     [contrib.datomic-tx :as tx]
-    [contrib.eval :as eval]
-    [contrib.eval-cljs :as eval-cljs]
     [contrib.reactive :as r]
-    [contrib.string :refer [blank->nil empty->nil]]
-    [contrib.try$ :refer [try-either]]
+    [contrib.string :refer [empty->nil]]
     [hypercrud.browser.context :as context]
     [hyperfiddle.security.client :as security]
     [hyperfiddle.tempid :refer [smart-entity-identifier]]
     [hyperfiddle.actions :as actions]
     [hyperfiddle.runtime :as runtime]))
 
-
-(defn eval-cljs-ns [fiddle]
-  (let [eval-in-ns 'user]                                   ; todo maybe use fiddle/ident for ns?
-    (some->> @(r/cursor fiddle [:fiddle/cljs-ns]) blank->nil
-             (eval-cljs/eval-statement-str! eval-in-ns)))
-  nil)
-
-; defer eval until render cycle inside userportal
-(let [memoized-eval-string (memoize eval/eval-expr-str!+)]  ; don't actually need to safely eval, just want to memoize exceptions
-  (defn eval-renderer-comp [fiddle-renderer-str & args]
-    (either/branch
-      (memoized-eval-string fiddle-renderer-str)
-      (fn [e] (throw e))
-      (fn [f] (into [f] args)))))
 
 (defn entity-change->tx
   ([ctx n]

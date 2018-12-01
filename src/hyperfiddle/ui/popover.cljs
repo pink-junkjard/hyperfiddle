@@ -11,16 +11,17 @@
     [contrib.string :refer [blank->nil]]
     [contrib.try$ :refer [try-promise]]
     [contrib.ui.tooltip :refer [tooltip tooltip-props]]
+    [hypercrud.browser.base :as base]
     [hypercrud.browser.context :as context]
     [hypercrud.util.branch :as branch]
     [hyperfiddle.actions :as actions]
     [hyperfiddle.api]
     [hyperfiddle.runtime :as runtime]
     [hyperfiddle.tempid :as tempid :refer [stable-entity-key]]
+    [hyperfiddle.ui.iframe :refer [iframe-cmp]]
     [promesa.core :as p]
     [re-com.core :as re-com]
-    [taoensso.timbre :as timbre]
-    [hypercrud.browser.base :as base]))
+    [taoensso.timbre :as timbre]))
 
 
 (let [safe-eval-string #(try-promise (eval/eval-expr-str! %))
@@ -83,7 +84,7 @@
         popover-invalid  (->> +popover-ctx-post (unwrap (constantly nil)) context/tree-invalid?)]
     [:div.hyperfiddle-popover-body                          ; wrpaper helps with popover max-width, hard to layout without this
      ; NOTE: this ctx logic and structure is the same as the popover branch of browser-request/recurse-request
-     [hyperfiddle.ui/iframe popover-ctx-pre {:route route}] ; cycle
+     [iframe-cmp popover-ctx-pre {:route route}] ; cycle
      (when ?child-branch
        [:button {:on-click (r/partial stage! link-ref eav popover-id ?child-branch ctx r-popover-data props)
                  :disabled popover-invalid} "stage"])

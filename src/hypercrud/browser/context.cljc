@@ -24,7 +24,7 @@
 
 (defn source-mode [ctx]
   (-> ctx
-      (assoc :hyperfiddle.ui/iframe-on-click (r/constantly nil) ; disable alt-click
+      (assoc :hyperfiddle.ui.iframe/on-click (r/constantly nil) ; disable alt-click
              :hypercrud.ui/display-mode (r/track identity :hypercrud.browser.browser-ui/user))
       (update :hypercrud.browser/domain
               (fn [domain]

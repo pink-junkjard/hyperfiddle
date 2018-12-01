@@ -13,7 +13,7 @@
     [hyperfiddle.ide.fiddles.schema :as schema-fiddle]
     [hyperfiddle.project :as project]
     [hyperfiddle.runtime :as runtime]
-    [hyperfiddle.ui :refer [iframe]]
+    [hyperfiddle.ui.iframe :refer [iframe-cmp]]
     [reagent.dom.server :as dom-server]))
 
 
@@ -43,7 +43,7 @@
         ptm {req res
              (project/attrs-request ctx) []}
         ctx (assoc ctx :peer (->TestRuntime (r/atom {::runtime/partitions {nil {:ptm ptm}}})))]
-    (render [iframe ctx {:route route}])))
+    (render [iframe-cmp ctx {:route route}])))
 
 (deftest schema []
   (let [req (-> (schema-fiddle/schema "$")

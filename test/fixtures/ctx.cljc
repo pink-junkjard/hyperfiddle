@@ -108,7 +108,7 @@
            (reify runtime/State
              (runtime/state [_] state)
              (runtime/state [_ path] (r/cursor state path)))),
-   :hyperfiddle.ui/iframe-on-click nil,
+   :hyperfiddle.ui.iframe/on-click nil,
    :hypercrud.browser/route (r/track identity [:demo/hyper-control nil]),
    :hypercrud.browser/source-domain
    {:db/id 17592186045517,
