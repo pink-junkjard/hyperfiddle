@@ -227,9 +227,10 @@
          :hyperfiddle.ui.layout/table contrib.ui/code-inline-block)])))
 
 (defn ^:export radio-group [val ctx & [props]]
-  (into [:span.radio-group (select-keys props [:class])]
+  (into [:span.radio-group (-> (select-keys props [:class])
+                               (update :class css (when (:is-invalid props) "invalid")))]
         (->> (:options props)
-             (map (let [props (dissoc props :class :options)]
+             (map (let [props (dissoc props :is-invalid :class :options)]
                     (fn [option-props]
                       [contrib.ui/radio-with-label
                        (-> (merge props option-props)
