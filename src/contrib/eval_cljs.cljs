@@ -19,17 +19,24 @@
                                             hc-data-readers
                                             {'entity hc-readers/entity
                                              'uri hc-readers/uri})]
-    (let [r (atom nil)
-          code-str (if (contains? (::ana/namespaces @-cljsjs-empty-state) eval-in-ns)
+    (let [r (atom nil)]
+      (when-not (contains? (::ana/namespaces @-cljsjs-empty-state) eval-in-ns)
+        (cljs/eval-str -cljsjs-empty-state
+                       (str "(ns " eval-in-ns ")")
+                       nil
+                       {:eval cljs/js-eval
+                        :ns eval-in-ns
+                        :context :statement}
+                       (partial reset! r))
+        (when-let [error (:error @r)]
+          (throw error)))
+      (cljs/eval-str -cljsjs-empty-state
                      code-str
-                     (str "(ns " eval-in-ns ")\n" code-str))
-          _ (cljs/eval-str -cljsjs-empty-state
-                           code-str
-                           nil
-                           {:eval cljs/js-eval
-                            :ns eval-in-ns
-                            :context :statement}
-                           (partial reset! r))]
+                     nil
+                     {:eval cljs/js-eval
+                      :ns eval-in-ns
+                      :context :statement}
+                     (partial reset! r))
       (when-let [error (:error @r)]
         (throw error)))))
 

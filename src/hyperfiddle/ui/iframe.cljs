@@ -32,28 +32,22 @@
 
 (defn- build-wrapped-render-expr-str [user-str] (str "(fn [val ctx props]\n" user-str ")"))
 
-(def ^:private eval-renderer (memoize (fn [code-str & cache-bust]
-                                        (println (str "eval-renderer " (pr-str cache-bust)))
-                                        (eval/eval-expr-str!+ code-str))))
+(def ^:private eval-renderer (memoize (fn [code-str & cache-bust] (eval/eval-expr-str!+ code-str))))
 
-(defn- fiddle-renderer-cmp [value ctx props cljs-ns]
+(defn- fiddle-renderer-cmp [value ctx props & bust-component-did-update]
   (let [last-cljs-ns (atom nil)]
-    (fn [value ctx props cljs-ns]
-      (let [fiddle (:hypercrud.browser/fiddle ctx)]
+    (fn [value ctx props & bust-component-did-update]
+      (let [cljs-ns @(r/fmap-> (:hypercrud.browser/fiddle ctx) :fiddle/cljs-ns blank->nil)]
         (when (not= @last-cljs-ns cljs-ns)
           ; todo maybe use fiddle/ident for ns?
           (eval-cljs/eval-statement-str! 'user cljs-ns))
         (reset! last-cljs-ns cljs-ns)
-        (-> (:fiddle/renderer @fiddle)
+        (-> @(r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/renderer])
             build-wrapped-render-expr-str
             (eval-renderer cljs-ns)
             (either/branch
               (fn [e] (throw e))
-              (fn [f]
-                ; If userland crashes, reactions don't take hold, we need to reset here.
-                ; Cheaper to pass this as a prop than to hash everything
-                ; Userland will never see this param as it isn't specified in the wrapped render expr.
-                [f value ctx props @fiddle])))))))
+              (fn [f] [f value ctx props])))))))
 
 (defn- ui-comp [ctx & [props]]                              ; user-renderer comes through here
   (let [value @(:hypercrud.browser/data ctx)
@@ -67,9 +61,9 @@
      (case display-mode
        :hypercrud.browser.browser-ui/user (if-let [user-renderer (:user-renderer props)]
                                             [user-renderer value ctx view-props]
-                                            (let [cljs-ns @(r/fmap-> (:hypercrud.browser/fiddle ctx) :fiddle/cljs-ns blank->nil)]
-                                              ; If evaling cljs-ns crashes, reactions don't take hold, we need to reset here.
-                                              [fiddle-renderer-cmp value ctx view-props cljs-ns]))
+                                            ; If userland crashes (fiddle/renderer OR cljs-ns), reactions don't take hold, we need to reset here.
+                                            ; Cheaper to pass this as a prop than to hash everything
+                                            [fiddle-renderer-cmp value ctx view-props @(:hypercrud.browser/fiddle ctx)])
        :hypercrud.browser.browser-ui/xray [hyperfiddle.ui/fiddle-xray value ctx view-props]
        :hypercrud.browser.browser-ui/api [hyperfiddle.ui/fiddle-api value ctx view-props])]))
 
