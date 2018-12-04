@@ -158,7 +158,7 @@
 (defn fiddle-src-renderer [val ctx props]
   (let [tab-state (r/atom (if (contains? tabs (:initial-tab props)) (:initial-tab props) :hf.src/query))]
     (fn [val ctx {:keys [:embed-mode] :as props}]
-      [:div (select-keys props [:class])
+      [:div (into {:key (str (:fiddle/ident val))} (select-keys props [:class]))
        #_(if-not embed-mode
            [:h3 "Source: " (str @(r/cursor (:hypercrud.browser/data ctx) [:fiddle/ident]))])
        ; Design constraint: one codemirror per tab, and it will expand to fill height.
