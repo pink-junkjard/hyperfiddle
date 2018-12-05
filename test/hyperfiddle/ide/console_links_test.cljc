@@ -261,7 +261,7 @@
 
 (deftest console-links-rules-
   []
-  (for [[comment query result links] matrix]
+  (for #_doseq [[comment query result links] matrix]
     (is (= (query-links schemas query result)
            links)
         comment))

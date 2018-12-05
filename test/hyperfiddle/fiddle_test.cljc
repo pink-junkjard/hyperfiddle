@@ -75,7 +75,7 @@
   (is (= (validate :fiddle/links links smart-lookup-ref-no-tempids)
          '()))
 
-  #_(for [t links]
+  #_(doseq [t links]
     (is (= (validate :fiddle/links t smart-lookup-ref-no-tempids)
            nil)))
   )

@@ -81,7 +81,7 @@
 (deftest pulled-tree-derivative-2
   []
   (let [t derivative-tests]
-    (for [[doc schema tree derivative] t]
+    (doseq [[doc schema tree derivative] t]
       (is (= (pulled-tree-derivative schema tree)
              derivative)
           doc)))
