@@ -38,7 +38,7 @@
   (let [last-cljs-ns (atom nil)]
     (fn [value ctx props & bust-component-did-update]
       (let [cljs-ns @(r/fmap-> (:hypercrud.browser/fiddle ctx) :fiddle/cljs-ns blank->nil)]
-        (when (not= @last-cljs-ns cljs-ns)
+        (when (and (some? cljs-ns) (not= @last-cljs-ns cljs-ns))
           ; todo maybe use fiddle/ident for ns?
           (eval-cljs/eval-statement-str! 'user cljs-ns))
         (reset! last-cljs-ns cljs-ns)
