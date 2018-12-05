@@ -144,7 +144,6 @@
 
 (def browser-pull                                           ; synchronized with http://hyperfiddle.hyperfiddle.net/:hyperfiddle!ide/
   [:db/id
-   :db/doc
    :fiddle/css
    :fiddle/ident
    :fiddle/uuid
