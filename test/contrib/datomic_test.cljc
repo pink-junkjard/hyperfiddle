@@ -74,7 +74,7 @@
        :domain.database/record
        {:db/id 17592186046087,
         :database/uri
-        #uri "datomic:free://datomic:4334/~alexandr.kozyrev@gmail.com+1"}}],}
+        #uri "datomic:free://datomic:4334/foo-ak"}}],}
     [:db/id :domain/home-route {:domain/databases [:db/id :domain.database/name {:domain.database/record [:db/id :database/uri]}]}]]
    ])
 
@@ -184,12 +184,12 @@
 
 
   (is (= (pull-traverse [:reg/gender
-                         :db/id ; In place order
+                         :db/id                             ; In place order
                          {:reg/shirt-size [:db/ident
                                            :reg/gender
                                            :db/ident
                                            :db/id]}
-                         :db/id ; Ignored, use first
+                         :db/id                             ; Ignored, use first
                          ])
          '([:reg/gender]
             []

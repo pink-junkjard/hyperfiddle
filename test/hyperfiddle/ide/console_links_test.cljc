@@ -200,10 +200,10 @@
       :domain/databases
       [{:db/id 17592186046525,
         :domain.database/name "$",
-        :domain.database/record {:db/id 17592186046087, :database/uri #uri "datomic:free://datomic:4334/~alexandr.kozyrev@gmail.com+1"}}],
+        :domain.database/record {:db/id 17592186046087, :database/uri #uri "datomic:free://datomic:4334/foo-ak"}}],
       :hyperfiddle/owners [#uuid "acd054a8-4e36-4d6c-a9ec-95bdc47f0d39" #uuid "c7fda234-a872-4a84-9c40-95633a92ac46"],
       :domain/fiddle-database {:db/id 17592186046087},
-      :domain/ident "alexandrkozyrev"}
+      :domain/ident "foo-ak"}
      ([[] #{:hf/remove :hf/self}])
      ]
 
@@ -216,10 +216,10 @@
       :domain/databases
       [{:db/id 17592186046525,
         :domain.database/name "$",
-        :domain.database/record {:db/id 17592186046087, :database/uri #uri "datomic:free://datomic:4334/~alexandr.kozyrev@gmail.com+1"}}],
+        :domain.database/record {:db/id 17592186046087, :database/uri #uri "datomic:free://datomic:4334/foo-ak"}}],
       :hyperfiddle/owners [#uuid "acd054a8-4e36-4d6c-a9ec-95bdc47f0d39" #uuid "c7fda234-a872-4a84-9c40-95633a92ac46"],
       :domain/fiddle-database {:db/id 17592186046087},
-      :domain/ident "alexandrkozyrev"}
+      :domain/ident "foo-ak"}
      ([[] #{:hf/remove :hf/self}])
      ]
 
@@ -251,10 +251,10 @@
       :domain/databases
       [{:db/id 17592186046525,
         :domain.database/name "$",
-        :domain.database/record {:db/id 17592186046087, :database/uri #uri "datomic:free://datomic:4334/~alexandr.kozyrev@gmail.com+1"}}],
+        :domain.database/record {:db/id 17592186046087, :database/uri #uri "datomic:free://datomic:4334/foo-ak"}}],
       :hyperfiddle/owners [#uuid "acd054a8-4e36-4d6c-a9ec-95bdc47f0d39" #uuid "c7fda234-a872-4a84-9c40-95633a92ac46"],
       :domain/fiddle-database {:db/id 17592186046087},
-      :domain/ident "alexandrkozyrev"}
+      :domain/ident "foo-ak"}
      ([[] #{:hf/remove :hf/self}])]
 
     ])
