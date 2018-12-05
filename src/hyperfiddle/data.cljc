@@ -1,6 +1,6 @@
 (ns hyperfiddle.data
   (:require
-    [cats.core :refer [fmap >>=]]
+    [cats.core :refer [>>=]]
     [cats.monad.either :refer [left right]]
     [contrib.ct :refer [unwrap]]
     [contrib.reactive :as r]
@@ -8,12 +8,8 @@
     [hypercrud.browser.base :as base]
     [hypercrud.browser.context :as context]
     [hypercrud.browser.field :as field]
-    [hypercrud.browser.link :as link]
-    [hypercrud.browser.context :as context]
-    [hyperfiddle.tempid :refer [stable-relation-key]]))
+    [hypercrud.browser.link :as link]))
 
-
-(def ^:export ^:deprecated row-keyfn hyperfiddle.tempid/row-keyfn)
 
 (defn form-with-naked-legacy "Field is invoked as fn"       ; because it unifies with request fn side
   [ctx]                                                     ; f-field :: (relative-path ctx) => Any

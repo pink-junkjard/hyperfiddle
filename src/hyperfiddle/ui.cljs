@@ -27,7 +27,7 @@
     [hyperfiddle.ide.console-links :refer [inject-console-links system-link?]]
     [hyperfiddle.route :as route]
     [hyperfiddle.security.client :as security]
-    [hyperfiddle.tempid :refer [smart-entity-identifier consistent-relation-key stable-relation-key]]
+    [hyperfiddle.tempid :as tempid :refer [smart-entity-identifier consistent-relation-key stable-relation-key]]
     [hyperfiddle.ui.api]
     [hyperfiddle.ui.controls :as controls :refer [label-with-docs dbid-label magic-new]]
     [hyperfiddle.ui.docstring :refer [semantic-docstring]]
@@ -323,7 +323,7 @@ User renderers should not be exposed to the reaction."
          [:thead (->> (columns (dissoc ctx :hypercrud.browser/data) props) (into [:tr]))] ; strict
          (->> (r/fmap-> (:hypercrud.browser/data ctx)
                         (sort/sort-fn sort-col))
-              (r/unsequence (r/partial data/row-keyfn ctx))
+              (r/unsequence (r/partial tempid/row-keyfn ctx))
               (map (fn [[row k]]
                      (->> (columns (context/row ctx row k) props)
                           (into ^{:key k} [:tr]))))         ; strict
@@ -336,7 +336,7 @@ User renderers should not be exposed to the reaction."
      [:a {:href "~entity('$','tempid')"} [:code "~entity('$','tempid')"]] "."]))
 
 (defn form "Not an abstraction." [fields val ctx & [props]]
-  (into [:<> {:key (str (hyperfiddle.tempid/row-keyfn ctx val))}]
+  (into [:<> {:key (str (tempid/row-keyfn ctx val))}]
         (fields (assoc ctx ::layout :hyperfiddle.ui.layout/block))))
 
 (defn columns [m-field relative-path field ctx & [props]]
