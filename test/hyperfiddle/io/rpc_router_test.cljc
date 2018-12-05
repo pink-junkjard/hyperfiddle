@@ -1,7 +1,7 @@
 (ns hyperfiddle.io.rpc-router-test
   (:require
     [clojure.test :refer [deftest is]]
-    [hyperfiddle.io.rpc-router :refer :all]))
+    [hyperfiddle.io.rpc-router :refer [decode-basis encode-basis]]))
 
 
 (def global-basis [[#uri "datomic:free://datomic:4334/domains" 1776]
