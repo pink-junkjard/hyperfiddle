@@ -255,16 +255,6 @@
              :page [page-view ctx f]
              :leaf [leaf-view ctx f]))))))
 
-(defn confirm [message]
-  #?(:clj  (throw (ex-info "confirm unsupported by platform" nil))
-     :cljs (js/confirm message)))
-
-(defn navigable? [route state]
-  (and (not= route (get-in state [::runtime/partitions nil :route]))
-       (or (->> (dissoc (::runtime/partitions state) nil)
-                (every? (comp empty? :stage second)))
-           (confirm "Unstaged work will be lost on navigate, are you sure?"))))
-
 (def LEVEL-NONE 0)
 (def LEVEL-GLOBAL-BASIS 1)
 (def LEVEL-DOMAIN 2)
