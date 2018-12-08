@@ -8,6 +8,7 @@
     [contrib.ui :refer [debounced]]                         ; avoid collisions
     [contrib.ui.recom-date :refer [recom-date]]
     [contrib.ui.tooltip :refer [tooltip-thick]]
+    [contrib.uri :refer [is-uri?]]
     [hypercrud.browser.context :as context]
     [hypercrud.browser.field :as field]
     [hyperfiddle.data :as data]
@@ -33,7 +34,7 @@
     :db.type/long any?                                      ;  todo
     :db.type/ref any?                                       ;  todo
     :db.type/string string?
-    :db.type/uri any?                                       ;  todo
+    :db.type/uri is-uri?
     :db.type/uuid uuid?))
 
 (defn ^:export keyword [val ctx & [props]]
