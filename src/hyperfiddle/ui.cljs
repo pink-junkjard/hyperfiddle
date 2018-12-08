@@ -90,12 +90,13 @@
       [:long :one] controls/long
       [:instant :one] controls/instant
       [:ref :one] controls/ref
-      [:ref :many] controls/edn-many                        ; multi select
+      [:ref :many] controls/ref-many
       [_ :one] controls/edn
       [_ :many] controls/edn-many)))
 
 (defn ^:export hyper-control [val ctx & [props]]
   {:post [%]}
+  ;(js/console.warn (str (:db/ident @(context/hydrate-attribute ctx (last (:hypercrud.browser/path ctx))))))
   (or (attr-renderer-control val ctx props)
       (let [-field @(:hypercrud.browser/field ctx)]
         (cond                                               ; Duplicate options test to avoid circular dependency in controls/ref

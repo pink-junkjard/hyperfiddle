@@ -132,6 +132,11 @@
              (if val
                [hyperfiddle.ui/ui-from-link link ctx props "detach"]))]))
 
+(defn ^:export ref-many [val ctx & [props]]
+  [hyperfiddle.ui/table
+   (r/partial hyperfiddle.ui/columns-relation-product hyperfiddle.ui/field)
+   ctx props])
+
 (defn ^:export id-or-ident [val ctx & [props]]
   ; id control uses links from parent ctx (parent ref and parent path)
   ; select-here does not match :hf/self since it is in the parent ref position
