@@ -117,7 +117,7 @@
                                   (runtime/dispatch! (:peer ctx) action)))}
            "transact!"])]
        " "
-       [tooltip (either/branch
+       #_[tooltip (either/branch
                   writes-allowed?+
                   (fn [e] {:status :warning :label "Misconfigured db security"})
                   (fn [writes-allowed?]
