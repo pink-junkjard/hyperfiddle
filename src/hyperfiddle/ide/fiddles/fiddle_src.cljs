@@ -27,7 +27,7 @@
        sort
        (map (fn [[$db _]]
               (let [props {:route [(keyword "hyperfiddle.schema" $db)]
-                           :target "_blank"}]
+                           #_#_:target "_blank"}]
                 ^{:key $db}
                 [anchor ctx props $db])))
        (doall)))
