@@ -93,11 +93,12 @@
          (remove (comp nil? second)))))
 
 (defn normalize-result [qfind result]
-  (condp = (type qfind)
-    FindColl (mapv vector result)
-    FindRel result
-    FindTuple (mapv vector result)
-    FindScalar [[result]]))
+  (when result                                              ; unclear if nil result should have been a server error https://github.com/hyperfiddle/hyperfiddle/issues/584
+    (condp = (type qfind)
+      FindColl (mapv vector result)
+      FindRel result
+      FindTuple (mapv vector result)
+      FindScalar [[result]])))
 
 (defn query-links-impl [schemas qfind result]
   (mapcat (partial console-links-e schemas qfind)           ; (map (partial console-link source)) % has the source

@@ -31,9 +31,10 @@
 
 (defmethod hydrate-request* EntityRequest [{:keys [e db pull-exp]} get-secure-db-with]
   (let [{pull-db :db} (get-secure-db-with (:uri db) (:branch db))]
-    (if (tempid? e)
-      {:db/id e}                                            ; https://github.com/hyperfiddle/hyperfiddle/issues/584
-      (d/pull pull-db pull-exp e))))
+    (cond
+      (nil? e) nil                                          ; This is probably an error, report it? Datomic says: (d/pull $ [:db/id] nil) => #:db{:id nil}
+      (tempid? e) {:db/id e}                                ; This introduces sloppy thinking about time!   https://github.com/hyperfiddle/hyperfiddle/issues/584
+      :happy (d/pull pull-db pull-exp e))))
 
 (defmethod hydrate-request* QueryRequest [{:keys [query params]} get-secure-db-with]
   (assert query "hydrate: missing query")

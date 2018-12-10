@@ -332,7 +332,7 @@ User renderers should not be exposed to the reaction."
 
 (defn hint [val {:keys [hypercrud.browser/fiddle] :as ctx} props]
   (if (and (-> (:fiddle/type @fiddle) (= :entity))
-           (nil? (smart-entity-identifier ctx val)))
+           (empty? val))
     [:div.alert.alert-warning "Warning: invalid route (d/pull requires an entity argument). To add a tempid entity to the URL, click here: "
      [:a {:href "~entity('$','tempid')"} [:code "~entity('$','tempid')"]] "."]))
 
