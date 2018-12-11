@@ -4,7 +4,7 @@
                   [adzerk/bootlaces "0.1.13" :scope "test"]
                   [crisptrutski/boot-cljs-test "0.3.4" :scope "test"]
                   [deps-to-boot "1.1.0" :scope "test"]
-                  [seancorfield/boot-tools-deps "0.4.5" :scope "test"]
+                  [seancorfield/boot-tools-deps "0.4.7" :scope "test"]
                   [sparkfund/boot-lein "0.4.0" :scope "test"]])
 
 (require '[adzerk.boot-cljs :refer :all]
