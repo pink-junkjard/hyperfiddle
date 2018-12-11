@@ -8,6 +8,8 @@
     [taoensso.timbre :as timbre]))
 
 
+(def ^:dynamic *force-refresh*)
+
 (defn http-request! [req]
   (let [req-hash (delay (hash req))]
     (perf/time-promise
@@ -36,6 +38,13 @@
                                                     #?(:clj (.getCause e) :cljs (ex-cause e))))
 
                                     (= (:status data) 0) (throw (ex-info (ex-message e) data (ex-cause e)))
+
+                                    (and (= (:status data) 404)
+                                         (some? *force-refresh*)
+                                         (= "Please refresh your browser" response-body))
+                                    (*force-refresh* (ex-info response-body
+                                                              (assoc data :hyperfiddle.io/http-status-code (:status data))
+                                                              (ex-cause e)))
 
                                     (:status data) (throw (ex-info (ex-message e)
                                                                    (assoc data :hyperfiddle.io/http-status-code (:status data))

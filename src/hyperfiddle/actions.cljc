@@ -162,7 +162,9 @@
                                     (Err/Err? e) (:msg e)
                                     (map? e) (:message e)
                                     :else (ex-message e))]
-                      (js/alert message)))
+                      (if (= "Please refresh your browser" message)
+                        (js/alert "We deployed some updates and your client is out of date, press OK and we will refresh your page")
+                        (js/alert message))))
                  (dispatch! [:transact!-failure e])
                  (throw e)))
       (p/then (fn [{:keys [tempid->id]}]
