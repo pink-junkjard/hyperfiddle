@@ -17,6 +17,7 @@
     [hyperfiddle.runtime :as runtime]
     [hyperfiddle.security.client :as security]
     [hyperfiddle.state :as state]
+    [hyperfiddle.ui.loading :refer [loading-page]]
     [promesa.core :as p]
     [reagent.dom.server :as reagent-server]
     [reagent.impl.template :as tmpl]
@@ -39,9 +40,7 @@
     (try
       (reagent-server/render-to-static-markup
         [foundation/view :page ctx (if (:active-ide? (runtime/host-env rt))
-                                     (constantly [:div.loading-page>div.logo-callout
-                                                  [:img {:src "https://i.imgur.com/DtMAeuM.png"}]
-                                                  [:span.brand ":hyperfiddle"]])
+                                     (constantly [loading-page])
                                      ide/view)])
       (catch :default e
         (reagent-server/render-to-string [:div
