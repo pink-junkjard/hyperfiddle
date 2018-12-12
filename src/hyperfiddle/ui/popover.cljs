@@ -61,7 +61,10 @@
                                         #(->> (swap-fn-async)
                                               (fmap
                                                 (fn [tx]
-                                                  (-> {:tx {(hypercrud.browser.context/uri ctx) tx}
+                                                  (-> {:tx {(or (hypercrud.browser.context/uri ctx)
+                                                                ; https://github.com/hyperfiddle/hyperfiddle/issues/816
+                                                                (hypercrud.browser.context/uri "$" ctx))
+                                                            tx}
                                                        :app-route (if-let [f (::redirect props)] (f @r-popover-data))}
                                                       dissoc-nils))))
                                         (actions/close-popover (:branch ctx) popover-id))
