@@ -81,10 +81,10 @@
                                 ?child-branch (assoc :branch ?child-branch))
         +popover-ctx-post (base/data-from-route route popover-ctx-pre)
         r-popover-data (r/>>= :hypercrud.browser/data +popover-ctx-post)
-        popover-invalid  (->> +popover-ctx-post (unwrap (constantly nil)) context/tree-invalid?)]
+        popover-invalid (->> +popover-ctx-post (unwrap (constantly nil)) context/tree-invalid?)]
     [:div.hyperfiddle-popover-body                          ; wrpaper helps with popover max-width, hard to layout without this
      ; NOTE: this ctx logic and structure is the same as the popover branch of browser-request/recurse-request
-     [iframe-cmp popover-ctx-pre {:route route}] ; cycle
+     [iframe-cmp popover-ctx-pre {:route route}]            ; cycle
      (when ?child-branch
        [:button {:on-click (r/partial stage! link-ref eav popover-id ?child-branch ctx r-popover-data props)
                  :disabled popover-invalid} "stage"])
