@@ -239,7 +239,9 @@
   (fn [dispatch! get-state]
     (p/then (swap-fn-async)
             (fn [{:keys [tx app-route]}]
+              {:pre [(not-any? nil? (keys tx))]}            ; tx :: {uri tx}    https://github.com/hyperfiddle/hyperfiddle/issues/816
               (let [with-actions (mapv (fn [[uri tx]]
+                                         (assert uri)
                                          (let [tx (update-to-tempids get-state branch uri tx)]
                                            [:with branch uri tx]))
                                        tx)
