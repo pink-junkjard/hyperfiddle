@@ -106,7 +106,7 @@
           (seq (::field/children -field)) (let [ctx (dissoc ctx ::layout)]
                                             [:div           ; wrapper div: https://github.com/hyperfiddle/hyperfiddle/issues/541
                                              [pull field val ctx props]
-                                             [field [] ctx entity-links-iframe (assoc props :label-fn (r/constantly nil #_[:div "nested pull iframes"]))]])
+                                             [field [] ctx entity-links-iframe (-> props (dissoc :class) (assoc :label-fn (r/constantly nil #_[:div "nested pull iframes"])))]])
           :else [(control val ctx props) val ctx props]))))
 
 (defn ^:export hyper-label [_ ctx & [props]]
@@ -379,7 +379,9 @@ nil. call site must wrap with a Reagent component"          ; is this just hyper
        [:blank _] nil
        [:query :relation] [table (r/partial columns-relation-product field) ctx props]
        [:query :tuple] [form (r/partial columns-relation-product field) val ctx props]
-       [_ _] (pull field val ctx props)))])
+       [_ _] (pull field val ctx props)))
+   (let [props (-> props (dissoc :class) (assoc :label-fn (r/constantly nil)))]
+     [field [] ctx entity-links-iframe props])])
 
 (def ^:dynamic markdown)                                    ; this should be hf-contrib or something
 
@@ -389,8 +391,7 @@ nil. call site must wrap with a Reagent component"          ; is this just hyper
   (let [ctx (inject-console-links ctx)]
     [:div (select-keys props [:class :on-click])
      [:h3 (pr-str @(:hypercrud.browser/route ctx))]
-     (result val ctx {})
-     [field [] ctx entity-links-iframe (assoc props :label-fn (r/constantly nil))]]))
+     [result val ctx {}]]))
 
 (letfn [(render-edn [data]
           (let [edn-str (pprint-str data 160)]
