@@ -80,7 +80,6 @@
 ;   see https://github.com/medfreeman/remark-generic-extensions/issues/30
 
 (defmethod md-ext :block [_ content argument props ctx]
-  ; Should presence of argument trigger a figure and caption?
   [:div props [markdown content (assoc ctx ::unp true)]])
 
 ; This is a custom markdown extension example.
