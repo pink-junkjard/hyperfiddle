@@ -84,10 +84,9 @@
        :reagent-render
        (fn [value & [?ctx]]
          (when-not (clojure.string/blank? value)
-           (let [c (-> remark-instance (.processSync value #js {"commonmark" true}) .-contents)
-                 ; Throw away remark wrapper div
-                 content (-> c .-props .-children)]
-             content)))
+           (-> remark-instance
+               (.processSync value #js {"commonmark" true})
+               .-contents)))
 
        :get-child-context
        (fn []
