@@ -103,12 +103,15 @@
      ; Careful: pass through :embed-mode
      (field [:fiddle/links] ctx links-renderer props))
 
+   :hf.src/ns
+   (fn [val ctx props]
+     (let [props (-> (dissoc props :embed-mode))]
+       (field [:fiddle/cljs-ns] ctx hyper-control (with-fiddle-default props val :fiddle/cljs-ns))))
+
    :hf.src/view
    (fn [val ctx props]
      (let [props (-> (dissoc props :embed-mode))]
-       [:<>
-        (field [:fiddle/renderer] ctx hyper-control (with-fiddle-default props val :fiddle/renderer))
-        (field [:fiddle/cljs-ns] ctx hyper-control (with-fiddle-default props val :fiddle/cljs-ns))]))
+       (field [:fiddle/renderer] ctx hyper-control (with-fiddle-default props val :fiddle/renderer))))
 
    :hf.src/markdown
    (fn [val ctx props]
@@ -159,13 +162,11 @@
   (let [tab-state (r/atom (if (contains? tabs (:initial-tab props)) (:initial-tab props) :hf.src/query))]
     (fn [val ctx {:keys [:embed-mode] :as props}]
       [:div (into {:key (str (:fiddle/ident val))} (select-keys props [:class]))
-       #_(if-not embed-mode
-           [:h3 "Source: " (str @(r/cursor (:hypercrud.browser/data ctx) [:fiddle/ident]))])
        ; Design constraint: one codemirror per tab, and it will expand to fill height.
        [horizontal-tabs
         ; F U recom: Validation failed: Expected 'vector of tabs | atom'. Got '[:query :links :view :css :fiddle]'
-        :tabs [{:id :hf.src/query} {:id :hf.src/links} {:id :hf.src/markdown}
-               {:id :hf.src/view} {:id :hf.src/css} {:id :hf.src/fiddle}]
+        :tabs (->> [:hf.src/query :hf.src/links :hf.src/markdown :hf.src/view :hf.src/ns :hf.src/css :hf.src/fiddle]
+                   (map (partial hash-map :id)))
         :id-fn :id
         :label-fn (comp name :id)
         :model tab-state
