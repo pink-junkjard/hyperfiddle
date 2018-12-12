@@ -32,7 +32,7 @@
     [hyperfiddle.runtime :as runtime]
     [hyperfiddle.security.domains]
     [promesa.core :as p]
-    #?(:cljs [re-com.tabs :refer [horizontal-tabs]])))
+    #?(:cljs [re-com.tabs])))
 
 
 (def domain-uri #uri "datomic:free://datomic:4334/domains")
@@ -198,17 +198,22 @@
                tabs-definition (->> @(runtime/state (:peer ctx) [::runtime/domain :domain/databases])
                                     (reduce (fn [acc hf-db]
                                               (let [uri (get-in hf-db [:domain.database/record :database/uri])]
-                                                (update acc uri (fnil conj '()) (:domain.database/name hf-db))))
+                                                (update acc uri (fnil conj '()) (:domain.database/name hf-db)))) ; dbname is :many - same uri named N times
                                             (into non-empty-uris
                                                   {@source-uri '("src")}))
-                                    (mapv (fn [[uri labels]] {:id uri :label (string/join " " labels)}))
-                                    (sort-by :label))
+                                    (mapv (fn [[uri dbnames]]
+                                            [uri (string/join " " dbnames)]))
+                                    (sort-by second)
+                                    (mapv (fn [[uri label]]
+                                            (let [is-dirty (contains? non-empty-uris uri)]
+                                              {:id uri
+                                               :label [:span {:class (if is-dirty "stage-dirty")} label]}))))
                _ (when-not (contains? (->> tabs-definition (map :id) (into #{})) @selected-uri)
                    (reset! selected-uri (or (hyperfiddle.domain/dbname->uri "$" @(runtime/state (:peer ctx) [::runtime/domain]))
                                             @source-uri)))
                stage (runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :stage @selected-uri])]
            [:<> {:key "topnav"}
-            [horizontal-tabs
+            [re-com.tabs/horizontal-tabs
              :model selected-uri
              :tabs tabs-definition
              :on-change change-tab]
