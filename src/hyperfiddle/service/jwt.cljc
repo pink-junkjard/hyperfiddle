@@ -1,4 +1,4 @@
-(ns hyperfiddle.service.lib.jwt
+(ns hyperfiddle.service.jwt
   (:require
     #?(:clj [clojure.walk :as walk])
     #?(:clj [contrib.data :refer [map-values]])

@@ -7,8 +7,8 @@
     [hypercrud.types.Err :refer [->Err]]
     [hyperfiddle.io.http :refer [build-routes]]
     [hyperfiddle.service.cookie :as cookie]
-    [hyperfiddle.service.lib.jwt :as jwt]
     [hyperfiddle.service.http :refer [handle-route]]
+    [hyperfiddle.service.jwt :as jwt]
     [promesa.core :as p]
     [taoensso.timbre :as timbre]))
 

@@ -9,7 +9,7 @@
     [hyperfiddle.io.http :as http]
     [hyperfiddle.service.cookie :as cookie]
     [hyperfiddle.service.http :refer [handle-route]]
-    [hyperfiddle.service.lib.jwt :as jwt]
+    [hyperfiddle.service.jwt :as jwt]
     [io.pedestal.http :as pedestal-http]
     [io.pedestal.interceptor.chain :refer [terminate]]
     [io.pedestal.interceptor.helpers :as interceptor]
