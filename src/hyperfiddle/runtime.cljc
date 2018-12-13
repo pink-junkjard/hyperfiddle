@@ -1,30 +1,14 @@
 (ns hyperfiddle.runtime
   (:refer-clojure :exclude [sync]))
 
-; App fn - just Datomic primitives
-; "api" vs "fiddle"
 
-(defprotocol AppFnGlobalBasis                               ; anything reachable through navigation; so likely all dbs in :domain/env
-  (global-basis [rt]))
-
-(defprotocol AppFnHydrate
-  (hydrate-requests [rt local-basis stage requests]))
-
-(defprotocol AppFnSync
-  (sync [rt dbs]))
-
-(defprotocol AppFnTransact!
+(defprotocol IO
+  (global-basis [rt])
+  (hydrate-requests [rt local-basis stage requests])
+  (hydrate-route [rt branch])
+  (local-basis [rt branch-ident])
+  (sync [rt dbs])
   (transact! [rt tx-groups]))
-
-; App val uses link-graph to determine a local-basis and optimize hydrates for cache locality
-
-(defprotocol AppValLocalBasis                               ; only the data for this route, but decoupled from browser, foo not allowed.
-  (local-basis [rt branch-ident]))
-
-(defprotocol AppValHydrate
-  ; user-data-fn not on this interface; hardcoded in runtime impls or read from db
-  ; returns ptm without stage-val hashes
-  (hydrate-route [rt branch]))
 
 (defprotocol State
   (dispatch! [rt action-or-func])
