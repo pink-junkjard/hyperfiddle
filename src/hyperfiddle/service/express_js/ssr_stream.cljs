@@ -3,8 +3,7 @@
     [goog.object :as object]
     [hyperfiddle.runtime :as runtime]
     [hyperfiddle.service.http :as http-service :refer [handle-route]]
-    [hyperfiddle.service.ssr.core :refer [render-to-node-stream ssr]]
-    [hyperfiddle.service.ssr.runtime :as ssr-runtime]
+    [hyperfiddle.service.ssr :as ssr]
     [promesa.core :as p]
     [taoensso.timbre :as timbre]))
 
@@ -15,14 +14,14 @@
         path (.-path req)
         redirect #(.redirect res %)
         next (fn []
-               (let [rt (ssr-runtime/build host-env {::runtime/user-id user-id} (object/get req "jwt"))]
-                 (-> (ssr env rt (.-path req))
+               (let [rt (ssr/build-runtime host-env {::runtime/user-id user-id} (object/get req "jwt"))]
+                 (-> (ssr/bootstrap-html-cmp env rt (.-path req))
                      (p/then (fn [{:keys [http-status-code component]}]
                                (doto res
                                  (.status http-status-code)
                                  (.type "html")
                                  (.write "<!DOCTYPE html>\n"))
-                               (let [stream (render-to-node-stream component)]
+                               (let [stream (ssr/render-to-node-stream component)]
                                  (.on stream "error" (fn [e]
                                                        (timbre/error e)
                                                        (.end res (str "<h2>Fatal rendering error:</h2><h4>" (ex-message e) "</h4>"))))
