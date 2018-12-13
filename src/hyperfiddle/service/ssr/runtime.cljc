@@ -24,15 +24,14 @@
   runtime/HostInfo
   (host-env [rt] host-env)
 
-  runtime/AppFnGlobalBasis
-  (global-basis [rt]
-    (global-basis-rpc! (:service-uri host-env) (:build host-env) jwt))
-
   runtime/DomainRegistry
   (domain [rt]
     (ide/domain rt (:domain-eid host-env)))
 
-  runtime/AppValLocalBasis
+  runtime/IO
+  (global-basis [rt]
+    (global-basis-rpc! (:service-uri host-env) (:build host-env) jwt))
+
   (local-basis [rt branch]
     (let [global-basis @(runtime/state rt [::runtime/global-basis])
           {:keys [route ::runtime/branch-aux]} @(runtime/state rt [::runtime/partitions branch])
@@ -46,17 +45,14 @@
                          "ide" :leaf)]
       (foundation/local-basis page-or-leaf global-basis route ctx ide/local-basis)))
 
-  runtime/AppValHydrate
   (hydrate-route [rt branch]
     (let [{:keys [route local-basis ::runtime/branch-aux]} @(runtime/state rt [::runtime/partitions branch])
           stage (map-values :stage @(runtime/state rt [::runtime/partitions]))]
       (hydrate-route-rpc! (:service-uri host-env) (:build host-env) local-basis route branch branch-aux stage jwt)))
 
-  runtime/AppFnHydrate
   (hydrate-requests [rt local-basis stage requests]
     (hydrate-requests-rpc! (:service-uri host-env) (:build host-env) local-basis stage requests jwt))
 
-  runtime/AppFnSync
   (sync [rt dbs]
     (sync-rpc! (:service-uri host-env) (:build host-env) dbs jwt))
 

@@ -1,4 +1,4 @@
-(ns hyperfiddle.service.jvm.hydrate-route
+(ns hyperfiddle.service.pedestal.hydrate-route
   (:refer-clojure :exclude [sync])
   (:require
     [contrib.data :refer [map-values]]
@@ -13,6 +13,8 @@
     [hyperfiddle.io.sync :refer [sync]]
     [hyperfiddle.io.util :refer [process-result]]
     [hyperfiddle.runtime :as runtime]
+    [hyperfiddle.service.http :as http-service :refer [handle-route]]
+    [hyperfiddle.service.pedestal.interceptors :refer [platform->pedestal-req-handler]]
     [hyperfiddle.state :as state]
     [promesa.core :as p]
     [taoensso.timbre :as timbre]))
@@ -43,7 +45,7 @@
   (db [this uri branch]
     (peer/db-pointer uri branch)))
 
-(deftype HydrateRoute [host-env state-atom root-reducer jwt ?subject]
+(deftype RT [host-env state-atom root-reducer jwt ?subject]
   runtime/State
   (dispatch! [rt action-or-func] (state/dispatch! state-atom root-reducer action-or-func))
   (state [rt] state-atom)
@@ -56,7 +58,7 @@
   (domain [rt]
     (ide/domain rt (:domain-eid host-env)))
 
-  runtime/AppValHydrate
+  runtime/IO
   (hydrate-route [rt branch]
     (let [{:keys [route local-basis ::runtime/branch-aux]} @(runtime/state rt [::runtime/partitions branch])
           stage (map-values :stage @(runtime/state rt [::runtime/partitions]))
@@ -89,7 +91,6 @@
                  (foundation/api page-or-leaf ctx (partial ide/api route)))
       (p/resolved (select-keys @(runtime/state rt [::runtime/partitions branch]) [:local-basis :ptm :tempid-lookups]))))
 
-  runtime/AppFnHydrate
   (hydrate-requests [rt local-basis stage requests]
     {:pre [requests (not-any? nil? requests)]}
     (let [staged-branches (stage-val->staged-branches stage)]
@@ -102,3 +103,6 @@
   hc/Peer
   (db [this uri branch]
     (peer/db-pointer uri branch)))
+
+(defmethod handle-route :hydrate-route [handler env req]
+  (platform->pedestal-req-handler (partial http-service/hydrate-route-handler ->RT) req))

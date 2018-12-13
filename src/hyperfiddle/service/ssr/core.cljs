@@ -2,7 +2,6 @@
   (:require
     ["react-dom/server" :as dom-server]
     [cats.monad.either :as either]
-    [clojure.set :as set]
     [contrib.reactive :as r]
     [contrib.template :refer [load-resource]]
     [goog.object :as object]
@@ -48,25 +47,25 @@
                                           [:h2 "SSR failed on:"]
                                           [error/error-block e]])))))
 
-(defn full-html [env rt params]
+(defn full-html [build static-resources show-analytics rt client-params]
   (let [hyperfiddle-dns? (boolean (:auth/root (runtime/host-env rt)))
         serve-js? (or (:active-ide? (runtime/host-env rt)) (not @(runtime/state rt [::runtime/domain :domain/disable-javascript])))
-        resource-base (str (:STATIC_RESOURCES env) "/" (:BUILD env))]
+        resource-base (str static-resources "/" build)]
     [:html {:lang "en"}
      [:head
       [:title "Hyperfiddle"]
       [:link {:rel "stylesheet" :href (str resource-base "/styles.css")}]
       [:meta {:name "viewport" :content "width=device-width, initial-scale=1"}]
       [:meta {:charset "UTF-8"}]
-      [:script {:id "build" :type "text/plain" :dangerouslySetInnerHTML {:__html (:BUILD env)}}]]
+      [:script {:id "build" :type "text/plain" :dangerouslySetInnerHTML {:__html build}}]]
      [:body
       [:div {:id "root" :dangerouslySetInnerHTML {:__html (root-html-str rt)}}]
-      (when (and hyperfiddle-dns? (:ANALYTICS env))
+      (when (and hyperfiddle-dns? show-analytics)
         [:div {:dangerouslySetInnerHTML {:__html analytics}}])
       (when serve-js?
         ; env vars for client side rendering
         [:script {:id "params" :type "application/transit-json"
-                  :dangerouslySetInnerHTML {:__html (transit/encode params)}}])
+                  :dangerouslySetInnerHTML {:__html (transit/encode client-params)}}])
       (when serve-js?
         [:script {:id "state" :type "application/transit-json"
                   :dangerouslySetInnerHTML {:__html (transit/encode @(runtime/state rt))}}])
@@ -76,7 +75,10 @@
         [:script {:id "main" :src (str resource-base "/main.js")}])]]))
 
 (defn ssr [env rt path]
-  (let [load-level foundation/LEVEL-HYDRATE-PAGE
+  (let [build (:BUILD env)
+        static-resources (:STATIC_RESOURCES env)
+        show-analytics (:ANALYTICS env)
+        load-level foundation/LEVEL-HYDRATE-PAGE
         browser-init-level (if (:active-ide? (runtime/host-env rt))
                              ;force the browser to re-run the data bootstrapping when not aliased
                              foundation/LEVEL-NONE
@@ -98,9 +100,10 @@
         (p/then (constantly 200))
         (p/catch #(or (:hyperfiddle.io/http-status-code (ex-data %)) 500))
         (p/then (fn [http-status-code]
-                  (let [params {:host-env (runtime/host-env rt)
-                                :sentry (-> (select-keys env [:BUILD :SENTRY_DSN :SENTRY_ENV])
-                                            (set/rename-keys {:SENTRY_DSN :dsn :SENTRY_ENV :environment :BUILD :release}))
-                                :hyperfiddle.bootstrap/init-level browser-init-level}]
+                  (let [client-params {:host-env (runtime/host-env rt)
+                                       :sentry {:dsn (:SENTRY_DSN env)
+                                                :environment (:SENTRY_ENV env)
+                                                :release (:BUILD env)}
+                                       :hyperfiddle.bootstrap/init-level browser-init-level}]
                     {:http-status-code http-status-code
-                     :component [full-html env rt params]}))))))
+                     :component [full-html build static-resources show-analytics rt client-params]}))))))

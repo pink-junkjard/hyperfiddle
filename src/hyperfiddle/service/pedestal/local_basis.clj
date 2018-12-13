@@ -1,21 +1,24 @@
-(ns hyperfiddle.service.jvm.local-basis
+(ns hyperfiddle.service.pedestal.local-basis
   (:refer-clojure :exclude [sync])
-  (:require [hypercrud.client.core :as hc]
-            [hypercrud.client.peer :as peer]
-            [contrib.reactive :as r]
-            [hyperfiddle.foundation :as foundation]
-            [hyperfiddle.ide :as ide]
-            [hyperfiddle.io.datomic.hydrate-requests :refer [hydrate-requests]]
-            [hyperfiddle.io.global-basis :refer [global-basis]]
-            [hyperfiddle.io.hydrate-requests :refer [stage-val->staged-branches]]
-            [hyperfiddle.io.sync :refer [sync]]
-            [hyperfiddle.runtime :as runtime]
-            [hyperfiddle.state :as state]
-            [promesa.core :as p]))
+  (:require
+    [hypercrud.client.core :as hc]
+    [hypercrud.client.peer :as peer]
+    [contrib.reactive :as r]
+    [hyperfiddle.foundation :as foundation]
+    [hyperfiddle.ide :as ide]
+    [hyperfiddle.io.datomic.hydrate-requests :refer [hydrate-requests]]
+    [hyperfiddle.io.global-basis :refer [global-basis]]
+    [hyperfiddle.io.hydrate-requests :refer [stage-val->staged-branches]]
+    [hyperfiddle.io.sync :refer [sync]]
+    [hyperfiddle.runtime :as runtime]
+    [hyperfiddle.service.http :as http-service :refer [handle-route]]
+    [hyperfiddle.service.pedestal.interceptors :refer [platform->pedestal-req-handler]]
+    [hyperfiddle.state :as state]
+    [promesa.core :as p]))
 
 
 ; This is allowed to hydrate route, this runtime is probably the same as hydrate-route runtime
-(deftype LocalBasis [host-env state-atom root-reducer jwt ?subject]
+(deftype RT [host-env state-atom root-reducer jwt ?subject]
   runtime/State
   (dispatch! [rt action-or-func] (state/dispatch! state-atom root-reducer action-or-func))
   (state [rt] state-atom)
@@ -24,15 +27,14 @@
   runtime/HostInfo
   (host-env [rt] host-env)
 
-  runtime/AppFnGlobalBasis
-  (global-basis [rt]
-    (global-basis rt (:domain-eid host-env)))
-
   runtime/DomainRegistry
   (domain [rt]
     (ide/domain rt (:domain-eid host-env)))
 
-  runtime/AppValLocalBasis
+  runtime/IO
+  (global-basis [rt]
+    (global-basis rt (:domain-eid host-env)))
+
   (local-basis [rt branch]
     (let [global-basis @(runtime/state rt [::runtime/global-basis])
           {:keys [route ::runtime/branch-aux]} @(runtime/state rt [::runtime/partitions branch])
@@ -46,13 +48,11 @@
                          "ide" :leaf)]
       (foundation/local-basis page-or-leaf global-basis route ctx ide/local-basis)))
 
-  runtime/AppFnHydrate
   (hydrate-requests [rt local-basis stage requests]
     ;(http/hydrate-requests! service-uri local-basis stage requests)
     (let [staged-branches (stage-val->staged-branches stage)]
       (p/resolved (hydrate-requests local-basis requests staged-branches ?subject))))
 
-  runtime/AppFnSync
   (sync [rt dbs]
     (p/do* (sync dbs)))
 
@@ -62,3 +62,6 @@
 
   (db [this uri branch]
     (peer/db-pointer uri branch)))
+
+(defmethod handle-route :local-basis [handler env req]
+  (platform->pedestal-req-handler (partial http-service/local-basis-handler ->RT) req))
