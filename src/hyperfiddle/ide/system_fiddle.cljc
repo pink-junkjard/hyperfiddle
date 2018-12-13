@@ -35,18 +35,12 @@
    :fiddle/pull-database (str dbname)
    :fiddle/renderer (load-resource "ide/console_renderer.cljs")})
 
-(def hf-live
-  {:fiddle/ident :hyperfiddle.system/hf-live
-   :fiddle/hydrate-result-as-fiddle true
-   :fiddle/renderer (load-resource "ide/hf_live_renderer.cljs")})
-
 (defn hydrate-system-fiddle [ident]
   (try-either                                               ; catch all the pre assertions
     (let [name' (name ident)]
       (case (namespace ident)
         "hyperfiddle.system" (cond
                                (= name' "unauthorized") errors/unauthorized
-                               (= name' "live") hf-live
                                (str/starts-with? name' "self-") (console-self (str/strip-prefix name' "self-"))
                                (str/starts-with? name' "new-") (console-new (str/strip-prefix name' "new-"))
                                (str/starts-with? name' "affix-") (console-affix (str/strip-prefix name' "affix-")))

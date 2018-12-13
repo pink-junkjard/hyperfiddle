@@ -6,6 +6,7 @@
     #?(:cljs [contrib.css :refer [css]])
     [contrib.ct :refer [unwrap]]
     [contrib.ednish :refer [decode-ednish]]
+    [contrib.pprint :as pprint]
     [contrib.reactive :as r]
     [contrib.reader :refer [read-edn-string+]]
     #?(:cljs [contrib.ui :refer [easy-checkbox radio-with-label]])
@@ -17,7 +18,6 @@
     [hyperfiddle.actions :as actions]
     [hyperfiddle.data]
     [hyperfiddle.foundation :as foundation]
-    #?(:cljs [hyperfiddle.ide.hf-live :as hf-live])
     [hyperfiddle.ide.system-fiddle :refer [system-fiddle?]]
     [hyperfiddle.io.hydrate-requests :refer [hydrate-one!]]
     [hyperfiddle.route :as route]
@@ -157,6 +157,15 @@
       frag)))
 
 #?(:cljs
+   (defn result-edn [val ctx props]
+     (let [s (-> val
+                 #_(as-> $ (if (seq attrs) (select-keys $ attrs) $)) ; omit elided fiddle attrs
+                 (pprint/pprint-str 50))]
+       [contrib.ui/code (assoc props                        ; Class ends up not on the codemirror, todo
+                          :value s
+                          :read-only true)])))
+
+#?(:cljs
    (defn primary-content-ide [ide-ctx content-ctx route]
      (let [state (r/atom {:edn-fiddle false})]
        (fn [ide-ctx content-ctx route]
@@ -183,7 +192,7 @@
              [iframe-cmp ide-ctx
               {:route (ide-route route content-ctx)
                :initial-tab (let [[_ _ _ frag] route] (read-fragment-only-hf-src frag))
-               :user-renderer (if @as-edn hf-live/result-edn fiddle-src-renderer)
+               :user-renderer (if @as-edn result-edn fiddle-src-renderer)
                :class (css "devsrc" "hf-live")}]])]))))
 
 #?(:cljs

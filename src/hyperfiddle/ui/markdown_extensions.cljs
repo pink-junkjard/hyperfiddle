@@ -110,15 +110,6 @@
         ?f (some->> content memoized-safe-eval (unwrap #(timbre/warn %)))]
     (hyperfiddle.ui/browse rel class ctx ?f props)))
 
-(defmethod md-ext :live [_ content argument props ctx]
-  (let [[_ srel spath] (re-find #"([^ ]*) ?(.*)" argument)]
-    (-> (mlet [rel (memoized-read-edn-string+ srel)
-               class (memoized-read-edn-string+ spath)]
-          (return [hyperfiddle.ide.hf-live/browse rel class ctx props]))
-        (either/branch
-          (fn [e] [(error-comp ctx) e])
-          identity))))
-
 (defmethod md-ext :link [_ content argument props ctx]
   (let [[_ rel-s class-s] (re-find #"([^ ]*) ?(.*)" argument)
         rel (some->> rel-s memoized-safe-eval (unwrap #(timbre/warn %)))

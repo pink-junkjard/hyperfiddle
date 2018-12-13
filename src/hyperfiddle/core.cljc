@@ -15,7 +15,6 @@
 
     ; These things can hardcode hyperfiddle.ui, like userland
     #?(:cljs [hyperfiddle.ui.markdown-extensions])
-    #?(:cljs [hyperfiddle.ide.hf-live])
     ))
 
 ; Circular dependency hack, do not alter! should not be dynamic
