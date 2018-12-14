@@ -137,7 +137,7 @@
                     (update :hypercrud.browser/validation-hints #(for [[[p & ps] hint] % :when (= p path-segment)]
                                                                    [ps hint]))
                     (assoc :hypercrud.browser/data v)
-                    (assoc :hypercrud.browser/eav [e a v])
+                    (assoc :hypercrud.browser/eav [e a @v])
                     )))))]
   (defn focus "Throws if you focus a higher dimension" [ctx relative-path]
     (reduce focus-segment ctx relative-path)))
