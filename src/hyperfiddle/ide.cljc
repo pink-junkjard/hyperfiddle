@@ -171,8 +171,10 @@
        (fn [ide-ctx content-ctx route]
          [:div.row.hyperfiddle.hf-live.unp.no-gutters {:key "primary-content"}
           [:div.result.col-sm
-           [:div "Result:"
-            (into [:span.hyperfiddle.hf-live.radio-group]
+           [:div.url-toolbar
+            [:button {:class "refresh"} "↻"]
+            [:input.url {:type "text" :value (foundation/route-encode (:peer content-ctx) route)}]
+            (into [:span]
                   (->> [{:label "edn" :tooltip "What the API client sees" :value :hypercrud.browser.browser-ui/api}
                         {:label "data" :tooltip "Ignore :fiddle/renderer" :value :hypercrud.browser.browser-ui/xray}
                         {:label "view" :tooltip "Use :fiddle/renderer" :value :hypercrud.browser.browser-ui/user}]
