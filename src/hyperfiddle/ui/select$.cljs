@@ -104,7 +104,7 @@
   [val ctx props]
   {:pre [ctx]}
   (assert (:options props) "select: :options prop is required")
-  (-> (mlet [options-ref (data/select+ ctx :hf/iframe (keyword (:options props)))] ; coerce somewhere else tho
+  (-> (mlet [options-ref (data/select+ ctx (keyword (:options props)))] ; coerce somewhere else tho
         (return
           (let [default-props {:on-change (with-entity-change! ctx)}
                 props (-> (merge default-props props)

@@ -35,9 +35,9 @@
     :db/cardinality :db.cardinality/many
     :db/isComponent true}
 
-   {:db/ident :link/rel
+   {:db/ident :link/class
     :db/valueType :db.type/keyword
-    :db/cardinality :db.cardinality/one}])
+    :db/cardinality :db.cardinality/many}])
 
 (def db-owner (UUID/randomUUID))
 
@@ -383,14 +383,14 @@
 (deftest test-merging-components-statements []
   (let [email "asdf@example.com"]
     (let [tx [[:db/add "-1" :fiddle/links "-2"]
-              [:db/add "-2" :link/rel :some-link]
+              [:db/add "-2" :link/class :some-link]
               [:db/add "-2" :person/email email]]]
       (testing "appends owner only to parent entity"
         (is (= (conj tx [:db/add "-1" :hyperfiddle/owners db-owner])
                (transact/process-tx fixtures/test-domains-uri db-owner fixtures/test-uri tx))))
       (transact/transact! fixtures/test-domains-uri db-owner {fixtures/test-uri tx}))
 
-    (let [link-id (d/q '[:find ?e . :where [?e :link/rel :some-link]] (d/db (d/connect (str fixtures/test-uri))))]
+    (let [link-id (d/q '[:find ?e . :where [?e :link/class :some-link]] (d/db (d/connect (str fixtures/test-uri))))]
       (testing "update component"
         (let [tx [[:db/add link-id :person/name "Asdf"]]]
           (testing "fails for non-owner"
@@ -429,17 +429,17 @@
     (let [email "asdf@example.com"
           list-tx [[:db/add "-1" :fiddle/links "-2"]
                    [:db/add "-1" :person/email email]
-                   [:db/add "-2" :link/rel :some-link]]
+                   [:db/add "-2" :link/class :some-link]]
           map-tx [{:db/id "-1"
                    :person/email email
                    :fiddle/links {:db/id "-2"
-                                  :link/rel :some-link}}]]
+                                  :link/class #{:some-link}}}]]
       (f list-tx)
       (f map-tx)
       ; just transact once
       (transact/transact! fixtures/test-domains-uri db-owner {fixtures/test-uri list-tx})))
 
-  (let [link-id (d/q '[:find ?e . :where [?e :link/rel :some-link]] (d/db (d/connect (str fixtures/test-uri))))]
+  (let [link-id (d/q '[:find ?e . :where [?e :link/class :some-link]] (d/db (d/connect (str fixtures/test-uri))))]
     (testing "update component"
       (letfn [(f [tx]
                 (testing "fails for non-owner"

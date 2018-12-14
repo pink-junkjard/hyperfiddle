@@ -45,18 +45,15 @@
    :fiddle/renderer (str '[hyperfiddle.ide.fiddles.schema-attribute/renderer val ctx props])
    :fiddle/links #{{:db/id (keyword "hyperfiddle.schema.db-cardinality-options" $db)
                     :link/fiddle (db-cardinality-options $db)
-                    :link/rel :hf/iframe
-                    :link/class #{:cardinality-options}}
+                    :link/class #{:hf/iframe :cardinality-options}}
                    {:db/id (keyword "hyperfiddle.schema.db-unique-options" $db)
                     :link/fiddle (db-unique-options $db)
-                    :link/rel :hf/iframe
-                    :link/class #{:unique-options}}
+                    :link/class #{:hf/iframe :unique-options}}
                    {:db/id (keyword "hyperfiddle.schema.db-valueType-options" $db)
                     :link/fiddle (db-valueType-options $db)
-                    :link/rel :hf/iframe
-                    :link/class #{:valueType-options}}
+                    :link/class #{:hf/iframe :valueType-options}}
                    {:db/id :system-anchor-remove            ; XXX
-                    :link/rel :hf/remove}}})
+                    :link/class #{:hf/remove}}}})
 
 (defn schema [$db]
   {:fiddle/ident (keyword "hyperfiddle.schema" $db)
@@ -75,8 +72,8 @@
    :fiddle/type :query
    :fiddle/renderer (load-resource "ide/schema_renderer.cljs")
    :fiddle/links #{{:db/id :system-anchor-edit              ; XXX
-                    :link/rel :hf/self
+                    :link/class #{:hf/self}
                     :link/fiddle (db-attribute-edit $db)}
                    {:db/id :system-anchor-new               ; XXX
-                    :link/rel :hf/new
+                    :link/class #{:hf/new}
                     :link/fiddle (db-attribute-edit $db)}}})

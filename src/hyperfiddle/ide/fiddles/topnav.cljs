@@ -34,7 +34,7 @@
          [:span fiddle-name]])
       (let [props {:tooltip [nil "Fiddles in this domain"]
                    :iframe-as-popover true}]
-        [ui/link :hf/iframe :fiddle-shortcuts ctx "index" props])]
+        [ui/link :fiddle-shortcuts ctx "index" props])]
 
      [:div.right-nav {:key "right-nav"}                     ; CAREFUL; this key prevents popover flickering
       [loading-spinner ctx]
@@ -58,8 +58,8 @@
                    :class (when-not @(r/fmap empty? (runtime/state (:peer ctx) [::runtime/partitions nil :stage]))
                             "stage-dirty")
                    :iframe-as-popover true}]
-        [ui/link :hf/iframe :stage ctx "stage" props])
-      (ui/link :hf/new :new-fiddle ctx "new" (let [disabled? (not (security/can-create? ctx)) ; we explicitly know the context here is $
+        [ui/link :stage ctx "stage" props])
+      (ui/link :new-fiddle ctx "new" (let [disabled? (not (security/can-create? ctx)) ; we explicitly know the context here is $
                                                    anonymous? (nil? @(runtime/state (:peer ctx) [::runtime/user-id]))]
                                                {:disabled disabled?
                                                 :tooltip (cond
@@ -67,12 +67,12 @@
                                                            disabled? [:warning "Writes restricted"])
                                                 :hyperfiddle.ui.popover/redirect (fn [popover-data]
                                                                                    [(:fiddle/ident popover-data)])}))
-      [tooltip {:label "Environment administration"} (ui/link :hf/rel :domain ctx "env")]
+      [tooltip {:label "Environment administration"} (ui/link :domain ctx "env")]
       (if @(runtime/state (:peer ctx) [::runtime/user-id])
-        (if-let [{:keys [:hypercrud.browser/data]} (hyperfiddle.data/browse ctx :hf/iframe :account)]
+        (if-let [{:keys [:hypercrud.browser/data]} (hyperfiddle.data/browse ctx :account)]
           (let [props {:tooltip [nil @(r/fmap :user/email data)]
                        :iframe-as-popover true}]
-            [ui/link :hf/iframe :account ctx @(r/fmap :user/name data) props]))
+            [ui/link :account ctx @(r/fmap :user/name data) props]))
         [:a {:href (foundation/stateless-login-url ctx)} "login"])]]))
 
 (defn hack-login-renderer [val ctx props]

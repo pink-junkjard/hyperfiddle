@@ -162,13 +162,12 @@ User renderers should not be exposed to the reaction."
     (into [:a props] children)))
 
 (letfn [(prompt [link-ref ?label]
-          (or ?label (->> (conj (set @(r/fmap :link/class link-ref))
-                                @(r/fmap :link/rel link-ref))
+          (or ?label (->> (set @(r/fmap :link/class link-ref))
                           (interpose " ") (apply str) blank->nil)))
-        (link-tooltip [{:keys [:link/rel :link/class]} ?route]
+        (link-tooltip [{:keys [:link/class]} ?route]
           (if ?route
             (let [[_ args] ?route]
-              (->> (concat class [rel] args) (map pr-str) (interpose " ") (apply str)))))
+              (->> (concat class args) (map pr-str) (interpose " ") (apply str)))))
         (validated-route-tooltip-props [r+?route link-ref ctx props] ; link is for validation
           ; this is a fine place to eval, put error message in the tooltip prop
           ; each prop might have special rules about his default, for example :visible is default true, does this get handled here?
@@ -185,14 +184,11 @@ User renderers should not be exposed to the reaction."
                                        existing-tooltip))))
                 (update :class css (when-not (empty? errors) "invalid")))))
         (disabled? [link-ref ctx]
-          (case @(r/fmap :link/rel link-ref)
-            :hf/new nil #_(not @(r/track security/can-create? ctx))
-            :hf/remove (not @(r/track security/writable-entity? ctx))
-            :hf/affix (not @(r/track security/writable-entity? (:hypercrud.browser/parent ctx)))
-            :hf/detach (not @(r/track security/writable-entity? (:hypercrud.browser/parent ctx)))
-            :hf/self nil
-            :hf/iframe nil
-            :hf/rel nil
+          (condp some @(r/fmap :link/class link-ref)
+            #{:hf/new} nil #_(not @(r/track security/can-create? ctx))
+            #{:hf/remove} (not @(r/track security/writable-entity? ctx))
+            #{:hf/affix :hf/detach} (not @(r/track security/writable-entity? (:hypercrud.browser/parent ctx)))
+            #{:hf/self :hf/rel :hf/iframe} nil
             ; else we don't know the semantics, just nil out
             nil))]
   (defn ui-from-link [link-ref ctx & [props ?label]]
@@ -202,7 +198,7 @@ User renderers should not be exposed to the reaction."
           style {:color nil #_(connection-color ctx (cond (system-link? (:db/id @link-ref)) 60 :else 40))}
           props (update props :style #(or % style))
           has-tx-fn @(r/fmap-> link-ref :link/tx-fn blank->nil boolean)
-          is-iframe @(r/fmap-> link-ref :link/rel (= :hf/iframe))]
+          is-iframe @(r/fmap->> link-ref :link/class (some #{:hf/iframe}))]
       (cond
         (and has-tx-fn @(r/fmap-> link-ref :link/fiddle nil?))
         (let [props (-> props
@@ -239,21 +235,21 @@ User renderers should not be exposed to the reaction."
         ))))
 
 (defn ^:export link "Relation level link renderer. Works in forms and lists but not tables." ; this is dumb, use a field renderer
-  [rel class ctx & [?label props]]                          ; path should be optional, for disambiguation only. Naked can be hard-linked in markdown?
+  [corcs ctx & [?label props]]                              ; path should be optional, for disambiguation only. Naked can be hard-linked in markdown?
   (either/branch
-    (data/select+ ctx rel class)
+    (data/select+ ctx corcs)
     #(vector :span %)
     (fn [link-ref]
       [ui-from-link link-ref ctx props ?label])))
 
 (defn ^:export browse "Relation level browse. Works in forms and lists but not tables."
-  [rel class ctx & [?user-renderer props]]
+  [corcs ctx & [?user-renderer props]]
   {:pre [ctx]}
   (let [props (if ?user-renderer
                 (assoc props :user-renderer ?user-renderer)
                 props)]
     (either/branch
-      (data/select+ ctx rel class)
+      (data/select+ ctx corcs)
       #(vector :span %)
       (fn [link-ref]
         [ui-from-link link-ref ctx props]))))
@@ -265,9 +261,9 @@ User renderers should not be exposed to the reaction."
            :style {:border-color (connection-color ctx)}}
      [Head nil (dissoc ctx :hypercrud.browser/data) props]
      (let [props (as-> props props
-                   (update props :disabled #(or % (not @(r/track writable-entity? ctx))))
-                   (update props :is-invalid #(or % (context/leaf-invalid? ctx)))
-                   (update props :class css (if (:disabled props) "disabled")))]
+                       (update props :disabled #(or % (not @(r/track writable-entity? ctx))))
+                       (update props :is-invalid #(or % (context/leaf-invalid? ctx)))
+                       (update props :class css (if (:disabled props) "disabled")))]
        [Body @(:hypercrud.browser/data ctx) ctx props])]
     (when (= '* (last relative-path))                       ; :hypercrud.browser/path
       ; guard against crashes for nil data
@@ -288,9 +284,9 @@ User renderers should not be exposed to the reaction."
     :body [:td {:class (css "field" (:class props))
                 :style {:border-color (connection-color ctx)}}
            (let [props (as-> props props
-                         (update props :disabled #(or % (not @(r/track writable-entity? ctx))))
-                         (update props :is-invalid #(or % (context/leaf-invalid? ctx)))
-                         (update props :class css (if (:disabled props) "disabled")))]
+                             (update props :disabled #(or % (not @(r/track writable-entity? ctx))))
+                             (update props :is-invalid #(or % (context/leaf-invalid? ctx)))
+                             (update props :class css (if (:disabled props) "disabled")))]
              [Body @(:hypercrud.browser/data ctx) ctx props])]))
 
 (defn ^:export field "Works in a form or table context. Draws label and/or value."

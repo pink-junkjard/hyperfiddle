@@ -105,17 +105,16 @@
 (defmethod md-ext :browse [_ content argument props ctx]
   (let [[_ srel sclass] (re-find #"([^ ]*) ?(.*)" argument)
         rel (some->> srel memoized-safe-eval (unwrap #(timbre/warn %)))
-        class (some->> sclass memoized-safe-eval (unwrap #(timbre/warn %)))
+        class (some->> sclass memoized-safe-eval (unwrap #(timbre/warn %))) ; corcs
         ?f (some->> content memoized-safe-eval (unwrap #(timbre/warn %)))]
-    (hyperfiddle.ui/browse rel class ctx ?f props)))
+    (hyperfiddle.ui/browse class ctx ?f props)))
 
 (defmethod md-ext :link [_ content argument props ctx]
-  (let [[_ rel-s class-s] (re-find #"([^ ]*) ?(.*)" argument)
-        rel (some->> rel-s memoized-safe-eval (unwrap #(timbre/warn %)))
-        ?class (some->> class-s memoized-safe-eval (unwrap #(timbre/warn %)))
+  (let [#_#_[_ rel-s class-s] (re-find #"([^ ]*) ?(.*)" argument)
+        ?class (some->> argument memoized-safe-eval (unwrap #(timbre/warn %))) ; :class is mandatory now
         ; https://github.com/medfreeman/remark-generic-extensions/issues/45
-        label (or-str content (name rel))]
-    (hyperfiddle.ui/link rel ?class ctx label props)))
+        label (or-str content (some-> ?class name))]
+    (hyperfiddle.ui/link ?class ctx label props)))
 
 (defmethod md-ext :result [_ content argument props ctx]
   (let [ctx (assoc ctx ::unp true)]

@@ -67,8 +67,10 @@
     ; blank fiddles
     nil))
 
-; contains hf/portal
-(defn filter-inline-links [fiddle] (update fiddle :fiddle/links #(filter (comp (partial = :hf/iframe) :link/rel) %)))
+(defn filter-inline-links [fiddle]
+  (update fiddle :fiddle/links (fn [links]
+                                 (->> links
+                                      (filter #(some #{:hf/iframe} (:link/class %)))))))
 
 (defn requests [ctx]
   ; at this point we only care about inline links and popovers are hydrated on their on hydrate-route calls

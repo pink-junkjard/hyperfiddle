@@ -51,55 +51,56 @@
   (let [this-path (:hypercrud.browser/path ctx)]
     (not= this-path (:hypercrud.browser/path (link-path-floor ctx link-path)))))
 
-(defn select-all-r "List[Link]. Find the closest match."
-  ([ctx] {:pre [ctx]}
-   (r/fmap->> (:hypercrud.browser/fiddle ctx)
-              :fiddle/links
-              (filter (r/comp (r/partial deps-satisfied? ctx) link/read-path :link/path))))
-  ([ctx rel] {:pre [ctx rel]}
-   (r/fmap->> (select-all-r ctx)
-              (filter (r/comp (r/partial = rel) :link/rel))))
-  ([ctx rel ?corcs]
-   (r/fmap->> (select-all-r ctx rel)
-              (filter (r/comp (r/partial r/last-arg-first clojure.set/superset? (contrib.data/xorxs ?corcs))
-                              ;  add more stuff here
-                              set :link/class)))))
+(letfn [(link-matches-class? [?corcs fiddle-ident link]
+          ; What we've got fully matches what we asked for
+          (clojure.set/superset?
+            (-> (set (:link/class link))
+                (conj fiddle-ident))
+            (contrib.data/xorxs ?corcs)))]
+  (defn select-all-r "List[Link]. Find the closest match."
+    ([ctx] {:pre [ctx]}
+     (r/fmap->> (:hypercrud.browser/fiddle ctx)
+                :fiddle/links
+                (filter (r/comp (r/partial deps-satisfied? ctx) link/read-path :link/path))))
+    ([ctx ?corcs]
+     (r/fmap->> (select-all-r ctx)
+                (filter (r/partial link-matches-class? ?corcs @(r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/ident])))))))
 
 (defn ^:export select-all "List[Link]. Find the closest match." [& args] @(apply select-all-r args))
 
-(defn validate-one+ [rel class links]
+(defn validate-one+ [class links]
   (let [n (count links)]
     (condp = n
       1 (right (first links))
-      0 (left (str/format "no match for rel: %s class: %s" (pr-str rel) (pr-str class)))
-      (left (str/format "Too many links matched (%s) for rel: %s class: %s" n (pr-str rel) (pr-str class))))))
+      0 (left (str/format "no match for class: %s" (pr-str class)))
+      (left (str/format "Too many (%s) links matched for class: %s" n (pr-str class))))))
 
-(defn ^:export select-here+ [ctx rel & [?corcs]]
+(defn ^:export select-here+ [ctx & [?corcs]]
   {:pre [ctx]}
-  (->> (r/fmap->> (select-all-r ctx rel ?corcs)
+  (->> (r/fmap->> (select-all-r ctx ?corcs)
                   (filter (r/partial link/same-path-as? (:hypercrud.browser/path ctx)))
-                  (validate-one+ rel ?corcs))
+                  (validate-one+ ?corcs))
        r/apply-inner-r
        deref))
 
-(defn ^:export select+ [ctx rel & [?corcs]]                 ; Right[Reaction[Link]], Left[String]
-  (->> (r/fmap->> (select-all-r ctx rel ?corcs)
-                  (validate-one+ rel ?corcs))
+(defn ^:export select+ [ctx & [?corcs]]                     ; Right[Reaction[Link]], Left[String]
+  (->> (r/fmap->> (select-all-r ctx ?corcs)
+                  (validate-one+ ?corcs))
        r/apply-inner-r
        deref))
 
 (defn ^:export browse+ "Navigate a link by hydrating its context accounting for dependencies in scope.
   returns Either[Loading|Error,ctx]."
-  [ctx rel & [?corcs]]
+  [ctx & [?corcs]]
   ; No focusing, can select from root, and data-from-link manufactures a new context
-  (>>= (select+ ctx rel ?corcs)
+  (>>= (select+ ctx ?corcs)
        #(base/data-from-link @% ctx)))
 
-(defn ^:export select-here [ctx rel & [?corcs]]
-  (->> (select-here+ ctx rel ?corcs) (unwrap (constantly nil))))
+(defn ^:export select-here [ctx & [?corcs]]
+  (->> (select-here+ ctx ?corcs) (unwrap (constantly nil))))
 
-(defn ^:export select [ctx rel & [?corcs]]
-  (->> (select+ ctx rel ?corcs) (unwrap (constantly nil))))
+(defn ^:export select [ctx & [?corcs]]
+  (->> (select+ ctx ?corcs) (unwrap (constantly nil))))
 
-(defn ^:export browse [ctx rel & [?corcs]]
-  (->> (browse+ ctx rel ?corcs) (unwrap (constantly nil))))
+(defn ^:export browse [ctx & [?corcs]]
+  (->> (browse+ ctx ?corcs) (unwrap (constantly nil))))

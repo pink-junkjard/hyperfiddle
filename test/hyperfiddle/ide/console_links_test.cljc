@@ -108,7 +108,7 @@
   (is (= (->> '([[:reg/gender] #{:hf/affix :hf/detach :hf/self}])
               (ungroup)
               (map console-link (repeat (:qfind (qparsed FindColl))))
-              (map (juxt :link/rel :link/path)))
+              (map (juxt (comp first :link/class) :link/path)))
          '([:hf/affix ":reg/gender"]
             [:hf/detach ":reg/gender"]
             [:hf/self ":reg/gender"])))

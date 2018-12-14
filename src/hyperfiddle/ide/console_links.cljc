@@ -40,7 +40,7 @@
              FindTuple (first path))
         source (get-in (parser/find-elements qfind) [ix :source :symbol])]
     {:db/id (keyword "hyperfiddle.browser.system-link" (str (name rel) "-" (hash path)))
-     :link/rel rel
+     :link/class #{rel}
      :link/path (path->str path)                            ; Explicit fe-pos where sometimes it can be implied
      :link/fiddle (some-> (console-fiddle-ctors rel) (apply [source]))}))
 
@@ -131,7 +131,11 @@
            (ungroup (query-links-impl schemas qfind data))))))
 
 (let [f (fn [new-links fiddle]
-          (update fiddle :fiddle/links (partial merge-by (juxt :link/rel (comp blank->nil :link/path)) new-links)))]
+          (update fiddle :fiddle/links (partial merge-by (juxt (fn hf-rel [link]
+                                                                 ; There is only one hf rel in the class
+                                                                 (filter #(= "hf" (namespace %)) (:link/class link)))
+                                                               (comp blank->nil :link/path))
+                                                new-links)))]
   (defn inject-console-links [ctx]
     (let [schemas (-> (->> @(runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :schemas])
                            (data/map-keys #(domain/uri->dbname % (:hypercrud.browser/domain ctx))))

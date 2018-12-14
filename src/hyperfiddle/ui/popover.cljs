@@ -49,7 +49,7 @@
 
                                           ; return the result to the action, it could be a promise
                                           result))]
-                    (runtime/dispatch! (:peer ctx) [:txfn (:link/rel link) (:link/path link)])
+                    (runtime/dispatch! (:peer ctx) [:txfn (:link/class link) (:link/path link)])
                     (f swap-fn-async))))))
           ; todo something better with these exceptions (could be user error)
           (p/catch (fn [err] (js/alert (pprint-str err))))))))

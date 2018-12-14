@@ -34,7 +34,7 @@
 
 (s/def :hyperfiddle.ide/new-fiddle (s/keys :req [:fiddle/ident]))
 
-(defmulti fiddle-link :link/rel)
+;(defmulti fiddle-link :link/class)
 
 (s/def :fiddle/ident keyword?)
 (s/def :fiddle/uuid uuid?)
@@ -42,18 +42,16 @@
 (s/def :fiddle/query string?)
 (s/def :fiddle/pull string?)
 (s/def :fiddle/pull-database string?)
-(s/def :fiddle/links (s/coll-of (s/and (s/keys :req [:link/rel]
-                                               :opt [:link/class
+(s/def :fiddle/links (s/coll-of (s/and (s/keys :opt [:link/class
                                                      :link/path :link/fiddle :link/formula :link/tx-fn])
-                                       ; Second, validate link/rel first
-                                       (s/multi-spec fiddle-link :link/rel))))
+                                       #_(s/multi-spec fiddle-link :link/class))))
 (s/def :fiddle/markdown string?)
 (s/def :fiddle/renderer string?)
 (s/def :fiddle/css string?)
 (s/def :fiddle/cljs-ns string?)
 (s/def :fiddle/hydrate-result-as-fiddle string?)
 
-(s/def :link/rel #{:hf/self :hf/rel :hf/new :hf/remove :hf/affix :hf/detach :hf/iframe})
+;(s/def :link/rel #{:hf/self :hf/rel :hf/new :hf/remove :hf/affix :hf/detach :hf/iframe})
 (s/def :link/class (s/coll-of keyword?))
 ;(s/def :link/fiddle (s/keys))
 (s/def :link/path string?)
@@ -67,13 +65,13 @@
 (defmethod fiddle-type :entity [_] (s/keys :opt [:fiddle/pull :fiddle/pull-database]))
 (defmethod fiddle-type nil [_] (s/keys))
 
-(defmethod fiddle-link :hf/self [_] (s/keys))
-(defmethod fiddle-link :hf/rel [_] (s/keys))
-(defmethod fiddle-link :hf/new [_] (s/keys))
-(defmethod fiddle-link :hf/remove [_] (s/keys))
-(defmethod fiddle-link :hf/affix [_] (s/keys))
-(defmethod fiddle-link :hf/detach [_] (s/keys))
-(defmethod fiddle-link :hf/iframe [_] (s/keys))
+;(defmethod fiddle-link :hf/self [_] (s/keys))
+;(defmethod fiddle-link :hf/rel [_] (s/keys))
+;(defmethod fiddle-link :hf/new [_] (s/keys))
+;(defmethod fiddle-link :hf/remove [_] (s/keys))
+;(defmethod fiddle-link :hf/affix [_] (s/keys))
+;(defmethod fiddle-link :hf/detach [_] (s/keys))
+;(defmethod fiddle-link :hf/iframe [_] (s/keys))
 
 (declare fiddle-defaults)
 (declare apply-defaults)
@@ -93,7 +91,7 @@
 
 (def link-defaults
   {:link/formula (fn [link]
-                   (condp contains? (:link/rel link)
+                   (condp some (:link/class link)
                      #{:hf/new} "(constantly (hyperfiddle.api/tempid-detached ctx))"
                      #{:hf/affix} "(partial hyperfiddle.api/tempid-child ctx)"
                      #{:hf/remove :hf/detach} "identity"
@@ -104,14 +102,12 @@
                        :blank nil)
                      nil))
    :link/tx-fn (fn [link]
-                 (case (:link/rel link)
-                   :hf/new ":zero"                            ; hack to draw as popover
-                   :hf/remove ":db.fn/retractEntity"
-                   :hf/affix ":db/add"
-                   :hf/detach ":db/retract"
-                   :hf/self nil
-                   :hf/iframe nil
-                   :hf/rel nil
+                 (condp some (:link/class link)
+                   #{:hf/new} ":zero"                       ; hack to draw as popover
+                   #{:hf/affix} ":db/add"                   ; infer from link/path
+                   #{:hf/remove} ":db.fn/retractEntity"
+                   #{:hf/detach} ":db/retract"
+                   #{:hf/iframe :hf/self :hf/rel} nil
                    nil))})
 
 (def fiddle-defaults
@@ -126,7 +122,7 @@
 
 (defn auto-link [link]
   (let [link (cond-> link
-                     (contains? #{:hf/rel :hf/self :hf/new :hf/iframe} (:link/rel link)) (update-existing :link/fiddle apply-defaults))]
+                     (some #{:hf/rel :hf/self :hf/new :hf/iframe} (:link/class link)) (update-existing :link/fiddle apply-defaults))]
     (-> link
         (update :link/formula or-str ((:link/formula link-defaults) link))
         (update :link/tx-fn or-str ((:link/tx-fn link-defaults) link)))))
@@ -157,7 +153,6 @@
                    :link/formula
                    :link/ident                              ; legacy
                    :link/path
-                   :link/rel
                    :link/tx-fn]}
    :fiddle/markdown
    :fiddle/pull
