@@ -107,13 +107,17 @@
                         (assoc :hypercrud.browser/field field))]
             (if-not (:hypercrud.browser/data ctx)
               ctx                                           ; head
-              (-> (set-parent-data ctx)                     ; body
-                  (update :hypercrud.browser/validation-hints #(for [[[p & ps] hint] % :when (= p path-segment)]
-                                                                 [ps hint]))
-                  (assoc :hypercrud.browser/data
-                         (let [f (r/fmap ::field/get-value field)]
-                           #_(assert @f (str "focusing on a non-pulled attribute: " (pr-str (:hypercrud.browser/path ctx)) "."))
-                           (r/fapply f (:hypercrud.browser/data ctx))))))))]
+              (let [e (some-> ctx hypercrud.browser.context/id)
+                    a (last (:hypercrud.browser/path ctx)) ; todo chop off FE todo
+                    v (let [f (r/fmap ::field/get-value field)]
+                        #_(assert @f (str "focusing on a non-pulled attribute: " (pr-str (:hypercrud.browser/path ctx)) "."))
+                        (r/fapply f (:hypercrud.browser/data ctx)))]
+                (-> (set-parent-data ctx)                   ; body
+                    (update :hypercrud.browser/validation-hints #(for [[[p & ps] hint] % :when (= p path-segment)]
+                                                                   [ps hint]))
+                    (assoc :hypercrud.browser/data v)
+                    (assoc :hypercrud.browser/eav [e a v])
+                    )))))]
   (defn focus "Throws if you focus a higher dimension" [ctx relative-path]
     (reduce focus-segment ctx relative-path)))
 
