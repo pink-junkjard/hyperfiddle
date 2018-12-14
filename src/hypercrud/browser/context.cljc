@@ -245,12 +245,12 @@
   {:pre [ctx] :post [%]}
   (let [path (hypercrud.browser.link/read-path @(r/fmap :link/path link-ref))
         ctx (refocus ctx path)
+        ; Focusing must account for link/formula (essentially tempids)
         +args @(r/fmap->> link-ref (build-args+ ctx))
         r+?route (r/fmap->> link-ref (build-route' +args ctx)) ; need to re-focus from the top
-        eav [(some-> ctx :hypercrud.browser/parent identify) ; Todo move into refocus. Also might not have one, txfn understands this
-             (last (:hypercrud.browser/path ctx))         ; todo chop off FE todo
-             (->> +args (contrib.ct/unwrap (constantly nil)) first :db/id)] ; Todo for :hf/new, the focused data is now eschewed in favor of this new tempid
-        ctx (assoc ctx :hypercrud.browser/eav eav)]
+        v' (->> +args (contrib.ct/unwrap (constantly nil)) first :db/id)
+        ctx (update ctx :hypercrud.browser/eav (fn [[e a v]]
+                                                 [e a v']))]
     [ctx r+?route]))
 
 (defn tree-invalid? "For popover buttons (fiddle level)" [ctx]
@@ -327,7 +327,7 @@
 (defn hash-ctx-data [ctx]                                       ; todo there are collisions when two links share the same 'location'
   (when-let [data (:hypercrud.browser/data ctx)]
     (case @(r/fmap ::field/cardinality (:hypercrud.browser/field ctx))
-      :db.cardinality/one @(r/fmap->> data ( ctx))
+      :db.cardinality/one @(r/fmap->> data (stable-relation-key ctx))
       :db.cardinality/many @(r/fmap->> data
                                        (mapv (r/partial stable-relation-key ctx))
                                        (into #{})
