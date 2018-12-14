@@ -4,13 +4,13 @@
     [cats.monad.either :as either]
     [cats.monad.exception :as exception]
     [clojure.set :as set]
+    [contrib.datomic]
     [datomic.api :as d]
     [hypercrud.types.DbVal]
     [hypercrud.types.EntityRequest]
     [hypercrud.types.Err :refer [->Err]]
     [hypercrud.types.QueryRequest]
     [hypercrud.util.branch :as branch]
-    [hyperfiddle.tempid :refer [tempid?]]
     [hyperfiddle.io.bindings]                               ; userland
     [taoensso.timbre :as timbre])
   (:import (hypercrud.types.DbVal DbVal)
@@ -33,7 +33,7 @@
   (let [{pull-db :db} (get-secure-db-with (:uri db) (:branch db))]
     (cond
       (nil? e) nil                                          ; This is probably an error, report it? Datomic says: (d/pull $ [:db/id] nil) => #:db{:id nil}
-      (tempid? e) {:db/id e}                                ; This introduces sloppy thinking about time!   https://github.com/hyperfiddle/hyperfiddle/issues/584
+      (contrib.datomic/tempid? e) {:db/id e}                                ; This introduces sloppy thinking about time!   https://github.com/hyperfiddle/hyperfiddle/issues/584
       :happy (d/pull pull-db pull-exp e))))
 
 (defmethod hydrate-request* QueryRequest [{:keys [query params]} get-secure-db-with]

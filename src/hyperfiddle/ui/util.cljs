@@ -5,7 +5,6 @@
     [contrib.string :refer [empty->nil]]
     [hypercrud.browser.context :as context]
     [hyperfiddle.security.client :as security]
-    [hyperfiddle.tempid :refer [smart-entity-identifier]]
     [hyperfiddle.actions :as actions]
     [hyperfiddle.runtime :as runtime]))
 
@@ -18,11 +17,11 @@
          o (if (not= (:db/ident valueType) :db.type/ref)
              (get entity attr-ident)
              (case (:db/ident cardinality)
-               :db.cardinality/one (smart-entity-identifier ctx (get entity attr-ident))
-               :db.cardinality/many (map (partial smart-entity-identifier ctx) (get entity attr-ident))))]
+               :db.cardinality/one (context/smart-entity-identifier ctx (get entity attr-ident))
+               :db.cardinality/many (map (partial context/smart-entity-identifier ctx) (get entity attr-ident))))]
      (entity-change->tx ctx o n)))
   ([ctx o n]
-   (let [id @(r/fmap (r/partial smart-entity-identifier ctx) (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data]))
+   (let [id @(r/fmap (r/partial context/smart-entity-identifier ctx) (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data]))
          attribute @(context/hydrate-attribute ctx (last (:hypercrud.browser/path ctx)))
          n (empty->nil n)]                                  ; hack for garbage string controls
      (tx/edit-entity id attribute o n))))

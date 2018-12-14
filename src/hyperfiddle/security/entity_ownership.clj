@@ -1,14 +1,14 @@
 (ns hyperfiddle.security.entity-ownership
   (:require
+    [contrib.datomic]
     [datomic.api :as d]
     [hyperfiddle.security :as security]
-    [hyperfiddle.tempid :refer [tempid?]]
     [loom.alg :as alg]
     [loom.graph :as graph]))
 
 
 (defn normalize-id [db ident]
-  (if (tempid? ident)
+  (if (contrib.datomic/tempid? ident)
     ident
     (or (d/entid db ident) ident)))
 
@@ -173,7 +173,7 @@
 
 (defn ->existing-eids [db eids]
   (->> eids
-       (remove tempid?)
+       (remove contrib.datomic/tempid?)
        (map (partial d/entid db))
        (remove nil?)                                        ; nil will be from new lookup refs
        (into #{})))
@@ -224,7 +224,7 @@
                            ; this entity is NOT a component child of another same partitioned new entity
                            (when (not= (first parent-parts) my-part)
                              ; doesn't matter which tempid has owner appended
-                             (let [tempid (some #(when (tempid? %) %) eids)]
+                             (let [tempid (some #(when (contrib.datomic/tempid? %) %) eids)]
                                (assert tempid "no tempids or existing ids") ; this is probably a bad transaction; would fail with "Unable to resolve entity"
                                ((:generate-owner config) tempid my-part))))))))
            (into tx-with-tempids)))))

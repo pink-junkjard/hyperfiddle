@@ -13,7 +13,6 @@
     [hypercrud.browser.field :as field]
     [hyperfiddle.data :as data]
     [hyperfiddle.runtime :as runtime]
-    [hyperfiddle.tempid :refer [tempid? underlying-tempid stable-relation-key smart-entity-identifier]]
     #_[hyperfiddle.ui]
     [hyperfiddle.ui.docstring :refer [semantic-docstring]]
     [hyperfiddle.ui.select$ :refer [select]]
@@ -110,7 +109,7 @@
             ))))
 
 (defn id-prompt [ctx val]
-  (pr-str (smart-entity-identifier ctx val)))
+  (pr-str (context/smart-entity-identifier ctx val)))
 
 (defn ^:export ref [val ctx & [props]]
   (cond
@@ -153,7 +152,7 @@
        (if-let [link (data/select-here ctx :hf/affix)]
          [hyperfiddle.ui/ui-from-link link ctx props "affix"]))
 
-     (if-not (underlying-tempid ctx val)
+     (if-not (context/underlying-tempid ctx val)
        (if-let [link (data/select-here ctx :hf/remove)]
          [hyperfiddle.ui/ui-from-link link ctx props "remove"]))
 
@@ -161,7 +160,7 @@
        [hyperfiddle.ui/ui-from-link link ctx props "detach"])
 
      (->> (data/select-all-r ctx :hf/rel)
-          (r/unsequence (r/partial stable-relation-key ctx))
+          (r/unsequence (r/partial context/stable-relation-key ctx))
           (map (fn [[rv k]]
                  ^{:key k}                                  ; Use the userland class as the label (ignore hf/rel)
                  [hyperfiddle.ui/ui-from-link rv ctx props]))
@@ -208,7 +207,7 @@
                        v))]
   (defn ^:export edn-many [val ctx & [props]]
     (let [valueType @(context/hydrate-attribute ctx (last (:hypercrud.browser/path ctx)) :db/valueType :db/ident)
-          val (set (if (= valueType :db.type/ref) (map (r/partial smart-entity-identifier ctx) val) val))
+          val (set (if (= valueType :db.type/ref) (map (r/partial context/smart-entity-identifier ctx) val) val))
           props (-> (assoc props
                       :value val
                       :mode "clojure"
@@ -245,7 +244,7 @@
                                   :on-change (with-entity-change! ctx)))]))))))
 
 (defn -magic-new-change! [state ctx #_ov v]
-  (let [e @(r/fmap (r/partial smart-entity-identifier ctx)
+  (let [e @(r/fmap (r/partial context/smart-entity-identifier ctx)
                    (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data]))]
     (with-tx! ctx [[:db/add e @state v]])))
 

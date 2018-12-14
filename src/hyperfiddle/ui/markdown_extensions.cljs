@@ -13,7 +13,6 @@
     [goog.object]
     [hypercrud.browser.context :as context]
     [hypercrud.ui.error :refer [error-comp]]
-    [hyperfiddle.tempid :as tempid]
     [hyperfiddle.ui]
     [taoensso.timbre :as timbre]))
 
@@ -144,7 +143,7 @@
 (defmethod md-ext :list [_ content argument props ctx]
   [:ul props
    (->> (:hypercrud.browser/data ctx)
-        (r/unsequence (r/partial tempid/row-keyfn ctx))
+        (r/unsequence (r/partial context/row-keyfn ctx))
         (map (fn [[row k]]
                ^{:key k}
                [:li [markdown content (context/row ctx row)]]))

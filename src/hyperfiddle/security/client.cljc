@@ -4,6 +4,7 @@
     [cats.monad.maybe :as maybe]
     [cats.monad.either :as either :refer [right]]
     [contrib.ct :refer [maybe]]
+    [contrib.datomic]
     [contrib.eval :refer [eval-expr-str!+]]
     [contrib.reactive :as r]
     [contrib.try$ :refer [try-either]]
@@ -12,7 +13,6 @@
     [hyperfiddle.domain :as domain]
     [hyperfiddle.runtime :as runtime]
     [hyperfiddle.security :as security]
-    [hyperfiddle.tempid :refer [tempid?]]
     [taoensso.timbre :as timbre]
     [hypercrud.util.branch :as branch]))
 
@@ -41,7 +41,7 @@
                      (parent-m (:hypercrud.browser/parent ctx))
                      (some-> (:hypercrud.browser/data ctx) deref))))
       new-entity? (fn new-entity? [peer uri dbid branch]
-                    (or (tempid? dbid)
+                    (or (contrib.datomic/tempid? dbid)
                         (some-> @(runtime/state peer [::runtime/partitions branch :tempid-lookups uri])
                                 (either/branch #(throw (ex-info % {})) #(get % dbid))
                                 some?)

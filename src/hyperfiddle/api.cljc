@@ -1,6 +1,6 @@
 (ns hyperfiddle.api
   (:require
-    [hyperfiddle.tempid :refer [with-tempid-color tempid-from-ctx tempid-from-stage]]))
+    [hypercrud.browser.context :refer [with-tempid-color tempid-from-ctx tempid-from-stage]]))
 
 
 (defn ^:export tempid-child "stable and idempotent, but implemented through parent-child ctx"
@@ -27,7 +27,7 @@
   [[:db/add e a v]])
 
 (defmethod txfn :db/retract [_ e a v ctx]
-  [[:db/retract e a v ctx]])
+  [[:db/retract e a v]])
 
 (defmethod txfn :db.fn/retractEntity [_ _ _ v ctx]
   [[:db.fn/retractEntity v]])

@@ -1,11 +1,24 @@
 (ns hypercrud.browser.context
   (:require
-    [cats.monad.either :as either]
+    [cats.core :refer [mlet return]]
+    [cats.monad.either :as either :refer [left right]]
     [contrib.data :refer [ancestry-common ancestry-divergence]]
+    [contrib.datomic]
+    [contrib.eval :as eval]
     [contrib.reactive :as r]
+    [contrib.string]
+    [contrib.try$ :refer [try-either]]
     [hypercrud.browser.field :as field]
+    [hypercrud.browser.link]
+    [hypercrud.browser.q-util]
+    [hypercrud.client.core :as hc]
+    [hypercrud.types.ThinEntity :refer [->ThinEntity #?(:cljs ThinEntity)]]
+    [hypercrud.util.branch]
     [hyperfiddle.domain :as domain]
-    [hyperfiddle.runtime :as runtime]))
+    [hyperfiddle.route]
+    [hyperfiddle.runtime :as runtime])
+  #?(:clj
+     (:import (hypercrud.types.ThinEntity ThinEntity))))
 
 
 (defn clean [ctx]
@@ -96,6 +109,14 @@
 (defn find-parent-field [ctx]
   (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/field]))
 
+(defn identify [ctx]
+  ; When looking at an attr of type ref, figure out it's identity, based on all the ways it can be pulled.
+  ; What if we pulled children without identity? Then we can't answer the question (should assert this)
+  (if-let [data (:hypercrud.browser/data ctx)]              ; Guard is for txfn popover call site
+    (or @(contrib.reactive/cursor data [:db/ident])
+        @(contrib.reactive/cursor data [:db/id])
+        @data)))
+
 (letfn [(focus-segment [ctx path-segment]                   ; attribute or fe segment
           #_(assert (or (not (:hypercrud.browser/data ctx)) ; head has no data, can focus without calling row
                         @(r/fmap->> (:hypercrud.browser/field ctx) ::field/cardinality (not= :db.cardinality/many)))
@@ -107,7 +128,7 @@
                         (assoc :hypercrud.browser/field field))]
             (if-not (:hypercrud.browser/data ctx)
               ctx                                           ; head
-              (let [e (some-> ctx hypercrud.browser.context/id)
+              (let [e (some-> ctx identify)                 ; this is the parent v
                     a (last (:hypercrud.browser/path ctx)) ; todo chop off FE todo
                     v (let [f (r/fmap ::field/get-value field)]
                         #_(assert @f (str "focusing on a non-pulled attribute: " (pr-str (:hypercrud.browser/path ctx)) "."))
@@ -135,9 +156,11 @@
       (update :hypercrud.browser/field
               #(r/fmap-> % (assoc ::field/cardinality :db.cardinality/one)))))
 
-(defn refocus "focus common ancestor" [ctx path]
-  {:pre [ctx]
-   :post [%]}
+(defn refocus
+  "focus common ancestor, this is deprecated and unifies with refocus' once reactive types
+  are removed from link ui"
+  [ctx path]
+  {:pre [ctx] :post [%]}
   ; This should run the link formula as part of focus step
   (let [current-path (:hypercrud.browser/path ctx)
         common-ancestor-path (ancestry-common current-path path)
@@ -145,17 +168,90 @@
         common-ancestor-ctx ((apply comp (repeat unwind-offset :hypercrud.browser/parent)) ctx)]
     (focus common-ancestor-ctx (ancestry-divergence path current-path))))
 
-(defn id [ctx]
-  ; When looking at an attr of type ref, figure out it's identity, based on all the ways it can be pulled.
-  ; What if we pulled children without identity? Then we can't answer the question (should assert this)
-  (if-let [data (:hypercrud.browser/data ctx)]              ; Guard is for txfn popover call site
-    (or @(contrib.reactive/cursor data [:db/ident])
-        @(contrib.reactive/cursor data [:db/id])
-        @data)))
+(defn id->tempid+ [route ctx]
+  (let [invert-id (fn [id uri]
+                    (if (contrib.datomic/tempid? id)
+                      id
+                      (let [id->tempid (ctx->id-lookup uri ctx)]
+                        (get id->tempid id id))))]
+    (try-either (hyperfiddle.route/invert-route (:hypercrud.browser/domain ctx) route invert-id))))
+
+(defn normalize-args [porps]
+  ; There is some weird shit hitting this assert, like {:db/id nil}
+  {:pre [#_(not (map? porps)) #_"legacy"]
+   :post [(vector? %) #_"route args are associative by position"]}
+  (vec (contrib.data/xorxs porps)))
 
 (defn has-entity-identity? [ctx]
   (::field/data-has-id? @(:hypercrud.browser/field ctx))
   #_(and (context/dbname ctx) (last (:hypercrud.browser/path ctx))))
+
+(defn underlying-tempid [ctx id]
+  ; This muddled thinking is caused by https://github.com/hyperfiddle/hyperfiddle/issues/584
+  (cond
+    (contrib.datomic/tempid? id) id
+    :else (get (ctx->id-lookup ctx) id)))
+
+(defn smart-entity-identifier "Generates the best Datomic lookup ref for a given pull."
+  [ctx {:keys [:db/id :db/ident] :as v}]                    ; v can be a ThinEntity or a pull i guess
+  ; This must be called only on refs.
+  ; If we have a color, and a (last path), ensure it is a ref.
+  ; If we have a color and [] path, it is definitely a ref.
+  ; If we have no color, it is a scalar or aggregate.
+  ;(assert (::field/data-has-id? @(:hypercrud.browser/field ctx)) "smart-identity works only on refs")
+
+  (let [identity-lookup nil]
+    (or (if (underlying-tempid ctx id) id)                  ; the lookups are no good yet, must use the dbid (not the tempid, actions/with will handle that reversal)
+        ident
+        identity-lookup
+        id
+        (if-not (map? v) v)                                 ; id-scalar
+        nil                                                 ; This is an entity but you didn't pull any identity - error?
+        )))
+
+(defn pull->colored-eid "Adapt pull to a datomic primitive suitable for :in" [ctx v]
+  (if-not (has-entity-identity? ctx)                ; maybe a ref but you didn't pull an identity? Can't do much for that (we can't generate links there and neither should userland try)
+    v                                                       ; In edge cases, this could be a colorless opaque value (composite or scalar)
+    (->ThinEntity (dbname ctx) (smart-entity-identifier ctx v))))
+
+(let [eval-string!+ (memoize eval/eval-expr-str!+)]
+  (defn build-args+
+    "formulas have to run as part of link refocusing so formula tempids can occlude the eschewed pulled-tree data"
+    [ctx {:keys [:link/fiddle :link/tx-fn] :as link}]
+    (mlet [f-wrap (if-let [formula-str (contrib.string/blank->nil (:link/formula link))]
+                    (eval-string!+ (str "(fn [ctx] \n" formula-str "\n)"))
+                    (either/right (constantly (constantly nil))))
+           f (try-either (f-wrap ctx))
+           colored-args (try-either @(r/fmap->> (or (:hypercrud.browser/data ctx) (r/track identity nil))
+                                                (pull->colored-eid ctx)
+                                                f))]
+          (return (normalize-args colored-args)))))
+
+(defn ^:export build-route' "There may not be a route! Fiddle is sometimes optional"
+  [+args ctx {:keys [:link/fiddle :link/tx-fn] :as link}]
+  (if (and (not fiddle) tx-fn)
+    (mlet [colored-args +args] (return nil))               ; :hf/remove doesn't have one by default, :hf/new does, both can be customized
+    (mlet [colored-args +args                              ; part of error chain
+           fiddle-id (if fiddle
+                       (right (:fiddle/ident fiddle))
+                       (left {:message ":link/fiddle required" :data {:link link}}))
+           route (id->tempid+ (hyperfiddle.route/canonicalize fiddle-id colored-args) ctx)
+           route (hyperfiddle.route/validate-route+ route)]
+          (return route))))
+
+; I think reactive types are probably slowing this down overall, there are too many
+; reactions going on. It all gets deref'ed in the end anyway! Just deref it above.
+(defn refocus' [ctx link-ref]
+  {:pre [ctx] :post [%]}
+  (let [path (hypercrud.browser.link/read-path @(r/fmap :link/path link-ref))
+        ctx (refocus ctx path)
+        +args @(r/fmap->> link-ref (build-args+ ctx))
+        r+?route (r/fmap->> link-ref (build-route' +args ctx)) ; need to re-focus from the top
+        eav [(some-> ctx :hypercrud.browser/parent identify) ; Todo move into refocus. Also might not have one, txfn understands this
+             (last (:hypercrud.browser/path ctx))         ; todo chop off FE todo
+             (->> +args (contrib.ct/unwrap (constantly nil)) first :db/id)] ; Todo for :hf/new, the focused data is now eschewed in favor of this new tempid
+        ctx (assoc ctx :hypercrud.browser/eav eav)]
+    [ctx r+?route]))
 
 (defn tree-invalid? "For popover buttons (fiddle level)" [ctx]
   (->> (:hypercrud.browser/validation-hints ctx)
@@ -165,3 +261,82 @@
   (->> (:hypercrud.browser/validation-hints ctx)
        (filter (comp nil? first))
        seq boolean))
+
+(defn tempid-from-stage "unstable"
+  ([ctx]
+   (let [dbname (dbname ctx)]
+     (assert dbname "no dbname in dynamic scope (If it can't be inferred, write a custom formula)")
+     (tempid-from-stage dbname ctx)))
+  ([dbname ctx]
+   @(r/fmap->> (runtime/state (:peer ctx) [::runtime/partitions])
+               (hypercrud.util.branch/branch-val (uri dbname ctx) (:branch ctx))
+               hash str)))
+
+(defn ^:export with-tempid-color "tempids in hyperfiddle are colored, because we need the backing dbval in order to reverse hydrated
+  dbid back into their tempid for routing"
+  ([ctx factory]
+   (let [dbname (dbname ctx)]
+     (assert dbname "no dbname in dynamic scope (If it can't be inferred, write a custom formula)")
+     (with-tempid-color dbname ctx factory)))
+  ([dbname ctx factory]
+   (->ThinEntity dbname (factory ctx))))
+
+(defn- fix-param [ctx param]
+  (if (instance? ThinEntity param)
+    (smart-entity-identifier ctx param)
+    param))
+
+(defn validate-query-params+ [q args ctx]
+  (mlet [query-holes (try-either (hypercrud.browser.q-util/parse-holes q)) #_"normalizes for :in $"
+         :let [db-lookup (->> (get-in ctx [:hypercrud.browser/domain :domain/databases])
+                              (map (juxt :domain.database/name #(hc/db (:peer ctx) (get-in % [:domain.database/record :database/uri]) (:branch ctx))))
+                              (into {}))
+               ; Add in named database params that aren't formula params
+               [params' unused] (loop [acc []
+                                       args args
+                                       [x & xs] query-holes]
+                                  (let [is-db (clojure.string/starts-with? x "$")
+                                        next-arg (if is-db (get db-lookup x)
+                                                           (fix-param ctx (first args)))
+                                        args (if is-db args (rest args))
+                                        acc (conj acc next-arg)]
+                                    (if xs
+                                      (recur acc args xs)
+                                      [acc args])))]]
+    ;(assert (= 0 (count (filter nil? params')))) ; datomic will give a data source error
+    ; validation. better to show the query and overlay the params or something?
+    (cond #_#_(seq unused) (either/left {:message "unused param" :data {:query q :params params' :unused unused}})
+      (not= (count params') (count query-holes)) (either/left {:message "missing params" :data {:query q :params params' :unused unused}})
+      :else-valid (either/right params'))))
+
+(defn stable-entity-key "Like smart-entity-identifier but reverses top layer of tempids to stabilize view keys in branches. You
+  must pull db/id to trigger tempid detection! Don't use this in labels."
+  [ctx {:keys [:db/id :db/ident] :as v}]
+  ; https://github.com/hyperfiddle/hyperfiddle/issues/563 - Regression: Schema editor broken due to smart-id
+  ; https://github.com/hyperfiddle/hyperfiddle/issues/345 - Form jank when tempid entity transitions to real entity
+  (or (underlying-tempid ctx id)                            ; prefer the tempid for stability
+      (smart-entity-identifier ctx v)))
+
+(defn stable-relation-key "Stable key that works on scalars too. ctx is for tempid-reversing"
+  [ctx v]
+  (or (stable-entity-key ctx v) v))
+
+(defn row-keyfn [ctx row]
+  (r/row-keyfn' (partial stable-relation-key ctx) row))
+
+(defn hash-ctx-data [ctx]                                       ; todo there are collisions when two links share the same 'location'
+  (when-let [data (:hypercrud.browser/data ctx)]
+    (case @(r/fmap ::field/cardinality (:hypercrud.browser/field ctx))
+      :db.cardinality/one @(r/fmap->> data ( ctx))
+      :db.cardinality/many @(r/fmap->> data
+                                       (mapv (r/partial stable-relation-key ctx))
+                                       (into #{})
+                                       hash)                ; todo scalar
+      nil nil #_":db/id has a faked attribute with no cardinality, need more thought to make elegant")))
+
+(defn tempid-from-ctx "stable" [ctx]
+  ; recurse all the way up the path? just data + parent-data is relative not fully qualified, which is not unique
+  (-> (str (:hypercrud.browser/path ctx) "."
+           (hash-ctx-data (:hypercrud.browser/parent ctx)) "."
+           (hash-ctx-data ctx))
+      hash str))

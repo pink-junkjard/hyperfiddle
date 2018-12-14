@@ -17,7 +17,6 @@
     [hyperfiddle.actions :as actions]
     [hyperfiddle.api]
     [hyperfiddle.runtime :as runtime]
-    [hyperfiddle.tempid :as tempid :refer [stable-entity-key]]
     [hyperfiddle.ui.iframe :refer [iframe-cmp]]
     [promesa.core :as p]
     [re-com.core :as re-com]
@@ -26,8 +25,9 @@
 
 (let [safe-eval-string #(try-promise (eval/eval-expr-str! %))
       memoized-eval-string (memoize safe-eval-string)]
-  (defn- with-swap-fn [link-ref eav ctx f]
-    (let [{:keys [:link/tx-fn] :as link} @link-ref]
+  (defn- with-swap-fn [link-ref ctx f]
+    (let [eav (:hypercrud.browser/eav ctx)                  ; scope capture, used to be passed in. Not sure how far can be delayed
+          {:keys [:link/tx-fn] :as link} @link-ref]
       (-> (if (blank->nil tx-fn)
             (memoized-eval-string tx-fn)                    ; TODO migrate type to keyword
             (p/resolved (constantly nil)))
@@ -54,7 +54,7 @@
           ; todo something better with these exceptions (could be user error)
           (p/catch (fn [err] (js/alert (pprint-str err))))))))
 
-(defn stage! [link-ref eav popover-id child-branch ctx r-popover-data props]
+(defn stage! [link-ref popover-id child-branch ctx r-popover-data props]
   (let [f (fn [swap-fn-async]
             ; the swap-fn could be determined via the link rel
             (->> (actions/stage-popover (:peer ctx) child-branch
@@ -69,7 +69,7 @@
                                                       dissoc-nils))))
                                         (actions/close-popover (:branch ctx) popover-id))
                  (runtime/dispatch! (:peer ctx))))]
-    (with-swap-fn link-ref eav ctx f)))
+    (with-swap-fn link-ref ctx f)))
 
 (defn close! [popover-id ctx]
   (runtime/dispatch! (:peer ctx) (actions/close-popover (:branch ctx) popover-id)))
@@ -79,7 +79,7 @@
                                    (actions/close-popover (:branch ctx) popover-id)
                                    (actions/discard-partition child-branch))))
 
-(defn managed-popover-body [route popover-id ?child-branch link-ref ctx eav props]
+(defn managed-popover-body [route popover-id ?child-branch link-ref ctx props]
   (let [popover-ctx-pre (cond-> (context/clean ctx)         ; hack clean for block level errors
                                 ?child-branch (assoc :branch ?child-branch))
         +popover-ctx-post (base/data-from-route route popover-ctx-pre)
@@ -89,7 +89,7 @@
      ; NOTE: this ctx logic and structure is the same as the popover branch of browser-request/recurse-request
      [iframe-cmp popover-ctx-pre {:route route}]            ; cycle
      (when ?child-branch
-       [:button {:on-click (r/partial stage! link-ref eav popover-id ?child-branch ctx r-popover-data props)
+       [:button {:on-click (r/partial stage! link-ref popover-id ?child-branch ctx r-popover-data props)
                  :disabled popover-invalid} "stage"])
      (if ?child-branch
        [:button {:on-click #(cancel! popover-id ?child-branch ctx)} "cancel"]
@@ -111,7 +111,7 @@
     child
     [tooltip (tooltip-props (:tooltip props)) child]))
 
-(defn run-txfn! [link-ref eav ctx props]
+(defn run-txfn! [link-ref ctx props]
   (let [popover-data nil]
     (letfn [(f [swap-fn-async]
               (-> (->> (swap-fn-async)
@@ -123,24 +123,24 @@
                     (fn [{:keys [tx app-route]}]
                       (->> (actions/with-groups (:peer ctx) (:branch ctx) tx :route app-route)
                            (runtime/dispatch! (:peer ctx)))))))]
-      (with-swap-fn link-ref eav ctx f))))
+      (with-swap-fn link-ref ctx f))))
 
-(defn effect-cmp [link-ref eav ctx props label]
+(defn effect-cmp [link-ref ctx props label]
   (let [props (-> props
-                  (assoc :on-click (r/partial run-txfn! link-ref eav ctx props))
+                  (assoc :on-click (r/partial run-txfn! link-ref ctx props))
                   ; use twbs btn coloring but not "btn" itself
                   (update :class css "btn-warning"))]
     [:button props [:span (str label "!")]]))
 
-(defn popover-cmp [link-ref eav ctx visual-ctx props label]
+(defn popover-cmp [link-ref ctx visual-ctx props label]
   ; try to auto-generate branch/popover-id from the product of:
   ; - link's :db/id
   ; - route
   ; - visual-ctx's data & path (where this popover is being drawn NOT its dependencies)
-  (let [child-branch (let [child-id-str (-> [(tempid/tempid-from-ctx visual-ctx)
+  (let [child-branch (let [child-id-str (-> [(hypercrud.browser.context/tempid-from-ctx visual-ctx)
                                              @(r/fmap :db/id link-ref)
                                              (:route props)
-                                             @(r/fmap (r/partial stable-entity-key ctx) (:hypercrud.browser/fiddle ctx))]
+                                             @(r/fmap (r/partial hypercrud.browser.context/stable-entity-key ctx) (:hypercrud.browser/fiddle ctx))]
                                             hash str)]
                        (branch/encode-branch-child (:branch ctx) child-id-str))
         popover-id child-branch                             ; just use child-branch as popover-id
@@ -162,4 +162,4 @@
        :anchor [:button btn-props [:span (str label "▾")]]
        :popover [re-com/popover-content-wrapper
                  :no-clip? true
-                 :body [managed-popover-body (:route props) popover-id child-branch link-ref ctx eav props]]]]]))
+                 :body [managed-popover-body (:route props) popover-id child-branch link-ref ctx props]]]]]))

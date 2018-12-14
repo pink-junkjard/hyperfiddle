@@ -1,7 +1,7 @@
 (ns contrib.datomic-tx
   (:require
     [clojure.set :as set]
-    [hyperfiddle.tempid :refer [tempid?]]))
+    [contrib.datomic :refer [tempid?]]))
 
 
 (defn edit-entity [id attribute o n]

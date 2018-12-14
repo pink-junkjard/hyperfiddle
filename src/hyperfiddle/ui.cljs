@@ -27,7 +27,6 @@
     [hyperfiddle.ide.console-links :refer [inject-console-links system-link?]]
     [hyperfiddle.route :as route]
     [hyperfiddle.security.client :as security]
-    [hyperfiddle.tempid :as tempid :refer [smart-entity-identifier consistent-relation-key stable-relation-key]]
     [hyperfiddle.ui.api]
     [hyperfiddle.ui.controls :as controls :refer [label-with-docs dbid-label magic-new]]
     [hyperfiddle.ui.docstring :refer [semantic-docstring]]
@@ -65,7 +64,7 @@
 (defn entity-links-iframe [val ctx & [props]]
   (->> (r/fmap->> (data/select-all-r ctx :hf/iframe)
                   (remove (r/comp (r/partial data/deps-over-satisfied? ctx) link/read-path :link/path)))
-       (r/unsequence (r/partial stable-relation-key ctx))
+       (r/unsequence (r/partial context/stable-relation-key ctx))
        (map (fn [[rv k]]
               ^{:key k}
               [ui-from-link rv ctx props]))
@@ -199,13 +198,7 @@ User renderers should not be exposed to the reaction."
   (defn ui-from-link [link-ref ctx & [props ?label]]
     {:pre [link-ref]}
     (let [visual-ctx ctx
-          ctx (context/refocus ctx (link/read-path @(r/fmap :link/path link-ref)))
-          error-comp (ui-error/error-comp ctx)
-          +args @(r/fmap->> link-ref (routing/build-args+ ctx))
-          r+?route (r/fmap->> link-ref (routing/build-route' +args ctx)) ; need to re-focus from the top
-          eav [(some-> ctx :hypercrud.browser/parent hypercrud.browser.context/id) ; Todo move into refocus. Also might not have one, txfn understands this
-               (last (:hypercrud.browser/path ctx))         ; todo chop off FE todo
-               (->> +args (unwrap (constantly nil)) first :db/id)] ; Todo for :hf/new, the focused data is now eschewed in favor of this new tempid
+          [ctx r+?route] (context/refocus' ctx link-ref)
           style {:color nil #_(connection-color ctx (cond (system-link? (:db/id @link-ref)) 60 :else 40))}
           props (update props :style #(or % style))
           has-tx-fn @(r/fmap-> link-ref :link/tx-fn blank->nil boolean)
@@ -215,7 +208,7 @@ User renderers should not be exposed to the reaction."
         (let [props (-> props
                         (update :class css "hyperfiddle")
                         (update :disabled #(or % (disabled? link-ref ctx))))]
-          [effect-cmp link-ref eav ctx props @(r/track prompt link-ref ?label)])
+          [effect-cmp link-ref ctx props @(r/track prompt link-ref ?label)])
 
         (or has-tx-fn (and is-iframe (:iframe-as-popover props)))
         (let [props (-> @(r/track validated-route-tooltip-props r+?route link-ref ctx props)
@@ -223,11 +216,11 @@ User renderers should not be exposed to the reaction."
                         (update :class css "hyperfiddle")   ; should this be in popover-cmp? what is this class? – unify with semantic css
                         (update :disabled #(or % (disabled? link-ref ctx))))
               label @(r/track prompt link-ref ?label)]
-          [popover-cmp link-ref eav ctx visual-ctx props label])
+          [popover-cmp link-ref ctx visual-ctx props label])
 
         is-iframe
         [stale/loading (stale/can-be-loading? ctx) (fmap #(route/assoc-frag % (:frag props)) @r+?route) ; what is this frag noise?
-         (fn [e] [error-comp e])
+         (fn [e] [(ui-error/error-comp ctx) e])
          (fn [route]
            (let [iframe (or (::custom-iframe props) iframe-cmp)]
              [iframe ctx (-> props                          ; flagged - :class
@@ -324,7 +317,7 @@ User renderers should not be exposed to the reaction."
          [:thead (->> (columns (dissoc ctx :hypercrud.browser/data) props) (into [:tr]))] ; strict
          (->> (r/fmap-> (:hypercrud.browser/data ctx)
                         (sort/sort-fn sort-col))
-              (r/unsequence (r/partial tempid/row-keyfn ctx))
+              (r/unsequence (r/partial context/row-keyfn ctx))
               (map (fn [[row k]]
                      (->> (columns (context/row ctx row k) props)
                           (into ^{:key k} [:tr]))))         ; strict
@@ -337,7 +330,7 @@ User renderers should not be exposed to the reaction."
      [:a {:href "~entity('$','tempid')"} [:code "~entity('$','tempid')"]] "."]))
 
 (defn form "Not an abstraction." [fields val ctx & [props]]
-  (into [:<> {:key (str (tempid/row-keyfn ctx val))}]
+  (into [:<> {:key (str (context/row-keyfn ctx val))}]
         (fields (assoc ctx ::layout :hyperfiddle.ui.layout/block))))
 
 (defn columns [m-field relative-path field ctx & [props]]

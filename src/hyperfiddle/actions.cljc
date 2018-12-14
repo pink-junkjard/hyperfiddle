@@ -182,7 +182,7 @@
                       (p/rejected e))
                     (fn [route]
                       (let [invert-id (fn [temp-id uri] (get-in tempid->id [uri temp-id] temp-id))
-                            route' (routing/invert-route (::runtime/domain (get-state)) route invert-id)
+                            route' (route/invert-route (::runtime/domain (get-state)) route invert-id)
                             keep-popovers? (or (nil? route) (route/compare-routes route current-route))]
                         ; todo we want to overwrite our current browser location with this new url
                         ; currently this new route breaks the back button

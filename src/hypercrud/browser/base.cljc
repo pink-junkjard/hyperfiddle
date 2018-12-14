@@ -17,8 +17,7 @@
             [hypercrud.types.EntityRequest :refer [->EntityRequest]]
             [hypercrud.types.QueryRequest :refer [->QueryRequest]]
             [hyperfiddle.domain :as domain]
-            [hyperfiddle.fiddle :as fiddle]
-            [hyperfiddle.tempid]))
+            [hyperfiddle.fiddle :as fiddle]))
 
 
 (defn legacy-fiddle-ident->lookup-ref [fiddle]              ; SHould be an ident but sometimes is a long today
@@ -59,7 +58,7 @@
 (defn request-for-fiddle [fiddle ctx]                       ; depends on route
   (case @(r/cursor fiddle [:fiddle/type])
     :query (mlet [q (reader/memoized-read-string+ @(r/cursor fiddle [:fiddle/query]))
-                  args (q-util/validate-query-params+ q @(r/fmap second (:hypercrud.browser/route ctx)) ctx)]
+                  args (context/validate-query-params+ q @(r/fmap second (:hypercrud.browser/route ctx)) ctx)]
              (return (->QueryRequest q args)))
 
     :entity
@@ -94,7 +93,7 @@
       (return (assoc ctx :hypercrud.browser/field reactive-field
                          :hypercrud.browser/validation-hints
                          (if-let [spec (s/get-spec (:fiddle/ident @fiddle))]
-                           (contrib.validation/validate spec @reactive-result (partial hyperfiddle.tempid/row-keyfn ctx))))))))
+                           (contrib.validation/validate spec @reactive-result (partial context/row-keyfn ctx))))))))
 
 (defn data-from-route "either ctx, ctx-from-route" [route ctx]                           ; todo rename
   (mlet [ctx (-> (context/clean ctx)
@@ -107,7 +106,7 @@
 
 (defn from-link [link ctx with-route]                       ; ctx is for formula and routing (tempids and domain)
   (let [ctx (context/refocus ctx (link/read-path (:link/path link)))] ; symmetry with UI - popovers, txfn etc
-    (mlet [route (routing/build-route' (routing/build-args+ ctx link) ctx link)]
+    (mlet [route (context/build-route' (context/build-args+ ctx link) ctx link)]
       (with-route route ctx))))
 
 (defn data-from-link [link ctx]                             ; todo rename

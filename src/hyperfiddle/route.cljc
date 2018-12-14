@@ -4,6 +4,7 @@
     [cats.monad.either :as either]
     [clojure.spec.alpha :as s]
     [clojure.string :as string]
+    [clojure.walk]
     [contrib.data :refer [orp rtrim-coll]]
     [contrib.ednish :as ednish :refer [decode-ednish encode-ednish]]
     [contrib.pprint :refer [pprint-str]]
@@ -11,8 +12,12 @@
     [contrib.string :refer [empty->nil]]
     [contrib.try$ :refer [try-either]]
     [cuerdas.core :as str]
+    [hypercrud.types.ThinEntity :refer [->ThinEntity #?(:cljs ThinEntity)]]
+    [hyperfiddle.domain]
     [hyperfiddle.fiddle]                                    ; for ::fiddle spec
-    ))
+    )
+  #?(:clj
+     (:import (hypercrud.types.ThinEntity ThinEntity))))
 
 
 (s/def ::fiddle (s/or
@@ -99,3 +104,14 @@
           (either/branch
             (fn [e] (decoding-error e s))
             identity)))))
+
+(defn invert-route [domain [_ args :as route] invert-id]
+  (let [args (->> {:request-params args}                    ; code compat
+                  (clojure.walk/postwalk (fn [v]                    ; works on [args] instead of (:request-param args) ?
+                                   (if (instance? ThinEntity v)
+                                     (let [uri (hyperfiddle.domain/dbname->uri (.-dbname v) domain)
+                                           id (invert-id (.-id v) uri)]
+                                       (->ThinEntity (.-dbname v) id))
+                                     v)))
+                  :request-params)]
+    (apply canonicalize (assoc route 1 args))))

@@ -11,7 +11,6 @@
     [hypercrud.browser.context :as context]
     [hypercrud.browser.field :as field]
     [hyperfiddle.data :as data]
-    [hyperfiddle.tempid :refer [smart-entity-identifier]]
     [hyperfiddle.ui.util :refer [with-entity-change! writable-entity?]]
     [taoensso.timbre :as timbre]))
 
@@ -69,7 +68,7 @@
         label-fn (contrib.eval/ensure-fn (:option-label props option-label))
         option-value-fn (fn [row]
                           (let [element (if (vector? row) (first row) row)] ; inspect datalog
-                            (pr-str (or (smart-entity-identifier ctx element) element))))]
+                            (pr-str (or (context/smart-entity-identifier ctx element) element))))]
     [:select.ui (dissoc props :option-label)                ; value
      ; .ui is because options are an iframe and need the pink box
      (conj
@@ -109,7 +108,7 @@
         (return
           (let [default-props {:on-change (with-entity-change! ctx)}
                 props (-> (merge default-props props)
-                          (assoc :value (str (context/id ctx))))
+                          (assoc :value (str (context/identify ctx))))
                 props (-> (select-keys props [:class])
                           (assoc :user-renderer (r/partial select-anchor-renderer props {:disabled (compute-disabled ctx props)})))
                 ctx (assoc ctx

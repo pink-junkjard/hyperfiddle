@@ -3,12 +3,15 @@
     [contrib.data :refer [group-by-pred]]))
 
 
+(defn tempid? [id]
+  (string? id))
+
 (defn identity-segment? [attr-spec]
   ; Not necessarily a keyword
   ; But accepts pull-shapes, so doesn't have to be the full attr spec
   (contains? #{:db/id :db/ident} attr-spec))
 
-(defn smart-lookup-ref-no-tempids "see hyperfiddle.tempid/smart-entity-identifier"
+(defn smart-lookup-ref-no-tempids "see hypercrud.browser.context/smart-entity-identifier"
   [{:keys [:db/id :db/ident] :as v}]
   (let [identity-lookup nil]
     (or #_(if (underlying-tempid ctx id) id)                  ; the lookups are no good yet, must use the dbid (not the tempid, actions/with will handle that reversal)
@@ -18,6 +21,10 @@
         (if-not (map? v) v)                                 ; id-scalar
         nil                                                 ; This is an entity but you didn't pull any identity - error?
         )))
+
+(defn consistent-relation-key "Key that the dbval has, but unstable in views with a branch"
+  [v]
+  (or (smart-lookup-ref-no-tempids v) v))
 
 (defn valueType [schema-by-attr k]
   {:pre [(map? schema-by-attr) (keyword? k)]}

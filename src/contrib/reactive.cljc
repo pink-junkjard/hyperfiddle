@@ -188,7 +188,7 @@
      (->> @(fmap (partial map key-fn) rv)
           (map (fn [key] [(cursor lookup [key]) key]))))))
 
-(defn row-keyfn' "See hyperfiddle.tempid/row-keyfn"
+(defn row-keyfn' "See hypercrud.browser.context/row-keyfn"
   [f row]
   {:pre [(not (reactive? row))]}
   ; This keyfn is very tricky, read https://github.com/hyperfiddle/hyperfiddle/issues/341

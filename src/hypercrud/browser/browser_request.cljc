@@ -67,6 +67,7 @@
     ; blank fiddles
     nil))
 
+; contains hf/portal
 (defn filter-inline-links [fiddle] (update fiddle :fiddle/links #(filter (comp (partial = :hf/iframe) :link/rel) %)))
 
 (defn requests [ctx]
