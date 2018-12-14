@@ -208,21 +208,8 @@
     [-codemirror props]))
 
 (defn ^:export code-inline-block [props]
-  (let [showing? (r/atom false)]
-    (fn [props]
-      [:div.truncate.code-inline-block
-       [re-com/popover-anchor-wrapper
-        :showing? showing?
-        :position :below-center
-        :anchor [:a {:href "javascript:void 0;" :on-click (r/partial swap! showing? not)}
-                 [:span (when (:is-invalid props) {:class "invalid"})
-                  (orp seq (:value props) (:default-value props) "-")]]
-        :popover [re-com/popover-content-wrapper
-                  :close-button? true
-                  :on-cancel (r/partial reset! showing? false)
-                  :no-clip? true
-                  :width "600px"
-                  :body (code props)]]])))
+  ; (when (:is-invalid props) {:class "invalid"})
+  (text props))
 
 (defn ^:export cm-edn [props]
   [validated-cmp (assoc props :mode "clojure") contrib.reader/read-edn-string! pprint-str code])
