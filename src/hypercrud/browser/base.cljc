@@ -87,6 +87,7 @@
            :let [ctx (assoc ctx
                        :hypercrud.browser/attr-renderers reactive-attrs
                        :hypercrud.browser/data reactive-result
+                       :hypercrud.browser/eav nil           ; Todo scalar queries already have inferrable v
                        :hypercrud.browser/fiddle fiddle     ; for :db/doc
                        :hypercrud.browser/path [])]
            reactive-field @(r/apply-inner-r (r/track field/auto-field request ctx))]

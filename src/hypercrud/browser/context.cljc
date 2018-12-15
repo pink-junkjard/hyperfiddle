@@ -29,6 +29,7 @@
 
           :hypercrud.browser/attr-renderers
           :hypercrud.browser/data
+          :hypercrud.browser/eav
           :hypercrud.browser/fiddle
           :hypercrud.browser/field
           :hypercrud.browser/parent
@@ -89,6 +90,29 @@
                 deref)
            (either/branch #(throw (ex-info % {})) identity))))
 
+(defn underlying-tempid [ctx id]
+  ; This muddled thinking is caused by https://github.com/hyperfiddle/hyperfiddle/issues/584
+  (cond
+    (contrib.datomic/tempid? id) id
+    :else (get (ctx->id-lookup ctx) id)))
+
+(defn smart-entity-identifier "Generates the best Datomic lookup ref for a given pull."
+  [ctx {:keys [:db/id :db/ident] :as v}]                    ; v can be a ThinEntity or a pull i guess
+  ; This must be called only on refs.
+  ; If we have a color, and a (last path), ensure it is a ref.
+  ; If we have a color and [] path, it is definitely a ref.
+  ; If we have no color, it is a scalar or aggregate.
+  ;(assert (::field/data-has-id? @(:hypercrud.browser/field ctx)) "smart-identity works only on refs")
+
+  (let [identity-lookup nil]
+    (or (if (underlying-tempid ctx id) id)                  ; the lookups are no good yet, must use the dbid (not the tempid, actions/with will handle that reversal)
+        ident
+        identity-lookup
+        id
+        (if-not (map? v) v)                                 ; id-scalar
+        nil                                                 ; This is an entity but you didn't pull any identity - error?
+        )))
+
 (defn hydrate-attribute [ctx ident & ?more-path]
   (runtime/state (:peer ctx) (concat [::runtime/partitions (:branch ctx) :schemas (uri ctx)] (cons ident ?more-path))))
 
@@ -130,15 +154,16 @@
             (if-not (:hypercrud.browser/data ctx)
               ctx                                           ; head
               (let [e (some-> ctx identify)                 ; this is the parent v
-                    a (last (:hypercrud.browser/path ctx)) ; todo chop off FE todo
-                    v (let [f (r/fmap ::field/get-value field)]
-                        #_(assert @f (str "focusing on a non-pulled attribute: " (pr-str (:hypercrud.browser/path ctx)) "."))
-                        (r/fapply f (:hypercrud.browser/data ctx)))]
+                    a (last (:hypercrud.browser/path ctx))  ; todo chop off FE todo
+                    data (let [f (r/fmap ::field/get-value field)]
+                           #_(assert @f (str "focusing on a non-pulled attribute: " (pr-str (:hypercrud.browser/path ctx)) "."))
+                           (r/fapply f (:hypercrud.browser/data ctx)))
+                    v (smart-entity-identifier ctx @data)]
                 (-> (set-parent-data ctx)                   ; body
                     (update :hypercrud.browser/validation-hints #(for [[[p & ps] hint] % :when (= p path-segment)]
                                                                    [ps hint]))
-                    (assoc :hypercrud.browser/data v)
-                    (assoc :hypercrud.browser/eav [e a @v])
+                    (assoc :hypercrud.browser/data data)
+                    (assoc :hypercrud.browser/eav [e a v])
                     )))))]
   (defn focus "Throws if you focus a higher dimension" [ctx relative-path]
     (reduce focus-segment ctx relative-path)))
@@ -152,17 +177,19 @@
       (set-parent)
       (set-parent-data)
       (assoc :hypercrud.browser/data rval)
+      (update :hypercrud.browser/eav (fn [[e a v]]
+                                       ; FindColl is happy,
+                                       ; FindRel (map smart-entity-identifier @rval)
+                                       ; Todo normalize FindRel into FindColl when possible
+                                       [e a (smart-entity-identifier ctx @rval)]))
       (update :hypercrud.browser/validation-hints #(for [[[p & ps] hint] % :when (= k p)]
                                                      [ps hint]))
       (update :hypercrud.browser/field
               #(r/fmap-> % (assoc ::field/cardinality :db.cardinality/one)))))
 
-(defn refocus
-  "focus common ancestor, this is deprecated and unifies with refocus' once reactive types
-  are removed from link ui"
+(defn refocus "todo unify with refocus'"
   [ctx path]
-  {:pre [ctx] :post [%]}
-  ; This should run the link formula as part of focus step
+  {:pre [ctx] :post [(contains? % :hypercrud.browser/eav)]}
   (let [current-path (:hypercrud.browser/path ctx)
         common-ancestor-path (ancestry-common current-path path)
         unwind-offset (- (count current-path) (count common-ancestor-path))
@@ -196,69 +223,54 @@
   (::field/data-has-id? @(:hypercrud.browser/field ctx))
   #_(and (context/dbname ctx) (last (:hypercrud.browser/path ctx))))
 
-(defn underlying-tempid [ctx id]
-  ; This muddled thinking is caused by https://github.com/hyperfiddle/hyperfiddle/issues/584
+(defn tag-v-with-color "Tag dbids with color, at the last moment before they render into URLs"
+  [ctx v]
   (cond
-    (contrib.datomic/tempid? id) id
-    :else (get (ctx->id-lookup ctx) id)))
+    (instance? ThinEntity v) v                              ; backwards compat with old hfhf formulas which return #entity
+    (not (has-entity-identity? ctx)) v                      ; maybe a ref but you didn't pull an identity? Can't do much for that (we can't generate links there and neither should userland try)
 
-(defn smart-entity-identifier "Generates the best Datomic lookup ref for a given pull."
-  [ctx {:keys [:db/id :db/ident] :as v}]                    ; v can be a ThinEntity or a pull i guess
-  ; This must be called only on refs.
-  ; If we have a color, and a (last path), ensure it is a ref.
-  ; If we have a color and [] path, it is definitely a ref.
-  ; If we have no color, it is a scalar or aggregate.
-  ;(assert (::field/data-has-id? @(:hypercrud.browser/field ctx)) "smart-identity works only on refs")
-
-  (let [identity-lookup nil]
-    (or (if (underlying-tempid ctx id) id)                  ; the lookups are no good yet, must use the dbid (not the tempid, actions/with will handle that reversal)
-        ident
-        identity-lookup
-        id
-        (if-not (map? v) v)                                 ; id-scalar
-        nil                                                 ; This is an entity but you didn't pull any identity - error?
-        )))
-
-(defn pull->colored-eid "Adapt pull to a datomic primitive suitable for :in" [ctx v]
-  (if-not (has-entity-identity? ctx)                ; maybe a ref but you didn't pull an identity? Can't do much for that (we can't generate links there and neither should userland try)
-    v                                                       ; In edge cases, this could be a colorless opaque value (composite or scalar)
-    (->ThinEntity (dbname ctx) (smart-entity-identifier ctx v))))
+    ; In edge cases, this could be a colorless opaque value (composite or scalar)
+    ; Todo: in the tuple case, each element may be a different color, so we need to refocus the ctx here (with find element index) to infer this
+    :happy (->ThinEntity (dbname ctx) (smart-entity-identifier ctx v))))
 
 (let [eval-string!+ (memoize eval/eval-expr-str!+)]
-  (defn build-args+
-    "formulas have to run as part of link refocusing so formula tempids can occlude the eschewed pulled-tree data"
+  (defn build-args+ "Params are EAV-typed (uncolored)"
     [ctx {:keys [:link/fiddle :link/tx-fn] :as link}]
-    (mlet [f-wrap (if-let [formula-str (contrib.string/blank->nil (:link/formula link))]
-                    (eval-string!+ (str "(fn [ctx] \n" formula-str "\n)"))
-                    (either/right (constantly (constantly nil))))
-           f (try-either (f-wrap ctx))
-           colored-args (try-either @(r/fmap->> (or (:hypercrud.browser/data ctx) (r/track identity nil))
-                                                (pull->colored-eid ctx)
-                                                f))]
-          (return (normalize-args colored-args)))))
+    (mlet [formula-ctx-closure (if-let [formula-str (contrib.string/blank->nil (:link/formula link))]
+                                 (eval-string!+ (str "(fn [ctx] \n" formula-str "\n)"))
+                                 (either/right (constantly (constantly nil))))
+           formula-fn (try-either (formula-ctx-closure ctx))
+           :let [[e a v] (:hypercrud.browser/eav ctx)]
+           args (try-either @(r/fmap->> (or (if v (r/track identity v)) ; fuck
+                                            (r/track identity nil))
+                                        formula-fn          ; Documented behavior is v in, tuple out, no colors.
+                                        normalize-args))]
+      (return args))))
 
-(defn ^:export build-route' "There may not be a route! Fiddle is sometimes optional"
+(defn ^:export build-route' "There may not be a route! Fiddle is sometimes optional" ; build-route+
   [+args ctx {:keys [:link/fiddle :link/tx-fn] :as link}]
   (if (and (not fiddle) tx-fn)
-    (mlet [colored-args +args] (return nil))               ; :hf/remove doesn't have one by default, :hf/new does, both can be customized
-    (mlet [colored-args +args                              ; part of error chain
+    (mlet [args +args] (return nil))                        ; :hf/remove doesn't have one by default, :hf/new does, both can be customized
+    (mlet [args +args                                       ; part of error chain
            fiddle-id (if fiddle
                        (right (:fiddle/ident fiddle))
                        (left {:message ":link/fiddle required" :data {:link link}}))
+           ; Why must we reverse into tempids? For the URL, of course.
+           :let [colored-args (mapv (partial tag-v-with-color ctx) args)]
            route (id->tempid+ (hyperfiddle.route/canonicalize fiddle-id colored-args) ctx)
            route (hyperfiddle.route/validate-route+ route)]
-          (return route))))
+      (return route))))
 
 ; I think reactive types are probably slowing this down overall, there are too many
 ; reactions going on. It all gets deref'ed in the end anyway! Just deref it above.
-(defn refocus' [ctx link-ref]
+(defn refocus' "focus a link ctx" [ctx link-ref]
   {:pre [ctx] :post [%]}
   (let [path (hypercrud.browser.link/read-path @(r/fmap :link/path link-ref))
         ctx (refocus ctx path)
-        ; Focusing must account for link/formula (essentially tempids)
-        +args @(r/fmap->> link-ref (build-args+ ctx))
-        r+?route (r/fmap->> link-ref (build-route' +args ctx)) ; need to re-focus from the top
-        v' (->> +args (contrib.ct/unwrap (constantly nil)) first :db/id)
+        ; Focusing must account for link/formula (essentially tempids can occlude the eschewed pulled-tree data)
+        +args @(r/fmap->> link-ref (build-args+ ctx))       ; Don't color them yet
+        r+?route (r/fmap->> link-ref (build-route' +args ctx)) ; Route has colored-args, eav does not
+        [v' & vs] (->> +args (contrib.ct/unwrap (constantly nil))) ; EAV sugar is not interested in tuple case, that txfn is way off happy path
         ctx (update ctx :hypercrud.browser/eav (fn [[e a v]]
                                                  [e a v']))]
     [ctx r+?route]))
@@ -272,24 +284,15 @@
        (filter (comp nil? first))
        seq boolean))
 
-(defn tempid-from-stage "unstable"
+(defn tempid! "unstable"
   ([ctx]
    (let [dbname (dbname ctx)]
      (assert dbname "no dbname in dynamic scope (If it can't be inferred, write a custom formula)")
-     (tempid-from-stage dbname ctx)))
+     (tempid! dbname ctx)))
   ([dbname ctx]
    @(r/fmap->> (runtime/state (:peer ctx) [::runtime/partitions])
                (hypercrud.util.branch/branch-val (uri dbname ctx) (:branch ctx))
                hash str)))
-
-(defn ^:export with-tempid-color "tempids in hyperfiddle are colored, because we need the backing dbval in order to reverse hydrated
-  dbid back into their tempid for routing"
-  ([ctx factory]
-   (let [dbname (dbname ctx)]
-     (assert dbname "no dbname in dynamic scope (If it can't be inferred, write a custom formula)")
-     (with-tempid-color dbname ctx factory)))
-  ([dbname ctx factory]
-   (->ThinEntity dbname (factory ctx))))
 
 (defn- fix-param [ctx param]
   (if (instance? ThinEntity param)
@@ -344,7 +347,7 @@
                                        hash)                ; todo scalar
       nil nil #_":db/id has a faked attribute with no cardinality, need more thought to make elegant")))
 
-(defn tempid-from-ctx "stable" [ctx]
+(defn tempid "stable" [ctx]
   ; recurse all the way up the path? just data + parent-data is relative not fully qualified, which is not unique
   (-> (str (:hypercrud.browser/path ctx) "."
            (hash-ctx-data (:hypercrud.browser/parent ctx)) "."

@@ -1,19 +1,20 @@
 (ns hyperfiddle.api
   (:require
-    [hypercrud.browser.context :refer [with-tempid-color tempid-from-ctx tempid-from-stage]]))
+    [hypercrud.browser.context]))
 
 
-(defn ^:export tempid-child "stable and idempotent, but implemented through parent-child ctx"
+
+(defn ^:export tempid-child                                 ; tempid
+  "Generate tempid from eav, this tempid is idempotent and stable over time"
   [ctx val]
-  (with-tempid-color ctx tempid-from-ctx))
+  (hypercrud.browser.context/tempid ctx))
 
-; This returns a new value each time the transaction changes - can't call it again later.
-; So tx-fns must inspect the modal-route, they can't re-create the dbid.
-(defn ^:export tempid-detached "unstable but guaranteed unique tempid"
+(defn ^:export tempid-detached                              ; tempid!
+  "Generate tempid that has not yet been used, by inspecting the stage – a side effect!"
   ([dbname ctx]
-   (with-tempid-color dbname ctx (partial tempid-from-stage dbname)))
+   (hypercrud.browser.context/tempid! dbname ctx))
   ([ctx]
-   (with-tempid-color ctx tempid-from-stage)))
+   (hypercrud.browser.context/tempid! ctx)))
 
 (defmulti txfn (fn [user-txfn e a v ctx] user-txfn))
 
