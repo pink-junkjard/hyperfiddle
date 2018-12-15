@@ -51,11 +51,11 @@
   (let [this-path (:hypercrud.browser/path ctx)]
     (not= this-path (:hypercrud.browser/path (link-path-floor ctx link-path)))))
 
-(letfn [(link-matches-class? [?corcs fiddle-ident link]
+(letfn [(link-matches-class? [?corcs link]
           ; What we've got fully matches what we asked for
           (clojure.set/superset?
             (-> (set (:link/class link))
-                (conj fiddle-ident))
+                (conj (-> link :link/fiddle :fiddle/ident)))
             (contrib.data/xorxs ?corcs)))]
   (defn select-all-r "List[Link]. Find the closest match."
     ([ctx] {:pre [ctx]}
@@ -64,7 +64,7 @@
                 (filter (r/comp (r/partial deps-satisfied? ctx) link/read-path :link/path))))
     ([ctx ?corcs]
      (r/fmap->> (select-all-r ctx)
-                (filter (r/partial link-matches-class? ?corcs @(r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/ident])))))))
+                (filter (r/partial link-matches-class? ?corcs))))))
 
 (defn ^:export select-all "List[Link]. Find the closest match." [& args] @(apply select-all-r args))
 
