@@ -8,6 +8,7 @@
     [contrib.reactive :as r]
     [contrib.string]
     [contrib.try$ :refer [try-either]]
+    [clojure.set]
     [hypercrud.browser.field :as field]
     [hypercrud.browser.link]
     [hypercrud.browser.q-util]
@@ -176,6 +177,15 @@
                         (get id->tempid id id))))]
     (try-either (hyperfiddle.route/invert-route (:hypercrud.browser/domain ctx) route invert-id))))
 
+(defn tempid->id+ [route ctx]
+  (let [invert-id (fn [temp-id uri]
+                    (if (contrib.datomic/tempid? temp-id)
+                      (let [tempid->id (-> (ctx->id-lookup uri ctx)
+                                           (clojure.set/map-invert))]
+                        (get tempid->id temp-id temp-id))
+                      temp-id))]
+    (try-either (hyperfiddle.route/invert-route (:hypercrud.browser/domain ctx) route invert-id))))
+
 (defn normalize-args [porps]
   ; There is some weird shit hitting this assert, like {:db/id nil}
   {:pre [#_(not (map? porps)) #_"legacy"]
@@ -283,7 +293,7 @@
 
 (defn- fix-param [ctx param]
   (if (instance? ThinEntity param)
-    (smart-entity-identifier ctx param)
+    (smart-entity-identifier ctx param)                     ; throws away the dbname
     param))
 
 (defn validate-query-params+ [q args ctx]

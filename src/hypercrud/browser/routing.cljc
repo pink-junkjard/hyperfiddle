@@ -1,8 +1,7 @@
-(ns hypercrud.browser.routing
+(ns hypercrud.browser.routing                               ; Just merge into context, this is context
   (:require
     [cats.core :as cats :refer [mlet return]]
     [cats.monad.either :as either :refer [left right]]
-    [clojure.set :as set]
     [contrib.ct :refer [unwrap]]
     [contrib.datomic]
     [contrib.reactive :as r]
@@ -10,17 +9,8 @@
     [contrib.string :refer [blank->nil]]
     [contrib.try$ :refer [try-either]]
     [hypercrud.browser.context :as context]
-    [hyperfiddle.route :as route]
     [taoensso.timbre :as timbre]))
 
-(defn tempid->id+ [route ctx]
-  (let [invert-id (fn [temp-id uri]
-                    (if (contrib.datomic/tempid? temp-id)
-                      (let [tempid->id (-> (context/ctx->id-lookup uri ctx)
-                                           (set/map-invert))]
-                        (get tempid->id temp-id temp-id))
-                      temp-id))]
-    (try-either (route/invert-route (:hypercrud.browser/domain ctx) route invert-id))))
 
 (defn route+ [ctx [_ params :as route]]                     ; circular, this can be done sooner
   (mlet [_ (if (or (nil? params) (vector? params))          ; validate normalized already
@@ -29,7 +19,7 @@
          ; route should be a ref, provided by the caller, that we fmap over
          ; because it is not, this is obviously fragile and will break on any change to the route
          ; this is acceptable today (Sep-2018) because changing a route in ANY way assumes the entire iframe will be re-rendered
-         reactive-route @(r/apply-inner-r (r/track tempid->id+ route ctx))]
+         reactive-route @(r/apply-inner-r (r/track context/tempid->id+ route ctx))]
     (cats/return (assoc ctx :hypercrud.browser/route reactive-route))))
 
 (defn validated-route+ [?fiddle ?route ctx]                 ; can validate with link, not just fiddle

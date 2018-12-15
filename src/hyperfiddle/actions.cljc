@@ -6,7 +6,6 @@
     [clojure.spec.alpha :as s]
     [contrib.datomic-tx :as tx]
     [contrib.uri :refer [->URI]]
-    [hypercrud.browser.routing :as routing]
     [hypercrud.client.core :as hc]
     [hypercrud.types.EntityRequest :refer [->EntityRequest]]
     [hypercrud.types.Err :as Err]

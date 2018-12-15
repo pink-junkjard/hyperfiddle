@@ -106,11 +106,11 @@
             identity)))))
 
 (defn invert-route [domain [_ args :as route] invert-id]
+  ; this is a map, not walk
   (let [args (->> {:request-params args}                    ; code compat
                   (clojure.walk/postwalk (fn [v]                    ; works on [args] instead of (:request-param args) ?
                                    (if (instance? ThinEntity v)
-                                     (let [uri (hyperfiddle.domain/dbname->uri (.-dbname v) domain)
-                                           id (invert-id (.-id v) uri)]
+                                     (let [id (invert-id (.-id v) (hyperfiddle.domain/dbname->uri (.-dbname v) domain))]
                                        (->ThinEntity (.-dbname v) id))
                                      v)))
                   :request-params)]
