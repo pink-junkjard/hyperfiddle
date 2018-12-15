@@ -86,29 +86,34 @@
                                (remove #(and (instance? datascript.parser.BindScalar %)
                                              (instance? datascript.parser.SrcVar (:variable %))))
                                seq)
+                        ; todo (juxt first second)
                         "identity"
                         "(constantly nil)"))))))
 
 (def link-defaults
   {:link/formula (fn [link]
-                   (condp some (:link/class link)
-                     #{:hf/new} "(constantly (hyperfiddle.api/tempid-detached ctx))"
-                     #{:hf/affix} "(partial hyperfiddle.api/tempid-child ctx)"
-                     #{:hf/remove :hf/detach} "identity"
-                     #{:hf/rel :hf/self :hf/iframe}
+                   (cond
+
+                     (some #{:hf/new :hf/affix} (:link/class link))
+                     (if (contrib.string/blank->nil (:link/path link)) ; TODO and not a find-element, which will soon be the case. Currently broken for find elements https://github.com/hyperfiddle/hyperfiddle/issues/826
+                       "(partial hyperfiddle.api/tempid-child ctx)"
+                       "(constantly (hyperfiddle.api/tempid-detached ctx))")
+
+                     (:link/fiddle link)                    ; If there is a fiddle-target, infer the expected :in shape
                      (case (get-in link [:link/fiddle :fiddle/type] ((:fiddle/type fiddle-defaults) (:link/fiddle link)))
                        :query (infer-query-formula (get-in link [:link/fiddle :fiddle/query] ((:fiddle/query fiddle-defaults) (:link/fiddle link))))
                        :entity "identity"
-                       :blank nil)
-                     nil))
+                       :blank nil)                          ; this is the case where the v is inferred but we don't actually want it. TODO: What if :txfn is combined with :target-fiddle :blank?
+
+                     :else-txfn "identity"))
+
    :link/tx-fn (fn [link]
-                 (condp some (:link/class link)
-                   #{:hf/new} ":zero"                       ; hack to draw as popover
-                   #{:hf/affix} ":db/add"                   ; infer from link/path
-                   #{:hf/remove} ":db.fn/retractEntity"
-                   #{:hf/detach} ":db/retract"
-                   #{:hf/iframe :hf/self :hf/rel} nil
-                   nil))})
+                 ; Auto parent-child management for eav contexts
+                 (let [a (contrib.string/blank->nil (:link/path link))]
+                   (condp some (:link/class link)
+                     #{:hf/new :hf/affix} (if a ":db/add" ":zero") ; hack to draw as popover
+                     #{:hf/remove :hf/detach} (if a ":db/retract" ":db.fn/retractEntity")
+                     nil)))})
 
 (def fiddle-defaults
   {:fiddle/markdown (fn [fiddle] (str/fmt "### %s" (some-> fiddle :fiddle/ident str)))

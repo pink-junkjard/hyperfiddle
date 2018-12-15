@@ -6,10 +6,10 @@
             [contrib.reader :as reader :refer [memoized-read-edn-string+]]
             [contrib.try$ :refer [try-either]]
             [contrib.validation]
+            [datascript.parser #?@(:cljs [:refer [FindRel FindColl FindTuple FindScalar Variable Aggregate Pull]])]
             [hypercrud.browser.context :as context]
             [hypercrud.browser.field :as field]
             [hypercrud.browser.link :as link]
-            [hypercrud.browser.q-util :as q-util]
             [hypercrud.browser.routing :as routing]
             [hyperfiddle.ide.system-fiddle :as system-fiddle]
             [hypercrud.client.core :as hc]
@@ -17,7 +17,10 @@
             [hypercrud.types.EntityRequest :refer [->EntityRequest]]
             [hypercrud.types.QueryRequest :refer [->QueryRequest]]
             [hyperfiddle.domain :as domain]
-            [hyperfiddle.fiddle :as fiddle]))
+            [hyperfiddle.fiddle :as fiddle]
+            [hyperfiddle.ide.console-links]                 ; just the parser
+            )
+  #?(:clj (:import (datascript.parser FindRel FindColl FindTuple FindScalar Variable Aggregate Pull))))
 
 
 (defn legacy-fiddle-ident->lookup-ref [fiddle]              ; SHould be an ident but sometimes is a long today
@@ -84,10 +87,15 @@
   (defn process-results "either ctx" [fiddle request ctx]                ; todo rename to (context/result)
     (mlet [reactive-attrs @(r/apply-inner-r (project/hydrate-attrs ctx))
            reactive-result @(r/apply-inner-r (r/track nil-or-hydrate (:peer ctx) (:branch ctx) request))
-           :let [ctx (assoc ctx
+           :let [fiddle-parsed (hyperfiddle.ide.console-links/parse-fiddle-data-shape @fiddle)
+                 ctx (assoc ctx
                        :hypercrud.browser/attr-renderers reactive-attrs
                        :hypercrud.browser/data reactive-result
-                       :hypercrud.browser/eav nil           ; Todo scalar queries already have inferrable v
+                       :hypercrud.browser/eav (if (= FindScalar (type (:qfind fiddle-parsed)))
+                                                (let [v (context/smart-entity-identifier ctx @reactive-result)]
+                                                  ; Probably also tuples here too.
+                                                  [nil nil v]))
+                       ;:hypercrud.browser/fiddle-parsed fiddle-parsed ; its memoized
                        :hypercrud.browser/fiddle fiddle     ; for :db/doc
                        :hypercrud.browser/path [])]
            reactive-field @(r/apply-inner-r (r/track field/auto-field request ctx))]
