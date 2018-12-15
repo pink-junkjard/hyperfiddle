@@ -286,10 +286,10 @@
 
 (defn tempid! "unstable"
   ([ctx]
-   (let [dbname (dbname ctx)]
-     (assert dbname "no dbname in dynamic scope (If it can't be inferred, write a custom formula)")
+   (let [dbname (or (dbname ctx) "$")]                      ; (assert dbname "no dbname in ctx")
+     ; If you don't like $, specify a :fiddle/pull-database or :fiddle/query
      (tempid! dbname ctx)))
-  ([dbname ctx]
+  ([dbname ctx]                                             ; deprecated arity, i think
    @(r/fmap->> (runtime/state (:peer ctx) [::runtime/partitions])
                (hypercrud.util.branch/branch-val (uri dbname ctx) (:branch ctx))
                hash str)))

@@ -94,17 +94,17 @@
   {:link/formula (fn [link]
                    (cond
 
-                     (some #{:hf/new :hf/affix} (:link/class link))
-                     (if (contrib.string/blank->nil (:link/path link)) ; TODO and not a find-element, which will soon be the case. Currently broken for find elements https://github.com/hyperfiddle/hyperfiddle/issues/826
-                       "(partial hyperfiddle.api/tempid-child ctx)"
-                       "(constantly (hyperfiddle.api/tempid-detached ctx))")
+                     (some #{:hf/new :hf/affix} (:link/class link)) "(constantly (hyperfiddle.api/tempid! ctx))"
 
                      (:link/fiddle link)                    ; If there is a fiddle-target, infer the expected :in shape
                      (case (get-in link [:link/fiddle :fiddle/type] ((:fiddle/type fiddle-defaults) (:link/fiddle link)))
                        :query (infer-query-formula (get-in link [:link/fiddle :fiddle/query] ((:fiddle/query fiddle-defaults) (:link/fiddle link))))
                        :entity "identity"
-                       :blank nil)                          ; this is the case where the v is inferred but we don't actually want it. TODO: What if :txfn is combined with :target-fiddle :blank?
 
+                       ; this is the case where the v is inferred but we don't actually want it, like a toplevel iframe for a FindScalar.
+                       :blank nil)
+
+                     ; TODO: What if :txfn is combined with :target-fiddle :blank, or :target-fiddle :FindTuple?
                      :else-txfn "identity"))
 
    :link/tx-fn (fn [link]
