@@ -24,8 +24,10 @@
     [hypercrud.ui.error :as ui-error]
     [hypercrud.ui.stale :as stale]
     [hyperfiddle.data :as data]
-    [hyperfiddle.ide.console-links :refer [inject-console-links system-link?]]
+    [hyperfiddle.domain]
+    [hyperfiddle.ide.console-links]
     [hyperfiddle.route :as route]
+    [hyperfiddle.runtime]
     [hyperfiddle.security.client :as security]
     [hyperfiddle.ui.api]
     [hyperfiddle.ui.controls :as controls :refer [label-with-docs dbid-label magic-new]]
@@ -195,7 +197,7 @@ User renderers should not be exposed to the reaction."
     {:pre [link-ref]}
     (let [visual-ctx ctx
           [ctx r+?route] (context/refocus' ctx link-ref)
-          style {:color nil #_(connection-color ctx (cond (system-link? (:db/id @link-ref)) 60 :else 40))}
+          style {:color nil #_(connection-color ctx (cond (hyperfiddle.ide.console-links/system-link? (:db/id @link-ref)) 60 :else 40))}
           props (update props :style #(or % style))
           has-tx-fn @(r/fmap-> link-ref :link/tx-fn blank->nil boolean)
           is-iframe @(r/fmap->> link-ref :link/class (some #{:hf/iframe}))]
@@ -375,6 +377,21 @@ nil. call site must wrap with a Reagent component"          ; is this just hyper
 (def ^:dynamic markdown)                                    ; this should be hf-contrib or something
 
 (def ^:export fiddle (-build-fiddle))
+
+(let [f (fn [new-links fiddle]
+          (update fiddle :fiddle/links
+                  (partial contrib.data/merge-by
+                           (juxt (fn hf-rel [link]
+                                   ; There is only one hf rel in the class
+                                   (filter #(= "hf" (namespace %)) (:link/class link)))
+                                 (comp blank->nil :link/path))
+                           new-links)))]
+  (defn inject-console-links [ctx]
+    (let [schemas (-> (->> @(hyperfiddle.runtime/state (:peer ctx) [:hyperfiddle.runtime/partitions (:branch ctx) :schemas])
+                           (contrib.data/map-keys #(hyperfiddle.domain/uri->dbname % (:hypercrud.browser/domain ctx))))
+                      (dissoc nil))
+          links (hyperfiddle.ide.console-links/console-links-fiddle schemas @(:hypercrud.browser/fiddle ctx) @(:hypercrud.browser/data ctx))]
+      (update ctx :hypercrud.browser/fiddle #(r/fmap->> % (f links))))))
 
 (defn ^:export fiddle-xray [val ctx & [props]]
   (let [ctx (inject-console-links ctx)]

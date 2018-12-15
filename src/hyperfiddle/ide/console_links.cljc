@@ -4,17 +4,15 @@
     [clojure.core.match :refer [match #?(:cljs match*)]]
     [clojure.string :as string]
     [contrib.ct :refer [unwrap]]
-    [contrib.data :as data :refer [merge-by transpose pad ungroup]]
+    [contrib.data :refer [transpose pad ungroup]]
     [contrib.datomic :refer [valueType ref? pull-shape enclosing-pull-shape pull-traverse]]
     [contrib.reactive :as r]
     [contrib.reader :refer [memoized-read-edn-string+]]
     [contrib.string :refer [blank->nil]]
     [contrib.try$ :refer [try-either]]
     [datascript.parser :as parser #?@(:cljs [:refer [FindRel FindColl FindTuple FindScalar Variable Aggregate Pull]])]
-    [hyperfiddle.domain :as domain]
     [hyperfiddle.ide.system-fiddle :as system-fiddle]
-    [hyperfiddle.fiddle :as fiddle]
-    [hyperfiddle.runtime :as runtime])
+    [hyperfiddle.fiddle :as fiddle])
   #?(:clj (:import (datascript.parser FindRel FindColl FindTuple FindScalar Variable Aggregate Pull))))
 
 
@@ -111,34 +109,23 @@
           (->> (unwrap println))
           (as-> qfind (query-links-impl schemas qfind data)))) ; (map (partial console-link source))
 
+(defn parse-fiddle-data-shape [{:keys [fiddle/type fiddle/query fiddle/pull fiddle/pull-database]}]
+  (->> (case type
+         :blank nil
+         :entity (->> (memoized-read-edn-string+ pull)
+                      (fmap (fn [pull]
+                              (let [source (symbol pull-database)
+                                    fake-q `[:find (~'pull ~source ~'?e ~pull) . :where [~'?e]]]
+                                (parser/parse-query fake-q))))
+                      (unwrap (constantly nil)))
+         :query (->> (memoized-read-edn-string+ query)
+                     (=<< #(try-either (parser/parse-query %)))
+                     (unwrap (constantly nil))))))
+
 (defn console-links-fiddle
   "All sys links can be matched and merged with user-links. Matching is determined by link/rel and link/path"
-  [schemas {:keys [fiddle/type fiddle/query fiddle/pull fiddle/pull-database]} data]
-  (let [?query (->> (case type
-                     :blank nil
-                     :entity (->> (memoized-read-edn-string+ pull)
-                                  (fmap (fn [pull]
-                                          (let [source (symbol pull-database)
-                                                fake-q `[:find (~'pull ~source ~'?e ~pull) . :where [~'?e]]]
-                                            (parser/parse-query fake-q))))
-                                  (unwrap (constantly nil)))
-                     :query (->> (memoized-read-edn-string+ query)
-                                 (=<< #(try-either (parser/parse-query %)))
-                                 (unwrap (constantly nil)))))]
-    (if-let [qfind (:qfind ?query)]
-      (map (comp fiddle/auto-link console-link)
-           (repeat qfind)
-           (ungroup (query-links-impl schemas qfind data))))))
-
-(let [f (fn [new-links fiddle]
-          (update fiddle :fiddle/links (partial merge-by (juxt (fn hf-rel [link]
-                                                                 ; There is only one hf rel in the class
-                                                                 (filter #(= "hf" (namespace %)) (:link/class link)))
-                                                               (comp blank->nil :link/path))
-                                                new-links)))]
-  (defn inject-console-links [ctx]
-    (let [schemas (-> (->> @(runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :schemas])
-                           (data/map-keys #(domain/uri->dbname % (:hypercrud.browser/domain ctx))))
-                      (dissoc nil))
-          links (console-links-fiddle schemas @(:hypercrud.browser/fiddle ctx) @(:hypercrud.browser/data ctx))]
-      (update ctx :hypercrud.browser/fiddle #(r/fmap->> % (f links))))))
+  [schemas fiddle data]
+  (if-let [{qfind :qfind} (parse-fiddle-data-shape fiddle)]
+    (map (comp fiddle/auto-link console-link)
+         (repeat qfind)
+         (ungroup (query-links-impl schemas qfind data)))))
