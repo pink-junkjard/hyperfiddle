@@ -47,8 +47,11 @@
                           (s/explain-data :hyperfiddle/route route)))))
 
 (defn canonicalize "(apply canonicalize route)"
-  [& [fiddle #_?fiddle-args ?datomic-args ?service-args ?initial-state]]
-  (orp seq (rtrim-coll nil? [fiddle ?datomic-args ?service-args ?initial-state])))
+  [& [fiddle #_?fiddle-args ?datomic-params ?service-args ?initial-state]]
+  {:post [(let [[_ params] %]
+            ; Route params are indexed by position
+            (or (nil? params) (vector? params)))]}
+  (orp seq (rtrim-coll nil? [fiddle ?datomic-params ?service-args ?initial-state])))
 
 (defn assoc-frag [[fiddle ?datomic-args ?service-args ?initial-state] frag]
   {:pre [(nil? ?initial-state)]}
@@ -106,12 +109,11 @@
             identity)))))
 
 (defn invert-route [domain [_ args :as route] invert-id]
-  ; this is a map, not walk
-  (let [args (->> {:request-params args}                    ; code compat
-                  (clojure.walk/postwalk (fn [v]                    ; works on [args] instead of (:request-param args) ?
-                                   (if (instance? ThinEntity v)
-                                     (let [id (invert-id (.-id v) (hyperfiddle.domain/dbname->uri (.-dbname v) domain))]
-                                       (->ThinEntity (.-dbname v) id))
-                                     v)))
-                  :request-params)]
-    (apply canonicalize (assoc route 1 args))))
+  (->> args
+       (mapv (fn [v]
+               (if (instance? ThinEntity v)
+                 (let [id (invert-id (.-id v) (hyperfiddle.domain/dbname->uri (.-dbname v) domain))]
+                   (->ThinEntity (.-dbname v) id))
+                 v)))
+       (assoc route 1)
+       (apply canonicalize)))
