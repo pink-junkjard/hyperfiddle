@@ -34,8 +34,6 @@
 
 (s/def :hyperfiddle.ide/new-fiddle (s/keys :req [:fiddle/ident]))
 
-;(defmulti fiddle-link :link/class)
-
 (s/def :fiddle/ident keyword?)
 (s/def :fiddle/uuid uuid?)
 (s/def :fiddle/type #{:blank :entity :query})
@@ -51,7 +49,6 @@
 (s/def :fiddle/cljs-ns string?)
 (s/def :fiddle/hydrate-result-as-fiddle string?)
 
-;(s/def :link/rel #{:hf/self :hf/rel :hf/new :hf/remove :hf/affix :hf/detach :hf/iframe})
 (s/def :link/class (s/coll-of keyword?))
 ;(s/def :link/fiddle (s/keys))
 (s/def :link/path string?)
@@ -64,14 +61,6 @@
 (defmethod fiddle-type :query [_] (s/keys :opt [:fiddle/query]))
 (defmethod fiddle-type :entity [_] (s/keys :opt [:fiddle/pull :fiddle/pull-database]))
 (defmethod fiddle-type nil [_] (s/keys))
-
-;(defmethod fiddle-link :hf/self [_] (s/keys))
-;(defmethod fiddle-link :hf/rel [_] (s/keys))
-;(defmethod fiddle-link :hf/new [_] (s/keys))
-;(defmethod fiddle-link :hf/remove [_] (s/keys))
-;(defmethod fiddle-link :hf/affix [_] (s/keys))
-;(defmethod fiddle-link :hf/detach [_] (s/keys))
-;(defmethod fiddle-link :hf/iframe [_] (s/keys))
 
 (declare fiddle-defaults)
 (declare apply-defaults)
@@ -126,11 +115,10 @@
    :fiddle/type (constantly :blank)})
 
 (defn auto-link [link]
-  (let [link (cond-> link
-                     (some #{:hf/rel :hf/self :hf/new :hf/iframe} (:link/class link)) (update-existing :link/fiddle apply-defaults))]
-    (-> link
-        (update :link/formula or-str ((:link/formula link-defaults) link))
-        (update :link/tx-fn or-str ((:link/tx-fn link-defaults) link)))))
+  (-> link
+      (update-existing :link/fiddle apply-defaults)
+      (update :link/formula or-str ((:link/formula link-defaults) link))
+      (update :link/tx-fn or-str ((:link/tx-fn link-defaults) link))))
 
 (defn apply-defaults [fiddle]
   (as-> fiddle fiddle
