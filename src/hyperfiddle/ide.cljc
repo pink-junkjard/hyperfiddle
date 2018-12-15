@@ -75,8 +75,17 @@
 ; despite being in the namespace (hyperfiddle.ide) which encompasses the union of target/user (bottom) and ide (top)
 (defn- *-ide-context [ctx]
   (-> ctx
-      (assoc :hypercrud.ui/display-mode (r/track identity :hypercrud.browser.browser-ui/user))
-      (context/source-mode)))
+      (assoc :hyperfiddle.ui.iframe/on-click (r/constantly nil) ; disable alt-click
+             :hypercrud.ui/display-mode (r/track identity :hypercrud.browser.browser-ui/user))
+      (update :hypercrud.browser/domain
+              (fn [domain]
+                (update (:hypercrud.browser/source-domain ctx) :domain/databases
+                        (fn [dbs]
+                          (->> dbs
+                               (remove #(= "$" (:domain.database/name %)))
+                               (cons {:domain.database/name "$"
+                                      :domain.database/record (:domain/fiddle-database domain)})
+                               vec)))))))
 
 (defn leaf-ide-context [ctx]
   (*-ide-context ctx))

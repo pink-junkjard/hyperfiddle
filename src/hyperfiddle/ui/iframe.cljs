@@ -69,25 +69,10 @@
 
 (defn- fiddle-css-renderer [s] [:style {:dangerouslySetInnerHTML {:__html @s}}])
 
-(defn- src-mode [route ctx]
-  (mlet [ctx (-> (context/clean ctx)
-                 (routing/route+ route))
-         request @(r/apply-inner-r (r/track base/meta-request-for-fiddle ctx))
-         :let [fiddle (let [fiddle {:fiddle/type :entity
-                                    :fiddle/pull-database "$"}]
-                        ; turns out we dont need fiddle for much if we already know the request
-                        (r/track fiddle/apply-defaults fiddle))]
-         ctx (-> (context/source-mode ctx)
-                 (context/clean)
-                 (routing/route+ [nil [(->ThinEntity "$" [:fiddle/ident @(r/fmap first (:hypercrud.browser/route ctx))])]]))]
-    (base/process-results fiddle request ctx)))
-
-(defn iframe-cmp [ctx {:keys [route hf-live] :as props}]    ; :: [route ctx & [?f props]]
+(defn iframe-cmp [ctx {:keys [route] :as props}]    ; :: [route ctx & [?f props]]
   (let [click-fn (or (::on-click ctx) (constantly nil))     ; parent ctx receives click event, not child frame
         either-v (or (some-> @(runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :error]) either/left)
-                     (if hf-live
-                       (src-mode route ctx)
-                       (base/data-from-route route ctx)))
+                     (base/data-from-route route ctx))
         error-comp (ui-error/error-comp ctx)
         props (dissoc props :route)]
     [stale/loading (stale/can-be-loading? ctx) either-v

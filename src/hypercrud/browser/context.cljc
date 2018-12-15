@@ -47,20 +47,6 @@
           :hypercrud.browser/route
           :hypercrud.browser/validation-hints))
 
-(defn source-mode [ctx]
-  (-> ctx
-      (assoc :hyperfiddle.ui.iframe/on-click (r/constantly nil) ; disable alt-click
-             :hypercrud.ui/display-mode (r/track identity :hypercrud.browser.browser-ui/user))
-      (update :hypercrud.browser/domain
-              (fn [domain]
-                (update (:hypercrud.browser/source-domain ctx) :domain/databases
-                        (fn [dbs]
-                          (->> dbs
-                               (remove #(= "$" (:domain.database/name %)))
-                               (cons {:domain.database/name "$"
-                                      :domain.database/record (:domain/fiddle-database domain)})
-                               vec)))))))
-
 (defn attribute-segment? [path-segment]
   (or (keyword? path-segment)
       (= '* path-segment)))
