@@ -112,7 +112,7 @@
    :fiddle/renderer (fn [fiddle]
                       #?(:cljs (-> hyperfiddle.ui/fiddle meta :expr-str)
                          :clj  nil))
-   :fiddle/type (constantly :blank)})
+   :fiddle/type (constantly :blank)})                       ; default is :query from new-fiddle; but from links panel, it's :entity
 
 (defn auto-link [link]
   (-> link
