@@ -80,7 +80,7 @@
   ([ctx] (uri (dbname ctx) ctx))
   ([dbname ctx] (some-> dbname (domain/dbname->uri (:hypercrud.browser/domain ctx)))))
 
-(defn ctx->id-lookup
+(defn ctx->id-lookup "light ctx dependency - needs :branch and :peer"
   ([ctx] (ctx->id-lookup (uri ctx) ctx))
   ([uri ctx]
     ; todo what about if the tempid is on a higher branch in the uri?
@@ -90,13 +90,13 @@
                 deref)
            (either/branch #(throw (ex-info % {})) identity))))
 
-(defn underlying-tempid [ctx id]
+(defn underlying-tempid "ctx just needs :branch and :peer" [ctx id]
   ; This muddled thinking is caused by https://github.com/hyperfiddle/hyperfiddle/issues/584
   (cond
     (contrib.datomic/tempid? id) id
     :else (get (ctx->id-lookup ctx) id)))
 
-(defn smart-entity-identifier "Generates the best Datomic lookup ref for a given pull."
+(defn smart-entity-identifier "Generates the best Datomic lookup ref for a given pull. ctx needs :branch and :peer"
   [ctx {:keys [:db/id :db/ident] :as v}]                    ; v can be a ThinEntity or a pull i guess
   ; This must be called only on refs.
   ; If we have a color, and a (last path), ensure it is a ref.
