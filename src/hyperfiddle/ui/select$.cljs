@@ -82,13 +82,13 @@
 (defn select-error-cmp [msg]
   [:span msg])
 
-(defn select-anchor-renderer [props option-props val ctx props2]
+(defn select-view-validated [select-view props option-props val ctx props2]
   (case @(r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/type])
     :entity [select-error-cmp "Only fiddle type `query` is supported for select options"]
     :blank [select-error-cmp "Only fiddle type `query` is supported for select options"]
     :query (if (= :db.cardinality/many @(r/fmap ::field/cardinality (:hypercrud.browser/field ctx)))
              (let [props (into props (select-keys props2 [:on-click]))]
-               [select-anchor-renderer' props option-props ctx])
+               [select-view props option-props ctx])
              [select-error-cmp "Tuples and scalars are unsupported for select options. Please fix your options query to return a relation or collection"])
     ; default
     [select-error-cmp "Only fiddle type `query` is supported for select options"]))
@@ -110,7 +110,7 @@
                 props (-> (merge default-props props)
                           (assoc :value (str (context/identify ctx))))
                 props (-> (select-keys props [:class])
-                          (assoc :user-renderer (r/partial select-anchor-renderer props {:disabled (compute-disabled ctx props)})))
+                          (assoc :user-renderer (r/partial select-view-validated select-anchor-renderer' props {:disabled (compute-disabled ctx props)})))
                 ctx (assoc ctx
                       :hypercrud.ui/display-mode (r/track identity :hypercrud.browser.browser-ui/user))]
             [hyperfiddle.ui/ui-from-link options-ref ctx props])))
