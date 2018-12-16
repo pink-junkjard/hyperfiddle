@@ -40,7 +40,7 @@
 (let [link-fiddle (fn [val ctx props]
                     [:<>
                      [hyper-control val ctx props]
-                     [link #{:link/fiddle :hf/new} ctx]])
+                     [link :hyperfiddle.ide/new-fiddle ctx]])
       empty-renderer (fn [val ctx props]
                        (link #{:fiddle/links :hf/remove} ctx))
       link-control (fn [val ctx props]
@@ -51,7 +51,7 @@
                      )]
   (defn links-renderer [val ctx props]
     [:div
-     (link #{:fiddle/links :hf/new} ctx)
+     (link :hyperfiddle.ide/new-link ctx)
      [table
       (fn [ctx]
         [(field [:link/path] ctx link-control)
