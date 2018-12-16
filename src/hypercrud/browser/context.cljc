@@ -264,7 +264,7 @@
 ; I think reactive types are probably slowing this down overall, there are too many
 ; reactions going on. It all gets deref'ed in the end anyway! Just deref it above.
 (defn refocus' "focus a link ctx" [ctx link-ref]
-  {:pre [ctx] :post [%]}
+  {:pre [ctx (r/reactive? link-ref)] :post [%]}
   (let [path (hypercrud.browser.link/read-path @(r/fmap :link/path link-ref))
         ctx (refocus ctx path)
         ; Focusing must account for link/formula (essentially tempids can occlude the eschewed pulled-tree data)
