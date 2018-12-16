@@ -55,7 +55,8 @@
           ; What we've got fully matches what we asked for
           (clojure.set/superset?
             (-> (set (:link/class link))
-                (conj (-> link :link/fiddle :fiddle/ident)))
+                (conj (some-> link :link/fiddle :fiddle/ident))
+                (conj (some-> link :link/tx-fn (subs 1) keyword)))
             (contrib.data/xorxs ?corcs)))]
   (defn select-all-r "List[Link]. Find the closest match."
     ([ctx] {:pre [ctx]}
