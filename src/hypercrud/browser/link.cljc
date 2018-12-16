@@ -10,4 +10,6 @@
        (unwrap #(timbre/error %))))                         ; too late to report anything to the dev
 
 (defn same-path-as? [path link]
-  (= path (read-path (:link/path link))))
+  (let [a (last path)
+        a' (last (read-path (:link/path link)))]
+    (= a a')))
