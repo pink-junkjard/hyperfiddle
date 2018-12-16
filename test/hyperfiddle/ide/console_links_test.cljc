@@ -75,7 +75,7 @@
 
 (def schemas {"$" fixtures.ctx/schema
               "$domains" fixtures.domains/schema})
-(deftest console-link-internals
+#_(deftest console-link-internals
   []
   (is (= (console-links-e schemas
                           (:qfind (qparsed FindColl))
