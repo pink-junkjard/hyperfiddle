@@ -51,11 +51,13 @@
   (let [this-path (:hypercrud.browser/path ctx)]
     (not= this-path (:hypercrud.browser/path (link-path-floor ctx link-path)))))
 
-(letfn [(link-matches-class? [?corcs link]
+(letfn [(link-matches-class? [?corcs page-fiddle-ident link]
           ; What we've got fully matches what we asked for
           (clojure.set/superset?
             (-> (set (:link/class link))
                 (conj (some-> link :link/fiddle :fiddle/ident))
+                (conj (or (some-> link :link/path link/read-path last)
+                          page-fiddle-ident))               ; links with no path, e.g. FindScalar and FindColl, are named by fiddle
                 (conj (some-> link :link/tx-fn (subs 1) keyword)))
             (contrib.data/xorxs ?corcs)))]
   (defn select-all-r "List[Link]. Find the closest match."
@@ -65,9 +67,12 @@
                 (filter (r/comp (r/partial deps-satisfied? ctx) link/read-path :link/path))))
     ([ctx ?corcs]
      (r/fmap->> (select-all-r ctx)
-                (filter (r/partial link-matches-class? ?corcs))))))
+                (filter (r/partial link-matches-class? ?corcs @(r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/ident])))))))
 
-(defn ^:export select-all "List[Link]. Find the closest match." [& args] @(apply select-all-r args))
+(defn ^:export select-all-here "List[Link]. Find the closest match."
+  [ctx & [?corcs]]
+  (r/fmap->> (select-all-r ctx ?corcs)
+             (filter (r/partial link/same-path-as? (:hypercrud.browser/path ctx)))))
 
 (defn validate-one+ [class links]
   (let [n (count links)]

@@ -96,40 +96,39 @@
             :db.cardinality/one nil
 
             :db.cardinality/many
-            [(if-let [link (data/select-here parent-ctx :hf/affix)]
-               [hyperfiddle.ui/ui-from-link link parent-ctx props "affix"])
-             (if-let [link (data/select-here parent-ctx :hf/new)]
+            [(if-let [link (data/select-here parent-ctx :hf/new)]
                [hyperfiddle.ui/ui-from-link link parent-ctx props "new"])]
 
             ; This hack detects FindCol, which has no parent cardinality but does need the links
-            nil [(if-let [link (some-> parent-ctx (data/select-here :hf/affix))]
-                   [hyperfiddle.ui/ui-from-link link parent-ctx props "affix"])
-                 (if-let [link (some-> parent-ctx (data/select-here :hf/new))]
+            nil [(if-let [link (some-> parent-ctx (data/select-here :hf/new))]
                    [hyperfiddle.ui/ui-from-link link parent-ctx props "new"])]
             ))))
 
 (defn id-prompt [ctx val]
   (pr-str (context/smart-entity-identifier ctx val)))
 
+(defn related-links [val ctx props]
+  (if val
+    (->> (data/select-all-here ctx)                         ; or just here? http://tank.hyperfiddle.site/:dustingetz!counter/
+         (r/unsequence (r/partial context/stable-relation-key ctx))
+         (remove (fn [[rv k]]
+                   (some #{:hf/new :hf/remove :hf/iframe} (:link/class @rv))))
+         (map (fn [[rv k]]
+                ^{:key k}
+                [hyperfiddle.ui/ui-from-link rv ctx props]))
+         seq
+         doall)))
+
 (defn ^:export ref [val ctx & [props]]
   (cond
     (:options props) [select val ctx props]
     :else [:div
-           [:div.input
-            (or (if-let [self (data/select-here ctx :hf/self)]
-                  (if val
-                    [hyperfiddle.ui/ui-from-link self ctx props (id-prompt ctx val)]))
-                (id-prompt ctx val))]
-
-           (if-let [link (data/select-here ctx :hf/affix)]
-             [hyperfiddle.ui/ui-from-link link ctx props "affix"])
-
+           [:div.input (interpose " " (cons (id-prompt ctx val) (related-links val ctx props)))]
+           (if-let [link (data/select-here ctx :hf/new)]
+             [hyperfiddle.ui/ui-from-link link ctx props])
            (if-let [link (data/select-here ctx :hf/remove)]
-             [hyperfiddle.ui/ui-from-link link ctx props "remove"])
-
-           (if-let [link (data/select-here ctx :hf/detach)]
              (if val
-               [hyperfiddle.ui/ui-from-link link ctx props "detach"]))]))
+               [hyperfiddle.ui/ui-from-link link ctx props]))]))
 
 (defn ^:export ref-many [val ctx & [props]]
   [hyperfiddle.ui/table
@@ -141,30 +140,15 @@
   ; select-here does not match :hf/self since it is in the parent ref position
   (if-let [ctx (:hypercrud.browser/parent ctx)]
     [:div
-     [:div.input
-      ; pr-str here to disambiguate `"tempid"` from `17592186046396` and `:gender/male`
-      (or (if-let [self (data/select-here ctx :hf/self)]
-            (if val
-              [hyperfiddle.ui/ui-from-link self ctx props (pr-str val)]))
-          (pr-str val))]
-
+     ; pr-str here to disambiguate `"tempid"` from `17592186046396` and `:gender/male`
+     ; ... This is dumb datomic hacks, views should never even see tempids
+     [:div.input (interpose " " (cons (id-prompt ctx val) (related-links val ctx props)))]
      (if (some-> ctx cardinality (= :db.cardinality/one))
-       (if-let [link (data/select-here ctx :hf/affix)]
-         [hyperfiddle.ui/ui-from-link link ctx props "affix"]))
-
+       (if-let [link (data/select-here ctx :hf/new)]
+         [hyperfiddle.ui/ui-from-link link ctx props]))
      (if-not (context/underlying-tempid ctx val)
        (if-let [link (data/select-here ctx :hf/remove)]
-         [hyperfiddle.ui/ui-from-link link ctx props "remove"]))
-
-     (if-let [link (data/select-here ctx :hf/detach)]
-       [hyperfiddle.ui/ui-from-link link ctx props "detach"])
-
-     (->> (data/select-all-r ctx :hf/rel)
-          (r/unsequence (r/partial context/stable-relation-key ctx))
-          (map (fn [[rv k]]
-                 ^{:key k}                                  ; Use the userland class as the label (ignore hf/rel)
-                 [hyperfiddle.ui/ui-from-link rv ctx props]))
-          doall)]
+         [hyperfiddle.ui/ui-from-link link ctx props]))]
     [:div [:div.input (pr-str val)]]))
 
 (defn ^:export instant [val ctx & [props]]

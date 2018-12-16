@@ -16,34 +16,12 @@
 
 ; these need to be thick/hydrated params bc we are manufacturing a pulled tree here.
 
-; TODO: manufacture pull from parent pull
-(defn console-self [dbname]
-  {:fiddle/ident (keyword "hyperfiddle.system" (str "self-" dbname))
-   :fiddle/type :entity
-   :fiddle/pull-database (str dbname)
-   :fiddle/renderer (load-resource "ide/console_renderer.cljs")})
-
-(defn console-new [dbname]
-  {:fiddle/ident (keyword "hyperfiddle.system" (str "new-" dbname))
-   :fiddle/type :entity
-   :fiddle/pull-database (str dbname)
-   :fiddle/renderer (load-resource "ide/console_renderer.cljs")})
-
-(defn console-affix [dbname]
-  {:fiddle/ident (keyword "hyperfiddle.system" (str "affix-" dbname))
-   :fiddle/type :entity
-   :fiddle/pull-database (str dbname)
-   :fiddle/renderer (load-resource "ide/console_renderer.cljs")})
-
 (defn hydrate-system-fiddle [ident]
   (try-either                                               ; catch all the pre assertions
     (let [name' (name ident)]
       (case (namespace ident)
         "hyperfiddle.system" (cond
-                               (= name' "unauthorized") errors/unauthorized
-                               (str/starts-with? name' "self-") (console-self (str/strip-prefix name' "self-"))
-                               (str/starts-with? name' "new-") (console-new (str/strip-prefix name' "new-"))
-                               (str/starts-with? name' "affix-") (console-affix (str/strip-prefix name' "affix-")))
+                               (= name' "unauthorized") errors/unauthorized)
         "hyperfiddle.system.route" (cond
                                      (= name' "decoding-error") errors/decoding-error
                                      (= name' "home-route-error") errors/home-route-error

@@ -178,6 +178,7 @@
       (set-parent-data)
       (assoc :hypercrud.browser/data rval)
       (update :hypercrud.browser/eav (fn [[e a v]]
+                                       ; (assert (nil? v) "it was not yet in scope") -- nested case, eav is present and well defined
                                        ; FindColl is happy,
                                        ; FindRel (map smart-entity-identifier @rval)
                                        ; Todo normalize FindRel into FindColl when possible

@@ -164,12 +164,15 @@ User renderers should not be exposed to the reaction."
     (into [:a props] children)))
 
 (letfn [(prompt [link-ref ?label]
-          (or ?label (->> (set @(r/fmap :link/class link-ref))
-                          (interpose " ") (apply str) blank->nil)))
-        (link-tooltip [{:keys [:link/class]} ?route]
+          (or ?label
+              (->> (set @(r/fmap :link/class link-ref)) (map name) (interpose " ") (apply str) blank->nil)
+              (some-> @link-ref :link/fiddle :fiddle/ident name)
+              (some-> @link-ref :link/tx-fn name)))
+        (link-tooltip [{:link/keys [class path]} ?route {[e a v] :hypercrud.browser/eav :as ctx}]
           (if ?route
-            (let [[_ args] ?route]
-              (->> (concat class args) (map pr-str) (interpose " ") (apply str)))))
+            (let [[fiddle-ident args] ?route]
+              ; Show how it routed. The rest is obvious from data mode
+              (->> (concat #_class #_[fiddle-ident] args) (map pr-str) (interpose " ") (apply str)))))
         (validated-route-tooltip-props [r+?route link-ref ctx props] ; link is for validation
           ; this is a fine place to eval, put error message in the tooltip prop
           ; each prop might have special rules about his default, for example :visible is default true, does this get handled here?
@@ -182,19 +185,19 @@ User renderers should not be exposed to the reaction."
                                    (if-not (empty? errors)
                                      [:warning (pprint-str errors)]
                                      (if (:hyperfiddle.ui/debug-tooltips ctx)
-                                       [nil (link-tooltip @link-ref ?route)]
+                                       [nil (link-tooltip @link-ref ?route ctx)]
                                        existing-tooltip))))
                 (update :class css (when-not (empty? errors) "invalid")))))
-        (disabled? [link-ref ctx]
+        (disabled? [link-ref {[e a v] :hypercrud.browser/eav :as ctx}]
           (condp some @(r/fmap :link/class link-ref)
-            #{:hf/new} nil #_(not @(r/track security/can-create? ctx))
-            #{:hf/remove} (not @(r/track security/writable-entity? ctx))
-            #{:hf/affix :hf/detach} (not @(r/track security/writable-entity? (:hypercrud.browser/parent ctx)))
-            #{:hf/self :hf/rel :hf/iframe} nil
+            #{:hf/new} nil #_(not @(r/track security/can-create? ctx)) ; flag
+            #{:hf/remove} (if a
+                            (not @(r/track security/writable-entity? (:hypercrud.browser/parent ctx)))
+                            (not @(r/track security/writable-entity? ctx)))
             ; else we don't know the semantics, just nil out
             nil))]
   (defn ui-from-link [link-ref ctx & [props ?label]]
-    {:pre [link-ref]}
+    {:pre [link-ref (r/reactive? link-ref)]}
     (let [visual-ctx ctx
           [ctx r+?route] (context/refocus' ctx link-ref)
           style {:color nil #_(connection-color ctx (cond (hyperfiddle.ide.console-links/system-link? (:db/id @link-ref)) 60 :else 40))}
@@ -394,7 +397,7 @@ nil. call site must wrap with a Reagent component"          ; is this just hyper
       (update ctx :hypercrud.browser/fiddle #(r/fmap->> % (f links))))))
 
 (defn ^:export fiddle-xray [val ctx & [props]]
-  (let [ctx (inject-console-links ctx)]
+  (let [#_#_ctx (inject-console-links ctx)]
     [:div (select-keys props [:class :on-click])
      [:h3 (pr-str @(:hypercrud.browser/route ctx))]
      [result val ctx {}]]))

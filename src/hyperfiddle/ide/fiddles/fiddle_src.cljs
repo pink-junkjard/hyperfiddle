@@ -40,9 +40,9 @@
 (let [link-fiddle (fn [val ctx props]
                     [:<>
                      [hyper-control val ctx props]
-                     [link #{:fiddle :hf/affix} ctx "affix"]])
+                     [link #{:link/fiddle :hf/new} ctx]])
       empty-renderer (fn [val ctx props]
-                       (link #{:link :hf/remove} ctx "remove"))
+                       (link #{:fiddle/links :hf/remove} ctx))
       link-control (fn [val ctx props]
                      (let [props (if-some [f (get fiddle/link-defaults (last (:hypercrud.browser/path ctx)))]
                                    (assoc props :default-value @(r/fmap f (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data])))
@@ -51,12 +51,12 @@
                      )]
   (defn links-renderer [val ctx props]
     [:div
-     (link #{:link :hf/affix} ctx "affix")
+     (link #{:fiddle/links :hf/new} ctx)
      [table
       (fn [ctx]
         [(field [:link/path] ctx link-control)
          (field [:link/class] ctx link-control)
-         (field [:link/fiddle] ctx link-fiddle {:options "fiddle-options"
+         (field [:link/fiddle] ctx link-fiddle {:options :hyperfiddle.ide/fiddle-options
                                                 :option-label (r/comp pr-str :fiddle/ident first)})
          (field [:link/formula] ctx link-control)
          (field [:link/tx-fn] ctx link-control)
@@ -113,7 +113,7 @@
                   [field [segment] ctx nil]))
            (doall))
       (field [:db/id] ctx (fn [val ctx props]
-                            [:div (link #{:fiddle :hf/remove} ctx "Remove fiddle" {:class "btn-outline-danger"})]))
+                            [:div (link #{:hyperfiddle/ide :hf/remove} ctx "Remove fiddle" {:class "btn-outline-danger"})]))
       #_[:div.p "Spec debugging"]
       #_[:pre
          (with-out-str

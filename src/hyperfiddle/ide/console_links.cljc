@@ -24,11 +24,10 @@
   (blank->nil (string/join " " path)))
 
 (def console-fiddle-ctors
-  {:hf/detach nil
-   :hf/remove nil
-   :hf/self system-fiddle/console-self
+  {}
+  #_{nil system-fiddle/console-self
    :hf/new system-fiddle/console-new
-   :hf/affix system-fiddle/console-affix})
+   :hf/remove nil})
 
 (defn console-link [qfind [rel path]]
   (let [ix (condp = (type qfind)
@@ -65,11 +64,11 @@
         ; nil attr means the pulled entity at the root of pulledtree
 
         ; Only findcoll gets hf/new at root, because if there is >1 findelement it won't show up with the relation
-        [(:or FindColl) Pull nil _] #{:hf/self :hf/remove :hf/new}
-        [(:or FindScalar FindRel FindTuple) Pull nil _] #{:hf/self :hf/remove}
+        [(:or FindColl) Pull nil _] #{nil :hf/remove :hf/new}
+        [(:or FindScalar FindRel FindTuple) Pull nil _] #{nil :hf/remove}
 
         ; Descendents are the same
-        [_ Pull _ :db.type/ref] #{:hf/self :hf/affix :hf/detach}
+        [_ Pull _ :db.type/ref] #{nil :hf/new :hf/remove}
 
         [_ Variable _ _] nil
         [_ Aggregate _ _] nil
