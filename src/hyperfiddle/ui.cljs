@@ -168,11 +168,10 @@ User renderers should not be exposed to the reaction."
               (->> (set @(r/fmap :link/class link-ref)) (map name) (interpose " ") (apply str) blank->nil)
               (some-> @link-ref :link/fiddle :fiddle/ident name)
               (some-> @link-ref :link/tx-fn name)))
-        (link-tooltip [{:link/keys [class path]} ?route {[e a v] :hypercrud.browser/eav :as ctx}]
-          (if ?route
-            (let [[fiddle-ident args] ?route]
-              ; Show how it routed. The rest is obvious from data mode
-              (->> (concat #_class #_[fiddle-ident] args) (map pr-str) (interpose " ") (apply str)))))
+        (link-tooltip [{:link/keys [class path]} ?route ctx] ; Show how it routed. The rest is obvious from data mode
+          (if-let [[fiddle-ident args] ?route]
+            (->> (concat #_class #_[fiddle-ident] args)
+                 (map pr-str) (interpose " ") (apply str))))
         (validated-route-tooltip-props [r+?route link-ref ctx props] ; link is for validation
           ; this is a fine place to eval, put error message in the tooltip prop
           ; each prop might have special rules about his default, for example :visible is default true, does this get handled here?
@@ -188,10 +187,10 @@ User renderers should not be exposed to the reaction."
                                        [nil (link-tooltip @link-ref ?route ctx)]
                                        existing-tooltip))))
                 (update :class css (when-not (empty? errors) "invalid")))))
-        (disabled? [link-ref {[e a v] :hypercrud.browser/eav :as ctx}]
+        (disabled? [link-ref ctx]
           (condp some @(r/fmap :link/class link-ref)
             #{:hf/new} nil #_(not @(r/track security/can-create? ctx)) ; flag
-            #{:hf/remove} (if a
+            #{:hf/remove} (if (r/cursor (:hypercrud.browser/eav ctx) [1])
                             (not @(r/track security/writable-entity? (:hypercrud.browser/parent ctx)))
                             (not @(r/track security/writable-entity? ctx)))
             ; else we don't know the semantics, just nil out

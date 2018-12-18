@@ -118,6 +118,7 @@
      (fn [ctx]                                              ; fresh clean ctx
        [:<>
         [ui-comp ctx (-> (update props :class css "ui")
+                         ; @route here is a broken reaction, see routing/route+ returns a severed reaciton
                          (assoc :on-click (r/partial click-fn @(:hypercrud.browser/route ctx))))]
         [fiddle-css-renderer (r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/css])]])
      (fn [ctx]

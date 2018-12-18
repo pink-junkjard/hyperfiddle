@@ -26,8 +26,7 @@
 (let [safe-eval-string #(try-promise (eval/eval-expr-str! %))
       memoized-eval-string (memoize safe-eval-string)]
   (defn- with-swap-fn [link-ref ctx f]
-    (let [eav (:hypercrud.browser/eav ctx)                  ; scope capture, used to be passed in. Not sure how far can be delayed
-          {:keys [:link/tx-fn] :as link} @link-ref]
+    (let [{:keys [:link/tx-fn] :as link} @link-ref]
       (-> (if (blank->nil tx-fn)
             (memoized-eval-string tx-fn)                    ; TODO migrate type to keyword
             (p/resolved (constantly nil)))
@@ -36,7 +35,7 @@
               (p/promise
                 (fn [resolve! reject!]
                   (let [swap-fn-async (fn []
-                                        (let [result (let [[e a v] eav
+                                        (let [result (let [[e a v] @(:hypercrud.browser/eav ctx)
                                                            result (hyperfiddle.api/txfn user-txfn e a v ctx)]
                                                        ; txfn may be sync or async
                                                        (if-not (p/promise? result) (p/resolved result) result))]
@@ -93,7 +92,8 @@
                  :disabled popover-invalid} "stage"])
      (if ?child-branch
        [:button {:on-click #(cancel! popover-id ?child-branch ctx)} "cancel"]
-       [:button {:on-click #(close! popover-id ctx)} "close"])]))
+       [:button {:on-click #(close! popover-id ctx)} "close"])
+     #_[:pre (pr-str route)]]))
 
 (defn open! [route popover-id child-branch ctx]
   (runtime/dispatch! (:peer ctx)

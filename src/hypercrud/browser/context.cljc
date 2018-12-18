@@ -9,6 +9,7 @@
     [contrib.string]
     [contrib.try$ :refer [try-either]]
     [clojure.set]
+    [clojure.spec.alpha :as s]
     [hypercrud.browser.field :as field]
     [hypercrud.browser.link]
     [hypercrud.browser.q-util]
@@ -21,6 +22,15 @@
   #?(:clj
      (:import (hypercrud.types.ThinEntity ThinEntity))))
 
+
+(s/def :hypercrud/context
+  (s/keys :opt [:hypercrud.browser/data
+                :hypercrud.browser/eav]))
+
+(s/def :hypercrud.browser/eav (s/and r/reactive?
+                                     #_(s/or :nil (comp nil? deref)
+                                           #_#_:eav (s/coll-of (comp not map? deref)))))
+(s/def :hypercrud.browser/data r/reactive?)
 
 (defn clean [ctx]
   (dissoc ctx
@@ -135,12 +145,24 @@
   (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/field]))
 
 (defn identify [ctx]
+  {:post [(not (map? %))]}
   ; When looking at an attr of type ref, figure out it's identity, based on all the ways it can be pulled.
   ; What if we pulled children without identity? Then we can't answer the question (should assert this)
   (if-let [data (:hypercrud.browser/data ctx)]              ; Guard is for txfn popover call site
     (or @(contrib.reactive/cursor data [:db/ident])
         @(contrib.reactive/cursor data [:db/id])
         @data)))
+
+(defn eav "project eav from data"
+  [ctx data]
+  (let [e (some-> ctx identify)                             ; this is the parent v
+        a (last (:hypercrud.browser/path ctx))              ; todo chop off FE todo
+        v (smart-entity-identifier ctx data)]
+    (assert (not (map? e)))
+    (assert (not (map? a)))
+    (assert (not (map? v)))
+    ; :extend-via-metadata
+    [e a v]))
 
 (letfn [(focus-segment [ctx path-segment]                   ; attribute or fe segment
           #_(assert (or (not (:hypercrud.browser/data ctx)) ; head has no data, can focus without calling row
@@ -153,17 +175,14 @@
                         (assoc :hypercrud.browser/field field))]
             (if-not (:hypercrud.browser/data ctx)
               ctx                                           ; head
-              (let [e (some-> ctx identify)                 ; this is the parent v
-                    a (last (:hypercrud.browser/path ctx))  ; todo chop off FE todo
-                    data (let [f (r/fmap ::field/get-value field)]
+              (let [data (let [f (r/fmap ::field/get-value field)]
                            #_(assert @f (str "focusing on a non-pulled attribute: " (pr-str (:hypercrud.browser/path ctx)) "."))
-                           (r/fapply f (:hypercrud.browser/data ctx)))
-                    v (smart-entity-identifier ctx @data)]
+                           (r/fapply f (:hypercrud.browser/data ctx)))]
                 (-> (set-parent-data ctx)                   ; body
                     (update :hypercrud.browser/validation-hints #(for [[[p & ps] hint] % :when (= p path-segment)]
                                                                    [ps hint]))
                     (assoc :hypercrud.browser/data data)
-                    (assoc :hypercrud.browser/eav [e a v])
+                    (assoc :hypercrud.browser/eav (r/fmap (r/partial eav ctx) data))
                     )))))]
   (defn focus "Throws if you focus a higher dimension" [ctx relative-path]
     (reduce focus-segment ctx relative-path)))
@@ -177,12 +196,13 @@
       (set-parent)
       (set-parent-data)
       (assoc :hypercrud.browser/data rval)
-      (update :hypercrud.browser/eav (fn [[e a v]]
-                                       ; (assert (nil? v) "it was not yet in scope") -- nested case, eav is present and well defined
-                                       ; FindColl is happy,
-                                       ; FindRel (map smart-entity-identifier @rval)
-                                       ; Todo normalize FindRel into FindColl when possible
-                                       [e a (smart-entity-identifier ctx @rval)]))
+      (update :hypercrud.browser/eav
+              (r/partial r/fmap (fn [[e a v]]
+                                  ; (assert (nil? v) "it was not yet in scope") -- nested case, eav is present and well defined
+                                  ; FindColl is happy,
+                                  ; FindRel (map smart-entity-identifier @rval)
+                                  ; Todo normalize FindRel into FindColl when possible
+                                  [e a (smart-entity-identifier ctx @rval)])))
       (update :hypercrud.browser/validation-hints #(for [[[p & ps] hint] % :when (= k p)]
                                                      [ps hint]))
       (update :hypercrud.browser/field
@@ -220,19 +240,19 @@
    :post [(vector? %) #_"route args are associative by position"]}
   (vec (contrib.data/xorxs porps)))
 
-(defn has-entity-identity? [ctx]
-  (::field/data-has-id? @(:hypercrud.browser/field ctx))
-  #_(and (context/dbname ctx) (last (:hypercrud.browser/path ctx))))
-
 (defn tag-v-with-color "Tag dbids with color, at the last moment before they render into URLs"
   [ctx v]
-  (cond
-    (instance? ThinEntity v) v                              ; backwards compat with old hfhf formulas which return #entity
-    (not (has-entity-identity? ctx)) v                      ; maybe a ref but you didn't pull an identity? Can't do much for that (we can't generate links there and neither should userland try)
+  (let [[_ a _] @(:hypercrud.browser/eav ctx)
+        valueType (if a
+                    (hydrate-attribute ctx a :db/valueType :db/ident)
+                    :db.type/ref)]                          ; if there is no a in scope, we must be a new entity
+    (cond
+      (instance? ThinEntity v) v                            ; backwards compat with old hfhf formulas which return #entity
+      (= valueType :db.type/ref) (->ThinEntity (or (dbname ctx) "$") ; in the tuple case, each element may be a different color, so we need to refocus the ctx here (with find element index) to infer this
+                                               (smart-entity-identifier ctx v))
 
-    ; In edge cases, this could be a colorless opaque value (composite or scalar)
-    ; Todo: in the tuple case, each element may be a different color, so we need to refocus the ctx here (with find element index) to infer this
-    :happy (->ThinEntity (dbname ctx) (smart-entity-identifier ctx v))))
+      ; In edge cases, this could be a colorless opaque value (composite or scalar)
+      :a-not-ref v)))
 
 (let [eval-string!+ (memoize eval/eval-expr-str!+)]
   (defn build-args+ "Params are EAV-typed (uncolored)"
@@ -241,9 +261,8 @@
                                  (eval-string!+ (str "(fn [ctx] \n" formula-str "\n)"))
                                  (either/right (constantly (constantly nil))))
            formula-fn (try-either (formula-ctx-closure ctx))
-           :let [[e a v] (:hypercrud.browser/eav ctx)]
-           args (try-either @(r/fmap->> (or (if v (r/track identity v)) ; fuck
-                                            (r/track identity nil))
+           :let [v (r/fmap-> (:hypercrud.browser/eav ctx) (get 2))]
+           args (try-either @(r/fmap->> v
                                         formula-fn          ; Documented behavior is v in, tuple out, no colors.
                                         normalize-args))]
       (return args))))
@@ -262,19 +281,20 @@
            route (hyperfiddle.route/validate-route+ route)]
       (return route))))
 
-; I think reactive types are probably slowing this down overall, there are too many
-; reactions going on. It all gets deref'ed in the end anyway! Just deref it above.
-(defn refocus' "focus a link ctx" [ctx link-ref]
-  {:pre [ctx (r/reactive? link-ref)] :post [%]}
-  (let [path (hypercrud.browser.link/read-path @(r/fmap :link/path link-ref))
-        ctx (refocus ctx path)
-        ; Focusing must account for link/formula (essentially tempids can occlude the eschewed pulled-tree data)
-        +args @(r/fmap->> link-ref (build-args+ ctx))       ; Don't color them yet
-        r+?route (r/fmap->> link-ref (build-route' +args ctx)) ; Route has colored-args, eav does not
-        [v' & vs] (->> +args (contrib.ct/unwrap (constantly nil))) ; EAV sugar is not interested in tuple case, that txfn is way off happy path
-        ctx (update ctx :hypercrud.browser/eav (fn [[e a v]]
-                                                 [e a v']))]
-    [ctx r+?route]))
+(letfn [(-stable-eav' [?v' [?e ?a _]]
+          [?e ?a ?v'])]
+  (defn refocus' "focus a link ctx, accounting for link/formula which occludes the natural eav"
+    [ctx link-ref]
+    {:pre [(s/assert :hypercrud/context ctx)
+           (s/assert r/reactive? link-ref)]
+     :post [(s/assert (s/cat :ctx :hypercrud/context :route r/reactive?) %)]}
+    (let [path (hypercrud.browser.link/read-path @(r/fmap :link/path link-ref))
+          ctx (refocus ctx path)
+          +args @(r/fmap->> link-ref (build-args+ ctx))
+          [v' & vs] (->> +args (contrib.ct/unwrap (constantly nil))) ; EAV sugar is not interested in tuple case, that txfn is way off happy path
+          ctx (update ctx :hypercrud.browser/eav (r/partial r/fmap (r/partial -stable-eav' v')))
+          r+?route (r/fmap->> link-ref (build-route' +args ctx))]
+      [ctx r+?route])))
 
 (defn tree-invalid? "For popover buttons (fiddle level)" [ctx]
   (->> (:hypercrud.browser/validation-hints ctx)
@@ -338,7 +358,7 @@
 (defn row-keyfn [ctx row]
   (r/row-keyfn' (partial stable-relation-key ctx) row))
 
-(defn hash-ctx-data [ctx]                                       ; todo there are collisions when two links share the same 'location'
+(defn hash-ctx-data [ctx]                                   ; todo there are collisions when two links share the same 'location'
   (when-let [data (:hypercrud.browser/data ctx)]
     (case @(r/fmap ::field/cardinality (:hypercrud.browser/field ctx))
       :db.cardinality/one @(r/fmap->> data (stable-relation-key ctx))

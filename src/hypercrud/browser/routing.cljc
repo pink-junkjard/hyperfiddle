@@ -12,7 +12,8 @@
     [taoensso.timbre :as timbre]))
 
 
-(defn route+ [ctx [_ params :as route]]                     ; circular, this can be done sooner
+(defn route+ "Performs tempid reversal for views downtree"
+  [ctx [_ params :as route]]                                ; circular, this can be done sooner
   (mlet [_ (if (or (nil? params) (vector? params))          ; validate normalized already
              (either/right nil)
              (either/left (ex-info "Route not normalized, params must be nil or vector" {:params params})))

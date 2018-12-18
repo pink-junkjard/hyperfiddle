@@ -91,10 +91,10 @@
                  ctx (assoc ctx
                        :hypercrud.browser/attr-renderers reactive-attrs
                        :hypercrud.browser/data reactive-result
-                       :hypercrud.browser/eav (if (= FindScalar (type (:qfind fiddle-parsed)))
-                                                (let [v (context/smart-entity-identifier ctx @reactive-result)]
-                                                  ; Probably also tuples here too.
-                                                  [nil nil v]))
+                       :hypercrud.browser/eav (r/fmap (fn [data]
+                                                        (if (= FindScalar (type (:qfind fiddle-parsed))) ; Probably also tuples here too.
+                                                          [nil nil (context/smart-entity-identifier ctx data)]))
+                                                      reactive-result)
                        ;:hypercrud.browser/fiddle-parsed fiddle-parsed ; its memoized
                        :hypercrud.browser/fiddle fiddle     ; for :db/doc
                        :hypercrud.browser/path [])]

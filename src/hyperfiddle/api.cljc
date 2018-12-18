@@ -1,5 +1,6 @@
 (ns hyperfiddle.api
   (:require
+    [contrib.reactive :as r]
     [hypercrud.browser.context]))
 
 
@@ -16,9 +17,8 @@
   ([ctx]
    (hypercrud.browser.context/tempid! ctx)))
 
-(defn ^:export tempid! [{[e a v] :hypercrud.browser/eav
-                         :as ctx}]
-  (if a                                                     ; TODO and not a find-element, which will soon be the case. Currently broken for find elements https://github.com/hyperfiddle/hyperfiddle/issues/826
+(defn ^:export tempid! [{r-eav :hypercrud.browser/eav :as ctx}]
+  (if @(r/fmap-> r-eav (get 1))                             ; TODO and not a find-element, which will soon be the case. Currently broken for find elements https://github.com/hyperfiddle/hyperfiddle/issues/826
     (hypercrud.browser.context/tempid ctx)
     (hypercrud.browser.context/tempid! ctx)))
 
