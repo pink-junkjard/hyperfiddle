@@ -244,7 +244,7 @@
   [ctx v]
   (let [[_ a _] @(:hypercrud.browser/eav ctx)
         valueType (if a
-                    (hydrate-attribute ctx a :db/valueType :db/ident)
+                    @(hydrate-attribute ctx a :db/valueType :db/ident)
                     :db.type/ref)]                          ; if there is no a in scope, we must be a new entity
     (cond
       (instance? ThinEntity v) v                            ; backwards compat with old hfhf formulas which return #entity
