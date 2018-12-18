@@ -190,7 +190,7 @@ User renderers should not be exposed to the reaction."
         (disabled? [link-ref ctx]
           (condp some @(r/fmap :link/class link-ref)
             #{:hf/new} nil #_(not @(r/track security/can-create? ctx)) ; flag
-            #{:hf/remove} (if (r/cursor (:hypercrud.browser/eav ctx) [1])
+            #{:hf/remove} (if @(r/cursor (:hypercrud.browser/eav ctx) [1])
                             (not @(r/track security/writable-entity? (:hypercrud.browser/parent ctx)))
                             (not @(r/track security/writable-entity? ctx)))
             ; else we don't know the semantics, just nil out
