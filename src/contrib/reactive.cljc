@@ -138,7 +138,7 @@
 (defn >>= [fr rv]
   (track (comp deref fr deref) rv))
 
-(defmacro fmap-> [x & forms]
+(defmacro fmap-> [x & forms]                                ; cats.core/ap->
   (loop [x x, forms forms]
     (if forms
       (let [form (first forms)
@@ -148,7 +148,7 @@
         (recur threaded (next forms)))
       x)))
 
-(defmacro fmap->> [x & forms]
+(defmacro fmap->> [x & forms]                               ; cat.core/ap->>
   (loop [x x, forms forms]
     (if forms
       (let [form (first forms)
