@@ -1,6 +1,8 @@
 (ns contrib.datomic
   (:require
-    [contrib.data :refer [group-by-pred]]))
+    [contrib.data :refer [group-by-pred]]
+    [datascript.parser #?@(:cljs [:refer [FindRel FindColl FindTuple FindScalar Variable Aggregate Pull]])])
+  #?(:clj (:import (datascript.parser FindRel FindColl FindTuple FindScalar Variable Aggregate Pull))))
 
 
 (defn tempid? [id]
@@ -108,3 +110,22 @@
                                          distinct))))
        distinct))
 
+(defn element-spread [schema {{pull-pattern :value} :pattern :as e} collection]
+  (condp = (type e)
+    Pull (pull-traverse (enclosing-pull-shape schema (pull-shape pull-pattern) collection))
+    Variable [[]]
+    Aggregate [[]]))
+
+(defn normalize-result [qfind result]
+  (when result                                              ; unclear if nil result should have been a server error https://github.com/hyperfiddle/hyperfiddle/issues/584
+    (condp = (type qfind)
+      FindColl (mapv vector result)
+      FindRel result
+      FindTuple (mapv vector result)
+      FindScalar [[result]])))
+
+(defn spread-elements [f schemas qfind result]
+  (mapcat (partial f schemas qfind)                         ; (map (partial console-link source)) % has the source
+          (range)                                           ; find-element index, for source reversing
+          (datascript.parser/find-elements qfind)
+          (contrib.data/pad nil (contrib.data/transpose (normalize-result qfind result)))))

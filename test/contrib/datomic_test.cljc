@@ -2,9 +2,13 @@
   (:require
     [clojure.test :refer [deftest is]]
     [contrib.datomic :refer [pull-shape pulled-tree-derivative enclosing-pull-shape
-                             pull-traverse pull-shape-union]]
+                             pull-traverse pull-shape-union normalize-result]]
+    [contrib.ct]
+    [contrib.try$]
     [fixtures.ctx :refer [schema result-coll]]
-    [fixtures.domains]))
+    [fixtures.domains]
+    [datascript.parser #?@(:cljs [:refer [FindRel FindColl FindTuple FindScalar Variable Aggregate Pull]])])
+  #?(:clj (:import (datascript.parser FindRel FindColl FindTuple FindScalar Variable Aggregate Pull))))
 
 
 (def pull-pattern-2
@@ -195,4 +199,43 @@
             []
             [:reg/shirt-size]
             [:reg/shirt-size :reg/gender])))
+  )
+
+(def queries
+  {FindColl '[:find [(pull ?e [:db/id                       ; self
+                               :reg/email                   ; not a ref
+                               :reg/age                     ; not a ref
+                               {:reg/gender [:db/ident]     ;self at gender level
+                                :reg/shirt-size [:db/ident]}]) ; self at gender level
+                     ...]
+              :where [?e :reg/email]]
+   FindRel '[:find
+             (sum ?age)
+             (pull ?g [:db/ident])
+             :where
+             [?e :reg/email ?email]
+             [?e :reg/age ?age]
+             [(clojure.string/includes? ?email "b")]
+             [?e :reg/gender ?g]]
+   FindTuple nil
+   FindScalar nil})
+
+(defn parse-query [q] (->> (contrib.try$/try-either (datascript.parser/parse-query q)) (contrib.ct/unwrap (constantly nil))))
+
+(def qparsed (into {} (map (juxt key (comp parse-query val)) queries)))
+
+(def results
+  {FindColl [{:reg/email "alice"} {:reg/email "bob"}]
+   FindRel [[20 {:db/ident :gender/male}] [65 {:db/ident :gender/female}]]
+   FindTuple nil
+   FindScalar nil})
+
+(deftest normalize-result-
+  []
+  (is (= (normalize-result (:qfind (qparsed FindColl)) (results FindColl))
+         [[{:reg/email "alice"}] [{:reg/email "bob"}]]))
+  (is (= (normalize-result (:qfind (qparsed FindColl)) [])
+         []))
+  (is (= (normalize-result (:qfind (qparsed FindRel)) (results FindRel))
+         (results FindRel)))
   )

@@ -4,7 +4,7 @@
     [clojure.core.match :refer [match #?(:cljs match*)]]
     [clojure.string :as string]
     [contrib.ct :refer [unwrap]]
-    [contrib.data :refer [transpose pad ungroup]]
+    [contrib.data]
     [contrib.datomic :refer [valueType ref? pull-shape enclosing-pull-shape pull-traverse]]
     [contrib.reactive :as r]
     [contrib.reader :refer [memoized-read-edn-string+]]
@@ -41,12 +41,6 @@
      :link/path (path->str path)                            ; Explicit fe-pos where sometimes it can be implied
      :link/fiddle (some-> (console-fiddle-ctors rel) (apply [source]))}))
 
-(defn element-spread [schema {{pull-pattern :value} :pattern :as e} collection]
-  (condp = (type e)
-    Pull (pull-traverse (enclosing-pull-shape schema (pull-shape pull-pattern) collection))
-    Variable [[]]
-    Aggregate [[]]))
-
 (defn console-links-rules [schema qfind e path]
   ; core.match gotcha: if you forget to declare a local binding, it will
   ; match as a symbol (wildcard)
@@ -77,7 +71,7 @@
 
 (defn console-links-e [schemas qfind ix e collection]
   (let [schema (get schemas (str (get-in e [:source :symbol])))
-        all-paths (element-spread schema e collection)
+        all-paths (contrib.datomic/element-spread schema e collection)
         all-links (->> all-paths (map (partial console-links-rules schema qfind e)))
         all-paths (->> all-paths (map (fn [path]
                                         (condp = (type qfind)
@@ -89,19 +83,8 @@
     (->> (map vector all-paths all-links)
          (remove (comp nil? second)))))
 
-(defn normalize-result [qfind result]
-  (when result                                              ; unclear if nil result should have been a server error https://github.com/hyperfiddle/hyperfiddle/issues/584
-    (condp = (type qfind)
-      FindColl (mapv vector result)
-      FindRel result
-      FindTuple (mapv vector result)
-      FindScalar [[result]])))
-
 (defn query-links-impl [schemas qfind result]
-  (mapcat (partial console-links-e schemas qfind)           ; (map (partial console-link source)) % has the source
-          (range)                                           ; find-element index, for source reversing
-          (parser/find-elements qfind)
-          (pad nil (transpose (normalize-result qfind result)))))
+  (contrib.datomic/spread-elements console-links-e schemas qfind result))
 
 (defn query-links "repl friendly interface" [schemas q data]
   (some-> (try-either (:qfind (parser/parse-query q)))
@@ -127,4 +110,4 @@
   (if-let [{qfind :qfind} (parse-fiddle-data-shape fiddle)]
     (map (comp fiddle/auto-link console-link)
          (repeat qfind)
-         (ungroup (query-links-impl schemas qfind data)))))
+         (contrib.data/ungroup (query-links-impl schemas qfind data)))))

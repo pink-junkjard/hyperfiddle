@@ -1,22 +1,19 @@
 (ns hyperfiddle.ide.console-links-test
   (:require
     [clojure.core.match :refer [match]]
-    [clojure.string :as string]
+    [clojure.string]
     [clojure.test :refer [deftest is]]
-    [contrib.data :as data :refer [ungroup transpose]]
+    [contrib.data :refer [ungroup transpose]]
     [contrib.ct :refer [unwrap]]
-    [contrib.eval :as eval]
     [contrib.reactive :as r]
     [contrib.reader]
-    [contrib.template :as template]
     [contrib.try$ :refer [try-either]]
     [datascript.parser :as parser #?@(:cljs [:refer [FindRel FindColl FindTuple FindScalar Variable Aggregate Pull]])]
     [fixtures.ctx :refer [ctx result-coll query-coll]]
     [fixtures.domains]
-    [hypercrud.browser.field :as field]
     [hyperfiddle.api]
     [hyperfiddle.ide.console-links :refer [console-link console-links-e
-                                           query-links normalize-result console-links-rules query-links-impl]])
+                                           query-links console-links-rules query-links-impl]])
   #?(:clj (:import (datascript.parser FindRel FindColl FindTuple FindScalar Variable Aggregate Pull))))
 
 
@@ -62,16 +59,6 @@
    FindRel [[20 {:db/ident :gender/male}] [65 {:db/ident :gender/female}]]
    FindTuple nil
    FindScalar nil})
-
-(deftest normalize-result-
-  []
-  (is (= (normalize-result (:qfind (qparsed FindColl)) (results FindColl))
-         [[{:reg/email "alice"}] [{:reg/email "bob"}]]))
-  (is (= (normalize-result (:qfind (qparsed FindColl)) [])
-         []))
-  (is (= (normalize-result (:qfind (qparsed FindRel)) (results FindRel))
-         (results FindRel)))
-  )
 
 (def schemas {"$" fixtures.ctx/schema
               "$domains" fixtures.domains/schema})
@@ -268,6 +255,6 @@
   )
 
 (comment
-  (is (= (transpose (normalize-result (:qfind (qparsed FindRel)) (results FindRel)))
+  (is (= (transpose (contrib.datomic/normalize-result (:qfind (qparsed FindRel)) (results FindRel)))
          [[20 65] [#:db{:ident :gender/male} #:db{:ident :gender/female}]]))
   )
