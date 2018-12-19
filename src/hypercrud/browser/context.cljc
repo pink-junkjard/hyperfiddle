@@ -216,6 +216,37 @@
         unwind-offset (- (count current-path) (count common-ancestor-path))
         common-ancestor-ctx ((apply comp (repeat unwind-offset :hypercrud.browser/parent)) ctx)]
     (focus common-ancestor-ctx (ancestry-divergence path current-path))))
+(defn deps-satisfied? "Links in this :body strata"
+  [ctx target-attr]
+  (let [target-path target-attr                             ; fixme
+        this-path (:hypercrud.browser/path ctx)
+        common-path (contrib.data/ancestry-common this-path target-path)
+        common-ctx (refocus ctx common-path)]
+    (loop [field (:hypercrud.browser/field common-ctx)
+           [segment & xs] (contrib.data/ancestry-divergence target-path common-path)]
+      (if-not segment
+        true                                                ; finished
+        (let [child-field (r/track find-child-field field segment ctx)]
+          (case @(r/fmap ::field/cardinality child-field)
+            :db.cardinality/one (recur child-field xs)
+            :db.cardinality/many false
+            false) #_"Nonsensical path - probably invalid links for this query, maybe they just changed the query and the links broke")))))
+
+(defn link-path-floor "Find the shortest path that has equal dimension"
+  [ctx path]
+  (loop [ctx (refocus ctx path)]                    ; we know we're at least satisfied so this is safe
+    (if-let [parent-ctx (:hypercrud.browser/parent ctx)]    ; walk it up and see if the dimension changes
+      (case (::field/cardinality @(:hypercrud.browser/field parent-ctx))
+        :db.cardinality/one (recur parent-ctx)              ; Next one is good, keep going
+        :db.cardinality/many ctx)                           ; Next one is one too far, so we're done
+      ctx)))                                                ; Empty path is the shortest path
+
+(defn deps-over-satisfied? "satisfied but not over-satisfied.
+  Useful in the UI xray mode for drawing iframes once."
+  [ctx link-attr]
+  (let [link-path nil
+        this-path (:hypercrud.browser/path ctx)]
+    (not= this-path (:hypercrud.browser/path (link-path-floor ctx link-path)))))
 
 (defn id->tempid+ [route ctx]
   (let [invert-id (fn [id uri]

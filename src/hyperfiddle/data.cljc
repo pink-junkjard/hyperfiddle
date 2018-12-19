@@ -25,32 +25,6 @@
       (conj (vec paths) [])                                 ; entity-[]
       (vec paths))))
 
-(defn deps-satisfied? "Links in this :body strata" [ctx target-path]
-  (let [this-path (:hypercrud.browser/path ctx)
-        common-path (contrib.data/ancestry-common this-path target-path)
-        common-ctx (context/refocus ctx common-path)]
-    (loop [field (:hypercrud.browser/field common-ctx)
-           [segment & xs] (contrib.data/ancestry-divergence target-path common-path)]
-      (if-not segment
-        true                                                ; finished
-        (let [child-field (r/track context/find-child-field field segment ctx)]
-          (case @(r/fmap ::field/cardinality child-field)
-            :db.cardinality/one (recur child-field xs)
-            :db.cardinality/many false
-            false) #_"Nonsensical path - probably invalid links for this query, maybe they just changed the query and the links broke")))))
-
-(defn link-path-floor "Find the shortest path that has equal dimension" [ctx path]
-  (loop [ctx (context/refocus ctx path)]                    ; we know we're at least satisfied so this is safe
-    (if-let [parent-ctx (:hypercrud.browser/parent ctx)]    ; walk it up and see if the dimension changes
-      (case (::field/cardinality @(:hypercrud.browser/field parent-ctx))
-        :db.cardinality/one (recur parent-ctx)              ; Next one is good, keep going
-        :db.cardinality/many ctx)                           ; Next one is one too far, so we're done
-      ctx)))                                                ; Empty path is the shortest path
-
-(defn deps-over-satisfied? "satisfied but not over-satisfied" [ctx link-path]
-  (let [this-path (:hypercrud.browser/path ctx)]
-    (not= this-path (:hypercrud.browser/path (link-path-floor ctx link-path)))))
-
 (letfn [(link-matches-class? [?corcs page-fiddle-ident link]
           ; What we've got fully matches what we asked for
           (clojure.set/superset?
@@ -64,7 +38,7 @@
     ([ctx] {:pre [ctx]}
      (r/fmap->> (:hypercrud.browser/fiddle ctx)
                 :fiddle/links
-                (filter (r/comp (r/partial deps-satisfied? ctx) link/read-path :link/path))))
+                (filter (r/comp (r/partial hypercrud.browser.context/deps-satisfied? ctx) link/read-path :link/path))))
     ([ctx ?corcs]
      (r/fmap->> (select-all-r ctx)
                 (filter (r/partial link-matches-class? ?corcs @(r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/ident])))))))
