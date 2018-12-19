@@ -161,4 +161,5 @@
 (defn read-path [s]
   (->> (contrib.reader/memoized-read-edn-string+ (str "[" s "]"))
        (unwrap #(timbre/error %))                           ; too late to report anything to the dev
-       last))
+       last                                                 ; Adapt legacy to attribute
+       ))
