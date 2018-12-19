@@ -184,7 +184,7 @@
         (map (fn [index] [(cursor rv [index]) index]))))
   ([key-fn rv]
    {:pre [(reactive? rv)]}
-   (let [lookup (fmap (partial util/group-by-unique key-fn) rv)]
+   (let [lookup (fmap (partial util/group-by-unique key-fn) rv)] ; because results are vectors(sets) and we need to traverse by id
      (->> @(fmap (partial map key-fn) rv)
           (map (fn [key] [(cursor lookup [key]) key]))))))
 
