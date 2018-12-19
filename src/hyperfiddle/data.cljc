@@ -8,7 +8,7 @@
     [hypercrud.browser.base :as base]
     [hypercrud.browser.context :as context]
     [hypercrud.browser.field :as field]
-    [hypercrud.browser.link :as link]))
+    [hyperfiddle.fiddle]))
 
 
 (defn form-with-naked-legacy "Field is invoked as fn"       ; because it unifies with request fn side
@@ -25,12 +25,17 @@
       (conj (vec paths) [])                                 ; entity-[]
       (vec paths))))
 
+(defn same-attr-as? "nil ?a means fiddle-level (fiddle-ident)"
+  [?a link]
+  (let [a' (hyperfiddle.fiddle/read-path (:link/path link))]
+    (= ?a a')))
+
 (letfn [(link-matches-class? [?corcs page-fiddle-ident link]
           ; What we've got fully matches what we asked for
           (clojure.set/superset?
             (-> (set (:link/class link))
                 (conj (some-> link :link/fiddle :fiddle/ident))
-                (conj (or (some-> link :link/path link/read-path last)
+                (conj (or (some-> link :link/path hyperfiddle.fiddle/read-path)
                           page-fiddle-ident))               ; links with no path, e.g. FindScalar and FindColl, are named by fiddle
                 (conj (some-> link :link/tx-fn (subs 1) keyword)))
             (contrib.data/xorxs ?corcs)))]
@@ -38,7 +43,7 @@
     ([ctx] {:pre [ctx]}
      (r/fmap->> (:hypercrud.browser/fiddle ctx)
                 :fiddle/links
-                (filter (r/comp (r/partial hypercrud.browser.context/deps-satisfied? ctx) link/read-path :link/path))))
+                (filter (r/comp (r/partial context/deps-satisfied? ctx) hyperfiddle.fiddle/read-path :link/path))))
     ([ctx ?corcs]
      (r/fmap->> (select-all-r ctx)
                 (filter (r/partial link-matches-class? ?corcs @(r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/ident])))))))
@@ -58,7 +63,7 @@
 (defn ^:export select-here+ [ctx & [?corcs]]
   {:pre [ctx]}
   (->> (r/fmap->> (select-all-r ctx ?corcs)
-                  (filter (r/partial link/same-path-as? (:hypercrud.browser/path ctx)))
+                  (filter (r/partial same-attr-as? (->> (:hypercrud.browser/path ctx) (drop-while int?) last)))
                   (validate-one+ ?corcs))
        r/apply-inner-r
        deref))
@@ -76,10 +81,10 @@
   (>>= (select+ ctx ?corcs)
        #(base/data-from-link @% ctx)))
 
-(defn ^:export select-here [ctx & [?corcs]]
+(defn ^:export select-here "reactive" [ctx & [?corcs]]
   (->> (select-here+ ctx ?corcs) (unwrap (constantly nil))))
 
-(defn ^:export select [ctx & [?corcs]]
+(defn ^:export select "reactive" [ctx & [?corcs]]
   (->> (select+ ctx ?corcs) (unwrap (constantly nil))))
 
 (defn ^:export browse [ctx & [?corcs]]

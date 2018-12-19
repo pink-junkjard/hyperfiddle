@@ -4,7 +4,7 @@
     [clojure.spec.alpha :as s]
     [contrib.ct :refer [unwrap]]
     [contrib.data :refer [update-existing]]
-    [contrib.reader :as reader]
+    [contrib.reader]
     [contrib.string :refer [or-str]]
     [contrib.template :as template]
     [contrib.try$ :refer [try-either]]
@@ -68,7 +68,7 @@
 (defn infer-query-formula [query]
   (unwrap
     #(timbre/warn %)
-    (->> (reader/memoized-read-string+ query)
+    (->> (contrib.reader/memoized-read-string+ query)
          (cats/=<< #(try-either (datascript.parser/parse-query %)))
          (cats/fmap (fn [{:keys [qin]}]
                       (if (->> qin
@@ -157,3 +157,8 @@
    :fiddle/hydrate-result-as-fiddle
    '*                                                       ; For hyperblog, so we can access :hyperblog.post/title etc from the fiddle renderer
    ])
+
+(defn read-path [s]
+  (->> (contrib.reader/memoized-read-edn-string+ (str "[" s "]"))
+       (unwrap #(timbre/error %))                           ; too late to report anything to the dev
+       last))

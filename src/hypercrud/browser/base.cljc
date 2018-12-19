@@ -9,7 +9,6 @@
             [datascript.parser #?@(:cljs [:refer [FindRel FindColl FindTuple FindScalar Variable Aggregate Pull]])]
             [hypercrud.browser.context :as context]
             [hypercrud.browser.field :as field]
-            [hypercrud.browser.link :as link]
             [hypercrud.browser.routing :as routing]
             [hyperfiddle.ide.system-fiddle :as system-fiddle]
             [hypercrud.client.core :as hc]
@@ -114,7 +113,7 @@
     (process-results fiddle fiddle-request ctx)))
 
 (defn from-link [link ctx with-route]                       ; ctx is for formula and routing (tempids and domain)
-  (let [ctx (context/refocus ctx (link/read-path (:link/path link)))] ; symmetry with UI - popovers, txfn etc
+  (let [ctx (context/refocus ctx (hyperfiddle.fiddle/read-path (:link/path link)))] ; symmetry with UI - popovers, txfn etc
     (mlet [route (context/build-route' (context/build-args+ ctx link) ctx link)]
       (with-route route ctx))))
 

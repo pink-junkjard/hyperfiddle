@@ -2,6 +2,7 @@
   (:require
     [cats.core :refer [mlet return]]
     [cats.monad.either :as either :refer [left right]]
+    [contrib.ct :refer [unwrap]]
     [contrib.data :refer [ancestry-common ancestry-divergence]]
     [contrib.datomic]
     [contrib.eval :as eval]
@@ -10,17 +11,21 @@
     [contrib.try$ :refer [try-either]]
     [clojure.set]
     [clojure.spec.alpha :as s]
+    [datascript.parser #?@(:cljs [:refer [FindRel FindColl FindTuple FindScalar Variable Aggregate Pull]])]
     [hypercrud.browser.field :as field]
-    [hypercrud.browser.link]
     [hypercrud.browser.q-util]
     [hypercrud.client.core :as hc]
     [hypercrud.types.ThinEntity :refer [->ThinEntity #?(:cljs ThinEntity)]]
     [hypercrud.util.branch]
     [hyperfiddle.domain :as domain]
+    [hyperfiddle.fiddle]
     [hyperfiddle.route]
-    [hyperfiddle.runtime :as runtime])
+    [hyperfiddle.runtime :as runtime]
+    [taoensso.timbre :as timbre])
   #?(:clj
-     (:import (hypercrud.types.ThinEntity ThinEntity))))
+     (:import
+       (hypercrud.types.ThinEntity ThinEntity)
+       (datascript.parser FindRel FindColl FindTuple FindScalar Variable Aggregate Pull))))
 
 
 (s/def :hypercrud/context
@@ -156,7 +161,7 @@
 (defn eav "project eav from data"
   [ctx data]
   (let [e (some-> ctx identify)                             ; this is the parent v
-        a (last (:hypercrud.browser/path ctx))              ; todo chop off FE todo
+        a (->> (:hypercrud.browser/path ctx) (drop-while int?) last)
         v (smart-entity-identifier ctx data)]
     (assert (not (map? e)))
     (assert (not (map? a)))
@@ -319,8 +324,7 @@
     {:pre [(s/assert :hypercrud/context ctx)
            (s/assert r/reactive? link-ref)]
      :post [(s/assert (s/cat :ctx :hypercrud/context :route r/reactive?) %)]}
-    (let [path (hypercrud.browser.link/read-path @(r/fmap :link/path link-ref))
-          ctx (refocus ctx path)
+    (let [ctx (refocus ctx @(r/fmap (r/comp hyperfiddle.fiddle/read-path :link/path) link-ref))
           +args @(r/fmap->> link-ref (build-args+ ctx))
           [v' & vs] (->> +args (contrib.ct/unwrap (constantly nil))) ; EAV sugar is not interested in tuple case, that txfn is way off happy path
           ctx (update ctx :hypercrud.browser/eav (r/partial r/fmap (r/partial -stable-eav' v')))

@@ -6,7 +6,6 @@
     [hypercrud.browser.base :as base]
     [hypercrud.browser.context :as context]
     [hypercrud.browser.field :as field]
-    [hypercrud.browser.link :as link]
     [hypercrud.browser.routing :as routing]
     [hypercrud.client.peer :refer [-quiet-unwrap]]
     [hyperfiddle.data :as data]
@@ -41,7 +40,7 @@
 
 (defn body-field [ctx]
   (->> @(r/fmap :fiddle/links (:hypercrud.browser/fiddle ctx))
-       (filter (partial link/same-path-as? (:hypercrud.browser/path ctx)))
+       (filter (partial data/same-attr-as? (->> (:hypercrud.browser/path ctx) (drop-while int?) last)))
        (mapcat #(request-from-link % ctx))
        (concat (let [child-fields? (not @(r/fmap (r/comp nil? ::field/children) (:hypercrud.browser/field ctx)))]
                  (when (and child-fields? (context/attribute-segment? (last (:hypercrud.browser/path ctx)))) ; ignore relation and fe fields
@@ -77,7 +76,7 @@
   (let [ctx (update ctx :hypercrud.browser/fiddle (partial r/fmap filter-inline-links))]
     (concat
       (->> @(r/fmap :fiddle/links (:hypercrud.browser/fiddle ctx))
-           (filter (partial link/same-path-as? []))
+           (filter (partial data/same-attr-as? nil))
            (mapcat #(request-from-link % ctx)))
       (with-result ctx)
       (if @(r/fmap :fiddle/hydrate-result-as-fiddle (:hypercrud.browser/fiddle ctx))

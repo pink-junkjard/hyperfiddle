@@ -7,7 +7,6 @@
     [hypercrud.browser.browser-request]
     [hypercrud.browser.context :as context]
     [hypercrud.browser.field :as field]
-    [hypercrud.browser.link :as link]
     [hyperfiddle.data :as data]
     [taoensso.timbre :as timbre]))
 
@@ -30,7 +29,7 @@
 (defn body-field [ctx]
   (->> @(r/fmap->> (:hypercrud.browser/fiddle ctx)
                    :fiddle/links
-                   (filter (r/partial link/same-path-as? (:hypercrud.browser/path ctx)))
+                   (filter (r/partial data/same-attr-as? (->> (:hypercrud.browser/path ctx) (drop-while int?) last)))
                    (map (r/partial recurse-from-link ctx))
                    (apply merge))
        (into (let [child-fields? (not @(r/fmap-> (:hypercrud.browser/field ctx) ::field/children nil?))]
@@ -65,7 +64,7 @@
     (merge (with-result ctx)
            @(r/fmap->> (:hypercrud.browser/fiddle ctx)
                        :fiddle/links
-                       (filter (r/partial link/same-path-as? (:hypercrud.browser/path ctx)))
+                       (filter (r/partial data/same-attr-as? (->> (:hypercrud.browser/path ctx) (drop-while int?) last)))
                        (map (r/partial recurse-from-link ctx))
                        (apply merge))
            (when @(r/fmap :fiddle/hydrate-result-as-fiddle (:hypercrud.browser/fiddle ctx))

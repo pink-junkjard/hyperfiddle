@@ -18,7 +18,6 @@
     [datascript.parser :refer [FindRel FindColl FindTuple FindScalar Variable Aggregate Pull]]
     [hypercrud.browser.context :as context]
     [hypercrud.browser.field :as field]
-    [hypercrud.browser.link :as link]
     [hypercrud.browser.routing :as routing]
     [hypercrud.ui.connection-color :refer [connection-color]]
     [hypercrud.ui.error :as ui-error]
@@ -63,14 +62,22 @@
 (declare fiddle-api)
 (declare fiddle-xray)
 
-(defn entity-links-iframe [val ctx & [props]]
+#_(defn entity-links-iframe [val ctx & [props]]
+  ; Find the iframe links that we can get to downwards, but not upwards
+  ; (select searches upwards)
+  ; Only ask this question from a place at the top
   (->> (r/fmap->> (data/select-all-r ctx :hf/iframe)
-                  (remove (r/comp (r/partial data/deps-over-satisfied? ctx) link/read-path :link/path)))
+                  (remove (r/comp (r/partial context/deps-over-satisfied? ctx) context/read-path :link/path)))
        (r/unsequence (r/partial context/stable-relation-key ctx))
        (map (fn [[rv k]]
               ^{:key k}
               [ui-from-link rv ctx props]))
        (into [:<>])))
+
+(defn iframe-field-default [val ctx props]
+  (let [props (-> props (dissoc :class) (assoc :label-fn (r/constantly nil) #_[:div "nested pull iframes"]))]
+    [:pre "iframe-field-default"]
+    #_[field [] ctx entity-links-iframe props]))
 
 (defn control "this is a function, which returns component"
   [val ctx & [props]]                                       ; returns Func[(ref, props, ctx) => DOM]
@@ -107,7 +114,7 @@
           (seq (::field/children -field)) (let [ctx (dissoc ctx ::layout)]
                                             [:div           ; wrapper div: https://github.com/hyperfiddle/hyperfiddle/issues/541
                                              [pull field val ctx props]
-                                             [field [] ctx entity-links-iframe (-> props (dissoc :class) (assoc :label-fn (r/constantly nil #_[:div "nested pull iframes"])))]])
+                                             [iframe-field-default val ctx props]])
           :else [(control val ctx props) val ctx props]))))
 
 (defn ^:export hyper-label [_ ctx & [props]]
@@ -373,8 +380,7 @@ nil. call site must wrap with a Reagent component"          ; is this just hyper
        [:query :relation] [table (r/partial columns-relation-product field) ctx props]
        [:query :tuple] [form (r/partial columns-relation-product field) val ctx props]
        [_ _] (pull field val ctx props)))
-   (let [props (-> props (dissoc :class) (assoc :label-fn (r/constantly nil)))]
-     [field [] ctx entity-links-iframe props])])
+   [iframe-field-default val ctx props]])
 
 (def ^:dynamic markdown)                                    ; this should be hf-contrib or something
 

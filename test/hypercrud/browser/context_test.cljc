@@ -3,7 +3,7 @@
     [clojure.test :refer [deftest is]]
     [hypercrud.browser.context :refer [deps-satisfied
                                        deps-over-satisfied
-                                       link-path-floor]]
+                                       #_link-path-floor]]
     ))
 
 
