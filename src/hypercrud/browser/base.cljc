@@ -79,6 +79,27 @@
 
     (either/right nil)))
 
+(defn -index-lookup [index ?corcs]
+  (let [criteria-set (contrib.data/xorxs ?corcs #{})]
+    (->> index
+         (filter (fn [[index-key v]]
+                   ; What we've got fully matches what was asked for
+                   (clojure.set/superset? index-key criteria-set))))))
+
+(defn index-links "Index lookup is #{criterias} -> linkref where criterias is some of #{ident txfn class class2}.
+  The index itself is reactive; if you change a link, then we rebuild the index."
+  [fiddle]
+  ; context/deps-satisfied?
+  (let [index (->> (:fiddle/links fiddle)
+                   (map (fn [link]
+                          ; Issues with nil vs fiddle-ident
+                          (-> (set (:link/class link))
+                              (conj (some-> link :link/fiddle :fiddle/ident))
+                              (conj (or (some-> link :link/path hyperfiddle.fiddle/read-path)
+                                        (:fiddle/ident fiddle)))        ; links with no path, e.g. FindScalar and FindColl, are named by fiddle
+                              (conj (some-> link :link/tx-fn (subs 1) keyword))))))]
+    (r/partial -index-lookup index)))
+
 (let [nil-or-hydrate (fn [peer branch request]
                        (if-let [?request @request]
                          @(hc/hydrate peer branch ?request)
@@ -96,6 +117,7 @@
                                                       reactive-result)
                        ;:hypercrud.browser/fiddle-parsed fiddle-parsed ; its memoized
                        :hypercrud.browser/fiddle fiddle     ; for :db/doc
+                       :hypercrud.browser/link-index (r/fmap index-links fiddle)
                        :hypercrud.browser/path [])]
            reactive-field @(r/apply-inner-r (r/track field/auto-field request ctx))]
       (return (assoc ctx :hypercrud.browser/field reactive-field

@@ -25,33 +25,15 @@
       (conj (vec paths) [])                                 ; entity-[]
       (vec paths))))
 
-(defn same-attr-as? "nil ?a means fiddle-level (fiddle-ident)"
-  [?a link]
-  (let [a' (hyperfiddle.fiddle/read-path (:link/path link))]
-    (= ?a a')))
+(defn select-all [ctx ?corcs]
+  (@(:hypercrud.browser/link-index ctx) ?corcs))
 
-(letfn [(link-matches-class? [?corcs page-fiddle-ident link]
-          ; What we've got fully matches what we asked for
-          (clojure.set/superset?
-            (-> (set (:link/class link))
-                (conj (some-> link :link/fiddle :fiddle/ident))
-                (conj (or (some-> link :link/path hyperfiddle.fiddle/read-path)
-                          page-fiddle-ident))               ; links with no path, e.g. FindScalar and FindColl, are named by fiddle
-                (conj (some-> link :link/tx-fn (subs 1) keyword)))
-            (contrib.data/xorxs ?corcs)))]
-  (defn select-all-r "List[Link]. Find the closest match."
-    ([ctx] {:pre [ctx]}
-     (r/fmap->> (:hypercrud.browser/fiddle ctx)
-                :fiddle/links
-                (filter (r/comp (r/partial context/deps-satisfied? ctx) hyperfiddle.fiddle/read-path :link/path))))
-    ([ctx ?corcs]
-     (r/fmap->> (select-all-r ctx)
-                (filter (r/partial link-matches-class? ?corcs @(r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/ident])))))))
-
-(defn ^:export select-all-here "List[Link]. Find the closest match."
+(defn ^:export select-all-here "reactive" ; collapses if eav is part of corcs
   [ctx & [?corcs]]
-  (r/fmap->> (select-all-r ctx ?corcs)
-             (filter (r/partial link/same-path-as? (:hypercrud.browser/path ctx)))))
+  (assert (= (second (:hypercrud.browser/eav ctx)) (->> (:hypercrud.browser/path ctx) (drop-while int?) last)))
+  (-> (contrib.data/xorxs ?corcs #{})
+      (conj (second (:hypercrud.browser/eav ctx)))
+      (->> (select-all ctx))))
 
 (defn validate-one+ [class links]
   (let [n (count links)]
@@ -60,19 +42,14 @@
       0 (left (str/format "no match for class: %s" (pr-str class)))
       (left (str/format "Too many (%s) links matched for class: %s" n (pr-str class))))))
 
+(defn ^:export select+ [ctx & [?corcs]]                     ; Right[Reaction[Link]], Left[String]
+  (->> (@(:hypercrud.browser/link-index ctx) ?corcs)
+       (validate-one+ ?corcs)))
+
 (defn ^:export select-here+ [ctx & [?corcs]]
   {:pre [ctx]}
-  (->> (r/fmap->> (select-all-r ctx ?corcs)
-                  (filter (r/partial same-attr-as? (->> (:hypercrud.browser/path ctx) (drop-while int?) last)))
-                  (validate-one+ ?corcs))
-       r/apply-inner-r
-       deref))
-
-(defn ^:export select+ [ctx & [?corcs]]                     ; Right[Reaction[Link]], Left[String]
-  (->> (r/fmap->> (select-all-r ctx ?corcs)
-                  (validate-one+ ?corcs))
-       r/apply-inner-r
-       deref))
+  (select+ ctx (-> (contrib.data/xorxs ?corcs #{})
+                   (conj (second (:hypercrud.browser/eav ctx))))))
 
 (defn ^:export browse+ "Navigate a link by hydrating its context accounting for dependencies in scope.
   returns Either[Loading|Error,ctx]."

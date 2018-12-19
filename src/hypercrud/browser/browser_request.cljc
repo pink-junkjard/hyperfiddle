@@ -39,8 +39,7 @@
                                             (either/right (request-from-route route ctx))))))
 
 (defn body-field [ctx]
-  (->> @(r/fmap :fiddle/links (:hypercrud.browser/fiddle ctx))
-       (filter (partial data/same-attr-as? (->> (:hypercrud.browser/path ctx) (drop-while int?) last)))
+  (->> @(data/select-here ctx)
        (mapcat #(request-from-link % ctx))
        (concat (let [child-fields? (not @(r/fmap (r/comp nil? ::field/children) (:hypercrud.browser/field ctx)))]
                  (when (and child-fields? (context/attribute-segment? (last (:hypercrud.browser/path ctx)))) ; ignore relation and fe fields
@@ -66,17 +65,12 @@
     ; blank fiddles
     nil))
 
-(defn filter-inline-links [fiddle]
-  (update fiddle :fiddle/links (fn [links]
-                                 (->> links
-                                      (filter #(some #{:hf/iframe} (:link/class %)))))))
-
 (defn requests [ctx]
   ; at this point we only care about inline links and popovers are hydrated on their on hydrate-route calls
-  (let [ctx (update ctx :hypercrud.browser/fiddle (partial r/fmap filter-inline-links))]
+  (let []
     (concat
-      (->> @(r/fmap :fiddle/links (:hypercrud.browser/fiddle ctx))
-           (filter (partial data/same-attr-as? nil))
+      ; select-here ?? Fiddle-ident indicates that. Want iframes at the fiddle level (no :link/path)
+      (->> @(data/select ctx #{:hf/iframe (:fiddle/ident (:hypercrud.browser/fiddle ctx))})
            (mapcat #(request-from-link % ctx)))
       (with-result ctx)
       (if @(r/fmap :fiddle/hydrate-result-as-fiddle (:hypercrud.browser/fiddle ctx))

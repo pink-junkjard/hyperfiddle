@@ -27,9 +27,7 @@
        (unwrap #(timbre/warn %))))
 
 (defn body-field [ctx]
-  (->> @(r/fmap->> (:hypercrud.browser/fiddle ctx)
-                   :fiddle/links
-                   (filter (r/partial data/same-attr-as? (->> (:hypercrud.browser/path ctx) (drop-while int?) last)))
+  (->> @(r/fmap->> (data/select-here ctx)
                    (map (r/partial recurse-from-link ctx))
                    (apply merge))
        (into (let [child-fields? (not @(r/fmap-> (:hypercrud.browser/field ctx) ::field/children nil?))]
@@ -60,11 +58,9 @@
 (defn api-data [ctx]
   ; at this point we only care about inline links
   ; also no popovers can be opened, so remove managed
-  (let [ctx (update ctx :hypercrud.browser/fiddle (partial r/fmap hypercrud.browser.browser-request/filter-inline-links))]
+  (let []
     (merge (with-result ctx)
-           @(r/fmap->> (:hypercrud.browser/fiddle ctx)
-                       :fiddle/links
-                       (filter (r/partial data/same-attr-as? (->> (:hypercrud.browser/path ctx) (drop-while int?) last)))
+           @(r/fmap->> (data/select-here ctx #{:hf/iframe})
                        (map (r/partial recurse-from-link ctx))
                        (apply merge))
            (when @(r/fmap :fiddle/hydrate-result-as-fiddle (:hypercrud.browser/fiddle ctx))
