@@ -2,7 +2,8 @@
   (:require
     [clojure.test :refer [deftest is]]
     [contrib.string :refer [blank->nil]]
-    [contrib.data :refer [cond-let map-pad pad rtrim-coll fix-arity fvor take-to ungroup dissoc-nils
+    [contrib.data :refer [xorxs
+                          cond-let map-pad pad rtrim-coll fix-arity fvor take-to ungroup dissoc-nils
                           compare-by-index ancestry-common ancestry-divergence merge-by collect orp]]))
 
 
@@ -125,3 +126,16 @@
 (deftest orp-test []
   (is (= false (orp some? nil false 1)))
   (is (= 6 (orp even? 1 3 5 6 7))))
+
+(deftest xorxs-test
+  []
+  (is (= (xorxs :a [])
+         (xorxs :a)
+         (xorxs [:a])
+         [:a]))
+  (is (= (xorxs :a #{})
+         (xorxs #{:a})
+         #{:a}))
+  (is (= nil
+         (xorxs nil)))
+  )

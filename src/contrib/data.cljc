@@ -110,12 +110,12 @@
     (-> (apply hash-map (flatten kwargs))
         (as-> $ (if (seq args) (assoc $ nil args) $)))))
 
-(defn xorxs [xorxs]
+(defn xorxs [xorxs & [zero]]
   (cond (vector? xorxs) xorxs
         (set? xorxs) xorxs
         (seq? xorxs) xorxs
         (nil? xorxs) nil
-        :else-single-value [xorxs] #_"can be a map"))
+        :else-single-value-or-map ((fnil conj []) zero xorxs)))
 
 (defn group-by-pred [f? xs]
   (let [{a true b false} (group-by f? xs)]
