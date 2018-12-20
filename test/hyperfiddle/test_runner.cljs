@@ -19,7 +19,6 @@
     hypercrud.browser.field-test
     hypercrud.browser.nested-pull-test
     hypercrud.browser.router-bidi-test
-    hyperfiddle.data-test
     hyperfiddle.fiddle-test
     hyperfiddle.foundation-test
     hyperfiddle.ide.console-links-test
@@ -49,7 +48,6 @@
     'hypercrud.browser.field-test
     'hypercrud.browser.nested-pull-test
     'hypercrud.browser.router-bidi-test
-    'hyperfiddle.data-test
     'hyperfiddle.fiddle-test
     'hyperfiddle.foundation-test
     'hyperfiddle.ide.console-links-test

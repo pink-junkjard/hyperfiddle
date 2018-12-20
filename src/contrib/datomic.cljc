@@ -2,7 +2,10 @@
   (:require
     [contrib.data :refer [group-by-pred]]
     [datascript.parser #?@(:cljs [:refer [FindRel FindColl FindTuple FindScalar Variable Aggregate Pull]])])
-  #?(:clj (:import (datascript.parser FindRel FindColl FindTuple FindScalar Variable Aggregate Pull))))
+  #?(:clj (:import
+            (datascript.parser FindRel FindColl FindTuple FindScalar Variable Aggregate Pull)
+            [clojure.lang #_#_#_Counted IFn IHashEq ILookup #_Seqable]
+            [clojure.core.protocols IKVReduce])))
 
 
 (defn tempid? [id]
@@ -28,14 +31,32 @@
   [v]
   (or (smart-lookup-ref-no-tempids v) v))
 
-(defn valueType [schema-by-attr k]
-  {:pre [(map? schema-by-attr) (keyword? k)]}
-  ; :db/id is nil
-  (-> schema-by-attr (get k) :db/valueType smart-lookup-ref-no-tempids))
+(defprotocol SchemaIndexedNormalized
+  ; Implement this interface in both peer and Hypercrud client
+  (-attr [_ a k])
+  (valueType [_ a])
+  (valueType? [_ a k])
+  (cardinality [_ a])
+  (cardinality? [_ a k])
+  (ref? [_ attr]))
 
-(defn ref? [schema-by-attr k]                               ; Nasty treeish client code. Should this use dynamic scope to hide schema?
-  {:pre [(map? schema-by-attr) (keyword? k)]}
-  (= :db.type/ref (valueType schema-by-attr k)))
+(defn indexed-schema [schema]
+  (let [schema-by-attr (contrib.data/group-by-unique :db/ident schema)]
+    (reify
+      SchemaIndexedNormalized
+      (-attr [this a k]
+        {:pre [(keyword? a) (keyword? k)]}
+        (smart-lookup-ref-no-tempids
+          (get-in schema-by-attr [a k])))
+      (valueType [this a] (-attr this a :db/valueType))
+      (cardinality [this a] (-attr this a :db/cardinality))
+      (valueType? [this a k] (= k (valueType this a)))
+      (cardinality? [this a k] (= k (valueType this a)))
+      (ref? [this k] (valueType? this k :db.type/ref))
+
+      ILookup
+      (valAt [this k] (get schema-by-attr k))
+      (valAt [this k not-found] (get schema-by-attr k not-found)))))
 
 (declare pull-shape)
 
@@ -78,37 +99,51 @@
 
 (defn pulled-tree-derivative "Derive a pull-shape which describes a pulled-tree"
   [schema pulled-tree]
-  {:pre [(map? schema) (map? pulled-tree)]}
-  (let [ref? (partial ref? schema)]
-    (->> pulled-tree
-         (reduce-kv
-           (fn [acc k v]
-             (conj acc (cond
-                         (= :db/id k) k
-                         (ref? k) {k (condp = (smart-lookup-ref-no-tempids (:db/cardinality (schema k)))
-                                       :db.cardinality/one (pulled-tree-derivative schema v)
-                                       :db.cardinality/many (apply pull-shape-union (map (partial pulled-tree-derivative schema) v)))}
-                         :else k)))
-           []))))
+  {:pre [(map? pulled-tree)]}
+  (->> pulled-tree
+       (reduce-kv
+         (fn [acc k v]
+           (conj acc (cond
+                       (= :db/id k) k
+                       (ref? schema k) {k (condp = (cardinality schema k)
+                                            :db.cardinality/one (pulled-tree-derivative schema v)
+                                            :db.cardinality/many (apply pull-shape-union (map (partial pulled-tree-derivative schema) v)))}
+                       :else k)))
+         [])))
 
 (defn enclosing-pull-shape "Union the requested pull-pattern-shape with the actual result shape"
   [schema shape coll]
   (apply pull-shape-union shape (map (partial pulled-tree-derivative schema) coll)))
 
-(defn pull-traverse "Manufacture superset of possible link paths"
-  [pull-shape & [path]]
-  (->> pull-shape
-       (mapcat (fn [attr-spec]
-                 (cond
-                   (identity-segment? attr-spec) [[]]       ; top level only
-                   (keyword? attr-spec) [(conj (vec path) attr-spec)]
-                   (map? attr-spec) (->> attr-spec
-                                         (mapcat (fn [[ref-attr children]]
-                                                   (let [path (conj (vec path) ref-attr)]
-                                                     (concat [path]
-                                                             (pull-traverse (remove identity-segment? children) path)))))
-                                         distinct))))
-       distinct))
+(defn pull-traverse "Manufacture superset of possible link paths
+  Collapses {:reg/gender [:db/ident :db/id]} into :reg/gender"
+  ([pull-shape] (pull-traverse pull-shape (constantly true) []))
+  ([pull-shape pred] (pull-traverse pull-shape pred []))
+  ([pull-shape pred path] ; private, internal path accumulator, like a zipper (loop recur would hide this)
+   (->> pull-shape
+        (mapcat (fn [attr-spec]
+                  (cond
+                    (identity-segment? attr-spec)
+                    [[]]                                    ; blank path means the element
+
+                    (keyword? attr-spec)                    ; scalars, never refs
+                    (if (pred attr-spec)
+                      [(conj (vec path) attr-spec)])
+
+                    (map? attr-spec)
+                    (->> attr-spec
+                         (mapcat (fn [[ref-attr children]]  ; always refs
+                                   (if (pred ref-attr)
+                                     (let [path (conj (vec path) ref-attr)]
+                                       (concat [path]
+                                               ; Collapse pulled identity into parent from link's perspective
+                                               ; :unique :identity should too todo
+                                               (pull-traverse
+                                                 (remove identity-segment? children) ; Address entities by :ref
+                                                 pred
+                                                 path))))))
+                         distinct))))
+        distinct)))                                         ; why distinct? This breaks tail recursion
 
 (defn element-spread [schema {{pull-pattern :value} :pattern :as e} collection]
   (condp = (type e)

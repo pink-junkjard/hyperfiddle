@@ -1,11 +1,12 @@
 (ns fixtures.domains
   (:require
     [contrib.data :refer [group-by-unique]]
+    [contrib.datomic]
     [contrib.reader]))
 
 
 (def schema
-  (group-by-unique :db/ident
+  (contrib.datomic/indexed-schema
     '({:db/ident :attribute/ident, :db/valueType {:db/ident :db.type/keyword}, :db/cardinality {:db/ident :db.cardinality/one}, :db/unique {:db/ident :db.unique/identity}, :db/doc "FK to schema, they can't be directly on $ schema because attribute renderers are a \"source code\" concern. TODO: move these off domain and into the fiddle repo."}
        {:db/ident :attribute/renderer, :db/valueType {:db/ident :db.type/string}, :db/cardinality {:db/ident :db.cardinality/one}, :db/doc "Default attribute renderer, a CLJS var like `hyperfiddle.ui.controls/code`."}
        {:db/ident :database/custom-write-sec, :db/valueType {:db/ident :db.type/string}, :db/cardinality {:db/ident :db.cardinality/one}}
@@ -42,4 +43,5 @@
        {:db/ident :link/formula, :db/valueType {:db/ident :db.type/string}, :db/cardinality {:db/ident :db.cardinality/one}, :db/doc "Deprecated – this is fully managed based on :link/rel. You can override it, but there isn't a good reason to do that anymore."}
        {:db/ident :link/path, :db/valueType {:db/ident :db.type/string}, :db/cardinality {:db/ident :db.cardinality/one}, :db/doc "E.g. `0 :reg/gender :db/ident`. Associates this link with a pulled entity by pull path, accounting for data cardinality. Find element index must be specified only for relation queries."}
        {:db/ident :link/rel, :db/valueType {:db/ident :db.type/keyword}, :db/cardinality {:db/ident :db.cardinality/one}, :db/doc "Set the rel to opt-in to automatic CRUD functionality. The set of rels is open for extension, but there is no admin panel for that yet. The integrated Datomic console's entity navigation and CRUD ensures that these rels exist for every entity pulled. Builtin rels:\n* *:hf/self* – Editor for the entity at a pulled path, accounting for cardinality. There must only be one :self link.\n* *:hf/rel* – Like :self but optional and can have more than one, for linking to related data.\n* *:hf/iframe* – Like :rel but data loads inline with this fiddle, use this for picker options\n* *:hf/new* – Like :rel but manufactures an entity tempid\n* *:hf/affix* – Like :new but affixes the new entity as a child to self.\n* *:hf/remove* – Retracts the entity\n* *:hf/detach* – Retract only the parent-child reference to this entity"}
-       {:db/ident :link/tx-fn, :db/valueType {:db/ident :db.type/string}, :db/cardinality {:db/ident :db.cardinality/one}, :db/doc "Optional CLJS function which generates a Datomic transaction value. Turns the link into a button which calls the :tx-fn and stages the result. If there is a :link/fiddle, the link will render as a popover and the tx-fn will be called with the popover form's value when it stages. Some rels provide a default tx-fn which you can override. TODO: clean this up."})))
+       {:db/ident :link/tx-fn, :db/valueType {:db/ident :db.type/string}, :db/cardinality {:db/ident :db.cardinality/one}, :db/doc "Optional CLJS function which generates a Datomic transaction value. Turns the link into a button which calls the :tx-fn and stages the result. If there is a :link/fiddle, the link will render as a popover and the tx-fn will be called with the popover form's value when it stages. Some rels provide a default tx-fn which you can override. TODO: clean this up."})
+    ))

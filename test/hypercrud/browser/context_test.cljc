@@ -1,9 +1,7 @@
 (ns hypercrud.browser.context-test
   (:require
     [clojure.test :refer [deftest is]]
-    [hypercrud.browser.context :refer [deps-satisfied
-                                       deps-over-satisfied
-                                       #_link-path-floor]]
+    [hypercrud.browser.context :refer []]
     ))
 
 
