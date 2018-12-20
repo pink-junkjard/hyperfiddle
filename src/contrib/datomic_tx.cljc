@@ -4,7 +4,8 @@
     [contrib.datomic :refer [tempid?]]))
 
 
-(defn edit-entity [id attribute o n]
+(defn edit-entity "o/n are sets in the :many case"
+  [id attribute o n]
   (let [{a :db/ident {cardinality :db/ident} :db/cardinality} attribute]
     (case cardinality
       :db.cardinality/one
