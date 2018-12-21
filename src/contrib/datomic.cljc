@@ -54,9 +54,15 @@
       (cardinality? [this a k] (= k (valueType this a)))
       (ref? [this k] (valueType? this k :db.type/ref))
 
-      ILookup
-      (valAt [this k] (get schema-by-attr k))
-      (valAt [this k not-found] (get schema-by-attr k not-found)))))
+      #?@(:clj
+          [ILookup
+           (valAt [this k] (get schema-by-attr k))
+           (valAt [this k not-found] (get schema-by-attr k not-found))]
+
+          :cljs
+          [ILookup
+           (-lookup [o k] (get schema-by-attr k))
+           (-lookup [o k not-found] (get schema-by-attr k not-found))]))))
 
 (declare pull-shape)
 
@@ -145,7 +151,38 @@
                          distinct))))
         distinct)))                                         ; why distinct? This breaks tail recursion
 
+(defn dimension [schema pullshape pullpath]
+  {:pre [schema]}
+  (count (filter #(cardinality? schema % :db.cardinality/many))))
+
+(defn ref-one? [schema a]
+  {:pre [(satisfies? SchemaIndexedNormalized schema)]}
+  (and (valueType? schema a :db.type/ref)
+       (cardinality? schema a :db.cardinality/one)))
+
+(defn downtree-pullpaths [schema pullshape]
+  (pull-traverse pullshape (partial ref-one? schema)))
+
+(defn unwind-pullpath "Find the oldest ancestor of the same dimension"
+  [schema pullpath]
+  (loop [[a & as :as here] (reverse pullpath)]              ; pullpath is guaranteed to align with pullshape
+    (if (ref-one? schema a)
+      (recur as)
+      here)))
+
+(defn reachable-paths [schema root-pullshape pullpath]
+  {:pre [schema]}
+  (->> (unwind-pullpath schema pullpath)
+       (get root-pullshape)
+       (downtree-pullpaths schema)))
+
+(defn reachable-attrs [schema root-pullshape pullpath]
+  {:pre [(satisfies? SchemaIndexedNormalized schema)]}
+  (->> (reachable-paths schema root-pullshape pullpath)
+       (map last)))
+
 (defn element-spread [schema {{pull-pattern :value} :pattern :as e} collection]
+  {:pre [schema]}
   (condp = (type e)
     Pull (pull-traverse (enclosing-pull-shape schema (pull-shape pull-pattern) collection))
     Variable [[]]
@@ -154,8 +191,8 @@
 (defn normalize-result [qfind result]
   (when result                                              ; unclear if nil result should have been a server error https://github.com/hyperfiddle/hyperfiddle/issues/584
     (condp = (type qfind)
-      FindColl (mapv vector result)
       FindRel result
+      FindColl (mapv vector result)
       FindTuple (mapv vector result)
       FindScalar [[result]])))
 

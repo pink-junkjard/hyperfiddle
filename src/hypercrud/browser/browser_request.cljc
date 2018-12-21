@@ -9,7 +9,9 @@
     [hypercrud.browser.routing :as routing]
     [hypercrud.client.peer :refer [-quiet-unwrap]]
     [hyperfiddle.data :as data]
-    [hyperfiddle.project :as project]))
+    [hyperfiddle.project :as project]
+    [datascript.parser #?@(:cljs [:refer [FindRel FindColl FindTuple FindScalar Variable Aggregate Pull]])])
+  #?(:clj (:import (datascript.parser FindRel FindColl FindTuple FindScalar Variable Aggregate Pull))))
 
 
 (declare requests)
@@ -46,35 +48,27 @@
                    (with-result ctx))))))
 
 (defn with-result [ctx]
-  (case @(r/fmap ::field/cardinality (:hypercrud.browser/field ctx))
-    :db.cardinality/one (->> (data/form-with-naked-legacy ctx)
-                             (map (fn [path]
-                                    (if (seq path)          ; scar - guard infinite recursion on [] links
-                                      (body-field (context/focus ctx path)))))
-                             flatten)
-    ; Spread across the rows and flip cardinality
-    :db.cardinality/many (->> @(:hypercrud.browser/data ctx)
-                              (mapcat (fn [row]
-                                        ; the request side does NOT need the cursors to be equiv between loops
-                                        (let [ctx (context/row ctx (r/atom row))]
-                                          (->> (data/form-with-naked-legacy ctx)
-                                               (map (fn [path]
-                                                      (if (seq path)
-                                                        (body-field (context/focus ctx path)))))
-                                               flatten)))))
-    ; blank fiddles
-    nil))
+  (for [ctx (context/spread-fiddle ctx)
+        ctx (context/spread-rows ctx)
+        ctx (context/spread-elements ctx)]
+    (->> (data/form-with-naked-legacy ctx)
+         ; left the map-flatten but why not mapcat?
+         (map (fn [path]
+                (if (seq path)                              ; scar - guard infinite recursion on [] links
+                  (body-field (context/focus ctx path)))))
+         flatten)))
 
 (defn requests [ctx]
   ; at this point we only care about inline links and popovers are hydrated on their on hydrate-route calls
-  (let []
-    (concat
-      ; select-here ?? Fiddle-ident indicates that. Want iframes at the fiddle level (no :link/path)
-      (->> @(data/select ctx #{:hf/iframe (:fiddle/ident (:hypercrud.browser/fiddle ctx))})
-           (mapcat #(request-from-link % ctx)))
-      (with-result ctx)
-      (if @(r/fmap :fiddle/hydrate-result-as-fiddle (:hypercrud.browser/fiddle ctx))
-        ; This only makes sense on :fiddle/type :query because it has arbitrary arguments
-        ; EntityRequest args are too structured.
-        (let [[_ [inner-fiddle & inner-args]] @(:hypercrud.browser/route ctx)]
-          (request-from-route [inner-fiddle (vec inner-args)] ctx))))))
+  (concat
+    ; Top level iframes have no dependency at all, no qfind or element at all
+    ; Is the topfiddle-ident in scope though?
+    (->> @(data/select-here ctx #{:hf/iframe (:fiddle/ident (:hypercrud.browser/fiddle ctx))}) ; No dependency at all, not even topfiddle
+         (mapcat #(request-from-link % ctx)))
+    (with-result ctx)
+    ; This does not get to look at the fiddlescope, though seems reasonable if it wanted to
+    (if @(r/fmap :fiddle/hydrate-result-as-fiddle (:hypercrud.browser/fiddle ctx))
+      ; This only makes sense on :fiddle/type :query because it has arbitrary arguments
+      ; EntityRequest args are too structured.
+      (let [[_ [inner-fiddle & inner-args]] @(:hypercrud.browser/route ctx)]
+        (request-from-route [inner-fiddle (vec inner-args)] ctx)))))

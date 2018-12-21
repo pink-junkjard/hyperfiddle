@@ -1,14 +1,16 @@
 (ns hypercrud.browser.context
   (:require
-    [cats.core :refer [mlet return]]
+    [cats.core :refer [mlet return =<< fmap]]
     [cats.monad.either :as either :refer [left right]]
     [contrib.ct :refer [unwrap]]
     [contrib.data :refer [ancestry-common ancestry-divergence]]
     [contrib.datomic]
     [contrib.eval :as eval]
     [contrib.reactive :as r]
+    [contrib.reader]
     [contrib.string]
     [contrib.try$ :refer [try-either]]
+    [contrib.validation]
     [clojure.set]
     [clojure.spec.alpha :as s]
     [datascript.parser #?@(:cljs [:refer [FindRel FindColl FindTuple FindScalar Variable Aggregate Pull]])]
@@ -128,6 +130,12 @@
         nil                                                 ; This is an entity but you didn't pull any identity - error?
         )))
 
+(defn summon-schemas-grouped-by-dbname [ctx]
+  {:post [(every? #(satisfies? contrib.datomic/SchemaIndexedNormalized %) %)]}
+  (-> (->> @(hyperfiddle.runtime/state (:peer ctx) [:hyperfiddle.runtime/partitions (:branch ctx) :schemas])
+           (contrib.data/map-keys #(hyperfiddle.domain/uri->dbname % (:hypercrud.browser/domain ctx))))
+      (dissoc nil)))
+
 (defn hydrate-attribute [ctx ident & ?more-path]
   (runtime/state (:peer ctx) (concat [::runtime/partitions (:branch ctx) :schemas (uri ctx)] (cons ident ?more-path))))
 
@@ -158,7 +166,7 @@
         @(contrib.reactive/cursor data [:db/id])
         @data)))
 
-(defn eav "project eav from data"
+(defn eav "project eav from data"                           ; could return the ctx instead
   [ctx data]
   (let [e (some-> ctx identify)                             ; this is the parent v
         a (->> (:hypercrud.browser/path ctx) (drop-while int?) last)
@@ -189,7 +197,10 @@
                     (assoc :hypercrud.browser/data data)
                     (assoc :hypercrud.browser/eav (r/fmap (r/partial eav ctx) data))
                     )))))]
-  (defn focus "Throws if you focus a higher dimension" [ctx relative-path]
+  (defn focus "Unwind or go deeper, to where we need to be, within same dimension.
+    Throws if you focus a higher dimension.
+    This is about navigation through pulledtrees which is why it is path-oriented."
+    [ctx relative-path]
     (reduce focus-segment ctx relative-path)))
 
 (defn row "Toggle :many into :one as we spread through the rows. k is used for filtering validation hints"
@@ -200,7 +211,7 @@
   (-> ctx
       (set-parent)
       (set-parent-data)
-      (assoc :hypercrud.browser/data rval)
+      (assoc :hypercrud.browser/data rval)                  ; matches k
       (update :hypercrud.browser/eav
               (r/partial r/fmap (fn [[e a v]]
                                   ; (assert (nil? v) "it was not yet in scope") -- nested case, eav is present and well defined
@@ -213,45 +224,168 @@
       (update :hypercrud.browser/field
               #(r/fmap-> % (assoc ::field/cardinality :db.cardinality/one)))))
 
-(defn refocus "todo unify with refocus'"
-  [ctx path]
-  {:pre [ctx] :post [(contains? % :hypercrud.browser/eav)]}
-  (let [current-path (:hypercrud.browser/path ctx)
-        common-ancestor-path (ancestry-common current-path path)
+
+(declare row-keyfn)
+(declare index-links)
+; var first, then can always use db/id on row. No not true – collisions! It is the [?e ?f] product which is unique
+
+; keyfn must support entities & scalars (including aggregates)
+; scalars may not be unique
+; entities might not be unique either, its the combination that is unique
+; lift out of current context in this case?
+; Make sure to optimize the single-fe case to use the identity/value which will be unique
+
+(defn parse-fiddle-data-shape [{:keys [fiddle/type fiddle/query fiddle/pull fiddle/pull-database]}]
+  (->> (case type
+         :blank nil
+         :entity (->> (contrib.reader/memoized-read-edn-string+ pull)
+                      (fmap (fn [pull]
+                              (let [source (symbol pull-database)
+                                    fake-q `[:find (~'pull ~source ~'?e ~pull) . :where [~'?e]]]
+                                (datascript.parser/parse-query fake-q))))
+                      (unwrap (constantly nil)))
+         :query (->> (contrib.reader/memoized-read-edn-string+ query)
+                     (=<< #(try-either (datascript.parser/parse-query %)))
+                     (unwrap (constantly nil))))))
+
+(let [topfiddle-a (fn [fiddle]
+                    ; v is eventually spread from FindRel (even in FindScalar case)
+                    [nil (:fiddle/ident fiddle) nil])]
+  (defn fiddle "Fiddle level ctx adds the result to scope"
+    [ctx]
+    {:post [(:hypercrud.browser/eav %)                      ; the topfiddle ident is the attr
+            (contains? % :hypercrud.browser/qfind)          ; but it can be nil for :type :blank
+            (:hypercrud.browser/link-index %)]}
+    (let [r-fiddle (:hypercrud.browser/fiddle ctx)
+          r-data (:hypercrud.browser/data ctx)]
+      (assoc ctx
+        :hypercrud.browser/qfind (r/fmap-> r-fiddle parse-fiddle-data-shape :qfind)
+        :hypercrud.browser/eav (r/fmap-> r-fiddle topfiddle-a)
+        #_#_:hypercrud.browser/eav (r/fmap (fn [data]
+                                             (if (= FindScalar (type (:qfind fiddle-shape))) ; Probably also tuples here too.
+                                               [nil nil (context/smart-entity-identifier ctx data)]))
+                                           reactive-result)
+        :hypercrud.browser/validation-hints
+        (if-let [spec (s/get-spec @(r/fmap :fiddle/ident r-fiddle))]
+          (contrib.validation/validate spec @r-data (partial row-keyfn ctx)))))))
+
+(defn spread-fiddle "automatically guards :fiddle/type :blank"
+  [ctx]
+  (let [fiddle-type @(r/fmap :fiddle/type (:hypercrud.browser/fiddle ctx))]
+    (condp some [fiddle-type]
+      #{:blank} []
+      #{:query :entity} [(fiddle ctx)])))
+
+(defn ^:export spread-rows "spread across resultset row-or-rows.
+  Automatically accounts for query dimension - no-op in the case of FindTuple and FindScalar."
+  [ctx & [sort-fn]]
+  {:pre [(:hypercrud.browser/qfind ctx)
+         (:hypercrud.browser/eav ctx)                       ; can be just topfiddle
+         (not (:hypercrud.browser/element ctx))]}           ; not yet
+  (let [{r-qfind :hypercrud.browser/qfind r-data :hypercrud.browser/data} ctx]
+    ; Option A: Lift everything and handle generally
+    #_(let [r-rows (condp some (type r-qfind)
+                     #{FindRel FindColl} r-data
+                     #{FindTuple FindScalar} (r/fmap vector r-data))]
+        (for [[_ k] (r/unsequence row-keyfn r-rows)]
+          (focus ctx [k])))
+
+    ; Option B: match and do the right thing, this results in a context that mirrors the query dimension
+    (condp some [(type @r-qfind)]
+      #{FindRel FindColl} (for [[_ k] (->> (r/fmap (or sort-fn identity) r-data)
+                                           (r/unsequence (r/partial row-keyfn ctx)))]
+                            (focus ctx [k]))
+      #{FindTuple FindScalar} [ctx])))
+
+(defn spread-elements "returns ctx per element" [ctx]
+  {:pre [(:hypercrud.browser/qfind ctx)
+         (not (:hypercrud.browser/element ctx))]}
+  (let [r-qfind (:hypercrud.browser/qfind ctx)]
+    ; All query dimensions have at least one element, do generally
+    ; No unsequence here? What if find elements change. can we use something other than int as keyfn?
+    (for [[element i] (map vector (datascript.parser/find-elements @r-qfind) (range))]
+      (let [ctx (assoc ctx :hypercrud.browser/element element)]
+        (focus ctx [i])))))
+
+(defprotocol FiddleLinksIndex
+  #_(links-at [this criterias])
+  #_(links-in-dimension [this element pullpath criterias])
+  (links-at-r [this criterias])                             ; criterias can contain nil, meaning toptop
+  (links-in-dimension-r [this element pullpath criterias]))
+
+(defn link-identifiers [fiddle-ident link]
+  (let [idents (-> (set (:link/class link))
+                   (conj (some-> link :link/fiddle :fiddle/ident))
+                   ; fiddle-ident is named in the link/path (e.g. to name a FindScalar)
+                   (conj (some-> link :link/path hyperfiddle.fiddle/read-path)) ; nil is semantically valid and well-defined
+                   (conj (some-> link :link/tx-fn (subs 1) keyword)))]
+    [idents link]))
+
+(defn link-criteria-match? [?corcs [index-key v]]
+  (clojure.set/superset? index-key (contrib.data/xorxs ?corcs #{})))
+
+(defn -indexed-links-at [fiddle]
+  (->> (:fiddle/links fiddle)
+       (map (partial link-identifiers (:fiddle/ident fiddle)))))
+
+(defn index-links "#{criteria} -> [link]
+  where criterias is some of #{ident txfn class class2}.
+  Links include all links reachable by navigating :ref :one. (Change this by specifying an :ident)
+  The index internals are reactive."
+  [schemas r-fiddle]
+  {:pre [(every? #(satisfies? contrib.datomic/SchemaIndexedNormalized %) schemas)]}
+  (let [indexed-links-at (r/fmap -indexed-links-at r-fiddle)]
+    (reify FiddleLinksIndex
+      (links-at-r [this criterias]
+        (r/fmap->> indexed-links-at
+                   (filter (partial link-criteria-match? criterias))))
+
+      (links-in-dimension-r [this ?element ?pullpath criterias] ; hidden deref
+        (if-not (and ?element ?pullpath)
+          (links-at-r this criterias)
+          (let [{{db :symbol} :source {pull-pattern :value} :pattern} ?element
+                schema (get schemas (str db))]
+            (->> (contrib.datomic/reachable-attrs schema (contrib.datomic/pull-shape pull-pattern) ?pullpath)
+                 (mapcat (fn [a]
+                           (links-at-r this (conj criterias a))))
+                 r/sequence)))))))
+
+(defn refocus "todo unify with refocus'
+  From view, !link(:new-intent-naive :hf/remove) - find the closest ctx with all dependencies satisfied. Accounts for cardinality.
+  Caller asserts that the deps are satisfied (right stuff is in scope).
+  Logic is relative to where we are now, so find-element is implicit.
+  If there is more than one path, is this an error?"
+  ; fiddle means eav starts at fiddle level
+  [ctx target-attr]
+  {:pre [(:hypercrud.browser/element ctx)                   ; even FindScalar has an element, :blank does not need to refocus
+         ctx]
+   ; If you don't have this stuff why do we need to focus?
+   :post [(->> (keys %) (clojure.set/superset? #{:hypercrud.browser/eav
+                                                 :hypercrud.browser/element
+                                                 :hypercrud.browser/qfind}))]}
+
+  ; are we focusing from blank? Impossible, there's no result to focus
+  ; Are we refocusing to blank? That would mean whacking the ctx entirely?
+  ; if target-attr = last path, we're already here! How did that happen? Should be harmless, will noop
+  (let [{{db :symbol} :source {pull-pattern :value} :pattern} (:hypercrud.browser/element ctx)
+        root-pull (contrib.datomic/pull-shape pull-pattern)
+        current-path (drop-while int? (:hypercrud.browser/path ctx))
+        schema (get (summon-schemas-grouped-by-dbname ctx) (str db))
+
+        ; find a reachable path that contains the target-attr in the fewest hops
+        ;   me->mother ; me->sister->mother ; closest ctx is selected
+        ; What if there is more than one?  me->sister->mother; me->father->mother
+        ; Ambiguous, how did we even select this link? Probably need full datascript query language.
+        target-path (->> (contrib.datomic/reachable-paths schema root-pull current-path)
+                         (filter #(some target-attr %))
+                         (map (partial take-while (partial not= target-attr)))
+                         (sort-by count)
+                         first)
+
+        common-ancestor-path (ancestry-common current-path target-path)
         unwind-offset (- (count current-path) (count common-ancestor-path))
         common-ancestor-ctx ((apply comp (repeat unwind-offset :hypercrud.browser/parent)) ctx)]
-    (focus common-ancestor-ctx (ancestry-divergence path current-path))))
-(defn deps-satisfied? "Links in this :body strata"
-  [ctx target-attr]
-  (let [target-path target-attr                             ; fixme
-        this-path (:hypercrud.browser/path ctx)
-        common-path (contrib.data/ancestry-common this-path target-path)
-        common-ctx (refocus ctx common-path)]
-    (loop [field (:hypercrud.browser/field common-ctx)
-           [segment & xs] (contrib.data/ancestry-divergence target-path common-path)]
-      (if-not segment
-        true                                                ; finished
-        (let [child-field (r/track find-child-field field segment ctx)]
-          (case @(r/fmap ::field/cardinality child-field)
-            :db.cardinality/one (recur child-field xs)
-            :db.cardinality/many false
-            false) #_"Nonsensical path - probably invalid links for this query, maybe they just changed the query and the links broke")))))
-
-(defn link-path-floor "Find the shortest path that has equal dimension"
-  [ctx path]
-  (loop [ctx (refocus ctx path)]                    ; we know we're at least satisfied so this is safe
-    (if-let [parent-ctx (:hypercrud.browser/parent ctx)]    ; walk it up and see if the dimension changes
-      (case (::field/cardinality @(:hypercrud.browser/field parent-ctx))
-        :db.cardinality/one (recur parent-ctx)              ; Next one is good, keep going
-        :db.cardinality/many ctx)                           ; Next one is one too far, so we're done
-      ctx)))                                                ; Empty path is the shortest path
-
-(defn deps-over-satisfied? "satisfied but not over-satisfied.
-  Useful in the UI xray mode for drawing iframes once."
-  [ctx link-attr]
-  (let [link-path nil
-        this-path (:hypercrud.browser/path ctx)]
-    (not= this-path (:hypercrud.browser/path (link-path-floor ctx link-path)))))
+    (focus common-ancestor-ctx (ancestry-divergence target-path current-path))))
 
 (defn id->tempid+ [route ctx]
   (let [invert-id (fn [id uri]
@@ -270,11 +404,9 @@
                       temp-id))]
     (try-either (hyperfiddle.route/invert-route (:hypercrud.browser/domain ctx) route invert-id))))
 
-(defn normalize-args [porps]
-  ; There is some weird shit hitting this assert, like {:db/id nil}
-  {:pre [#_(not (map? porps)) #_"legacy"]
-   :post [(vector? %) #_"route args are associative by position"]}
-  (vec (contrib.data/xorxs porps)))
+(defn normalize-args [?porps]
+  {:post [(vector? %) #_"route args are associative by position"]} ; can be []
+  (vec (contrib.data/xorxs ?porps)))
 
 (defn tag-v-with-color "Tag dbids with color, at the last moment before they render into URLs"
   [ctx v]
@@ -297,7 +429,7 @@
                                  (eval-string!+ (str "(fn [ctx] \n" formula-str "\n)"))
                                  (either/right (constantly (constantly nil))))
            formula-fn (try-either (formula-ctx-closure ctx))
-           :let [v (r/fmap-> (:hypercrud.browser/eav ctx) (get 2))]
+           :let [v (r/fmap-> (:hypercrud.browser/eav ctx) (get 2))] ; eav can be nil! Generally when formula ignores it anyway e.g. top iframes
            args (try-either @(r/fmap->> v
                                         formula-fn          ; Documented behavior is v in, tuple out, no colors.
                                         normalize-args))]
@@ -324,7 +456,7 @@
     {:pre [(s/assert :hypercrud/context ctx)
            (s/assert r/reactive? link-ref)]
      :post [(s/assert (s/cat :ctx :hypercrud/context :route r/reactive?) %)]}
-    (let [ctx (refocus ctx @(r/fmap (r/comp hyperfiddle.fiddle/read-path :link/path) link-ref))
+    (let [ctx (refocus ctx @(r/fmap (r/comp hyperfiddle.fiddle/read-path :link/path) link-ref)) ; nil -> fiddle-ident
           +args @(r/fmap->> link-ref (build-args+ ctx))
           [v' & vs] (->> +args (contrib.ct/unwrap (constantly nil))) ; EAV sugar is not interested in tuple case, that txfn is way off happy path
           ctx (update ctx :hypercrud.browser/eav (r/partial r/fmap (r/partial -stable-eav' v')))
@@ -388,10 +520,10 @@
 
 (defn stable-relation-key "Stable key that works on scalars too. ctx is for tempid-reversing"
   [ctx v]
-  (or (stable-entity-key ctx v) v))
+  (or (stable-entity-key ctx v) v))                         ; bad
 
 (defn row-keyfn [ctx row]
-  (r/row-keyfn' (partial stable-relation-key ctx) row))
+  (r/row-keyfn' (partial stable-relation-key ctx) row))     ; bad
 
 (defn hash-ctx-data [ctx]                                   ; todo there are collisions when two links share the same 'location'
   (when-let [data (:hypercrud.browser/data ctx)]

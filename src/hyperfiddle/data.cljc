@@ -25,31 +25,43 @@
       (conj (vec paths) [])                                 ; entity-[]
       (vec paths))))
 
-(defn select-all [ctx ?corcs]
-  (@(:hypercrud.browser/link-index ctx) ?corcs))
+(defn select-many "All links we can reach (for this entire dimension)"
+  [ctx ?corcs]
+  {:pre [#_(:hypercrud.browser/qfind ctx)                   ; :blank ?
+         #_(:hypercrud.browser/element ctx)                 ; database color
+         (:hypercrud.browser/link-index ctx)
+         (:hypercrud.browser/eav ctx)]                      ; it can be Reaction of [nil nil nil]
+   :post [(r/reactive? %)]}
+  (context/links-in-dimension-r                                ; hidden deref
+    (:hypercrud.browser/link-index ctx)
+    (:hypercrud.browser/element ctx)                        ; optional?
+    (:hypercrud.browser/path ctx)                           ; optional?
+    (contrib.data/xorxs ?corcs #{})))
 
-(defn ^:export select-all-here "reactive" ; collapses if eav is part of corcs
+(defn ^:export select-many-here "reactive" ; collapses if eav is part of corcs
   [ctx & [?corcs]]
-  (assert (= (second (:hypercrud.browser/eav ctx)) (->> (:hypercrud.browser/path ctx) (drop-while int?) last)))
+  {:pre [(:hypercrud.browser/eav ctx)]
+   :post [(r/reactive? %)]}
   (-> (contrib.data/xorxs ?corcs #{})
-      (conj (second (:hypercrud.browser/eav ctx)))
-      (->> (select-all ctx))))
+      (conj (second @(:hypercrud.browser/eav ctx)))
+      (->> (select-many ctx))))
 
-(defn validate-one+ [class links]
-  (let [n (count links)]
+(defn validate-one+r [corcs r-links]                        ; Right[Reaction] or Left[Error] - broken, error should react too
+  (let [n @(r/fmap count r-links)]
     (condp = n
-      1 (right (first links))
-      0 (left (str/format "no match for class: %s" (pr-str class)))
-      (left (str/format "Too many (%s) links matched for class: %s" n (pr-str class))))))
+      1 (right (r/fmap first r-links))
+      0 (left (str/format "no match for class: %s" (pr-str corcs)))
+      (left (str/format "Too many (%s) links matched for criteria: %s" n (pr-str corcs))))))
 
-(defn ^:export select+ [ctx & [?corcs]]                     ; Right[Reaction[Link]], Left[String]
-  (->> (@(:hypercrud.browser/link-index ctx) ?corcs)
-       (validate-one+ ?corcs)))
+(defn ^:export select+ [ctx & [?corcs]]                     ; Right[Reaction[Link]] or Left[String]
+  (->> (validate-one+r ?corcs (select-many ctx ?corcs))
+       #_#_r/apply-inner-r deref))
 
 (defn ^:export select-here+ [ctx & [?corcs]]
-  {:pre [ctx]}
-  (select+ ctx (-> (contrib.data/xorxs ?corcs #{})
-                   (conj (second (:hypercrud.browser/eav ctx))))))
+  {:pre [ctx]
+   :post [#_(r/reactive? %)]}
+  (->> (validate-one+r ?corcs (select-many-here ctx ?corcs))
+       #_#_r/apply-inner-r deref))
 
 (defn ^:export browse+ "Navigate a link by hydrating its context accounting for dependencies in scope.
   returns Either[Loading|Error,ctx]."
@@ -59,10 +71,14 @@
        #(base/data-from-link @% ctx)))
 
 (defn ^:export select-here "reactive" [ctx & [?corcs]]
-  (->> (select-here+ ctx ?corcs) (unwrap (constantly nil))))
+  {:post [(or #_(nil? %) (r/reactive? %))]}
+  (->> (select-here+ ctx ?corcs) (unwrap (constantly (r/track identity nil)))))
 
 (defn ^:export select "reactive" [ctx & [?corcs]]
-  (->> (select+ ctx ?corcs) (unwrap (constantly nil))))
+  {:pre [(context/summon-schemas-grouped-by-dbname ctx)]
+   :post [(r/reactive? %)]}
+  (->> (select+ ctx ?corcs) (unwrap (constantly (r/track identity nil)))))
 
 (defn ^:export browse [ctx & [?corcs]]
-  (->> (browse+ ctx ?corcs) (unwrap (constantly nil))))
+  {:post [(r/reactive? %)]}
+  (->> (browse+ ctx ?corcs) (unwrap (constantly (r/track identity nil)))))

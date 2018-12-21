@@ -1,11 +1,9 @@
 (ns hypercrud.browser.base
   (:require [cats.core :refer [mlet return]]
-            [cats.monad.either :as either]
-            [clojure.spec.alpha :as s]
+            [cats.monad.either :as either :refer [left right]]
             [contrib.reactive :as r]
             [contrib.reader :as reader :refer [memoized-read-edn-string+]]
             [contrib.try$ :refer [try-either]]
-            [contrib.validation]
             [datascript.parser #?@(:cljs [:refer [FindRel FindColl FindTuple FindScalar Variable Aggregate Pull]])]
             [hypercrud.browser.context :as context]
             [hypercrud.browser.field :as field]
@@ -16,9 +14,7 @@
             [hypercrud.types.EntityRequest :refer [->EntityRequest]]
             [hypercrud.types.QueryRequest :refer [->QueryRequest]]
             [hyperfiddle.domain :as domain]
-            [hyperfiddle.fiddle :as fiddle]
-            [hyperfiddle.ide.console-links]                 ; just the parser
-            )
+            [hyperfiddle.fiddle :as fiddle])
   #?(:clj (:import (datascript.parser FindRel FindColl FindTuple FindScalar Variable Aggregate Pull))))
 
 
@@ -79,51 +75,25 @@
 
     (either/right nil)))
 
-(defn -index-lookup [index ?corcs]
-  (let [criteria-set (contrib.data/xorxs ?corcs #{})]
-    (->> index
-         (filter (fn [[index-key v]]
-                   ; What we've got fully matches what was asked for
-                   (clojure.set/superset? index-key criteria-set))))))
-
-(defn index-links "Index lookup is #{criterias} -> linkref where criterias is some of #{ident txfn class class2}.
-  The index itself is reactive; if you change a link, then we rebuild the index."
-  [fiddle]
-  ; context/deps-satisfied?
-  (let [index (->> (:fiddle/links fiddle)
-                   (map (fn [link]
-                          ; Issues with nil vs fiddle-ident
-                          (-> (set (:link/class link))
-                              (conj (some-> link :link/fiddle :fiddle/ident))
-                              (conj (or (some-> link :link/path hyperfiddle.fiddle/read-path)
-                                        (:fiddle/ident fiddle)))        ; links with no path, e.g. FindScalar and FindColl, are named by fiddle
-                              (conj (some-> link :link/tx-fn (subs 1) keyword))))))]
-    (r/partial -index-lookup index)))
-
 (let [nil-or-hydrate (fn [peer branch request]
                        (if-let [?request @request]
                          @(hc/hydrate peer branch ?request)
                          (either/right nil)))]
-  (defn process-results "either ctx" [fiddle request ctx]                ; todo rename to (context/result)
+  (defn process-results "Initialize ctx internals, but doesn't focus anything into scope.
+    Not even the topfiddle"
+    [fiddle request ctx]
     (mlet [reactive-attrs @(r/apply-inner-r (project/hydrate-attrs ctx))
            reactive-result @(r/apply-inner-r (r/track nil-or-hydrate (:peer ctx) (:branch ctx) request))
-           :let [fiddle-parsed (hyperfiddle.ide.console-links/parse-fiddle-data-shape @fiddle)
-                 ctx (assoc ctx
+           :let [ctx (assoc ctx
                        :hypercrud.browser/attr-renderers reactive-attrs
+                       ; The following are internal, result is not formally in user scope yet!
                        :hypercrud.browser/data reactive-result
-                       :hypercrud.browser/eav (r/fmap (fn [data]
-                                                        (if (= FindScalar (type (:qfind fiddle-parsed))) ; Probably also tuples here too.
-                                                          [nil nil (context/smart-entity-identifier ctx data)]))
-                                                      reactive-result)
-                       ;:hypercrud.browser/fiddle-parsed fiddle-parsed ; its memoized
-                       :hypercrud.browser/fiddle fiddle     ; for :db/doc
-                       :hypercrud.browser/link-index (r/fmap index-links fiddle)
+                       :hypercrud.browser/fiddle fiddle
+                       :hypercrud.browser/link-index (context/index-links (context/summon-schemas-grouped-by-dbname ctx) fiddle)
+                       :hypercrud.browser/eav (r/track identity [nil nil nil]) ; good enough for a top iframe!
                        :hypercrud.browser/path [])]
-           reactive-field @(r/apply-inner-r (r/track field/auto-field request ctx))]
-      (return (assoc ctx :hypercrud.browser/field reactive-field
-                         :hypercrud.browser/validation-hints
-                         (if-let [spec (s/get-spec (:fiddle/ident @fiddle))]
-                           (contrib.validation/validate spec @reactive-result (partial context/row-keyfn ctx))))))))
+           reactive-field @(r/apply-inner-r (r/track field/auto-field request ctx))] ; legacy
+      (return (assoc ctx :hypercrud.browser/field reactive-field)))))
 
 (defn data-from-route "either ctx, ctx-from-route" [route ctx]                           ; todo rename
   (mlet [ctx (-> (context/clean ctx)
@@ -135,8 +105,12 @@
     (process-results fiddle fiddle-request ctx)))
 
 (defn from-link [link ctx with-route]                       ; ctx is for formula and routing (tempids and domain)
-  (let [ctx (context/refocus ctx (hyperfiddle.fiddle/read-path (:link/path link)))] ; symmetry with UI - popovers, txfn etc
-    (mlet [route (context/build-route' (context/build-args+ ctx link) ctx link)]
+  #_{:pre [(:hypercrud.browser/element ctx)]}               ; top-level iframes dont have an element
+  (let [+args (if-let [target-attr (hyperfiddle.fiddle/read-path (:link/path link))] ; set fiddle-ident as attr if you need the dependency
+                (context/build-args+ (context/refocus ctx target-attr) link)
+                (right []))]                                ; top iframes without dependency don't need a formula
+    ; If we're refocusing to :blank, do we need to whack the ctx?
+    (mlet [route (context/build-route' +args ctx link)]
       (with-route route ctx))))
 
 (defn data-from-link [link ctx]                             ; todo rename

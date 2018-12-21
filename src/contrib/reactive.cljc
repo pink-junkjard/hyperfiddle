@@ -1,5 +1,5 @@
 (ns contrib.reactive
-  (:refer-clojure :exclude [atom comp constantly partial])
+  (:refer-clojure :exclude [atom comp constantly partial sequence])
   (:require [cats.core :as cats]
             [contrib.data :as util]
     #?(:cljs [reagent.core :as reagent])
@@ -169,6 +169,13 @@
 (let [f (fn [rmv] (cats/fmap (clojure.core/constantly (fmap cats/extract rmv)) @rmv))]
   (defn apply-inner-r [rmv]
     (track f rmv)))
+
+(defn sequence "see cats.core/sequence" [rvs]
+  (track (partial map deref) rvs)
+  #_(reduce (fn [acc rv]
+              (fmap (partial cons acc) rv))
+            (atom ())
+            rvs))
 
 (defn unsequence
   "Expand a reference of a list into a list of references while maintaining order.

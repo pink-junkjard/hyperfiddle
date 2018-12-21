@@ -11,6 +11,7 @@
     [contrib.string :refer [blank->nil]]
     [contrib.try$ :refer [try-either]]
     [datascript.parser :as parser #?@(:cljs [:refer [FindRel FindColl FindTuple FindScalar Variable Aggregate Pull]])]
+    [hypercrud.browser.context]
     [hyperfiddle.ide.system-fiddle :as system-fiddle]
     [hyperfiddle.fiddle :as fiddle])
   #?(:clj (:import (datascript.parser FindRel FindColl FindTuple FindScalar Variable Aggregate Pull))))
@@ -91,23 +92,10 @@
           (->> (unwrap println))
           (as-> qfind (query-links-impl schemas qfind data)))) ; (map (partial console-link source))
 
-(defn parse-fiddle-data-shape [{:keys [fiddle/type fiddle/query fiddle/pull fiddle/pull-database]}]
-  (->> (case type
-         :blank nil
-         :entity (->> (memoized-read-edn-string+ pull)
-                      (fmap (fn [pull]
-                              (let [source (symbol pull-database)
-                                    fake-q `[:find (~'pull ~source ~'?e ~pull) . :where [~'?e]]]
-                                (parser/parse-query fake-q))))
-                      (unwrap (constantly nil)))
-         :query (->> (memoized-read-edn-string+ query)
-                     (=<< #(try-either (parser/parse-query %)))
-                     (unwrap (constantly nil))))))
-
 (defn console-links-fiddle
   "All sys links can be matched and merged with user-links. Matching is determined by link/rel and link/path"
   [schemas fiddle data]
-  (if-let [{qfind :qfind} (parse-fiddle-data-shape fiddle)]
+  (if-let [{qfind :qfind} (hypercrud.browser.context/parse-fiddle-data-shape fiddle)]
     (map (comp fiddle/auto-link console-link)
          (repeat qfind)
          (contrib.data/ungroup (query-links-impl schemas qfind data)))))
