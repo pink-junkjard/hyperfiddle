@@ -1,5 +1,6 @@
 {entity hyperfiddle.readers/entity
  uri hyperfiddle.readers/uri
+ schema hyperfiddle.readers/schema
 
  ; defrecords get these for free in clj
  hypercrud.types.DbVal.DbVal hypercrud.types.DbVal/read-DbVal

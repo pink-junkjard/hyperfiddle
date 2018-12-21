@@ -1,6 +1,7 @@
 (ns hyperfiddle.hc_data_readers
   (:require
     #?(:cljs [contrib.uuid :refer [read-uuid]])
+    [contrib.datomic :refer [indexed-schema]]
     [#?(:cljs cljs.reader :clj clojure.tools.reader.default-data-readers)]
     [hyperfiddle.readers]                                   ; important
     [hypercrud.types.DbVal :refer [read-DbVal]]
@@ -17,6 +18,7 @@
    ;'queue #?(:cljs cljs.reader/read-queue) ; queue not supported on JVM: https://dev.clojure.org/jira/browse/CLJ-976
    ;'js #?(:cljs cljs.tagged-literals/read-js) ; compiler, not reader ?
    'entity read-ThinEntity
+   'schema indexed-schema
    'uri read-URI
    'hypercrud.types.DbVal.DbVal read-DbVal
    'hypercrud.types.EntityRequest.EntityRequest read-EntityRequest

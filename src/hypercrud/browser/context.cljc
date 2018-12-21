@@ -131,7 +131,7 @@
         )))
 
 (defn summon-schemas-grouped-by-dbname [ctx]
-  {:post [(every? #(satisfies? contrib.datomic/SchemaIndexedNormalized %) %)]}
+  {:post [(every? #(satisfies? contrib.datomic/SchemaIndexedNormalized %) (vals %))]}
   (-> (->> @(hyperfiddle.runtime/state (:peer ctx) [:hyperfiddle.runtime/partitions (:branch ctx) :schemas])
            (contrib.data/map-keys #(hyperfiddle.domain/uri->dbname % (:hypercrud.browser/domain ctx))))
       (dissoc nil)))
@@ -333,7 +333,7 @@
   Links include all links reachable by navigating :ref :one. (Change this by specifying an :ident)
   The index internals are reactive."
   [schemas r-fiddle]
-  {:pre [(every? #(satisfies? contrib.datomic/SchemaIndexedNormalized %) schemas)]}
+  {:pre [(every? #(satisfies? contrib.datomic/SchemaIndexedNormalized %) (vals schemas))]}
   (let [indexed-links-at (r/fmap -indexed-links-at r-fiddle)]
     (reify FiddleLinksIndex
       (links-at-r [this criterias]

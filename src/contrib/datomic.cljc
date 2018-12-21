@@ -4,8 +4,7 @@
     [datascript.parser #?@(:cljs [:refer [FindRel FindColl FindTuple FindScalar Variable Aggregate Pull]])])
   #?(:clj (:import
             (datascript.parser FindRel FindColl FindTuple FindScalar Variable Aggregate Pull)
-            [clojure.lang #_#_#_Counted IFn IHashEq ILookup #_Seqable]
-            [clojure.core.protocols IKVReduce])))
+            [clojure.lang IHashEq ILookup])))
 
 
 (defn tempid? [id]
@@ -33,36 +32,48 @@
 
 (defprotocol SchemaIndexedNormalized
   ; Implement this interface in both peer and Hypercrud client
-  (-attr [_ a k])
-  (valueType [_ a])
-  (valueType? [_ a k])
-  (cardinality [_ a])
-  (cardinality? [_ a k])
-  (ref? [_ attr]))
+  (-repr-portable-hack [this])
+  (-attr [this a k])
+  (valueType [this a])
+  (valueType? [this a k])
+  (cardinality [this a])
+  (cardinality? [this a k])
+  (ref? [this attr]))
 
-(defn indexed-schema [schema]
-  (let [schema-by-attr (contrib.data/group-by-unique :db/ident schema)]
-    (reify
-      SchemaIndexedNormalized
-      (-attr [this a k]
-        {:pre [(keyword? a) (keyword? k)]}
-        (smart-lookup-ref-no-tempids
-          (get-in schema-by-attr [a k])))
-      (valueType [this a] (-attr this a :db/valueType))
-      (cardinality [this a] (-attr this a :db/cardinality))
-      (valueType? [this a k] (= k (valueType this a)))
-      (cardinality? [this a k] (= k (valueType this a)))
-      (ref? [this k] (valueType? this k :db.type/ref))
+;(defn- schema-repr [o] (str "#schema" (pr-str (-v o))))
 
-      #?@(:clj
-          [ILookup
-           (valAt [this k] (get schema-by-attr k))
-           (valAt [this k not-found] (get schema-by-attr k not-found))]
+(deftype Schema [schema-pulledtree schema-by-attr]
+  SchemaIndexedNormalized
+  (-repr-portable-hack [this] (str "#schema " (pr-str schema-pulledtree)))
+  (-attr [this a k]
+    {:pre [(keyword? a) (keyword? k)]}
+    (smart-lookup-ref-no-tempids
+      (get-in schema-by-attr [a k])))
+  (valueType [this a] (-attr this a :db/valueType))
+  (cardinality [this a] (-attr this a :db/cardinality))
+  (valueType? [this a k] (= k (valueType this a)))
+  (cardinality? [this a k] (= k (valueType this a)))
+  (ref? [this k] (valueType? this k :db.type/ref))
 
-          :cljs
-          [ILookup
-           (-lookup [o k] (get schema-by-attr k))
-           (-lookup [o k not-found] (get schema-by-attr k not-found))]))))
+  #?@(:clj
+      [Object (equals [o other] (and (instance? Schema other) (= (.-schema-pulledtree o) (.-schema-pulledtree other))))
+       IHashEq (hasheq [o] (hash schema-pulledtree))
+       ILookup
+       (valAt [this k] (get schema-by-attr k))
+       (valAt [this k not-found] (get schema-by-attr k not-found))]
+      :cljs
+      [IEquiv (-equiv [o other] (and (instance? Schema other) (= (.-schema-pulledtree o) (.-schema-pulledtree other))))
+       IHash (-hash [o] (hash schema-pulledtree))
+       IPrintWithWriter (-pr-writer [o writer _] (-write writer (-repr-portable-hack o)))
+       ILookup
+       (-lookup [o k] (get schema-by-attr k))
+       (-lookup [o k not-found] (get schema-by-attr k not-found))]))
+
+#?(:clj (defmethod print-method Schema [o ^java.io.Writer w] (.write w (-repr-portable-hack o))))
+#?(:clj (defmethod print-dup Schema [o w] (print-method o w)))
+
+(defn indexed-schema [schema-pulledtree]
+  (Schema. schema-pulledtree (contrib.data/group-by-unique :db/ident schema-pulledtree)))
 
 (declare pull-shape)
 
