@@ -1,6 +1,7 @@
 (ns hypercrud.browser.base
   (:require [cats.core :refer [mlet return]]
             [cats.monad.either :as either :refer [left right]]
+            [contrib.ct :refer [unwrap]]
             [contrib.reactive :as r]
             [contrib.reader :as reader :refer [memoized-read-edn-string+]]
             [contrib.try$ :refer [try-either]]
@@ -104,6 +105,9 @@
     ; fiddle request can be nil for no-arg pulls (just draw readonly form)
     (process-results fiddle fiddle-request ctx)))
 
+(defn data-from-route! [route ctx]
+  (unwrap (constantly nil) (data-from-route route ctx)))
+
 (defn from-link [link ctx with-route]                       ; ctx is for formula and routing (tempids and domain)
   #_{:pre [(:hypercrud.browser/element ctx)]}               ; top-level iframes dont have an element
   (let [+args (if-let [target-attr (hyperfiddle.fiddle/read-path (:link/path link))] ; set fiddle-ident as attr if you need the dependency
@@ -115,3 +119,6 @@
 
 (defn data-from-link [link ctx]                             ; todo rename
   (from-link link ctx data-from-route))
+
+(defn data-from-link! [link ctx]
+  (unwrap (constantly nil) (data-from-link link ctx)))
