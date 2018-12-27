@@ -10,7 +10,6 @@
     [contrib.reader]
     [contrib.string]
     [contrib.try$ :refer [try-either]]
-    [contrib.validation]
     [clojure.set]
     [clojure.spec.alpha :as s]
     [datascript.parser #?@(:cljs [:refer [FindRel FindColl FindTuple FindScalar Variable Aggregate Pull]])]
@@ -34,9 +33,7 @@
   (s/keys :opt [:hypercrud.browser/data
                 :hypercrud.browser/eav]))
 
-(s/def :hypercrud.browser/eav (s/and r/reactive?
-                                     #_(s/or :nil (comp nil? deref)
-                                           #_#_:eav (s/coll-of (comp not map? deref)))))
+(s/def :hypercrud.browser/eav r/reactive?)
 (s/def :hypercrud.browser/data r/reactive?)
 
 (defn clean [ctx]
@@ -203,7 +200,7 @@
     [ctx relative-path]
     (reduce focus-segment ctx relative-path)))
 
-(defn row "Toggle :many into :one as we spread through the rows. k is used for filtering validation hints"
+#_(defn row "Toggle :many into :one as we spread through the rows. k is used for filtering validation hints"
   [ctx rval & [k]]
   {:pre [(r/reactive? rval)]}
   (assert @(r/fmap->> (:hypercrud.browser/field ctx) ::field/cardinality (= :db.cardinality/many))
@@ -247,65 +244,6 @@
          :query (->> (contrib.reader/memoized-read-edn-string+ query)
                      (=<< #(try-either (datascript.parser/parse-query %)))
                      (unwrap (constantly nil))))))
-
-(let [topfiddle-a (fn [fiddle]
-                    ; v is eventually spread from FindRel (even in FindScalar case)
-                    [nil (:fiddle/ident fiddle) nil])]
-  (defn fiddle "Fiddle level ctx adds the result to scope"
-    [ctx]
-    {:post [(:hypercrud.browser/eav %)                      ; the topfiddle ident is the attr
-            (contains? % :hypercrud.browser/qfind)          ; but it can be nil for :type :blank
-            (:hypercrud.browser/link-index %)]}
-    (let [r-fiddle (:hypercrud.browser/fiddle ctx)
-          r-data (:hypercrud.browser/data ctx)]
-      (assoc ctx
-        :hypercrud.browser/qfind (r/fmap-> r-fiddle parse-fiddle-data-shape :qfind)
-        :hypercrud.browser/eav (r/fmap-> r-fiddle topfiddle-a)
-        #_#_:hypercrud.browser/eav (r/fmap (fn [data]
-                                             (if (= FindScalar (type (:qfind fiddle-shape))) ; Probably also tuples here too.
-                                               [nil nil (context/smart-entity-identifier ctx data)]))
-                                           reactive-result)
-        :hypercrud.browser/validation-hints
-        (if-let [spec (s/get-spec @(r/fmap :fiddle/ident r-fiddle))]
-          (contrib.validation/validate spec @r-data (partial row-keyfn ctx)))))))
-
-(defn spread-fiddle "automatically guards :fiddle/type :blank"
-  [ctx]
-  (let [fiddle-type @(r/fmap :fiddle/type (:hypercrud.browser/fiddle ctx))]
-    (condp some [fiddle-type]
-      #{:blank} []
-      #{:query :entity} [(fiddle ctx)])))
-
-(defn ^:export spread-rows "spread across resultset row-or-rows.
-  Automatically accounts for query dimension - no-op in the case of FindTuple and FindScalar."
-  [ctx & [sort-fn]]
-  {:pre [(:hypercrud.browser/qfind ctx)
-         (:hypercrud.browser/eav ctx)                       ; can be just topfiddle
-         (not (:hypercrud.browser/element ctx))]}           ; not yet
-  (let [{r-qfind :hypercrud.browser/qfind r-data :hypercrud.browser/data} ctx]
-    ; Option A: Lift everything and handle generally
-    #_(let [r-rows (condp some (type r-qfind)
-                     #{FindRel FindColl} r-data
-                     #{FindTuple FindScalar} (r/fmap vector r-data))]
-        (for [[_ k] (r/unsequence row-keyfn r-rows)]
-          (focus ctx [k])))
-
-    ; Option B: match and do the right thing, this results in a context that mirrors the query dimension
-    (condp some [(type @r-qfind)]
-      #{FindRel FindColl} (for [[_ k] (->> (r/fmap (or sort-fn identity) r-data)
-                                           (r/unsequence (r/partial row-keyfn ctx)))]
-                            (focus ctx [k]))
-      #{FindTuple FindScalar} [ctx])))
-
-(defn spread-elements "returns ctx per element" [ctx]
-  {:pre [(:hypercrud.browser/qfind ctx)
-         (not (:hypercrud.browser/element ctx))]}
-  (let [r-qfind (:hypercrud.browser/qfind ctx)]
-    ; All query dimensions have at least one element, do generally
-    ; No unsequence here? What if find elements change. can we use something other than int as keyfn?
-    (for [[element i] (map vector (datascript.parser/find-elements @r-qfind) (range))]
-      (let [ctx (assoc ctx :hypercrud.browser/element element)]
-        (focus ctx [i])))))
 
 (defprotocol FiddleLinksIndex
   #_(links-at [this criterias])
@@ -449,8 +387,13 @@
            route (hyperfiddle.route/validate-route+ route)]
       (return route))))
 
-(letfn [(-stable-eav' [?v' [?e ?a _]]
-          [?e ?a ?v'])]
+(defn stable-eav-v' [[e a _] v']
+  [e a v'])
+
+(defn stable-eav-a' [[e _ v] a']
+  [e a' v])
+
+(letfn []
   (defn refocus' "focus a link ctx, accounting for link/formula which occludes the natural eav"
     [ctx link-ref]
     {:pre [(s/assert :hypercrud/context ctx)
@@ -459,7 +402,7 @@
     (let [ctx (refocus ctx @(r/fmap (r/comp hyperfiddle.fiddle/read-path :link/path) link-ref)) ; nil -> fiddle-ident
           +args @(r/fmap->> link-ref (build-args+ ctx))
           [v' & vs] (->> +args (contrib.ct/unwrap (constantly nil))) ; EAV sugar is not interested in tuple case, that txfn is way off happy path
-          ctx (update ctx :hypercrud.browser/eav (r/partial r/fmap (r/partial -stable-eav' v')))
+          ctx (update ctx :hypercrud.browser/eav (r/partial r/fmap (r/partial r/flip stable-eav-v' v')))
           r+?route (r/fmap->> link-ref (build-route' +args ctx))]
       [ctx r+?route])))
 

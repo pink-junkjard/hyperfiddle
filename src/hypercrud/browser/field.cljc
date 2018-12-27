@@ -21,7 +21,7 @@
    ::children nil
    ::data-has-id? false
    ::label (str (:symbol element))
-   ::get-value (r/partial r/last-arg-first get fe-pos)
+   ::get-value (r/partial r/flip get fe-pos)
    ::path-segment fe-pos
    ::source-symbol nil})
 

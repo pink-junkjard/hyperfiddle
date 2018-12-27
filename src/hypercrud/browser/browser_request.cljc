@@ -8,6 +8,7 @@
     [hypercrud.browser.field :as field]
     [hypercrud.browser.routing :as routing]
     [hypercrud.client.peer :refer [-quiet-unwrap]]
+    [hyperfiddle.api]
     [hyperfiddle.data :as data]
     [hyperfiddle.project :as project]
     [datascript.parser #?@(:cljs [:refer [FindRel FindColl FindTuple FindScalar Variable Aggregate Pull]])])
@@ -48,9 +49,9 @@
                    (with-result ctx))))))
 
 (defn with-result [ctx]
-  (for [ctx (context/spread-fiddle ctx)
-        ctx (context/spread-rows ctx)
-        ctx (context/spread-elements ctx)]
+  (for [ctx (hyperfiddle.api/spread-fiddle ctx)
+        ctx (hyperfiddle.api/spread-rows ctx)
+        ctx (hyperfiddle.api/spread-elements ctx)]
     (->> (data/form-with-naked-legacy ctx)
          ; left the map-flatten but why not mapcat?
          (map (fn [path]

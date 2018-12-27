@@ -31,6 +31,9 @@
 (defn last-arg-first [f & args]
   (apply f (last args) (drop-last 1 args)))
 
+(defn flip [f x y]
+  (f y x))
+
 #?(:cljs
    (deftype Constantly [v]
      Fn

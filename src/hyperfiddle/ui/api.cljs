@@ -27,7 +27,7 @@
        (unwrap #(timbre/warn %))))
 
 (defn body-field [ctx]
-  (->> @(r/fmap->> (data/select-here ctx)
+  (->> @(r/fmap->> (data/select-many-here ctx)
                    (map (r/partial recurse-from-link ctx))
                    (apply merge))
        (into (let [child-fields? (not @(r/fmap-> (:hypercrud.browser/field ctx) ::field/children nil?))]
