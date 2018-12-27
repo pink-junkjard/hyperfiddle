@@ -38,14 +38,6 @@
     (:hypercrud.browser/path ctx)                           ; optional?
     (contrib.data/xorxs ?corcs #{})))
 
-(defn ^:export select-many-here "reactive" ; collapses if eav is part of corcs
-  [ctx & [?corcs]]
-  {:pre [(:hypercrud.browser/eav ctx)]
-   :post [(r/reactive? %)]}
-  (-> (contrib.data/xorxs ?corcs #{})
-      (conj (second @(:hypercrud.browser/eav ctx)))
-      (->> (select-many ctx))))
-
 (defn validate-one+r [corcs r-links]                        ; Right[Reaction] or Left[Error] - broken, error should react too
   (let [n @(r/fmap count r-links)]
     (condp = n
@@ -54,13 +46,29 @@
       (left (str/format "Too many (%s) links matched for criteria: %s" n (pr-str corcs))))))
 
 (defn ^:export select+ [ctx & [?corcs]]                     ; Right[Reaction[Link]] or Left[String]
-  (->> (validate-one+r ?corcs (select-many ctx ?corcs))
+  (->> (select-many ctx ?corcs)
+       (validate-one+r ?corcs)
        #_#_r/apply-inner-r deref))
+
+(defn ^:export select "reactive" [ctx & [?corcs]]
+  {:pre [(context/summon-schemas-grouped-by-dbname ctx)]
+   :post [(r/reactive? %)]}
+  (->> (select+ ctx ?corcs)
+       (unwrap (constantly (r/track identity nil)))))
+
+(defn ^:export select-many-here "reactive" ; collapses if eav is part of corcs
+  [ctx & [?corcs]]
+  {:pre [(:hypercrud.browser/eav ctx)]
+   :post [(r/reactive? %)]}
+  (-> (contrib.data/xorxs ?corcs #{})
+      (conj (second @(:hypercrud.browser/eav ctx)))
+      (->> (select-many ctx))))
 
 (defn ^:export select-here+ [ctx & [?corcs]]
   {:pre [ctx]
-   :post [#_(r/reactive? %)]}
-  (->> (validate-one+r ?corcs (select-many-here ctx ?corcs))
+   :post [(r/reactive? %)]}
+  (->> (select-many-here ctx ?corcs)
+       (validate-one+r ?corcs)
        #_#_r/apply-inner-r deref))
 
 (defn ^:export browse+ "Navigate a link by hydrating its context accounting for dependencies in scope.
@@ -69,15 +77,6 @@
   ; No focusing, can select from root, and data-from-link manufactures a new context
   (>>= (select+ ctx ?corcs)
        #(base/data-from-link @% ctx)))
-
-(defn ^:export select-here "reactive" [ctx & [?corcs]]
-  {:post [(or #_(nil? %) (r/reactive? %))]}
-  (->> (select-here+ ctx ?corcs) (unwrap (constantly (r/track identity nil)))))
-
-(defn ^:export select "reactive" [ctx & [?corcs]]
-  {:pre [(context/summon-schemas-grouped-by-dbname ctx)]
-   :post [(r/reactive? %)]}
-  (->> (select+ ctx ?corcs) (unwrap (constantly (r/track identity nil)))))
 
 (defn ^:export browse [ctx & [?corcs]]
   {:post [(r/reactive? %)]}

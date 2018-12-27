@@ -96,11 +96,11 @@
             :db.cardinality/one nil
 
             :db.cardinality/many
-            [(if-let [link (data/select-here parent-ctx :hf/new)]
+            [(if-let [link (data/select-many-here parent-ctx :hf/new)]
                [hyperfiddle.ui/ui-from-link link parent-ctx props "new"])]
 
             ; This hack detects FindCol, which has no parent cardinality but does need the links
-            nil [(if-let [link (some-> parent-ctx (data/select-here :hf/new))]
+            nil [(if-let [link (some-> parent-ctx (data/select-many-here :hf/new))]
                    [hyperfiddle.ui/ui-from-link link parent-ctx props "new"])]
             ))))
 
@@ -109,7 +109,7 @@
 
 (defn related-links [val ctx props]
   (if val
-    (->> (data/select-all-here ctx)                         ; or just here? http://tank.hyperfiddle.site/:dustingetz!counter/
+    (->> (data/select-many-here ctx)                        ; or just here? http://tank.hyperfiddle.site/:dustingetz!counter/
          (r/unsequence (r/partial context/stable-relation-key ctx))
          (remove (fn [[rv k]]
                    (some #{:hf/new :hf/remove :hf/iframe} (:link/class @rv))))
@@ -124,9 +124,9 @@
     (:options props) [select val ctx props]
     :else [:div
            [:div.input (interpose " " (cons (id-prompt ctx val) (related-links val ctx props)))]
-           (if-let [link (data/select-here ctx :hf/new)]
+           (if-let [link (data/select-many-here ctx :hf/new)]
              [hyperfiddle.ui/ui-from-link link ctx props])
-           (if-let [link (data/select-here ctx :hf/remove)]
+           (if-let [link (data/select-many-here ctx :hf/remove)]
              (if val
                [hyperfiddle.ui/ui-from-link link ctx props]))]))
 
@@ -144,10 +144,10 @@
      ; ... This is dumb datomic hacks, views should never even see tempids
      [:div.input (interpose " " (cons (id-prompt ctx val) (related-links val ctx props)))]
      (if (some-> ctx cardinality (= :db.cardinality/one))
-       (if-let [link (data/select-here ctx :hf/new)]
+       (if-let [link (data/select-many-here ctx :hf/new)]
          [hyperfiddle.ui/ui-from-link link ctx props]))
      (if-not (context/underlying-tempid ctx val)
-       (if-let [link (data/select-here ctx :hf/remove)]
+       (if-let [link (data/select-many-here ctx :hf/remove)]
          [hyperfiddle.ui/ui-from-link link ctx props]))]
     [:div [:div.input (pr-str val)]]))
 

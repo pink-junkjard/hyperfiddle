@@ -41,7 +41,7 @@
                                             (either/right (request-from-route route ctx))))))
 
 (defn body-field [ctx]
-  (->> @(data/select-here ctx)
+  (->> @(data/select-many-here ctx)
        (mapcat #(request-from-link % ctx))
        (concat (let [child-fields? (not @(r/fmap (r/comp nil? ::field/children) (:hypercrud.browser/field ctx)))]
                  (when (and child-fields? (context/attribute-segment? (last (:hypercrud.browser/path ctx)))) ; ignore relation and fe fields
@@ -63,7 +63,7 @@
   (concat
     ; Top level iframes have no dependency at all, no qfind or element at all
     ; Is the topfiddle-ident in scope though?
-    (->> @(data/select-here ctx #{:hf/iframe (:fiddle/ident (:hypercrud.browser/fiddle ctx))}) ; No dependency at all, not even topfiddle
+    (->> @(data/select-many-here ctx #{:hf/iframe nil}) ; No dependency at all, not even topfiddle
          (mapcat #(request-from-link % ctx)))
     (with-result ctx)
     ; This does not get to look at the fiddlescope, though seems reasonable if it wanted to
