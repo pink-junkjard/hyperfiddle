@@ -32,9 +32,7 @@
             fiddle-name (if (keyword? fiddle-ident) (name fiddle-ident))]
         [tooltip {:label fiddle-name}
          [:span fiddle-name]])
-      (let [props {:tooltip [nil "Fiddles in this domain"]
-                   :iframe-as-popover true}]
-        [ui/link :fiddle-shortcuts ctx "index" props])]
+      [ui/link :fiddle-shortcuts ctx "index" {:tooltip [nil "Fiddles in this domain"] :iframe-as-popover true}]]
 
      [:div.right-nav {:key "right-nav"}                     ; CAREFUL; this key prevents popover flickering
       [loading-spinner ctx]
@@ -83,7 +81,9 @@
     [loading-spinner ctx]]])
 
 (defn renderer [val ctx props]
-  (let [f (if (and (= :hyperfiddle.ide/please-login (first (context/target-route ctx)))
+  (let [ctx (hyperfiddle.api/fiddle ctx)
+        #_#_ctx (hyperfiddle.api/element ctx)               ; its blank
+        f (if (and (= :hyperfiddle.ide/please-login (first (context/target-route ctx)))
                    (not= [:domain/ident foundation/source-domain-ident] (:domain-eid (runtime/host-env (:peer ctx)))))
             hack-login-renderer
             renderer')]

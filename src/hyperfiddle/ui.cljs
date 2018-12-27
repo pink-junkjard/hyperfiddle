@@ -386,26 +386,11 @@ nil. call site must wrap with a Reagent component"          ; is this just hyper
 
 (def ^:export fiddle (-build-fiddle))
 
-(let [f (fn [new-links fiddle]
-          (update fiddle :fiddle/links
-                  (partial contrib.data/merge-by
-                           (juxt (fn hf-rel [link]
-                                   ; There is only one hf rel in the class
-                                   (filter #(= "hf" (namespace %)) (:link/class link)))
-                                 (comp blank->nil :link/path))
-                           new-links)))]
-  (defn inject-console-links [ctx]
-    (let [schemas (-> (->> @(hyperfiddle.runtime/state (:peer ctx) [:hyperfiddle.runtime/partitions (:branch ctx) :schemas])
-                           (contrib.data/map-keys #(hyperfiddle.domain/uri->dbname % (:hypercrud.browser/domain ctx))))
-                      (dissoc nil))
-          links (hyperfiddle.ide.console-links/console-links-fiddle schemas @(:hypercrud.browser/fiddle ctx) @(:hypercrud.browser/data ctx))]
-      (update ctx :hypercrud.browser/fiddle #(r/fmap->> % (f links))))))
-
 (defn ^:export fiddle-xray [val ctx & [props]]
-  (let [#_#_ctx (inject-console-links ctx)]
-    [:div (select-keys props [:class :on-click])
-     [:h3 (pr-str @(:hypercrud.browser/route ctx))]
-     [result val ctx {}]]))
+  [:div (select-keys props [:class :on-click])
+   [:h3 (pr-str @(:hypercrud.browser/route ctx))]
+   (for [ctx (hyperfiddle.api/spread-fiddle ctx)]
+     [result val ctx {}])])
 
 (letfn [(render-edn [data]
           (let [edn-str (pprint-str data 160)]

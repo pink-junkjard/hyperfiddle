@@ -38,7 +38,7 @@
   [ctx]
   (let [fiddle-type @(r/fmap :fiddle/type (:hypercrud.browser/fiddle ctx))]
     (condp some [fiddle-type]
-      #{:blank} []
+      #{:blank} []                                          ; don't we want the eav?
       #{:query :entity} [(fiddle ctx)])))
 
 (defn ^:export spread-rows "spread across resultset row-or-rows.
@@ -55,6 +55,11 @@
                             (hypercrud.browser.context/focus ctx [k]))
       #{FindTuple FindScalar} [ctx])))
 
+(defn element [ctx & [i]]
+  (let [e @(r/fmap-> (:hypercrud.browser/qfind ctx) datascript.parser/find-elements (get (or i 0)))
+        ctx (assoc ctx :hypercrud.browser/element e)]
+    (hypercrud.browser.context/focus ctx [i])))
+
 (defn ^:export spread-elements "yields a ctx foreach element.
   All query dimensions have at least one element."
   [ctx]
@@ -62,9 +67,8 @@
          (not (:hypercrud.browser/element ctx))]}
   (let [r-qfind (:hypercrud.browser/qfind ctx)]
     ; No unsequence here? What if find elements change? Can we use something other than (range) as keyfn?
-    (for [[element i] (map vector (datascript.parser/find-elements @r-qfind) (range))]
-      (let [ctx (assoc ctx :hypercrud.browser/element element)]
-        (hypercrud.browser.context/focus ctx [i])))))
+    (for [i (range (count (datascript.parser/find-elements @r-qfind)))]
+      (element ctx i))))
 
 (defn ^:export ^:legacy tempid-child
   "Generate tempid from eav, this tempid is idempotent and stable over time"

@@ -276,7 +276,8 @@
     (reify FiddleLinksIndex
       (links-at-r [this criterias]
         (r/fmap->> indexed-links-at
-                   (filter (partial link-criteria-match? criterias))))
+                   (filter (partial link-criteria-match? criterias))
+                   (map second)))                           ; drop the index, just the links
 
       (links-in-dimension-r [this ?element ?pullpath criterias] ; hidden deref
         (if-not (and ?element ?pullpath)
@@ -393,18 +394,21 @@
 (defn stable-eav-a' [[e _ v] a']
   [e a' v])
 
-(letfn []
-  (defn refocus' "focus a link ctx, accounting for link/formula which occludes the natural eav"
-    [ctx link-ref]
-    {:pre [(s/assert :hypercrud/context ctx)
-           (s/assert r/reactive? link-ref)]
-     :post [(s/assert (s/cat :ctx :hypercrud/context :route r/reactive?) %)]}
-    (let [ctx (refocus ctx @(r/fmap (r/comp hyperfiddle.fiddle/read-path :link/path) link-ref)) ; nil -> fiddle-ident
-          +args @(r/fmap->> link-ref (build-args+ ctx))
-          [v' & vs] (->> +args (contrib.ct/unwrap (constantly nil))) ; EAV sugar is not interested in tuple case, that txfn is way off happy path
-          ctx (update ctx :hypercrud.browser/eav (r/partial r/fmap (r/partial r/flip stable-eav-v' v')))
-          r+?route (r/fmap->> link-ref (build-route' +args ctx))]
-      [ctx r+?route])))
+(defn refocus' "focus a link ctx, accounting for link/formula which occludes the natural eav"
+  [ctx link-ref]
+  {:pre [(s/assert :hypercrud/context ctx)
+         (s/assert r/reactive? link-ref)]
+   :post [(s/assert (s/cat :ctx :hypercrud/context :route r/reactive?) %)]}
+  (let [target-a @(r/fmap (r/comp hyperfiddle.fiddle/read-path :link/path) link-ref)
+        ctx (if (and target-a                               ; backwards compat before mig
+                     (not= target-a @(r/fmap-> (:hypercrud.browser/eav ctx) second))) ; already here
+              (refocus ctx target-a)
+              ctx)
+        +args @(r/fmap->> link-ref (build-args+ ctx))
+        [v' & vs] (->> +args (contrib.ct/unwrap (constantly nil))) ; EAV sugar is not interested in tuple case, that txfn is way off happy path
+        ctx (update ctx :hypercrud.browser/eav (r/partial r/fmap (r/partial r/flip stable-eav-v' v')))
+        r+?route (r/fmap->> link-ref (build-route' +args ctx))]
+    [ctx r+?route]))
 
 (defn tree-invalid? "For popover buttons (fiddle level)" [ctx]
   (->> (:hypercrud.browser/validation-hints ctx)
