@@ -93,7 +93,8 @@
     :else a))
 
 (defn pull-shape [pull-pattern]
-  {:pre [(sequential? pull-pattern)]}
+  ;{:pre [(sequential? pull-pattern)]}
+  (assert (sequential? pull-pattern) (pr-str pull-pattern))
   (->> pull-pattern
        (map attr-spec->shape)
        (remove nil?)
@@ -193,6 +194,7 @@
        (map last)))
 
 (defn element-spread [schema {{pull-pattern :value} :pattern :as e} collection]
+  ; derivative oriented, ignores spread
   {:pre [schema]}
   (condp = (type e)
     Pull (pull-traverse (enclosing-pull-shape schema (pull-shape pull-pattern) collection))
@@ -212,3 +214,27 @@
           (range)                                           ; find-element index, for source reversing
           (datascript.parser/find-elements qfind)
           (contrib.data/pad nil (contrib.data/transpose (normalize-result qfind result)))))
+
+(defn pull-strata [pull-shape]
+  (->> pull-shape
+       (mapcat (fn [attr-spec]
+                 (cond
+                   (keyword? attr-spec) [attr-spec]
+                   (map? attr-spec) (keys attr-spec))))))   ; Could verify :ref against schema here
+
+
+(defn pull-shape-refine [a pull-shape]
+  (->> pull-shape
+       (filter (fn [attr-spec]
+                 (and
+                   (map? attr-spec)
+                   (contains? attr-spec a))))))
+
+(defn enclosing-pull-shapes [schemas qfind data]
+  (let [data (contrib.datomic/normalize-result qfind data)]
+    (->> (datascript.parser/find-elements qfind)
+         (map-indexed (fn [i {{db :symbol} :source {pull-pattern :value} :pattern}]
+                        (let [coll (map #(get % i) data)
+                              schema (get schemas (str db))]
+                          (contrib.datomic/enclosing-pull-shape schema (contrib.datomic/pull-shape pull-pattern) coll))))
+         vec)))

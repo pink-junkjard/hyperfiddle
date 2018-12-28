@@ -1,7 +1,7 @@
 (ns contrib.datomic-test
   (:require
     [clojure.test :refer [deftest is]]
-    [contrib.datomic :refer [pull-shape pulled-tree-derivative enclosing-pull-shape
+    [contrib.datomic :refer [pull-shape pulled-tree-derivative enclosing-pull-shape pull-strata
                              pull-traverse pull-shape-union normalize-result]]
     [contrib.ct]
     [contrib.try$]
@@ -238,4 +238,10 @@
          []))
   (is (= (normalize-result (:qfind (qparsed FindRel)) (results FindRel))
          (results FindRel)))
+  )
+
+(deftest pull-strata-
+  []
+  (is (= (pull-strata [:db/id :db/ident :hyperfiddle/owners #:reg{:gender [:db/id]}])
+         '(:db/id :db/ident :hyperfiddle/owners :reg/gender)))
   )
