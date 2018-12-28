@@ -1,6 +1,7 @@
 (ns contrib.reactive
-  (:refer-clojure :exclude [atom comp constantly partial sequence])
+  (:refer-clojure :exclude [atom comp constantly partial sequence apply])
   (:require [cats.core :as cats]
+            [clojure.spec.alpha :as s]
             [contrib.data :as util]
     #?(:cljs [reagent.core :as reagent])
     #?(:cljs [reagent.ratom :refer [IReactiveAtom]]))
@@ -17,7 +18,7 @@
      :cljs (satisfies? IReactiveAtom v)))
 
 (defn atom [x & rest]
-  (apply #?(:clj clojure.core/atom :cljs reagent/atom) x rest))
+  (clojure.core/apply #?(:clj clojure.core/atom :cljs reagent/atom) x rest))
 
 (defn cursor [src path]
   {:pre [(reactive? src)]}
@@ -26,10 +27,10 @@
      :cljs (reagent/cursor src path)))
 
 (defn partial [f & args]
-  (apply #?(:clj clojure.core/partial :cljs reagent/partial) f args))
+  (clojure.core/apply #?(:clj clojure.core/partial :cljs reagent/partial) f args))
 
 (defn last-arg-first [f & args]
-  (apply f (last args) (drop-last 1 args)))
+  (clojure.core/apply f (last args) (drop-last 1 args)))
 
 (defn flip [f x y]
   (f y x))
@@ -116,7 +117,7 @@
      (-invoke [_ a b c d e f g h i j k l m n o p q r s t]
        (cf a b c d e f g h i j k l m n o p q r s t))
      (-invoke [_ a b c d e f g h i j k l m n o p q r s t rest]
-       (apply cf a b c d e f g h i j k l m n o p q r s t rest))
+       (clojure.core/apply cf a b c d e f g h i j k l m n o p q r s t rest))
      IEquiv
      (-equiv [_ other] (and (instance? Comp other) (= fs (.-fs other))))
      IHash
@@ -125,13 +126,13 @@
 #?(:cljs (defn comp
            ([] identity)
            ([f] f)
-           ([f & fs] (->Comp (apply clojure.core/comp f fs) (cons f fs))))
+           ([f & fs] (->Comp (clojure.core/apply clojure.core/comp f fs) (cons f fs))))
    :clj  (def comp clojure.core/comp))
 
 (defn track [f & args]
   ; todo support more than just IDeref
-  #?(:clj  (delay (apply f args))
-     :cljs (apply reagent/track f args)))
+  #?(:clj  (delay (clojure.core/apply f args))
+     :cljs (clojure.core/apply reagent/track f args)))
 
 (defn fmap [f rv]
   {:pre [f]}
@@ -169,8 +170,13 @@
 ; Reactive[Monad[_]] => Reactive[Monad[Reactive[_]]]
 ; useful for reacting on the Either (left v right), but not the Right's value
 ; this should probably fall out eventually
-(let [f (fn [rmv] (cats/fmap (clojure.core/constantly (fmap cats/extract rmv)) @rmv))]
+(let [f (fn [rmv]
+          {:pre [(s/assert cats.monad.either/either? @rmv)]}
+          (cats/fmap (clojure.core/constantly (fmap cats/extract rmv)) @rmv))]
   (defn apply-inner-r [rmv]
+    {:pre [(s/assert reactive? rmv)
+           #_(s/assert cats.monad.either/either? @rmv)]
+     :post [(s/assert reactive? %)]}
     (track f rmv)))
 
 (defn sequence "see cats.core/sequence" [rvs]
@@ -206,3 +212,6 @@
         (map f row)
         (f row))
       hash))
+
+(defn apply [f rvs]
+  (fmap->> (sequence rvs) (clojure.core/apply f)))

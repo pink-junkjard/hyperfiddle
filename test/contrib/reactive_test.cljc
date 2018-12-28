@@ -41,3 +41,8 @@
 
   (let [reactive-inc (r/atom (fn [a] (fn [b] (+ a b))))]
     (is (= 3 @(r/fapply reactive-inc (r/atom 1) (r/atom 2))))))
+
+(deftest apply-
+  []
+  (is (= @(r/apply + [(r/atom 1) (r/atom 2)])
+         3)))
