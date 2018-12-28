@@ -5,6 +5,7 @@
     [contrib.reactive :as r]
     [hypercrud.browser.context :as context]
     [hypercrud.browser.field :as field]
+    [hyperfiddle.api]
     [hyperfiddle.fiddle :as fiddle]
     [hyperfiddle.runtime :as runtime]
     [hyperfiddle.ui :refer [anchor field hyper-control link table]]
@@ -33,7 +34,8 @@
    [hyper-control val ctx-fiddle-type (with-fiddle-default props val :fiddle/type)]
    (if (= val :entity)
      (let [ctx (context/focus ctx-top [:fiddle/pull-database])]
-       [:div [hyper-control @(:hypercrud.browser/data ctx) ctx (with-fiddle-default {:class "pull-database"} val :fiddle/pull-database)]])
+       [:div [hyper-control (get @(:hypercrud.browser/eav ctx) 2)
+              ctx (with-fiddle-default {:class "pull-database"} val :fiddle/pull-database)]])
      [:div])
    [:span.schema "schema: " (schema-links ctx-fiddle-type)]])
 
@@ -44,7 +46,7 @@
       empty-renderer (fn [val ctx props]
                        (link #{:fiddle/links :hf/remove} ctx))
       link-control (fn [val ctx props]
-                     (let [props (if-some [f (get fiddle/link-defaults (last (:hypercrud.browser/path ctx)))]
+                     (let [#_#_props (if-some [f (get fiddle/link-defaults (last (:hypercrud.browser/path ctx)))]
                                    (assoc props :default-value @(r/fmap f (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data])))
                                    props)]
                        (hyper-control val ctx props))
@@ -131,14 +133,14 @@
 (defn fiddle-src-renderer [val ctx props]
   (let [tab-state (r/atom (if (contains? tabs (:initial-tab props)) (:initial-tab props) :hf.src/query))]
     (fn [val ctx props]
-      [:div (into {:key (str (:fiddle/ident val))} (select-keys props [:class]))
-       ; Design constraint: one codemirror per tab, and it will expand to fill height.
-       [horizontal-tabs
-        ; F U recom: Validation failed: Expected 'vector of tabs | atom'. Got '[:query :links :view :css :fiddle]'
-        :tabs (->> [:hf.src/query :hf.src/links :hf.src/markdown :hf.src/view :hf.src/ns :hf.src/css :hf.src/fiddle]
-                   (map (partial hash-map :id)))
-        :id-fn :id
-        :label-fn (comp name :id)
-        :model tab-state
-        :on-change (r/partial reset! tab-state)]
-       [(get tabs @tab-state) val ctx {}]])))
+      (let [ctx (hyperfiddle.api/fiddle ctx)
+            ctx (hyperfiddle.api/element ctx)]
+        [:div (into {:key (str (:fiddle/ident val))} (select-keys props [:class]))
+         [horizontal-tabs
+          :tabs (->> [:hf.src/query :hf.src/links :hf.src/markdown :hf.src/view :hf.src/ns :hf.src/css :hf.src/fiddle]
+                     (map (partial hash-map :id)))
+          :id-fn :id
+          :label-fn (comp name :id)
+          :model tab-state
+          :on-change (r/partial reset! tab-state)]
+         [(get tabs @tab-state) val ctx {}]]))))

@@ -88,7 +88,8 @@
 
 (defn target-route [ctx] @(runtime/state (:peer ctx) [::runtime/partitions nil :route]))
 
-(defn dbname [ctx] (some->> (:hypercrud.browser/field ctx) (r/fmap ::field/source-symbol) deref str))
+(defn dbname [ctx]
+  (some-> (:hypercrud.browser/element ctx) deref :source :symbol str))
 
 (defn uri
   ([ctx] (uri (dbname ctx) ctx))
@@ -151,9 +152,6 @@
               schema @(runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :schemas uri])]
           (field/summon schema (::field/source-symbol @field) path-segment)))))
 
-(defn find-parent-field [ctx]
-  (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/field]))
-
 (defn identify [ctx]
   {:post [(not (map? %))]}
   ; When looking at an attr of type ref, figure out it's identity, based on all the ways it can be pulled.
@@ -174,56 +172,54 @@
     ; :extend-via-metadata
     [e a v]))
 
-(letfn [(focus-segment [ctx path-segment]                   ; attribute or fe segment
-          #_(assert (or (not (:hypercrud.browser/data ctx)) ; head has no data, can focus without calling row
-                        @(r/fmap->> (:hypercrud.browser/field ctx) ::field/cardinality (not= :db.cardinality/many)))
-                    (str "Cannot focus directly from a cardinality/many (do you need a table wrap?). current path: " (:hypercrud.browser/path ctx) ", attempted segment: " path-segment))
-          (let [field (r/track find-child-field (:hypercrud.browser/field ctx) path-segment ctx)
-                ctx (-> ctx
-                        (set-parent)
-                        (update :hypercrud.browser/path conj path-segment)
-                        (assoc :hypercrud.browser/field field))]
-            (if-not (:hypercrud.browser/data ctx)
-              ctx                                           ; head
-              (let [data (let [f (r/fmap ::field/get-value field)]
-                           #_(assert @f (str "focusing on a non-pulled attribute: " (pr-str (:hypercrud.browser/path ctx)) "."))
-                           (r/fapply f (:hypercrud.browser/data ctx)))]
-                (-> (set-parent-data ctx)                   ; body
-                    (update :hypercrud.browser/validation-hints #(for [[[p & ps] hint] % :when (= p path-segment)]
-                                                                   [ps hint]))
-                    (assoc :hypercrud.browser/data data)
-                    (assoc :hypercrud.browser/eav (r/fmap (r/partial eav ctx) data))
-                    )))))]
-  (defn focus "Unwind or go deeper, to where we need to be, within same dimension.
+(defn focus-segment [ctx path-segment]                      ; no longer handles fe-segments
+  {:pre [(s/assert :hypercrud/context ctx)]
+   :post [(s/assert :hypercrud/context %)]}
+  (let [field (r/track find-child-field (:hypercrud.browser/field ctx) path-segment ctx)
+        ctx (-> ctx
+                (set-parent)
+                (update :hypercrud.browser/path conj path-segment)
+                (update :hypercrud.browser/enclosing-pull-shape (r/partial contrib.datomic/pull-shape-refine path-segment))
+                (assoc :hypercrud.browser/field field))]
+    (if-not (:hypercrud.browser/data ctx)
+      ctx                                                   ; head
+      (let [[e a v] @(:hypercrud.browser/eav ctx)
+            _ (assert keyword? path-segment)
+            data (r/fmap path-segment (:hypercrud.browser/data ctx))]
+        (-> (set-parent-data ctx)                           ; body
+            (update :hypercrud.browser/validation-hints #(for [[[p & ps] hint] % :when (= p path-segment)]
+                                                           [ps hint]))
+            (assoc :hypercrud.browser/data data)
+            (assoc :hypercrud.browser/eav (r/fmap (r/partial eav ctx) data)
+                   #_(r/track identity [(some-> ctx identify)
+                                        path-segment
+                                        (smart-entity-identifier ctx @(r/cursor (:hypercrud.browser/data ctx)
+                                                                                ; path needs row? If it has find-element
+                                                                                (:hypercrud.browser/path ctx)))]))
+            )))))
+
+(defn focus "Unwind or go deeper, to where we need to be, within same dimension.
     Throws if you focus a higher dimension.
     This is about navigation through pulledtrees which is why it is path-oriented."
-    [ctx relative-path]
-    (reduce focus-segment ctx relative-path)))
+  [ctx relative-path]
+  {:pre [(s/assert :hypercrud/context ctx)]
+   :post [(s/assert :hypercrud/context %)]}
+  (reduce focus-segment ctx relative-path))
 
-#_(defn row "Toggle :many into :one as we spread through the rows. k is used for filtering validation hints"
-  [ctx rval & [k]]
-  {:pre [(r/reactive? rval)]}
-  (assert @(r/fmap->> (:hypercrud.browser/field ctx) ::field/cardinality (= :db.cardinality/many))
-          (str "`context/row` is only valid on cardinality/many. current path: " (pr-str (:hypercrud.browser/path ctx))))
+(defn row "Toggle :many into :one as we spread through the rows.
+  No change in :eav."
+  [ctx & [k]]
+  {:pre [(s/assert :hypercrud/context ctx)]
+   :post [(s/assert :hypercrud/context %)]}
   (-> ctx
       (set-parent)
       (set-parent-data)
-      (assoc :hypercrud.browser/data rval)                  ; matches k
-      (update :hypercrud.browser/eav
-              (r/partial r/fmap (fn [[e a v]]
-                                  ; (assert (nil? v) "it was not yet in scope") -- nested case, eav is present and well defined
-                                  ; FindColl is happy,
-                                  ; FindRel (map smart-entity-identifier @rval)
-                                  ; Todo normalize FindRel into FindColl when possible
-                                  [e a (smart-entity-identifier ctx @rval)])))
+      (assoc :hypercrud.browser/data (r/cursor (:hypercrud.browser/data ctx) k)) ; no change in eav
       (update :hypercrud.browser/validation-hints #(for [[[p & ps] hint] % :when (= k p)]
                                                      [ps hint]))
-      (update :hypercrud.browser/field
-              #(r/fmap-> % (assoc ::field/cardinality :db.cardinality/one)))))
-
+      (update :hypercrud.browser/field #(r/fmap-> % (assoc ::field/cardinality :db.cardinality/one)))))
 
 (declare row-keyfn)
-(declare index-links)
 ; var first, then can always use db/id on row. No not true – collisions! It is the [?e ?f] product which is unique
 
 ; keyfn must support entities & scalars (including aggregates)
@@ -270,8 +266,9 @@
   where criterias is some of #{ident txfn class class2}.
   Links include all links reachable by navigating :ref :one. (Change this by specifying an :ident)
   The index internals are reactive."
-  [schemas r-fiddle]
-  {:pre [(every? #(satisfies? contrib.datomic/SchemaIndexedNormalized %) (vals schemas))]}
+  [r-schemas r-fiddle]
+  {:pre [#_(not-empty r-schemas)
+         (every? #(satisfies? contrib.datomic/SchemaIndexedNormalized %) (vals @r-schemas))]}
   (let [indexed-links-at (r/fmap -indexed-links-at r-fiddle)]
     (reify FiddleLinksIndex
       (links-at-r [this criterias]
@@ -280,11 +277,12 @@
                    (map second)))                           ; drop the index, just the links
 
       (links-in-dimension-r [this ?element ?pullpath criterias] ; hidden deref
-        (if-not (and ?element ?pullpath)
+        (if-not (and ?element @?element ?pullpath)
           (links-at-r this criterias)
-          (let [{{db :symbol} :source {pull-pattern :value} :pattern} ?element
-                schema (get schemas (str db))]
-            (->> (contrib.datomic/reachable-attrs schema (contrib.datomic/pull-shape pull-pattern) ?pullpath)
+          (let [{{db :symbol} :source {pull-pattern :value} :pattern} @?element
+                schema (get @r-schemas (str db))]             ; track schema in ctx too
+            (->> (when schema
+                   (contrib.datomic/reachable-attrs schema (contrib.datomic/pull-shape pull-pattern) ?pullpath))
                  (mapcat (fn [a]
                            (links-at-r this (conj criterias a))))
                  r/sequence)))))))
@@ -368,11 +366,9 @@
                                  (eval-string!+ (str "(fn [ctx] \n" formula-str "\n)"))
                                  (either/right (constantly (constantly nil))))
            formula-fn (try-either (formula-ctx-closure ctx))
-           :let [v (r/fmap-> (:hypercrud.browser/eav ctx) (get 2))] ; eav can be nil! Generally when formula ignores it anyway e.g. top iframes
-           args (try-either @(r/fmap->> v
-                                        formula-fn          ; Documented behavior is v in, tuple out, no colors.
-                                        normalize-args))]
-      (return args))))
+           :let [[_ _ v] @(:hypercrud.browser/eav ctx)]
+           args (try-either (formula-fn v))]                ; Documented behavior is v in, tuple out, no colors.
+      (return (normalize-args args)))))
 
 (defn ^:export build-route' "There may not be a route! Fiddle is sometimes optional" ; build-route+
   [+args ctx {:keys [:link/fiddle :link/tx-fn] :as link}]
@@ -389,9 +385,11 @@
       (return route))))
 
 (defn stable-eav-v' [[e a _] v']
+  {:pre [e a v']}
   [e a v'])
 
 (defn stable-eav-a' [[e _ v] a']
+  {:pre [a']}
   [e a' v])
 
 (defn refocus' "focus a link ctx, accounting for link/formula which occludes the natural eav"
@@ -399,14 +397,15 @@
   {:pre [(s/assert :hypercrud/context ctx)
          (s/assert r/reactive? link-ref)]
    :post [(s/assert (s/cat :ctx :hypercrud/context :route r/reactive?) %)]}
-  (let [target-a @(r/fmap (r/comp hyperfiddle.fiddle/read-path :link/path) link-ref)
-        ctx (if (and target-a                               ; backwards compat before mig
-                     (not= target-a @(r/fmap-> (:hypercrud.browser/eav ctx) second))) ; already here
+  (let [[e a v] @(:hypercrud.browser/eav ctx)
+        target-a @(r/fmap (r/comp hyperfiddle.fiddle/read-path :link/path) link-ref)
+        ctx (if (and target-a (not= target-a a))            ; backwards compat
               (refocus ctx target-a)
               ctx)
         +args @(r/fmap->> link-ref (build-args+ ctx))
         [v' & vs] (->> +args (contrib.ct/unwrap (constantly nil))) ; EAV sugar is not interested in tuple case, that txfn is way off happy path
-        ctx (update ctx :hypercrud.browser/eav (r/partial r/fmap (r/partial r/flip stable-eav-v' v')))
+        ctx (assoc ctx :hypercrud.browser/eav (r/track identity [e a v'])
+                    #_(r/partial r/fmap (r/partial r/flip stable-eav-v' v')))
         r+?route (r/fmap->> link-ref (build-route' +args ctx))]
     [ctx r+?route]))
 

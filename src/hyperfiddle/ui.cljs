@@ -205,7 +205,7 @@ User renderers should not be exposed to the reaction."
   (defn ui-from-link [link-ref ctx & [props ?label]]
     {:pre [link-ref (r/reactive? link-ref)]}
     (let [visual-ctx ctx
-          [ctx r+?route] (context/refocus' ctx link-ref)
+          [ctx r+?route] (context/refocus' ctx link-ref)    ; route reaction isn't even real
           style {:color nil #_(connection-color ctx (cond (hyperfiddle.ide.console-links/system-link? (:db/id @link-ref)) 60 :else 40))}
           props (update props :style #(or % style))
           has-tx-fn @(r/fmap-> link-ref :link/tx-fn blank->nil boolean)
@@ -270,12 +270,13 @@ User renderers should not be exposed to the reaction."
   (with-meta
     [:div {:class (css "field" (:class props))
            :style {:border-color (connection-color ctx)}}
-     [Head nil (dissoc ctx :hypercrud.browser/data) props]
-     (let [props (as-> props props
+     [Head nil (dissoc ctx :hypercrud.browser/data) props]  ; eav
+     (let [[e a v] @(:hypercrud.browser/eav ctx)
+           props (as-> props props
                        (update props :disabled #(or % (not @(r/track writable-entity? ctx))))
                        (update props :is-invalid #(or % (context/leaf-invalid? ctx)))
                        (update props :class css (if (:disabled props) "disabled")))]
-       [Body @(:hypercrud.browser/data ctx) ctx props])]
+       [Body v ctx props])]
     (when (= '* (last relative-path))                       ; :hypercrud.browser/path
       ; guard against crashes for nil data
       {:key @(r/fmap-> (or (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data])
@@ -308,7 +309,7 @@ User renderers should not be exposed to the reaction."
         props (dissoc props :label-fn)
         props (update props :class css (semantic-css ctx))
         is-magic-new (= '* (last relative-path))]
-    (case (:hyperfiddle.ui/layout ctx)
+    (case (:hyperfiddle.ui/layout ctx)                      ; check cardinality
       :hyperfiddle.ui.layout/table (when-not is-magic-new
                                      [table-field relative-path ctx Body Head props])
       [form-field relative-path ctx Body Head props])))
@@ -322,12 +323,10 @@ User renderers should not be exposed to the reaction."
                            ::layout :hyperfiddle.ui.layout/table)]
         [:table (update props :class (fnil css "hyperfiddle") "unp") ; fnil case is iframe root (not a field :many)
          [:thead (->> (columns (dissoc ctx :hypercrud.browser/data) props) (into [:tr]))] ; strict
-         (->> (r/fmap-> (:hypercrud.browser/data ctx)
-                        (sort/sort-fn sort-col))
-              (r/unsequence (r/partial context/row-keyfn ctx))
-              (map (fn [[row k]]
-                     (->> (columns (context/row ctx row k) props)
-                          (into ^{:key k} [:tr]))))         ; strict
+         ; filter? Group-by? You can't. Do it in the peer
+         (->> (for [ctx (hyperfiddle.api/spread-rows ctx #(sort/sort-fn % sort-col))]
+                (->> (columns ctx props)
+                     (into [:tr {:key (:hypercrud.browser/path ctx)}])))
               (into [:tbody]))]))))
 
 (defn hint [val {:keys [hypercrud.browser/fiddle] :as ctx} props]
@@ -341,6 +340,8 @@ User renderers should not be exposed to the reaction."
         (fields (assoc ctx ::layout :hyperfiddle.ui.layout/block))))
 
 (defn columns [m-field relative-path field ctx & [props]]
+  (for [ctx (hyperfiddle.api/spread-relation ctx)]          ; (hyperfiddle.api/spread-a ctx)
+    [form-field ctx Body Head props])
   (concat
     (->> @(r/fmap->> m-field ::field/children (map ::field/path-segment))
          (map (fn [child-segment]
@@ -353,7 +354,7 @@ User renderers should not be exposed to the reaction."
                    Pull nil #_entity-links
                    ; else nested pulls
                    nil)]
-      [^{:key (str relative-path)} [field relative-path ctx f props]])))
+      [^{:key (str relative-path)} [field relative-path ctx f props]]))) ; fiddle segment (top)
 
 (defn columns-relation-product [field ctx & [props]]
   (->> (r/fmap ::field/children (:hypercrud.browser/field ctx))

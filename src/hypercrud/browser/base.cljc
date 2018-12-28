@@ -82,16 +82,18 @@
                          (either/right nil)))]
   (defn process-results "Initialize ctx internals, but doesn't focus anything into scope.
     Not even the topfiddle"
-    [fiddle request ctx]
+    [r-fiddle request ctx]
+    ; Blow mlet in case of (right _) -> (left _), but don't recompute if (right :a) -> (right :b).
     (mlet [reactive-attrs @(r/apply-inner-r (project/hydrate-attrs ctx))
            reactive-result @(r/apply-inner-r (r/track nil-or-hydrate (:peer ctx) (:branch ctx) request))
-           :let [ctx (assoc ctx
+           :let [r-schemas (r/track context/summon-schemas-grouped-by-dbname ctx)
+                 ctx (assoc ctx
                        :hypercrud.browser/attr-renderers reactive-attrs
-                       ; The following are internal, result is not formally in user scope yet!
+                       :hypercrud.browser/schemas r-schemas
                        :hypercrud.browser/data reactive-result
-                       :hypercrud.browser/fiddle fiddle
-                       :hypercrud.browser/link-index (context/index-links (context/summon-schemas-grouped-by-dbname ctx) fiddle)
-                       :hypercrud.browser/eav (r/track identity [nil nil nil]) ; good enough for a top iframe!
+                       :hypercrud.browser/fiddle r-fiddle
+                       :hypercrud.browser/link-index (context/index-links r-schemas r-fiddle)
+                       :hypercrud.browser/eav (r/track identity [nil nil nil])
                        :hypercrud.browser/path [])]
            reactive-field @(r/apply-inner-r (r/track field/auto-field request ctx))] ; legacy
       (return (assoc ctx :hypercrud.browser/field reactive-field)))))

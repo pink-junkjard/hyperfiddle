@@ -117,7 +117,7 @@
 
 (defn pulled-tree-derivative "Derive a pull-shape which describes a pulled-tree"
   [schema pulled-tree]
-  {:pre [(map? pulled-tree)]}
+  {:pre [schema (map? pulled-tree)]}
   (->> pulled-tree
        (reduce-kv
          (fn [acc k v]
@@ -231,10 +231,15 @@
                    (contains? attr-spec a))))))
 
 (defn enclosing-pull-shapes [schemas qfind data]
+  {:pre [schemas qfind data]}
   (let [data (contrib.datomic/normalize-result qfind data)]
     (->> (datascript.parser/find-elements qfind)
-         (map-indexed (fn [i {{db :symbol} :source {pull-pattern :value} :pattern}]
-                        (let [coll (map #(get % i) data)
-                              schema (get schemas (str db))]
-                          (contrib.datomic/enclosing-pull-shape schema (contrib.datomic/pull-shape pull-pattern) coll))))
+         (map-indexed (fn [i element]
+                        (condp = (type element)
+                          Variable nil
+                          Aggregate nil
+                          Pull (let [{{db :symbol} :source {pull-pattern :value} :pattern} element
+                                     coll (mapv #(get % i) data)
+                                     schema (get schemas (str db))]
+                                 (enclosing-pull-shape schema (pull-shape pull-pattern) coll)))))
          vec)))

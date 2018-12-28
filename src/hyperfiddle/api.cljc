@@ -12,26 +12,35 @@
 
 
 ; This file is coded in reactive style, which means no closures because they cause unstable references.
-; All closures must be explicitly closed with r/partial
+; All "closures" must be explicitly closed with a deftype that implements IEquiv, see helpers in contrib.reactive
+
 
 (defn ^:export fiddle "Fiddle level ctx adds the result to scope"
   [ctx]
-  {:post [(:hypercrud.browser/eav %)                        ; the topfiddle ident is the attr
+  {:post [(s/assert :hypercrud/context %)
           (contains? % :hypercrud.browser/qfind)            ; but it can be nil for :type :blank
           (:hypercrud.browser/link-index %)]}
+
+  ; Deep inspect the elements to compute the enclosing pull shape for each element
+
   (let [r-fiddle (:hypercrud.browser/fiddle ctx)
-        r-data (:hypercrud.browser/data ctx)]
-    (-> ctx
-        (assoc
-          :hypercrud.browser/qfind (r/fmap-> r-fiddle hypercrud.browser.context/parse-fiddle-data-shape :qfind)
-          :hypercrud.browser/validation-hints
-          (if-let [spec (s/get-spec @(r/fmap :fiddle/ident r-fiddle))]
-            (contrib.validation/validate spec @r-data (partial hypercrud.browser.context/row-keyfn ctx))))
-        (update :hypercrud.browser/eav (fn [r-eav]
-                                         (-> [r-eav (r/fmap :fiddle/ident r-fiddle)] ; args to stable-eav'
-                                             (r/sequence)   ; Reaction[List[_]]
-                                             (->> (r/fmap (r/partial apply hypercrud.browser.context/stable-eav-a'))))
-                                         )))))
+        r-data (:hypercrud.browser/data ctx)
+        r-qfind (r/fmap-> r-fiddle hypercrud.browser.context/parse-fiddle-data-shape :qfind)]
+    (as-> ctx ctx
+          (assoc ctx
+            :hypercrud.browser/qfind r-qfind
+            :hypercrud.browser/validation-hints
+            (if-let [spec (s/get-spec @(r/fmap :fiddle/ident r-fiddle))]
+              (contrib.validation/validate spec @r-data (partial hypercrud.browser.context/row-keyfn ctx))))
+          (if-not @r-qfind                                  ; guard :blank
+            ctx
+            (assoc ctx :hypercrud.browser/enclosing-pull-shapes (r/apply contrib.datomic/enclosing-pull-shapes
+                                                                         ((juxt :hypercrud.browser/schemas
+                                                                                :hypercrud.browser/qfind
+                                                                                :hypercrud.browser/data) ctx))))
+          (update ctx :hypercrud.browser/eav (fn [r-eav]
+                                               (r/apply hypercrud.browser.context/stable-eav-a'
+                                                        [r-eav (r/fmap :fiddle/ident r-fiddle)]))))))
 
 (defn ^:export spread-fiddle "automatically guards :fiddle/type :blank.
   Use in a for comprehension!"
@@ -45,22 +54,28 @@
   Automatically accounts for query dimension - no-op in the case of FindTuple and FindScalar."
   [ctx & [sort-fn]]
   {:pre [(:hypercrud.browser/qfind ctx)
-         (:hypercrud.browser/eav ctx)                       ; can be just topfiddle
+         (s/assert :hypercrud/context ctx)
          (not (:hypercrud.browser/element ctx))]}           ; not yet
   (let [{r-qfind :hypercrud.browser/qfind r-data :hypercrud.browser/data} ctx]
     (condp some [(type @r-qfind)]
       #{FindRel FindColl} (for [[_ k] (->> (r/fmap (or sort-fn identity) r-data)
                                            (r/unsequence (r/partial hypercrud.browser.context/row-keyfn ctx)))]
-                            ;(hypercrud.browser.context/row ctx _ k)
-                            (hypercrud.browser.context/focus ctx [k]))
+                            (hypercrud.browser.context/row ctx k))
       #{FindTuple FindScalar} [ctx])))
 
-(defn element [ctx & [i]]
-  (let [e @(r/fmap-> (:hypercrud.browser/qfind ctx) datascript.parser/find-elements (get (or i 0)))
-        ctx (assoc ctx :hypercrud.browser/element e)]
-    (hypercrud.browser.context/focus ctx [i])))
+(defn stable-tupled-v-extractor [i r-data]
+  {:pre [i (r/reactive? r-data)]}                           ; It's a tuple (already spread row)
+  (r/fmap->> r-data (map (r/partial r/flip get i))))
 
-(defn ^:export spread-elements "yields a ctx foreach element.
+(defn element [ctx & [i]]
+  (-> ctx
+      (assoc :hypercrud.browser/element (r/fmap-> (:hypercrud.browser/qfind ctx) datascript.parser/find-elements (get (or i 0))))
+      (assoc :hypercrud.browser/enclosing-pull-shape nil)
+      (update :hypercrud.browser/data (condp some [(type @(:hypercrud.browser/qfind ctx))]
+                                        #{FindRel FindTuple} (r/partial stable-tupled-v-extractor i)
+                                        #{FindColl FindScalar} identity))))
+
+(defn ^:export spread-relation "yields a ctx foreach element.
   All query dimensions have at least one element."
   [ctx]
   {:pre [(:hypercrud.browser/qfind ctx)
@@ -69,6 +84,27 @@
     ; No unsequence here? What if find elements change? Can we use something other than (range) as keyfn?
     (for [i (range (count (datascript.parser/find-elements @r-qfind)))]
       (element ctx i))))
+
+(defn attribute [ctx a]                                     ; This is focus
+  ; refine the enclosing-pull-shape
+  ; accumulate the path and parent
+  ; header vs body
+  ; eav
+  (hypercrud.browser.context/focus-segment ctx a))
+
+(defn spread-element [{:keys [:hypercrud.browser/qfind
+                              :hypercrud.browser/element] :as ctx}]
+  {:pre [element]}
+  ; Legacy is to generate paths for the fields, field calls focus. Is this focus?
+  ; If so how do we control order?
+  ; focus = attribute
+
+  ; Set EAV?
+  (condp = (type element)
+    Variable [ctx]
+    Aggregate [ctx]
+    Pull (for [k (contrib.datomic/pull-strata (:hypercrud.browser/enclosing-pull-shape ctx))]
+           (attribute ctx k))))
 
 (defn ^:export ^:legacy tempid-child
   "Generate tempid from eav, this tempid is idempotent and stable over time"

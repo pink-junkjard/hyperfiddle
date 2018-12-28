@@ -1,6 +1,7 @@
 (ns contrib.reactive
   (:refer-clojure :exclude [atom comp constantly partial sequence apply])
   (:require [cats.core :as cats]
+            [cats.monad.either]
             [clojure.spec.alpha :as s]
             [contrib.data :as util]
     #?(:cljs [reagent.core :as reagent])
@@ -171,7 +172,7 @@
 ; useful for reacting on the Either (left v right), but not the Right's value
 ; this should probably fall out eventually
 (let [f (fn [rmv]
-          {:pre [(s/assert cats.monad.either/either? @rmv)]}
+          {:pre [#_(s/assert cats.monad.either/either? @rmv)]}
           (cats/fmap (clojure.core/constantly (fmap cats/extract rmv)) @rmv))]
   (defn apply-inner-r [rmv]
     {:pre [(s/assert reactive? rmv)
@@ -214,4 +215,5 @@
       hash))
 
 (defn apply [f rvs]
-  (fmap->> (sequence rvs) (clojure.core/apply f)))
+  (fmap (partial clojure.core/apply f) (sequence rvs))
+  #_(fmap->> (sequence rvs) (clojure.core/apply f)))        ; seems broken macro in cljs only `WARNING: Wrong number of args (1) passed to cljs.core/apply at line 219 reactive.cljc`

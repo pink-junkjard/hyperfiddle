@@ -67,7 +67,8 @@
                                                                                    [(:fiddle/ident popover-data)])}))
       [tooltip {:label "Environment administration"} (ui/link :domain ctx "env")]
       (if @(runtime/state (:peer ctx) [::runtime/user-id])
-        (if-let [{:keys [:hypercrud.browser/data]} (hyperfiddle.data/browse ctx :account)]
+        (if-let [{:keys [:hypercrud.browser/data]} (-> (hyperfiddle.data/browse ctx :account)
+                                                       (hyperfiddle.api/fiddle))]
           (let [props {:tooltip [nil @(r/fmap :user/email data)]
                        :iframe-as-popover true}]
             [ui/link :account ctx @(r/fmap :user/name data) props]))

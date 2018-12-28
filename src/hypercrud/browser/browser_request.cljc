@@ -2,6 +2,8 @@
   (:require
     [cats.core :as cats :refer [mlet]]
     [cats.monad.either :as either]
+    [clojure.spec.alpha :as s]
+    [contrib.datomic]
     [contrib.reactive :as r]
     [hypercrud.browser.base :as base]
     [hypercrud.browser.context :as context]
@@ -29,7 +31,8 @@
               (-quiet-unwrap
                 (mlet [fiddle @(r/apply-inner-r (r/track base/hydrate-fiddle meta-fiddle-request ctx))
                        fiddle-request @(r/apply-inner-r (r/track base/request-for-fiddle fiddle ctx))]
-                  (assert (r/reactive? fiddle-request))
+                  (s/assert r/reactive? fiddle)
+                  (s/assert r/reactive? fiddle-request)
                   (cats/return
                     (concat
                       (some-> @fiddle-request vector)
@@ -41,30 +44,38 @@
   (-quiet-unwrap (base/from-link link ctx (fn [route ctx]
                                             (either/right (request-from-route route ctx))))))
 
-(defn body-field [ctx]
-  (->> @(data/select-many-here ctx)
+(defn spread-pull [ctx]
+  (for [k (contrib.datomic/pull-strata (:hypercrud.browser/enclosing-pull-shape ctx))]
+    (hyperfiddle.api/attribute ctx k)))
+
+(defn requests-for-pull-iframes [ctx]
+  (->> @(data/select-many-here ctx #{:hf/iframe})
        (mapcat #(request-from-link % ctx))
-       (concat (let [child-fields? (not @(r/fmap (r/comp nil? ::field/children) (:hypercrud.browser/field ctx)))]
-                 (when (and child-fields? (context/attribute-segment? (last (:hypercrud.browser/path ctx)))) ; ignore relation and fe fields
-                   (with-result ctx))))))
+       (concat
+         (for [ctx (spread-pull ctx)]
+           (requests-for-pull-iframes ctx)))))                             ; recur
 
 (defn with-result [ctx]
-  (for [ctx (hyperfiddle.api/spread-fiddle ctx)
-        ctx (hyperfiddle.api/spread-rows ctx)
-        ctx (hyperfiddle.api/spread-elements ctx)]
-    (->> (data/form-with-naked-legacy ctx)
-         ; left the map-flatten but why not mapcat?
-         (map (fn [path]
-                (if (seq path)                              ; scar - guard infinite recursion on [] links
-                  (body-field (context/focus ctx path)))))
-         flatten)))
+  (for [ctx (hyperfiddle.api/spread-fiddle ctx)]
+    (concat
+      (->> @(data/select-many-here ctx #{:hf/iframe})
+           (mapcat #(request-from-link % ctx)))
+      (for [ctx (hyperfiddle.api/spread-rows ctx)
+            ; tuple level iframes - how would we address them?
+            ctx (hyperfiddle.api/spread-relation ctx)]
+        ; element level iframes could be addressed by element index or name
+        (condp = (type (:hypercrud.browser/element ctx))    ; (let [{{db :symbol} :source {pull-pattern :value} :pattern} element])
+          Variable []
+          Aggregate []
+          Pull (for [ctx (spread-pull ctx)]
+                 (requests-for-pull-iframes ctx)))))))
 
 (defn requests [ctx]
   ; at this point we only care about inline links and popovers are hydrated on their on hydrate-route calls
   (concat
     ; Top level iframes have no dependency at all, no qfind or element at all
     ; Is the topfiddle-ident in scope though?
-    (->> @(data/select-many-here ctx #{:hf/iframe nil}) ; No dependency at all, not even topfiddle
+    (->> @(data/select-many-here ctx #{:hf/iframe})
          (mapcat #(request-from-link % ctx)))
     (with-result ctx)
     ; This does not get to look at the fiddlescope, though seems reasonable if it wanted to
