@@ -55,7 +55,7 @@
   [ctx & [sort-fn]]
   {:pre [(:hypercrud.browser/qfind ctx)
          (s/assert :hypercrud/context ctx)
-         (not (:hypercrud.browser/element ctx))]}           ; not yet
+         #_(not (:hypercrud.browser/element ctx))]}           ; not yet, except in recursive case
   (let [{r-qfind :hypercrud.browser/qfind r-data :hypercrud.browser/data} ctx]
     (condp some [(type @r-qfind)]
       #{FindRel FindColl} (for [[_ k] (->> (r/fmap (or sort-fn identity) r-data)
@@ -63,19 +63,22 @@
                             (hypercrud.browser.context/row ctx k))
       #{FindTuple FindScalar} [ctx])))
 
-(defn stable-tupled-v-extractor [i r-data]
-  {:pre [i (r/reactive? r-data)]}                           ; It's a tuple (already spread row)
-  (r/fmap->> r-data (map (r/partial r/flip get i))))
+(defn stable-tupled-v-extractor [i ?r-data]
+  {:pre [i #_(r/reactive? ?r-data)]}                        ; It's a tuple (already spread row)
+  (when ?r-data                                             ; headers
+    (r/fmap->> ?r-data (map (r/partial r/flip get i)))))
 
 (defn element [ctx & [i]]
+  ;{:pre [(s/assert nil? (:hypercrud.browser/element ctx))]}
   (-> ctx
       (assoc :hypercrud.browser/element (r/fmap-> (:hypercrud.browser/qfind ctx) datascript.parser/find-elements (get (or i 0))))
-      (assoc :hypercrud.browser/enclosing-pull-shape nil)
+      (assoc :hypercrud.browser/element-index (or i 0))     ; hack, don't drive tables like this, a breaking change
+      (update :hypercrud.browser/enclosing-pull-shape (r/partial r/flip get i))
       (update :hypercrud.browser/data (condp some [(type @(:hypercrud.browser/qfind ctx))]
                                         #{FindRel FindTuple} (r/partial stable-tupled-v-extractor i)
                                         #{FindColl FindScalar} identity))))
 
-(defn ^:export spread-relation "yields a ctx foreach element.
+(defn ^:export spread-elements "yields a ctx foreach element.
   All query dimensions have at least one element."
   [ctx]
   {:pre [(:hypercrud.browser/qfind ctx)
@@ -86,11 +89,16 @@
       (element ctx i))))
 
 (defn attribute [ctx a]                                     ; This is focus
+  {:pre [ctx a]}
   ; refine the enclosing-pull-shape
   ; accumulate the path and parent
   ; header vs body
   ; eav
-  (hypercrud.browser.context/focus-segment ctx a))
+  (hypercrud.browser.context/attribute ctx a))
+
+(defn spread-pull [ctx]                                     ; not recursive
+  (for [k (contrib.datomic/pull-level (:hypercrud.browser/enclosing-pull-shape ctx))]
+    (attribute ctx k)))
 
 (defn spread-element [{:keys [:hypercrud.browser/qfind
                               :hypercrud.browser/element] :as ctx}]
@@ -103,7 +111,7 @@
   (condp = (type element)
     Variable [ctx]
     Aggregate [ctx]
-    Pull (for [k (contrib.datomic/pull-strata (:hypercrud.browser/enclosing-pull-shape ctx))]
+    Pull (for [k (contrib.datomic/pull-level (:hypercrud.browser/enclosing-pull-shape ctx))]
            (attribute ctx k))))
 
 (defn ^:export ^:legacy tempid-child

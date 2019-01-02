@@ -7,7 +7,6 @@
     [contrib.reactive :as r]
     [hypercrud.browser.base :as base]
     [hypercrud.browser.context :as context]
-    [hypercrud.browser.field :as field]
     [hypercrud.browser.routing :as routing]
     [hypercrud.client.peer :refer [-quiet-unwrap]]
     [hyperfiddle.api]
@@ -44,15 +43,11 @@
   (-quiet-unwrap (base/from-link link ctx (fn [route ctx]
                                             (either/right (request-from-route route ctx))))))
 
-(defn spread-pull [ctx]
-  (for [k (contrib.datomic/pull-strata (:hypercrud.browser/enclosing-pull-shape ctx))]
-    (hyperfiddle.api/attribute ctx k)))
-
 (defn requests-for-pull-iframes [ctx]
   (->> @(data/select-many-here ctx #{:hf/iframe})
        (mapcat #(request-from-link % ctx))
        (concat
-         (for [ctx (spread-pull ctx)]
+         (for [ctx (hyperfiddle.api/spread-pull ctx)]
            (requests-for-pull-iframes ctx)))))                             ; recur
 
 (defn with-result [ctx]
@@ -62,12 +57,12 @@
            (mapcat #(request-from-link % ctx)))
       (for [ctx (hyperfiddle.api/spread-rows ctx)
             ; tuple level iframes - how would we address them?
-            ctx (hyperfiddle.api/spread-relation ctx)]
+            ctx (hyperfiddle.api/spread-elements ctx)]
         ; element level iframes could be addressed by element index or name
         (condp = (type (:hypercrud.browser/element ctx))    ; (let [{{db :symbol} :source {pull-pattern :value} :pattern} element])
           Variable []
           Aggregate []
-          Pull (for [ctx (spread-pull ctx)]
+          Pull (for [ctx (hyperfiddle.api/spread-pull ctx)]
                  (requests-for-pull-iframes ctx)))))))
 
 (defn requests [ctx]

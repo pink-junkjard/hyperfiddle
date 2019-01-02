@@ -215,8 +215,8 @@
           (datascript.parser/find-elements qfind)
           (contrib.data/pad nil (contrib.data/transpose (normalize-result qfind result)))))
 
-(defn pull-strata [pull-shape]
-  (->> pull-shape
+(defn pull-level [pullshape]                               ; see downtree-pullpaths
+  (->> pullshape
        (mapcat (fn [attr-spec]
                  (cond
                    (keyword? attr-spec) [attr-spec]
@@ -231,7 +231,8 @@
                    (contains? attr-spec a))))))
 
 (defn enclosing-pull-shapes [schemas qfind data]
-  {:pre [schemas qfind data]}
+  {:pre [schemas qfind data]
+   :post [vector?]}                                         ; associative by index
   (let [data (contrib.datomic/normalize-result qfind data)]
     (->> (datascript.parser/find-elements qfind)
          (map-indexed (fn [i element]

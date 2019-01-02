@@ -132,7 +132,7 @@
 
 (defn ^:export ref-many [val ctx & [props]]
   [hyperfiddle.ui/table
-   (r/partial hyperfiddle.ui/columns-relation-product hyperfiddle.ui/field)
+   (r/partial hyperfiddle.ui/columns hyperfiddle.ui/field)
    ctx props])
 
 (defn ^:export id-or-ident [val ctx & [props]]

@@ -266,7 +266,7 @@ User renderers should not be exposed to the reaction."
         [ui-from-link link-ref ctx props]))))
 
 (defn form-field "Form fields are label AND value. Table fields are label OR value."
-  [relative-path ctx Body Head props]
+  [ctx Body Head props]
   (with-meta
     [:div {:class (css "field" (:class props))
            :style {:border-color (connection-color ctx)}}
@@ -277,21 +277,21 @@ User renderers should not be exposed to the reaction."
                        (update props :is-invalid #(or % (context/leaf-invalid? ctx)))
                        (update props :class css (if (:disabled props) "disabled")))]
        [Body v ctx props])]
-    (when (= '* (last relative-path))                       ; :hypercrud.browser/path
+    (when (= '* (last (:hypercrud.browser/path ctx)))       ; broken?
       ; guard against crashes for nil data
       {:key @(r/fmap-> (or (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data])
                            (r/track identity nil))
                        keys hash)})))
 
 (defn table-field "Form fields are label AND value. Table fields are label OR value."
-  [relative-path ctx Body Head props]                       ; Body :: (val props ctx) => DOM, invoked as component
+  [ctx Body Head props]                                     ; Body :: (val props ctx) => DOM, invoked as component
   ; Presence of data to detect head vs body? Kind of dumb
   (case (if (:hypercrud.browser/data ctx) :body :head)      ; this is ugly and not uniform with form-field NOTE: NO DEREF ON THIS NIL CHECK
     :head [:th {:class (css "field" (:class props))         ; hoist
                 :style {:background-color (connection-color ctx)}}
            [Head nil ctx (-> props
-                             (update :class css (when (sort/sortable? ctx) "sortable") (some-> (sort/sort-direction relative-path ctx) name))
-                             (assoc :on-click (r/partial sort/toggle-sort! relative-path ctx)))]]
+                             (update :class css (when (sort/sortable? ctx) "sortable") (some-> (sort/sort-direction (:hypercrud.browser/path ctx) ctx) name))
+                             (assoc :on-click (r/partial sort/toggle-sort! (:hypercrud.browser/path ctx) ctx)))]]
     ; Field omits [] but table does not, because we use it to specifically draw repeating anchors with a field renderer.
     :body [:td {:class (css "field" (:class props))
                 :style {:border-color (connection-color ctx)}}
@@ -303,16 +303,31 @@ User renderers should not be exposed to the reaction."
 
 (defn ^:export field "Works in a form or table context. Draws label and/or value."
   [relative-path ctx & [?f props]]
-  (let [ctx (context/focus ctx relative-path)
+  (let [ctx (context/focus ctx relative-path) ; Handle element and attr
         Body (or ?f hyper-control)
         Head (or (:label-fn props) hyper-label)
         props (dissoc props :label-fn)
-        props (update props :class css (semantic-css ctx))
-        is-magic-new (= '* (last relative-path))]
+        props (update props :class css (semantic-css ctx))]
     (case (:hyperfiddle.ui/layout ctx)                      ; check cardinality
-      :hyperfiddle.ui.layout/table (when-not is-magic-new
-                                     [table-field relative-path ctx Body Head props])
-      [form-field relative-path ctx Body Head props])))
+      :hyperfiddle.ui.layout/table #_(when-not is-magic-new) [table-field ctx Body Head props]
+      [form-field ctx Body Head props])))
+
+(defn columns [relpath ui-field ctx & [props]]
+  (concat
+    (for [[k ctx] (map vector (contrib.datomic/pull-level (:hypercrud.browser/enclosing-pull-shape ctx))
+                       (hyperfiddle.api/spread-pull ctx))]
+      ^{:key (str k)}
+      [ui-field (conj relpath k) ctx nil props])
+    [[ui-field relpath ctx nil props]]))                    ; fiddle segment (top)
+
+(defn columns-relation-product [ui-field ctx & [props]]
+  (for [[i element ctx] (map vector (range) (datascript.parser/find-elements @(:hypercrud.browser/qfind ctx))
+                             (hyperfiddle.api/spread-elements ctx))]
+    (condp some [(type element)]
+      #{Variable Aggregate} [ui-field [i] ctx props]
+      #{Pull} (for [[a ctx] (map vector (contrib.datomic/pull-level (:hypercrud.browser/enclosing-pull-shape ctx))
+                                 (hyperfiddle.api/spread-pull ctx))]
+                [ui-field [i a] ctx props]))))
 
 (defn ^:export table "Semantic table; columns driven externally" ; this is just a widget
   [columns ctx & [props]]
@@ -322,12 +337,12 @@ User renderers should not be exposed to the reaction."
             ctx (assoc ctx ::sort/sort-col sort-col
                            ::layout :hyperfiddle.ui.layout/table)]
         [:table (update props :class (fnil css "hyperfiddle") "unp") ; fnil case is iframe root (not a field :many)
-         [:thead (->> (columns (dissoc ctx :hypercrud.browser/data) props) (into [:tr]))] ; strict
-         ; filter? Group-by? You can't. Do it in the peer
-         (->> (for [ctx (hyperfiddle.api/spread-rows ctx #(sort/sort-fn % sort-col))]
-                (->> (columns ctx props)
-                     (into [:tr {:key (:hypercrud.browser/path ctx)}])))
-              (into [:tbody]))]))))
+         [:thead (into [:tr] (columns ctx))]
+         ; filter? Group-by? You can't. This is data driven. Shape your data in the peer.
+         (into [:tbody] (for [ctx (hyperfiddle.api/spread-rows ctx #(sort/sort-fn % sort-col))]
+                          (into
+                            [:tr {:key (:hypercrud.browser/row-key ctx)}]
+                            (columns ctx))))]))))
 
 (defn hint [val {:keys [hypercrud.browser/fiddle] :as ctx} props]
   (if (and (-> (:fiddle/type @fiddle) (= :entity))
@@ -339,49 +354,27 @@ User renderers should not be exposed to the reaction."
   (into [:<> {:key (str (context/row-keyfn ctx val))}]
         (fields (assoc ctx ::layout :hyperfiddle.ui.layout/block))))
 
-(defn columns [m-field relative-path field ctx & [props]]
-  (for [ctx (hyperfiddle.api/spread-relation ctx)]          ; (hyperfiddle.api/spread-a ctx)
-    [form-field ctx Body Head props])
-  (concat
-    (->> @(r/fmap->> m-field ::field/children (map ::field/path-segment))
-         (map (fn [child-segment]
-                (let [relative-path (conj relative-path child-segment)]
-                  ^{:key (str relative-path)}
-                  [field relative-path ctx hyper-control props]))))
-    (when-let [f (condp = @(r/fmap ::field/element-type m-field)
-                   Variable hyper-control
-                   Aggregate hyper-control
-                   Pull nil #_entity-links
-                   ; else nested pulls
-                   nil)]
-      [^{:key (str relative-path)} [field relative-path ctx f props]]))) ; fiddle segment (top)
-
-(defn columns-relation-product [field ctx & [props]]
-  (->> (r/fmap ::field/children (:hypercrud.browser/field ctx))
-       (r/unsequence ::field/path-segment)
-       (mapcat (fn [[m-field segment]]
-                 (columns m-field [segment] field ctx props)))))
-
 (defn pull "handles any datomic result that isn't a relation, recursively"
   [field val ctx & [props]]
   (let [cardinality @(r/fmap ::field/cardinality (:hypercrud.browser/field ctx))]
     (match* [cardinality]
-      [:db.cardinality/one] [form (r/partial columns (:hypercrud.browser/field ctx) [] field) val ctx props]
-      [:db.cardinality/many] [table (r/partial columns (:hypercrud.browser/field ctx) [] field) ctx props])))
+      [:db.cardinality/one] [form (r/partial columns [] field) val ctx props]
+      [:db.cardinality/many] [table (r/partial columns [] field) ctx props])))
 
 (defn ^:export result "Default result renderer. Invoked as fn, returns seq-hiccup, hiccup or
 nil. call site must wrap with a Reagent component"          ; is this just hyper-control ?
   [val ctx & [props]]
-  [:<>
-   (hint val ctx props)
-   (let [type @(r/fmap :fiddle/type (:hypercrud.browser/fiddle ctx))
-         level @(r/fmap ::field/level (:hypercrud.browser/field ctx))]
-     (match* [type level]
-       [:blank _] nil
-       [:query :relation] [table (r/partial columns-relation-product field) ctx props]
-       [:query :tuple] [form (r/partial columns-relation-product field) val ctx props]
-       [_ _] (pull field val ctx props)))
-   [iframe-field-default val ctx props]])
+  (let [ctx (hyperfiddle.api/fiddle ctx)]
+    [:<>
+     (hint val ctx props)
+     (let [type @(r/fmap :fiddle/type (:hypercrud.browser/fiddle ctx))
+           level @(r/fmap ::field/level (:hypercrud.browser/field ctx))]
+       (match* [type level]
+         [:blank _] nil
+         [:query :relation] [table (r/partial columns-relation-product hyperfiddle.ui/field) ctx props]
+         [:query :tuple] [form (r/partial columns-relation-product hyperfiddle.ui/field) val ctx props]
+         [_ _] (pull hyperfiddle.ui/field val ctx props)))
+     [iframe-field-default val ctx props]]))
 
 (def ^:dynamic markdown)                                    ; this should be hf-contrib or something
 
@@ -390,8 +383,8 @@ nil. call site must wrap with a Reagent component"          ; is this just hyper
 (defn ^:export fiddle-xray [val ctx & [props]]
   [:div (select-keys props [:class :on-click])
    [:h3 (pr-str @(:hypercrud.browser/route ctx))]
-   (for [ctx (hyperfiddle.api/spread-fiddle ctx)]
-     [result val ctx {}])])
+   ;(for [ctx (hyperfiddle.api/spread-fiddle ctx)])
+   [result val ctx {}]])
 
 (letfn [(render-edn [data]
           (let [edn-str (pprint-str data 160)]

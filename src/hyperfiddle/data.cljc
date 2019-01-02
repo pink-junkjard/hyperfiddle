@@ -68,7 +68,6 @@
   (>>= (select+ ctx ?corcs)
        #(base/data-from-link @% ctx)))
 
-(defn ^:export browse [ctx & [?corcs]]
-  {:pre [(s/assert :hypercrud/context ctx)]
-   :post [(r/reactive? %)]}
-  (->> (browse+ ctx ?corcs) (unwrap (constantly (r/track identity nil)))))
+(defn ^:export browse [ctx & [?corcs]]                      ; returns a ctx, not reactive, has reactive keys
+  {:pre [(s/assert :hypercrud/context ctx)]}
+  (->> (browse+ ctx ?corcs) (unwrap (constantly nil))))

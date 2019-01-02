@@ -105,15 +105,10 @@
       (field [:fiddle/uuid] ctx hyper-control (assoc props :disabled true))
       (field [:fiddle/hydrate-result-as-fiddle] ctx hyper-control props)
       [:div.p "Additional attributes"]
-      (->> @(r/fmap->> (:hypercrud.browser/field ctx)
-                       ::field/children
-                       (map ::field/path-segment)
-                       (remove (r/comp (r/partial = "fiddle") namespace))
-                       (remove (r/partial = :db/id)))
-           (map (fn [segment]
-                  ^{:key (str [segment])}
-                  [field [segment] ctx nil]))
-           (doall))
+      (for [k (->> (contrib.datomic/pull-level (:hypercrud.browser/enclosing-pull-shape ctx))
+                   (remove (partial = :db/id)))]
+        ^{:key (str k)}
+        [field [k] ctx])
       (field [:db/id] ctx (fn [val ctx props]
                             [:div (link #{:hyperfiddle/ide :hf/remove} ctx "Remove fiddle" {:class "btn-outline-danger"})]))
       #_[:div.p "Spec debugging"]

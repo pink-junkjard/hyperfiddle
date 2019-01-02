@@ -172,8 +172,9 @@
     ; :extend-via-metadata
     [e a v]))
 
-(defn focus-segment [ctx path-segment]                      ; no longer handles fe-segments
-  {:pre [(s/assert :hypercrud/context ctx)]
+(defn attribute [ctx path-segment]                          ; no longer handles fe-segments
+  {:pre [(s/assert :hypercrud/context ctx)
+         (s/assert keyword? path-segment)]
    :post [(s/assert :hypercrud/context %)]}
   (let [field (r/track find-child-field (:hypercrud.browser/field ctx) path-segment ctx)
         ctx (-> ctx
@@ -204,7 +205,15 @@
   [ctx relative-path]
   {:pre [(s/assert :hypercrud/context ctx)]
    :post [(s/assert :hypercrud/context %)]}
-  (reduce focus-segment ctx relative-path))
+  ; Is this legacy compat?
+  (loop [ctx ctx
+         [p & ps] relative-path]
+    (reduce (fn [ctx p]
+              (cond
+                (int? p) (hyperfiddle.api/element ctx p)
+                (keyword? p) (hyperfiddle.api/attribute ctx p)
+                :else (assert false (str "illegal focus: " p))))
+            ctx relative-path)))
 
 (defn row "Toggle :many into :one as we spread through the rows.
   No change in :eav."
@@ -214,6 +223,7 @@
   (-> ctx
       (set-parent)
       (set-parent-data)
+      (assoc :hypercrud.browser/row-key k)
       (assoc :hypercrud.browser/data (r/cursor (:hypercrud.browser/data ctx) k)) ; no change in eav
       (update :hypercrud.browser/validation-hints #(for [[[p & ps] hint] % :when (= k p)]
                                                      [ps hint]))
