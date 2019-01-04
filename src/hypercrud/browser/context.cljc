@@ -112,6 +112,7 @@
     :else (get (ctx->id-lookup ctx) id)))
 
 (defn smart-entity-identifier "Generates the best Datomic lookup ref for a given pull. ctx needs :branch and :peer"
+  ; flip params for fmap->
   [ctx {:keys [:db/id :db/ident] :as v}]                    ; v can be a ThinEntity or a pull i guess
   ; This must be called only on refs.
   ; If we have a color, and a (last path), ensure it is a ref.
@@ -161,8 +162,20 @@
         @(contrib.reactive/cursor data [:db/id])
         @data)))
 
+(defn stable-eav-v' [[e a _] v']
+  {:pre [e a v']}
+  [e a v'])
+
+(defn stable-eav-a [[e _ _] a']
+  {:pre [a']}
+  [e a' nil])
+
+(defn stable-eav-av [[e _ _] a' v']
+  {:pre [a' v']}
+  [e a' v'])
+
 (defn eav "project eav from data"                           ; could return the ctx instead
-  [ctx ?data]
+  [ctx a ?data]
   (let [e (some-> ctx identify)                             ; this is the parent v
         a (->> (:hypercrud.browser/path ctx) (drop-while int?) last)
         v (smart-entity-identifier ctx ?data)]
@@ -172,44 +185,39 @@
     ; :extend-via-metadata
     [e a v]))
 
-(defn attribute [ctx path-segment]
+(defn attribute [ctx a]
   {:pre [(s/assert :hypercrud/context ctx)
-         (s/assert keyword? path-segment)]
+         (s/assert keyword? a)]
    :post [(s/assert :hypercrud/context %)]}
   ; refine the enclosing-pull-shape
   ; accumulate the path and parent
   ; header vs body
   ; eav
-  (let [field (r/track find-child-field (:hypercrud.browser/field ctx) path-segment ctx)
+  (let [head-or-body (if (:hypercrud.browser/data ctx) :body :head)
+        r-eav (:hypercrud.browser/eav ctx)
         ctx (-> ctx
                 (set-parent)
-                (update :hypercrud.browser/path conj path-segment)
+                (update :hypercrud.browser/path conj a)
+                (assoc :hypercrud.browser/eav (r/fmap-> r-eav (stable-eav-a a)))
                 (assoc :hypercrud.browser/enclosing-pull-shape (r/fmap->> (:hypercrud.browser/enclosing-pull-shape ctx)
-                                                                          (contrib.datomic/pull-shape-refine path-segment)))
-                (assoc :hypercrud.browser/field field))]
-    (if-not (:hypercrud.browser/data ctx)
-      ctx                                                   ; head
-      (let [[e a v] @(:hypercrud.browser/eav ctx)
-            _ (assert keyword? path-segment)
-            data (r/fmap path-segment (:hypercrud.browser/data ctx))]
-        (-> (set-parent-data ctx)                           ; body
-            (update :hypercrud.browser/validation-hints #(for [[[p & ps] hint] % :when (= p path-segment)]
-                                                           [ps hint]))
-            (assoc :hypercrud.browser/data data)
-            (assoc :hypercrud.browser/eav (r/fmap (r/partial eav ctx) data)
-                   #_(r/track identity [(some-> ctx identify)
-                                        path-segment
-                                        (smart-entity-identifier ctx @(r/cursor (:hypercrud.browser/data ctx)
-                                                                                ; path needs row? If it has find-element
-                                                                                (:hypercrud.browser/path ctx)))]))
-            )))))
+                                                                          (contrib.datomic/pull-shape-refine a))))]
+    (case head-or-body
+      :head ctx
+      :body (let [r-data (r/fmap a (:hypercrud.browser/data ctx))
+                  r-v (r/fmap->> r-data (smart-entity-identifier ctx))]
+              (-> (set-parent-data ctx)
+                  (update :hypercrud.browser/validation-hints #(for [[[p & ps] hint] % :when (= p a)]
+                                                                 [ps hint]))
+                  (assoc :hypercrud.browser/data r-data)
+                  (assoc :hypercrud.browser/eav (r/fmap-> r-eav (stable-eav-av a @r-v))) ; overreacted, fix
+                  )))))
 
 (defn stable-tupled-v-extractor [i ?r-data]
   {:pre [i #_(r/reactive? ?r-data)]}                        ; It's a tuple (already spread row)
   (when ?r-data                                             ; headers
     (r/fmap->> ?r-data (map (r/partial r/flip get i)))))
 
-(defn element [ctx & [i]]
+(defn element [ctx & [i]]                                   ; [nil :seattle/neighborhoods 1234345]
   ;{:pre [(s/assert nil? (:hypercrud.browser/element ctx))]}
   ;{:post [(s/assert :hypercrud/context %)]}
   (as-> ctx ctx
@@ -217,7 +225,7 @@
         (assoc ctx :hypercrud.browser/element-index (or i 0)) ; hack, don't drive tables like this, a breaking change
         (assoc ctx :hypercrud.browser/enclosing-pull-shape (r/fmap-> (:hypercrud.browser/enclosing-pull-shapes ctx)
                                                                      (get i)))
-        (let [{data :hypercrud.browser/data} ctx]
+        (let [{data :hypercrud.browser/data} ctx]           ; head vs body
           (if data
             (update ctx :hypercrud.browser/data (condp some [(type @(:hypercrud.browser/qfind ctx))]
                                                   #{FindRel FindTuple} (r/partial stable-tupled-v-extractor i)
@@ -416,14 +424,6 @@
            route (id->tempid+ (hyperfiddle.route/canonicalize fiddle-id colored-args) ctx)
            route (hyperfiddle.route/validate-route+ route)]
       (return route))))
-
-(defn stable-eav-v' [[e a _] v']
-  {:pre [e a v']}
-  [e a v'])
-
-(defn stable-eav-a' [[e _ v] a']
-  {:pre [a']}
-  [e a' v])
 
 (defn refocus' "focus a link ctx, accounting for link/formula which occludes the natural eav"
   [ctx link-ref]

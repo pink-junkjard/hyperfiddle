@@ -39,7 +39,7 @@
                                                                                 :hypercrud.browser/qfind
                                                                                 :hypercrud.browser/data) ctx))))
           (update ctx :hypercrud.browser/eav (fn [r-eav]
-                                               (r/apply hypercrud.browser.context/stable-eav-a'
+                                               (r/apply hypercrud.browser.context/stable-eav-a
                                                         [r-eav (r/fmap :fiddle/ident r-fiddle)]))))))
 
 (defn ^:export spread-fiddle "automatically guards :fiddle/type :blank.

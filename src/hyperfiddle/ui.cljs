@@ -118,21 +118,21 @@
           :else [(control val ctx props) val ctx props]))))
 
 (defn ^:export hyper-label [_ ctx & [props]]
-  (let [field @(:hypercrud.browser/field ctx)
-        level (::field/level field)
-        segment (last (:hypercrud.browser/path ctx))
-        segment-type (context/segment-type-2 segment)       ; :element means :relation? no, naked. Relation is ortho
-        has-child-fields @(r/fmap-> (:hypercrud.browser/field ctx) ::field/children nil? not)]
-    (cond
-      (field/identity-segment? field) (dbid-label _ ctx props)
-      :else (match* [level segment-type segment has-child-fields]
-              [nil :splat _ _] (label-with-docs (::field/label field) (semantic-docstring ctx "Free-hand attribute entry") props)
-              [nil :attribute _ _] (label-with-docs (::field/label field) (semantic-docstring ctx) props)
-              [nil :element _ true] (label-with-docs "*relation*" (semantic-docstring ctx) props)
-              [nil :element _ false] (label-with-docs (::field/label field) (semantic-docstring ctx) props)
-              [nil :naked-or-element _ _] (label-with-docs "*relation*" (semantic-docstring ctx) props) ; Schema new attr, and fiddle-links new link - needs to be split
-              [:relation :naked-or-element _ _] (label-with-docs "*relation*" (semantic-docstring ctx) props)
-              [:tuple :naked-or-element _ _] (label-with-docs "*tuple*" (semantic-docstring ctx) props)))))
+  ; core.match scope hacks
+  (let [Pull Pull
+        Variable Variable
+        Aggregate Aggregate
+        qfind @(:hypercrud.browser/qfind ctx)
+        element @(:hypercrud.browser/element ctx)
+        [e a v] @(:hypercrud.browser/eav ctx)]
+    (match* [(type qfind) (type element) a]                 ; has-child-fields @(r/fmap-> (:hypercrud.browser/field ctx) ::field/children nil? not)
+      [_ Pull :db/id] (dbid-label _ ctx props)              ; fixme
+      [_ Pull :db/ident] (dbid-label _ ctx props)
+      [_ Pull aa] (label-with-docs (name aa) (semantic-docstring ctx) props)
+      [_ Variable _] (label-with-docs (get-in element [:variable :symbol]) (semantic-docstring ctx) props)
+      [_ Aggregate _] (let [label (str (cons (get-in element [:fn :symbol])
+                                             (map (comp second first) (:args element))))]
+                        (label-with-docs label (semantic-docstring ctx) props)))))
 
 
 (defn ^:export semantic-css [ctx]

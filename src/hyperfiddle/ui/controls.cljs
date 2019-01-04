@@ -86,9 +86,9 @@
     (some-> attr :db/cardinality :db/ident)))
 
 (defn dbid-label [_ ctx & [props]]
-  (let [prompt (some->> (:hypercrud.browser/field ctx) (r/fmap ::field/label) deref)
-        parent-ctx (:hypercrud.browser/parent ctx)]
-    (into [:<> (label-with-docs prompt (semantic-docstring ctx) props)]
+  (let [parent-ctx (:hypercrud.browser/parent ctx)
+        [e a v] @(:hypercrud.browser/eav ctx)]
+    (into [:<> (label-with-docs (last (:hypercrud.browser/path ctx)) (semantic-docstring ctx) props)]
           ; dbid links are at parent path, but we don't always have a parent #543
           (condp = (some-> parent-ctx cardinality)
 
