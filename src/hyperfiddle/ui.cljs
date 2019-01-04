@@ -78,25 +78,28 @@
     [:pre "iframe-field-default"]
     #_[field [] ctx entity-links-iframe props]))
 
-(defn control "this is a function, which returns component"
-  [val ctx & [props]]                                       ; returns Func[(ref, props, ctx) => DOM]
-  (let [element @(:hypercrud.browser/element ctx)
-        [e a v] @(:hypercrud.browser/eav ctx)
-        attr @(context/hydrate-attribute ctx a)
-        value-type (some-> attr :db/valueType :db/ident name keyword)
-        cardinality (some-> attr :db/cardinality :db/ident name keyword)]
-    (match* [(type element) value-type cardinality]
-      [Variable _ _] controls/string
-      [Aggregate _ _] controls/string
-      [Pull :boolean :one] controls/boolean
-      [Pull :keyword :one] controls/keyword
-      [Pull :string :one] controls/string
-      [Pull :long :one] controls/long
-      [Pull :instant :one] controls/instant
-      [Pull :ref :one] controls/ref
-      [Pull :ref :many] controls/ref-many
-      [_ _ :one] controls/edn
-      [_ _ :many] controls/edn-many)))
+(let [Pull Pull
+      Variable Variable
+      Aggregate Aggregate]
+  (defn control "this is a function, which returns component"
+    [val ctx & [props]]                                     ; returns Func[(ref, props, ctx) => DOM]
+    (let [element @(:hypercrud.browser/element ctx)
+          [e a v] @(:hypercrud.browser/eav ctx)
+          attr @(context/hydrate-attribute ctx a)
+          value-type (some-> attr :db/valueType :db/ident name keyword)
+          cardinality (some-> attr :db/cardinality :db/ident name keyword)]
+      (match* [(type element) value-type cardinality]
+        [Variable _ _] controls/string
+        [Aggregate _ _] controls/string
+        [Pull :boolean :one] controls/boolean
+        [Pull :keyword :one] controls/keyword
+        [Pull :string :one] controls/string
+        [Pull :long :one] controls/long
+        [Pull :instant :one] controls/instant
+        [Pull :ref :one] controls/ref
+        [Pull :ref :many] controls/ref-many
+        [_ _ :one] controls/edn
+        [_ _ :many] controls/edn-many))))
 
 (defn ^:export hyper-control [val ctx & [props]]            ; eav ctx props - use defmethod, not fn
   {:post [%]}
@@ -106,7 +109,9 @@
         (cond                                               ; Duplicate options test to avoid circular dependency in controls/ref
           (:options props) [(control val ctx props) val ctx props]
           (contains? #{:db/id :db/ident} a) [controls/id-or-ident val ctx props]
-          (every? #{:db/id :db/ident} children) [(control val ctx props) val ctx props] ; flatten useless nesting
+          (and (seq children)
+               (every? #{:db/id :db/ident} children)) (let [W (control val ctx props)]
+                                                        [W val ctx props]) ; flatten useless nesting
           (seq children) (let [ctx (dissoc ctx ::layout)]
                            [:div                            ; wrapper div: https://github.com/hyperfiddle/hyperfiddle/issues/541
                             [pull hyperfiddle.ui/field val ctx props]

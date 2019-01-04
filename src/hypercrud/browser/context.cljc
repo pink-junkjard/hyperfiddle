@@ -159,47 +159,32 @@
   {:pre [a']}
   [e a' nil])
 
-(defn stable-eav-av [[e _ _] a' v']
-  {:pre [a' v']}
-  [e a' v'])
-
-(defn eav "project eav from data"                           ; could return the ctx instead
-  [ctx a ?data]
-  (let [e (some-> ctx identify)                             ; this is the parent v
-        a (->> (:hypercrud.browser/path ctx) (drop-while int?) last)
-        v (smart-entity-identifier ctx ?data)]
-    (assert (not (map? e)))
-    (assert (not (map? a)))
-    (assert (not (map? v)))
-    ; :extend-via-metadata
-    [e a v]))
+(defn stable-eav-av [[e _ _] a' ?v']
+  {:pre [a']}                                               ; ?v' can be nil - sparse results
+  [e a' ?v'])
 
 (defn attribute [ctx a]
   {:pre [(s/assert :hypercrud/context ctx)
          (s/assert keyword? a)]
-   :post [(s/assert :hypercrud/context %)]}
-  ; refine the enclosing-pull-shape
-  ; accumulate the path and parent
-  ; header vs body
-  ; eav
+   :post [(s/assert :hypercrud/context %)
+          #_(do (println (:hypercrud.browser/enclosing-pull-shape %)) true)]}
   (let [head-or-body (if (:hypercrud.browser/data ctx) :body :head)
         r-eav (:hypercrud.browser/eav ctx)
         ctx (-> ctx
                 (set-parent)
                 (update :hypercrud.browser/path conj a)
-                (assoc :hypercrud.browser/eav (r/fmap-> r-eav (stable-eav-a a)))
                 (assoc :hypercrud.browser/enclosing-pull-shape (r/fmap->> (:hypercrud.browser/enclosing-pull-shape ctx)
                                                                           (contrib.datomic/pull-shape-refine a))))]
     (case head-or-body
-      :head ctx
+      :head (assoc ctx :hypercrud.browser/eav (r/fmap-> r-eav (stable-eav-a a)))
       :body (let [r-data (r/fmap a (:hypercrud.browser/data ctx))
-                  r-v (r/fmap->> r-data (smart-entity-identifier ctx)) ; already done !!!???
-                  _ (assert @r-v)]
+                  ; v may be nil - sparse resultset
+                  r-?v (r/fmap->> r-data (smart-entity-identifier ctx))]
               (-> (set-parent-data ctx)
                   (update :hypercrud.browser/validation-hints #(for [[[p & ps] hint] % :when (= p a)]
                                                                  [ps hint]))
                   (assoc :hypercrud.browser/data r-data)
-                  (assoc :hypercrud.browser/eav (r/fmap-> r-eav (stable-eav-av a @r-v))) ; overreacted, fix
+                  (assoc :hypercrud.browser/eav (r/fmap-> r-eav (stable-eav-av a @r-?v))) ; insufficent stability on r-?v, fixme
                   )))))
 
 (defn stable-tupled-v-extractor [i ?r-data]
@@ -241,8 +226,7 @@
   [ctx & [k]]
   {:pre [(s/assert :hypercrud/context ctx)]
    :post [(s/assert :hypercrud/context %)
-          #_(do (println (:hypercrud.browser/data ctx))
-              true)]}
+          #_(do (println (:hypercrud.browser/data ctx)) true)]}
   (-> ctx
       (set-parent)
       (set-parent-data)

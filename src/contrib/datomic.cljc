@@ -216,7 +216,8 @@
           (contrib.data/pad nil (contrib.data/transpose (normalize-result qfind result)))))
 
 (defn pull-level [pullshape]                               ; see downtree-pullpaths
-  {:pre [(sequential? pullshape)]}
+  {:pre [(or (sequential? pullshape)
+             (nil? pullshape))]}
   (->> pullshape
        (mapcat (fn [attr-spec]
                  (cond
@@ -225,11 +226,10 @@
 
 
 (defn pull-shape-refine [a pull-shape]
-  (->> pull-shape
-       (filter (fn [attr-spec]
-                 (and
-                   (map? attr-spec)
-                   (contains? attr-spec a))))))
+  (-> pull-shape
+      (->> (filter map?))
+      (->> (apply merge))
+      (get a)))
 
 (defn enclosing-pull-shapes [schemas qfind data]
   {:pre [schemas qfind data]

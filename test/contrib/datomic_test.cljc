@@ -1,6 +1,6 @@
 (ns contrib.datomic-test
   (:require
-    [clojure.test :refer [deftest is]]
+    [clojure.test :refer [deftest is testing]]
     [contrib.datomic :refer [pull-shape pulled-tree-derivative enclosing-pull-shape pull-level
                              pull-traverse pull-shape-union normalize-result]]
     [contrib.ct]
@@ -242,6 +242,21 @@
 
 (deftest pull-strata-
   []
-  (is (= (pull-level [:db/id :db/ident :hyperfiddle/owners #:reg{:gender [:db/id]}])
-         '(:db/id :db/ident :hyperfiddle/owners :reg/gender)))
+  (def a [:dustingetz.reg/email
+          :dustingetz.reg/name
+          ; :dustingetz.reg/age
+          ; :dustingetz.reg/birthdate
+          {:dustingetz.reg/gender [:db/ident]}
+          {:dustingetz.reg/shirt-size [:db/ident]}
+          :db/id])
+  (testing "nested pulls"
+    (is (= (contrib.datomic/pull-level a)
+           '(:dustingetz.reg/email :dustingetz.reg/name :dustingetz.reg/gender :dustingetz.reg/shirt-size :db/id)))
+    (is (= (contrib.datomic/pull-shape-refine :dustingetz.reg/gender a)
+           '(:db/ident))))
+
+  (testing "identity"
+    (is (= (pull-level [:db/id :db/ident :hyperfiddle/owners #:reg{:gender [:db/id]}])
+           '(:db/id :db/ident :hyperfiddle/owners :reg/gender))))
   )
+
