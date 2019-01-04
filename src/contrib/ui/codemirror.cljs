@@ -45,7 +45,8 @@
        [contrib.ui/textarea
         (-> props
             (select-keys [:id :class :default-value :on-change :value]) ; #318 Warning: React does not recognize the `lineNumbers` prop on a DOM element
-            (assoc :auto-complete "off")
+            (assoc :auto-complete "off"
+                   :read-only true)                         ; react-dom.inc.js:3137 Warning: Failed prop type: You provided a `value` prop to a form field without an `onChange` handler. This will render a read-only field. If the field should be mutable use `defaultValue`. Otherwise, set either `onChange` or `readOnly`.
             (cond-> (:is-invalid props) (update :class css "invalid")))])
 
      :component-did-mount
