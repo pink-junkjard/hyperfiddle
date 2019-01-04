@@ -166,9 +166,9 @@ User renderers should not be exposed to the reaction."
 (defn ^:export anchor [ctx props & children]
   (let [props (-> props
                   (update :class css "hyperfiddle")
-                  (dissoc :route)
                   (assoc :href (some->> (:route props) (hyperfiddle.foundation/route-encode (:peer ctx)))))]
-    (into [:a props] children)))
+    (into [:a (select-keys props [:class :href])]
+          children)))
 
 (letfn [(prompt [link-ref ?label]
           (or ?label
