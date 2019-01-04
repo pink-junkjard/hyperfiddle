@@ -71,7 +71,9 @@
    (fn [val ctx props]
      [:<>
       (field [:fiddle/type] ctx (r/partial query-composite-stable ctx) props)
-      (case (or @(r/cursor (:hypercrud.browser/data ctx) [:fiddle/type]) ((:fiddle/type fiddle/fiddle-defaults) val))
+      (case (or @(r/cursor (:hypercrud.browser/data ctx) [:fiddle/type])
+                ((:fiddle/type fiddle/fiddle-defaults)
+                  val))
         :entity ^{:key "pull"} [field [:fiddle/pull] ctx hyper-control (with-fiddle-default props val :fiddle/pull)]
         :query ^{:key "query"} [field [:fiddle/query] ctx hyper-control (with-fiddle-default props val :fiddle/query)]
         :blank nil)])
@@ -105,7 +107,7 @@
       (field [:fiddle/uuid] ctx hyper-control (assoc props :disabled true))
       (field [:fiddle/hydrate-result-as-fiddle] ctx hyper-control props)
       [:div.p "Additional attributes"]
-      (for [k (->> (contrib.datomic/pull-level (:hypercrud.browser/enclosing-pull-shape ctx))
+      (for [k (->> (contrib.datomic/pull-level @(:hypercrud.browser/enclosing-pull-shape ctx))
                    (remove (partial = :db/id)))]
         ^{:key (str k)}
         [field [k] ctx])

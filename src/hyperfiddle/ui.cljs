@@ -267,21 +267,15 @@ User renderers should not be exposed to the reaction."
 
 (defn form-field "Form fields are label AND value. Table fields are label OR value."
   [ctx Body Head props]
-  (with-meta
-    [:div {:class (css "field" (:class props))
-           :style {:border-color (connection-color ctx)}}
-     [Head nil (dissoc ctx :hypercrud.browser/data) props]  ; eav
-     (let [[e a v] @(:hypercrud.browser/eav ctx)
-           props (as-> props props
-                       (update props :disabled #(or % (not @(r/track writable-entity? ctx))))
-                       (update props :is-invalid #(or % (context/leaf-invalid? ctx)))
-                       (update props :class css (if (:disabled props) "disabled")))]
-       [Body v ctx props])]
-    (when (= '* (last (:hypercrud.browser/path ctx)))       ; broken?
-      ; guard against crashes for nil data
-      {:key @(r/fmap-> (or (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data])
-                           (r/track identity nil))
-                       keys hash)})))
+  [:div {:class (css "field" (:class props))
+         :style {:border-color (connection-color ctx)}}
+   [Head nil (dissoc ctx :hypercrud.browser/data) props]    ; eav
+   (let [[e a v] @(:hypercrud.browser/eav ctx)
+         props (as-> props props
+                     (update props :disabled #(or % (not @(r/track writable-entity? ctx))))
+                     (update props :is-invalid #(or % (context/leaf-invalid? ctx)))
+                     (update props :class css (if (:disabled props) "disabled")))]
+     [Body v ctx props])])
 
 (defn table-field "Form fields are label AND value. Table fields are label OR value."
   [ctx Body Head props]                                     ; Body :: (val props ctx) => DOM, invoked as component
@@ -309,25 +303,26 @@ User renderers should not be exposed to the reaction."
         props (dissoc props :label-fn)
         props (update props :class css (semantic-css ctx))]
     (case (:hyperfiddle.ui/layout ctx)                      ; check cardinality
-      :hyperfiddle.ui.layout/table #_(when-not is-magic-new) [table-field ctx Body Head props]
+      :hyperfiddle.ui.layout/table [table-field ctx Body Head props]
       [form-field ctx Body Head props])))
 
 (defn columns [relpath ui-field ctx & [props]]
   (concat
-    (for [[k ctx] (map vector (contrib.datomic/pull-level (:hypercrud.browser/enclosing-pull-shape ctx))
+    (for [[k ctx] (map vector (contrib.datomic/pull-level @(:hypercrud.browser/enclosing-pull-shape ctx))
                        (hyperfiddle.api/spread-pull ctx))]
       ^{:key (str k)}
       [ui-field (conj relpath k) ctx nil props])
     [[ui-field relpath ctx nil props]]))                    ; fiddle segment (top)
 
 (defn columns-relation-product [ui-field ctx & [props]]
-  (for [[i element ctx] (map vector (range) (datascript.parser/find-elements @(:hypercrud.browser/qfind ctx))
-                             (hyperfiddle.api/spread-elements ctx))]
-    (condp some [(type element)]
-      #{Variable Aggregate} [ui-field [i] ctx props]
-      #{Pull} (for [[a ctx] (map vector (contrib.datomic/pull-level (:hypercrud.browser/enclosing-pull-shape ctx))
-                                 (hyperfiddle.api/spread-pull ctx))]
-                [ui-field [i a] ctx props]))))
+  {:pre [ctx]}
+  (->> (for [[i element ctx] (map vector (range) (datascript.parser/find-elements @(:hypercrud.browser/qfind ctx))
+                                  (hyperfiddle.api/spread-elements ctx))]
+         (condp some [(type element)]
+           #{Variable Aggregate} [[ui-field [i] ctx props]]
+           #{Pull} (for [[a] (map vector (contrib.datomic/pull-level @(:hypercrud.browser/enclosing-pull-shape ctx)))]
+                     [ui-field [i a] ctx props])))
+       (mapcat identity)))
 
 (defn ^:export table "Semantic table; columns driven externally" ; this is just a widget
   [columns ctx & [props]]
@@ -337,7 +332,7 @@ User renderers should not be exposed to the reaction."
             ctx (assoc ctx ::sort/sort-col sort-col
                            ::layout :hyperfiddle.ui.layout/table)]
         [:table (update props :class (fnil css "hyperfiddle") "unp") ; fnil case is iframe root (not a field :many)
-         [:thead (into [:tr] (columns ctx))]
+         [:thead (into [:tr] (columns (dissoc ctx :hypercrud.browser/data)))]
          ; filter? Group-by? You can't. This is data driven. Shape your data in the peer.
          (into [:tbody] (for [ctx (hyperfiddle.api/spread-rows ctx #(sort/sort-fn % sort-col))]
                           (into
@@ -364,16 +359,14 @@ User renderers should not be exposed to the reaction."
 (defn ^:export result "Default result renderer. Invoked as fn, returns seq-hiccup, hiccup or
 nil. call site must wrap with a Reagent component"          ; is this just hyper-control ?
   [val ctx & [props]]
-  (let [ctx (hyperfiddle.api/fiddle ctx)]
+  (let [ctx (hyperfiddle.api/fiddle ctx)
+        qfind @(:hypercrud.browser/qfind ctx)]
     [:<>
      (hint val ctx props)
-     (let [type @(r/fmap :fiddle/type (:hypercrud.browser/fiddle ctx))
-           level @(r/fmap ::field/level (:hypercrud.browser/field ctx))]
-       (match* [type level]
-         [:blank _] nil
-         [:query :relation] [table (r/partial columns-relation-product hyperfiddle.ui/field) ctx props]
-         [:query :tuple] [form (r/partial columns-relation-product hyperfiddle.ui/field) val ctx props]
-         [_ _] (pull hyperfiddle.ui/field val ctx props)))
+     (when qfind
+       (condp some [(type qfind)]
+         #{FindRel FindColl} [table (r/partial columns-relation-product hyperfiddle.ui/field) ctx props]
+         #{FindTuple FindScalar} [form (r/partial columns-relation-product hyperfiddle.ui/field) val ctx props]))
      [iframe-field-default val ctx props]]))
 
 (def ^:dynamic markdown)                                    ; this should be hf-contrib or something

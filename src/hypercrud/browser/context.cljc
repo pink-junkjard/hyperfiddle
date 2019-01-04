@@ -162,25 +162,30 @@
         @data)))
 
 (defn eav "project eav from data"                           ; could return the ctx instead
-  [ctx data]
+  [ctx ?data]
   (let [e (some-> ctx identify)                             ; this is the parent v
         a (->> (:hypercrud.browser/path ctx) (drop-while int?) last)
-        v (smart-entity-identifier ctx data)]
+        v (smart-entity-identifier ctx ?data)]
     (assert (not (map? e)))
     (assert (not (map? a)))
     (assert (not (map? v)))
     ; :extend-via-metadata
     [e a v]))
 
-(defn attribute [ctx path-segment]                          ; no longer handles fe-segments
+(defn attribute [ctx path-segment]
   {:pre [(s/assert :hypercrud/context ctx)
          (s/assert keyword? path-segment)]
    :post [(s/assert :hypercrud/context %)]}
+  ; refine the enclosing-pull-shape
+  ; accumulate the path and parent
+  ; header vs body
+  ; eav
   (let [field (r/track find-child-field (:hypercrud.browser/field ctx) path-segment ctx)
         ctx (-> ctx
                 (set-parent)
                 (update :hypercrud.browser/path conj path-segment)
-                (update :hypercrud.browser/enclosing-pull-shape (r/partial contrib.datomic/pull-shape-refine path-segment))
+                (assoc :hypercrud.browser/enclosing-pull-shape (r/fmap->> (:hypercrud.browser/enclosing-pull-shape ctx)
+                                                                          (contrib.datomic/pull-shape-refine path-segment)))
                 (assoc :hypercrud.browser/field field))]
     (if-not (:hypercrud.browser/data ctx)
       ctx                                                   ; head
@@ -199,6 +204,26 @@
                                                                                 (:hypercrud.browser/path ctx)))]))
             )))))
 
+(defn stable-tupled-v-extractor [i ?r-data]
+  {:pre [i #_(r/reactive? ?r-data)]}                        ; It's a tuple (already spread row)
+  (when ?r-data                                             ; headers
+    (r/fmap->> ?r-data (map (r/partial r/flip get i)))))
+
+(defn element [ctx & [i]]
+  ;{:pre [(s/assert nil? (:hypercrud.browser/element ctx))]}
+  ;{:post [(s/assert :hypercrud/context %)]}
+  (as-> ctx ctx
+        (assoc ctx :hypercrud.browser/element (r/fmap-> (:hypercrud.browser/qfind ctx) datascript.parser/find-elements (get (or i 0))))
+        (assoc ctx :hypercrud.browser/element-index (or i 0)) ; hack, don't drive tables like this, a breaking change
+        (assoc ctx :hypercrud.browser/enclosing-pull-shape (r/fmap-> (:hypercrud.browser/enclosing-pull-shapes ctx)
+                                                                     (get i)))
+        (let [{data :hypercrud.browser/data} ctx]
+          (if data
+            (update ctx :hypercrud.browser/data (condp some [(type @(:hypercrud.browser/qfind ctx))]
+                                                  #{FindRel FindTuple} (r/partial stable-tupled-v-extractor i)
+                                                  #{FindColl FindScalar} identity))
+            ctx))))
+
 (defn focus "Unwind or go deeper, to where we need to be, within same dimension.
     Throws if you focus a higher dimension.
     This is about navigation through pulledtrees which is why it is path-oriented."
@@ -206,14 +231,12 @@
   {:pre [(s/assert :hypercrud/context ctx)]
    :post [(s/assert :hypercrud/context %)]}
   ; Is this legacy compat?
-  (loop [ctx ctx
-         [p & ps] relative-path]
-    (reduce (fn [ctx p]
-              (cond
-                (int? p) (hyperfiddle.api/element ctx p)
-                (keyword? p) (hyperfiddle.api/attribute ctx p)
-                :else (assert false (str "illegal focus: " p))))
-            ctx relative-path)))
+  (reduce (fn [ctx p]
+            (cond
+              (int? p) (element ctx p)
+              (keyword? p) (attribute ctx p)
+              :else (assert false (str "illegal focus: " p))))
+          ctx relative-path))
 
 (defn row "Toggle :many into :one as we spread through the rows.
   No change in :eav."
@@ -224,7 +247,7 @@
       (set-parent)
       (set-parent-data)
       (assoc :hypercrud.browser/row-key k)
-      (assoc :hypercrud.browser/data (r/cursor (:hypercrud.browser/data ctx) k)) ; no change in eav
+      (assoc :hypercrud.browser/data (r/cursor (:hypercrud.browser/data-index ctx) [k])) ; no change in eav
       (update :hypercrud.browser/validation-hints #(for [[[p & ps] hint] % :when (= k p)]
                                                      [ps hint]))
       (update :hypercrud.browser/field #(r/fmap-> % (assoc ::field/cardinality :db.cardinality/one)))))

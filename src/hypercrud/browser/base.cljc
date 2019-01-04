@@ -2,6 +2,7 @@
   (:require [cats.core :refer [mlet return]]
             [cats.monad.either :as either :refer [left right]]
             [contrib.ct :refer [unwrap]]
+            [contrib.data]
             [contrib.reactive :as r]
             [contrib.reader :as reader :refer [memoized-read-edn-string+]]
             [contrib.try$ :refer [try-either]]
@@ -15,7 +16,8 @@
             [hypercrud.types.EntityRequest :refer [->EntityRequest]]
             [hypercrud.types.QueryRequest :refer [->QueryRequest]]
             [hyperfiddle.domain :as domain]
-            [hyperfiddle.fiddle :as fiddle])
+            [hyperfiddle.fiddle :as fiddle]
+            [hyperfiddle.ui.sort])
   #?(:clj (:import (datascript.parser FindRel FindColl FindTuple FindScalar Variable Aggregate Pull))))
 
 
@@ -86,11 +88,17 @@
     ; Blow mlet in case of (right _) -> (left _), but don't recompute if (right :a) -> (right :b).
     (mlet [reactive-attrs @(r/apply-inner-r (project/hydrate-attrs ctx))
            reactive-result @(r/apply-inner-r (r/track nil-or-hydrate (:peer ctx) (:branch ctx) request))
-           :let [r-schemas (r/track context/summon-schemas-grouped-by-dbname ctx)
+           :let [#_#_sort-fn (hyperfiddle.ui.sort/sort-fn % sort-col)
+                 r-schemas (r/track context/summon-schemas-grouped-by-dbname ctx)
                  ctx (assoc ctx
                        :hypercrud.browser/attr-renderers reactive-attrs
                        :hypercrud.browser/schemas r-schemas
                        :hypercrud.browser/data reactive-result
+                       :hypercrud.browser/data-index
+                       (-> reactive-result
+                           #_(r/fmap-> (or sort-fn identity)) ; sorting doesn't index keyfn lookup by design
+                           (r/fmap-> (r/partial contrib.data/group-by-unique (r/partial hypercrud.browser.context/row-keyfn ctx))))
+                       ;:hypercrud.browser/datascript (contrib.datomic/datascript-from-result @reactive-result @r-schemas)
                        :hypercrud.browser/fiddle r-fiddle
                        :hypercrud.browser/link-index (context/index-links r-schemas r-fiddle)
                        :hypercrud.browser/eav (r/track identity [nil nil nil])
