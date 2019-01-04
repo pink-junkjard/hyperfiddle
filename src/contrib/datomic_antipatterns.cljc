@@ -1,9 +1,9 @@
 (ns contrib.datomic-antipatterns
   (:require
-    [clojure.set :as set]
+    [clojure.set]
     [clojure.walk :as walk]
     [contrib.data :refer [group-by-pred]]
-    [fixtures.ctx :refer [ctx schema result-coll]]))
+    [fixtures.ctx :refer [schema result-coll]]))
 
 
 ; This is a graveyard of bad ideas.

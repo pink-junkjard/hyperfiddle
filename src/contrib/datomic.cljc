@@ -216,6 +216,7 @@
           (contrib.data/pad nil (contrib.data/transpose (normalize-result qfind result)))))
 
 (defn pull-level [pullshape]                               ; see downtree-pullpaths
+  {:pre [(sequential? pullshape)]}
   (->> pullshape
        (mapcat (fn [attr-spec]
                  (cond
@@ -244,3 +245,9 @@
                                      schema (get schemas (str db))]
                                  (enclosing-pull-shape schema (pull-shape pull-pattern) coll)))))
          vec)))
+
+(defn spread-elements' [f schemas qfind data]
+  (spread-elements (fn [schemas qfind ix e coll-normalized]
+                     (let [schema (get schemas (str (get-in e [:source :symbol])))]
+                       (f schema e coll-normalized)))
+                   schemas qfind data))
