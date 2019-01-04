@@ -14,11 +14,9 @@
                     (-> ctx
                         (select-keys [:hypercrud.browser/route ; ordered for glance debugging
                                       :hypercrud.browser/data
-                                      :hypercrud.browser/field
                                       :hypercrud.browser/path])
                         (update-existing :hypercrud.browser/route deref)
                         (update-existing :hypercrud.browser/data deref)
-                        (update-existing :hypercrud.browser/field deref)
-                        (update-existing :hypercrud.browser/parent select-keys [:hypercrud.browser/field :hypercrud.browser/path])
+                        (update-existing :hypercrud.browser/parent select-keys [:hypercrud.browser/path])
                         (pprint-str 150))))
 (set! js/hc_route (fn [ctx] (-> ctx :hypercrud.browser/route deref pprint-str)))

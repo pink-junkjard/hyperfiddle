@@ -4,7 +4,6 @@
     [clojure.pprint]
     [contrib.reactive :as r]
     [hypercrud.browser.context :as context]
-    [hypercrud.browser.field :as field]
     [hyperfiddle.api]
     [hyperfiddle.fiddle :as fiddle]
     [hyperfiddle.runtime :as runtime]

@@ -9,7 +9,6 @@
     [contrib.string :refer [blank->nil]]
     [datascript.parser :refer [FindRel FindColl FindTuple FindScalar Variable Aggregate Pull]]
     [hypercrud.browser.context :as context]
-    [hypercrud.browser.field :as field]
     [hyperfiddle.data :as data]
     [hyperfiddle.ui.util :refer [with-entity-change! writable-entity?]]
     [taoensso.timbre :as timbre]))
@@ -20,30 +19,25 @@
     (str v)))
 
 (defn option-label [row ctx]
-  (let [field @(:hypercrud.browser/field ctx)
-        {{find :qfind} ::field/query} field]
-
-    ; This logic duplicates ui/columns-relation-product &co
+  ; This logic duplicates ui/columns-relation-product &co
+  (let [qfind @(:hypercrud.browser/qfind ctx)]
     (->>
-      (condp = (type find)
+      (condp = (type qfind)
         FindRel
-        (mapcat (fn [element field relation]
+        (mapcat (fn [element v]
                   (condp = (type element)
-                    Variable [relation]
-                    Aggregate [relation]
-                    Pull (mapv (fn [{f ::field/get-value}]
-                                 (field-label (f relation)))
-                               (::field/children field))))
-                (:elements find)
-                (::field/children field)
+                    Variable [v]
+                    Aggregate [v]
+                    Pull (let [children (contrib.datomic/pull-level (get-in element [:pattern :value]))]
+                           (->> children (mapv #(field-label (get % v)))))))
+                (:elements qfind)
                 row)
         FindColl
-        (condp = (type (:element find))
+        (condp = (type (:element qfind))
           Variable [row]
           Aggregate [row]
-          Pull (mapv (fn [{f ::field/get-value}]            ; identity
-                       (field-label (f row)))
-                     (::field/children field)))
+          Pull (let [children (contrib.datomic/pull-level (get-in (:element qfind) [:pattern :value]))]
+                 (->> children (mapv #(field-label (get % row))))))
         FindTuple [row]                                     ; bug - bad wrapper?
         FindScalar [row])
       (remove nil?)
@@ -86,10 +80,11 @@
   (case @(r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/type])
     :entity [select-error-cmp "Only fiddle type `query` is supported for select options"]
     :blank [select-error-cmp "Only fiddle type `query` is supported for select options"]
-    :query (if (= :db.cardinality/many @(r/fmap ::field/cardinality (:hypercrud.browser/field ctx)))
-             (let [props (into props (select-keys props2 [:on-click]))]
-               [select-view props option-props ctx])
-             [select-error-cmp "Tuples and scalars are unsupported for select options. Please fix your options query to return a relation or collection"])
+    :query (let [qfind (:hypercrud.browser/qfind ctx)]
+             (condp some [(type qfind)]
+               #{FindRel FindColl} (let [props (into props (select-keys props2 [:on-click]))]
+                                     [select-view props option-props ctx])
+               #{FindScalar FindTuple} [select-error-cmp "Tuples and scalars are unsupported for select options. Please change your options query to return a relation or collection"]))
     ; default
     [select-error-cmp "Only fiddle type `query` is supported for select options"]))
 

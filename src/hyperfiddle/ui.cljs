@@ -17,7 +17,6 @@
     [contrib.validation]
     [datascript.parser :refer [FindRel FindColl FindTuple FindScalar Variable Aggregate Pull]]
     [hypercrud.browser.context :as context]
-    [hypercrud.browser.field :as field]
     [hypercrud.browser.routing :as routing]
     [hypercrud.ui.connection-color :refer [connection-color]]
     [hypercrud.ui.error :as ui-error]
@@ -81,40 +80,37 @@
 
 (defn control "this is a function, which returns component"
   [val ctx & [props]]                                       ; returns Func[(ref, props, ctx) => DOM]
-  (let [segment (last (:hypercrud.browser/path ctx))
-        attr @(context/hydrate-attribute ctx segment)
-        type (or (some-> attr :db/valueType :db/ident name keyword) (context/segment-type-2 segment)) ; can include :element ? :aggregate, :entity
+  (let [element @(:hypercrud.browser/element ctx)
+        [e a v] @(:hypercrud.browser/eav ctx)
+        attr @(context/hydrate-attribute ctx a)
+        value-type (some-> attr :db/valueType :db/ident name keyword)
         cardinality (some-> attr :db/cardinality :db/ident name keyword)]
-    (match* [type cardinality]
-      [:element _] controls/string                          ; FindRel-Variable
-      #_#_[:aggregate _] controls/string                    ; entity, aggregate, what else?
-      #_#_[:entity _] entity-links
-      [:attribute _] (r/constantly (str "no schema for attr: " segment))
+    (match* [(type element) value-type cardinality]
+      [Variable _ _] controls/string
+      [Aggregate _ _] controls/string
+      [Pull :boolean :one] controls/boolean
+      [Pull :keyword :one] controls/keyword
+      [Pull :string :one] controls/string
+      [Pull :long :one] controls/long
+      [Pull :instant :one] controls/instant
+      [Pull :ref :one] controls/ref
+      [Pull :ref :many] controls/ref-many
+      [_ _ :one] controls/edn
+      [_ _ :many] controls/edn-many)))
 
-      [:splat _] magic-new
-      [:boolean :one] controls/boolean
-      [:keyword :one] controls/keyword
-      [:string :one] controls/string
-      [:long :one] controls/long
-      [:instant :one] controls/instant
-      [:ref :one] controls/ref
-      [:ref :many] controls/ref-many
-      [_ :one] controls/edn
-      [_ :many] controls/edn-many)))
-
-(defn ^:export hyper-control [val ctx & [props]]
+(defn ^:export hyper-control [val ctx & [props]]            ; eav ctx props - use defmethod, not fn
   {:post [%]}
-  ;(js/console.warn (str (:db/ident @(context/hydrate-attribute ctx (last (:hypercrud.browser/path ctx))))))
   (or (attr-renderer-control val ctx props)
-      (let [-field @(:hypercrud.browser/field ctx)]
+      (let [[e a v] @(:hypercrud.browser/eav ctx)
+            children (contrib.datomic/pull-level @(:hypercrud.browser/enclosing-pull-shape ctx))]
         (cond                                               ; Duplicate options test to avoid circular dependency in controls/ref
           (:options props) [(control val ctx props) val ctx props]
-          (field/identity-segment? -field) [controls/id-or-ident val ctx props]
-          (field/children-identity-only? -field) [(control val ctx props) val ctx props]
-          (seq (::field/children -field)) (let [ctx (dissoc ctx ::layout)]
-                                            [:div           ; wrapper div: https://github.com/hyperfiddle/hyperfiddle/issues/541
-                                             [pull field val ctx props]
-                                             [iframe-field-default val ctx props]])
+          (contains? #{:db/id :db/ident} a) [controls/id-or-ident val ctx props]
+          (every? #{:db/id :db/ident} children) [(control val ctx props) val ctx props] ; flatten useless nesting
+          (seq children) (let [ctx (dissoc ctx ::layout)]
+                           [:div                            ; wrapper div: https://github.com/hyperfiddle/hyperfiddle/issues/541
+                            [pull hyperfiddle.ui/field val ctx props]
+                            [iframe-field-default val ctx props]])
           :else [(control val ctx props) val ctx props]))))
 
 (defn ^:export hyper-label [_ ctx & [props]]
@@ -122,17 +118,16 @@
   (let [Pull Pull
         Variable Variable
         Aggregate Aggregate
-        qfind @(:hypercrud.browser/qfind ctx)
         element @(:hypercrud.browser/element ctx)
         [e a v] @(:hypercrud.browser/eav ctx)]
-    (match* [(type qfind) (type element) a]                 ; has-child-fields @(r/fmap-> (:hypercrud.browser/field ctx) ::field/children nil? not)
-      [_ Pull :db/id] (dbid-label _ ctx props)              ; fixme
-      [_ Pull :db/ident] (dbid-label _ ctx props)
-      [_ Pull aa] (label-with-docs (name aa) (semantic-docstring ctx) props)
-      [_ Variable _] (label-with-docs (get-in element [:variable :symbol]) (semantic-docstring ctx) props)
-      [_ Aggregate _] (let [label (str (cons (get-in element [:fn :symbol])
-                                             (map (comp second first) (:args element))))]
-                        (label-with-docs label (semantic-docstring ctx) props)))))
+    (match* [(type element) a]                              ; has-child-fields @(r/fmap-> (:hypercrud.browser/field ctx) ::field/children nil? not)
+      [Pull :db/id] (dbid-label _ ctx props)                ; fixme
+      [Pull :db/ident] (dbid-label _ ctx props)
+      [Pull aa] (label-with-docs (name aa) (semantic-docstring ctx) props)
+      [Variable _] (label-with-docs (get-in element [:variable :symbol]) (semantic-docstring ctx) props)
+      [Aggregate _] (let [label (str (cons (get-in element [:fn :symbol])
+                                           (map (comp second first) (:args element))))]
+                      (label-with-docs label (semantic-docstring ctx) props)))))
 
 
 (defn ^:export semantic-css [ctx]
@@ -351,10 +346,12 @@ User renderers should not be exposed to the reaction."
 
 (defn pull "handles any datomic result that isn't a relation, recursively"
   [field val ctx & [props]]
-  (let [cardinality @(r/fmap ::field/cardinality (:hypercrud.browser/field ctx))]
+  (let [[e a v] @(:hypercrud.browser/eav ctx)
+        attr @(context/hydrate-attribute ctx a)
+        cardinality (some-> attr :db/cardinality :db/ident name keyword)]
     (match* [cardinality]
-      [:db.cardinality/one] [form (r/partial columns [] field) val ctx props]
-      [:db.cardinality/many] [table (r/partial columns [] field) ctx props])))
+      [:one] [form (r/partial columns [] field) val ctx props]
+      [:many] [table (r/partial columns [] field) ctx props])))
 
 (defn ^:export result "Default result renderer. Invoked as fn, returns seq-hiccup, hiccup or
 nil. call site must wrap with a Reagent component"          ; is this just hyper-control ?

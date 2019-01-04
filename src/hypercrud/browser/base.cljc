@@ -8,7 +8,6 @@
             [contrib.try$ :refer [try-either]]
             [datascript.parser #?@(:cljs [:refer [FindRel FindColl FindTuple FindScalar Variable Aggregate Pull]])]
             [hypercrud.browser.context :as context]
-            [hypercrud.browser.field :as field]
             [hypercrud.browser.routing :as routing]
             [hyperfiddle.ide.system-fiddle :as system-fiddle]
             [hypercrud.client.core :as hc]
@@ -90,21 +89,19 @@
            reactive-result @(r/apply-inner-r (r/track nil-or-hydrate (:peer ctx) (:branch ctx) request))
            :let [#_#_sort-fn (hyperfiddle.ui.sort/sort-fn % sort-col)
                  r-schemas (r/track context/summon-schemas-grouped-by-dbname ctx)
+                 keyfn (r/partial hypercrud.browser.context/row-keyfn ctx)
                  ctx (assoc ctx
                        :hypercrud.browser/attr-renderers reactive-attrs
                        :hypercrud.browser/schemas r-schemas
                        :hypercrud.browser/data reactive-result
-                       :hypercrud.browser/data-index
-                       (-> reactive-result
-                           #_(r/fmap-> (or sort-fn identity)) ; sorting doesn't index keyfn lookup by design
-                           (r/fmap-> (r/partial contrib.data/group-by-unique (r/partial hypercrud.browser.context/row-keyfn ctx))))
+                       ; sorting doesn't index keyfn lookup by design
+                       :hypercrud.browser/data-index (r/fmap->> reactive-result (contrib.data/group-by-unique keyfn))
                        ;:hypercrud.browser/datascript (contrib.datomic/datascript-from-result @reactive-result @r-schemas)
                        :hypercrud.browser/fiddle r-fiddle
                        :hypercrud.browser/link-index (context/index-links r-schemas r-fiddle)
                        :hypercrud.browser/eav (r/track identity [nil nil nil])
-                       :hypercrud.browser/path [])]
-           reactive-field @(r/apply-inner-r (r/track field/auto-field request ctx))] ; legacy
-      (return (assoc ctx :hypercrud.browser/field reactive-field)))))
+                       :hypercrud.browser/path [])]] ; legacy
+      (return ctx))))
 
 (defn data-from-route "either ctx, ctx-from-route" [route ctx]                           ; todo rename
   (mlet [ctx (-> (context/clean ctx)

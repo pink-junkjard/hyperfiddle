@@ -10,7 +10,6 @@
     [contrib.ui.tooltip :refer [tooltip-thick]]
     [contrib.uri :refer [is-uri?]]
     [hypercrud.browser.context :as context]
-    [hypercrud.browser.field :as field]
     [hyperfiddle.data :as data]
     [hyperfiddle.runtime :as runtime]
     #_[hyperfiddle.ui]
@@ -88,13 +87,10 @@
 (defn dbid-label [_ ctx & [props]]
   (let [parent-ctx (:hypercrud.browser/parent ctx)
         [e a v] @(:hypercrud.browser/eav ctx)]
-    (into [:<> (label-with-docs (last (:hypercrud.browser/path ctx)) (semantic-docstring ctx) props)]
+    (into [:<> (label-with-docs a (semantic-docstring ctx) props)]
           ; dbid links are at parent path, but we don't always have a parent #543
           (condp = (some-> parent-ctx cardinality)
-
-            ; :one is handled by the body
-            :db.cardinality/one nil
-
+            :db.cardinality/one nil                         ; :one is handled by the body
             :db.cardinality/many
             [(if-let [link (data/select-many-here parent-ctx :hf/new)]
                [hyperfiddle.ui/ui-from-link link parent-ctx props "new"])]

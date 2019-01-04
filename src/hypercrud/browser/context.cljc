@@ -13,7 +13,6 @@
     [clojure.set]
     [clojure.spec.alpha :as s]
     [datascript.parser #?@(:cljs [:refer [FindRel FindColl FindTuple FindScalar Variable Aggregate Pull]])]
-    [hypercrud.browser.field :as field]
     [hypercrud.browser.q-util]
     [hypercrud.client.core :as hc]
     [hypercrud.types.ThinEntity :refer [->ThinEntity #?(:cljs ThinEntity)]]
@@ -45,7 +44,6 @@
           :hypercrud.browser/data
           :hypercrud.browser/eav
           :hypercrud.browser/fiddle
-          :hypercrud.browser/field
           :hypercrud.browser/parent
           :hypercrud.browser/path
           :hypercrud.browser/route
@@ -144,15 +142,6 @@
 (defn- set-parent-data [ctx]
   (update ctx :hypercrud.browser/parent (fnil into {}) (select-keys ctx [:hypercrud.browser/data])))
 
-(defn find-child-field [field path-segment ctx]
-  (or (->> (::field/children @field)
-           (filter #(= (::field/path-segment %) path-segment))
-           first)
-      (when (keyword? path-segment)
-        (let [uri (uri (str (::field/source-symbol @field)) ctx)
-              schema @(runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :schemas uri])]
-          (field/summon schema (::field/source-symbol @field) path-segment)))))
-
 (defn identify [ctx]
   {:post [(not (map? %))]}
   ; When looking at an attr of type ref, figure out it's identity, based on all the ways it can be pulled.
@@ -204,7 +193,8 @@
     (case head-or-body
       :head ctx
       :body (let [r-data (r/fmap a (:hypercrud.browser/data ctx))
-                  r-v (r/fmap->> r-data (smart-entity-identifier ctx))]
+                  r-v (r/fmap->> r-data (smart-entity-identifier ctx)) ; already done !!!???
+                  _ (assert @r-v)]
               (-> (set-parent-data ctx)
                   (update :hypercrud.browser/validation-hints #(for [[[p & ps] hint] % :when (= p a)]
                                                                  [ps hint]))
@@ -250,15 +240,16 @@
   No change in :eav."
   [ctx & [k]]
   {:pre [(s/assert :hypercrud/context ctx)]
-   :post [(s/assert :hypercrud/context %)]}
+   :post [(s/assert :hypercrud/context %)
+          #_(do (println (:hypercrud.browser/data ctx))
+              true)]}
   (-> ctx
       (set-parent)
       (set-parent-data)
       (assoc :hypercrud.browser/row-key k)
-      (assoc :hypercrud.browser/data (r/cursor (:hypercrud.browser/data-index ctx) [k])) ; no change in eav
+      (assoc :hypercrud.browser/data (r/fmap-> (:hypercrud.browser/data-index ctx) (apply [k]))) ; no change in eav
       (update :hypercrud.browser/validation-hints #(for [[[p & ps] hint] % :when (= k p)]
-                                                     [ps hint]))
-      (update :hypercrud.browser/field #(r/fmap-> % (assoc ::field/cardinality :db.cardinality/one)))))
+                                                     [ps hint]))))
 
 (declare row-keyfn)
 ; var first, then can always use db/id on row. No not true – collisions! It is the [?e ?f] product which is unique
@@ -505,14 +496,16 @@
   (r/row-keyfn' (partial stable-relation-key ctx) row))     ; bad
 
 (defn hash-ctx-data [ctx]                                   ; todo there are collisions when two links share the same 'location'
-  (when-let [data (:hypercrud.browser/data ctx)]
-    (case @(r/fmap ::field/cardinality (:hypercrud.browser/field ctx))
-      :db.cardinality/one @(r/fmap->> data (stable-relation-key ctx))
-      :db.cardinality/many @(r/fmap->> data
-                                       (mapv (r/partial stable-relation-key ctx))
-                                       (into #{})
-                                       hash)                ; todo scalar
-      nil nil #_":db/id has a faked attribute with no cardinality, need more thought to make elegant")))
+  (let [{r-data :hypercrud.browser/data
+         r-qfind :hypercrud.browser/qfind} ctx]
+    ; why so defensive here?
+    (when (some-> r-qfind deref)                            ; there must be data if there is qfind
+      (condp some [(type @r-qfind)]
+        #{FindRel FindColl} @(r/fmap->> r-data
+                                        (mapv (r/partial stable-relation-key ctx))
+                                        (into #{})
+                                        hash)
+        #{FindTuple FindScalar} @(r/fmap->> r-data (stable-relation-key ctx))))))
 
 (defn tempid "stable" [ctx]
   ; recurse all the way up the path? just data + parent-data is relative not fully qualified, which is not unique
