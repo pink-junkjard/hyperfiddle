@@ -308,19 +308,19 @@ User renderers should not be exposed to the reaction."
 
 (defn columns [relpath ui-field ctx & [props]]
   (concat
-    (for [[k ctx] (map vector (contrib.datomic/pull-level @(:hypercrud.browser/enclosing-pull-shape ctx))
-                       (hyperfiddle.api/spread-pull ctx))]
+    ; questionable enclosing-pull-shape here
+    (for [[k] (map vector (contrib.datomic/pull-level @(:hypercrud.browser/enclosing-pull-shape ctx)) #_(hyperfiddle.api/spread-pull ctx))]
       ^{:key (str k)}
       [ui-field (conj relpath k) ctx nil props])
     [[ui-field relpath ctx nil props]]))                    ; fiddle segment (top)
 
 (defn columns-relation-product [ui-field ctx & [props]]
   {:pre [ctx]}
-  (->> (for [[i element ctx] (map vector (range) (datascript.parser/find-elements @(:hypercrud.browser/qfind ctx))
-                                  (hyperfiddle.api/spread-elements ctx))]
+  (->> (for [[i element ctx-e] (map vector (range) (datascript.parser/find-elements @(:hypercrud.browser/qfind ctx))
+                                    (hyperfiddle.api/spread-elements ctx))]
          (condp some [(type element)]
            #{Variable Aggregate} [[ui-field [i] ctx props]]
-           #{Pull} (for [[a] (map vector (contrib.datomic/pull-level @(:hypercrud.browser/enclosing-pull-shape ctx)))]
+           #{Pull} (for [[a] (map vector (contrib.datomic/pull-level @(:hypercrud.browser/enclosing-pull-shape ctx-e)))]
                      [ui-field [i a] ctx props])))
        (mapcat identity)))
 
@@ -332,7 +332,7 @@ User renderers should not be exposed to the reaction."
             ctx (assoc ctx ::sort/sort-col sort-col
                            ::layout :hyperfiddle.ui.layout/table)]
         [:table (update props :class (fnil css "hyperfiddle") "unp") ; fnil case is iframe root (not a field :many)
-         [:thead (into [:tr] (columns (dissoc ctx :hypercrud.browser/data)))]
+         #_[:thead (into [:tr] (columns (dissoc ctx :hypercrud.browser/data)))]
          ; filter? Group-by? You can't. This is data driven. Shape your data in the peer.
          (into [:tbody] (for [ctx (hyperfiddle.api/spread-rows ctx #(sort/sort-fn % sort-col))]
                           (into

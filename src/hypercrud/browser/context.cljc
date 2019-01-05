@@ -165,9 +165,12 @@
 
 (defn attribute [ctx a]
   {:pre [(s/assert :hypercrud/context ctx)
-         (s/assert keyword? a)]
+         (s/assert keyword? a)
+         #_(do (println "attribute: " a) true)
+         #_(do (println "... data pre: " (pr-str (some-> (:hypercrud.browser/data ctx) deref))) true)]
    :post [(s/assert :hypercrud/context %)
-          #_(do (println (:hypercrud.browser/enclosing-pull-shape %)) true)]}
+          #_(do (println (:hypercrud.browser/enclosing-pull-shape %)) true)
+          #_(do (println "... data post: " (pr-str (some-> (:hypercrud.browser/data %) deref))) true)]}
   (let [head-or-body (if (:hypercrud.browser/data ctx) :body :head)
         r-eav (:hypercrud.browser/eav ctx)
         ctx (-> ctx
@@ -179,7 +182,7 @@
       :head (assoc ctx :hypercrud.browser/eav (r/fmap-> r-eav (stable-eav-a a)))
       :body (let [r-data (r/fmap a (:hypercrud.browser/data ctx))
                   ; v may be nil - sparse resultset
-                  r-?v (r/fmap->> r-data (smart-entity-identifier ctx))]
+                  r-?v (r/fmap->> r-data (smart-entity-identifier ctx))] ; flagged
               (-> (set-parent-data ctx)
                   (update :hypercrud.browser/validation-hints #(for [[[p & ps] hint] % :when (= p a)]
                                                                  [ps hint]))
@@ -187,14 +190,24 @@
                   (assoc :hypercrud.browser/eav (r/fmap-> r-eav (stable-eav-av a @r-?v))) ; insufficent stability on r-?v, fixme
                   )))))
 
+(defn get' "flipped arg order, for reactive partial"
+  ([k o] (get o k))
+  ([k o not-found] (get o k not-found)))
+
 (defn stable-tupled-v-extractor [i ?r-data]
-  {:pre [i #_(r/reactive? ?r-data)]}                        ; It's a tuple (already spread row)
+  {:pre [i #_(r/reactive? ?r-data)]                         ; It's a tuple (already spread row)
+   :post [#_(every? some? @%)]}
   (when ?r-data                                             ; headers
-    (r/fmap->> ?r-data (map (r/partial r/flip get i)))))
+    #_(r/fmap->> ?r-data (mapv (r/partial get' i)))
+    (r/fmap-> ?r-data (get i))))
 
 (defn element [ctx & [i]]                                   ; [nil :seattle/neighborhoods 1234345]
-  ;{:pre [(s/assert nil? (:hypercrud.browser/element ctx))]}
-  ;{:post [(s/assert :hypercrud/context %)]}
+  {:pre [#_(s/assert nil? (:hypercrud.browser/element ctx))
+         #_(do (println "element: " i) true)
+         #_(do (println "... data pre: " (pr-str (some-> (:hypercrud.browser/data ctx) deref))) true)]
+   :post [#_(s/assert :hypercrud/context %)
+          #_(do (some->> % :hypercrud.browser/data deref pr-str (println "... data post: ")) true)
+          #_(every? some? @(:hypercrud.browser/data %))]}   ; bad in header, good in body
   (as-> ctx ctx
         (assoc ctx :hypercrud.browser/element (r/fmap-> (:hypercrud.browser/qfind ctx) datascript.parser/find-elements (get (or i 0))))
         (assoc ctx :hypercrud.browser/element-index (or i 0)) ; hack, don't drive tables like this, a breaking change
@@ -212,7 +225,8 @@
     This is about navigation through pulledtrees which is why it is path-oriented."
   [ctx relative-path]
   {:pre [(s/assert :hypercrud/context ctx)]
-   :post [(s/assert :hypercrud/context %)]}
+   :post [(s/assert :hypercrud/context %)
+          #_(do (println "Field relpath: " relative-path " eav: " (pr-str @(:hypercrud.browser/eav %))) true)]}
   ; Is this legacy compat?
   (reduce (fn [ctx p]
             (cond
