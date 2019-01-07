@@ -15,32 +15,8 @@
 ; All "closures" must be explicitly closed with a deftype that implements IEquiv, see helpers in contrib.reactive
 
 
-(defn ^:export fiddle "Fiddle level ctx adds the result to scope"
-  [ctx]
-  {:post [(s/assert :hypercrud/context %)
-          (contains? % :hypercrud.browser/qfind)            ; but it can be nil for :type :blank
-          (:hypercrud.browser/link-index %)]}
-
-  ; Deep inspect the elements to compute the enclosing pull shape for each element
-
-  (let [r-fiddle (:hypercrud.browser/fiddle ctx)
-        r-data (:hypercrud.browser/data ctx)
-        r-qfind (r/fmap-> r-fiddle hypercrud.browser.context/parse-fiddle-data-shape :qfind)]
-    (as-> ctx ctx
-          (assoc ctx
-            :hypercrud.browser/qfind r-qfind
-            :hypercrud.browser/validation-hints
-            (if-let [spec (s/get-spec @(r/fmap :fiddle/ident r-fiddle))]
-              (contrib.validation/validate spec @r-data (partial hypercrud.browser.context/row-keyfn ctx))))
-          (if-not @r-qfind                                  ; guard :blank
-            ctx
-            (assoc ctx :hypercrud.browser/enclosing-pull-shapes (r/apply contrib.datomic/enclosing-pull-shapes
-                                                                         ((juxt :hypercrud.browser/schemas
-                                                                                :hypercrud.browser/qfind
-                                                                                :hypercrud.browser/data) ctx))))
-          (update ctx :hypercrud.browser/eav (fn [r-eav]
-                                               (r/apply hypercrud.browser.context/stable-eav-a
-                                                        [r-eav (r/fmap :fiddle/ident r-fiddle)]))))))
+(defn ^:export fiddle [ctx]                                 ; remove
+  (hypercrud.browser.context/fiddle ctx))
 
 (defn ^:export spread-fiddle "automatically guards :fiddle/type :blank.
   Use in a for comprehension!"
@@ -48,7 +24,7 @@
   (let [fiddle-type @(r/fmap :fiddle/type (:hypercrud.browser/fiddle ctx))]
     (condp some [fiddle-type]
       #{:blank} []                                          ; don't we want the eav?
-      #{:query :entity} [(fiddle ctx)])))
+      #{:query :entity} [(hypercrud.browser.context/fiddle ctx)])))
 
 (defn ^:export spread-rows "spread across resultset row-or-rows.
   Automatically accounts for query dimension - no-op in the case of FindTuple and FindScalar."

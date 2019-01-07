@@ -68,7 +68,7 @@
       [tooltip {:label "Environment administration"} (ui/link :domain ctx "env")]
       (if @(runtime/state (:peer ctx) [::runtime/user-id])
         (if-let [{:keys [:hypercrud.browser/data]} (-> (hyperfiddle.data/browse ctx :account)
-                                                       (hyperfiddle.api/fiddle))]
+                                                       (hypercrud.browser.context/fiddle))]
           (let [props {:tooltip [nil @(r/fmap :user/email data)]
                        :iframe-as-popover true}]
             [ui/link :account ctx @(r/fmap :user/name data) props]))
@@ -82,7 +82,7 @@
     [loading-spinner ctx]]])
 
 (defn renderer [val ctx props]
-  (let [ctx (hyperfiddle.api/fiddle ctx)
+  (let [ctx (hypercrud.browser.context/fiddle ctx)
         #_#_ctx (hyperfiddle.api/element ctx)               ; its blank
         f (if (and (= :hyperfiddle.ide/please-login (first (context/target-route ctx)))
                    (not= [:domain/ident foundation/source-domain-ident] (:domain-eid (runtime/host-env (:peer ctx)))))

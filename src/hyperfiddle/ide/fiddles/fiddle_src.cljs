@@ -129,8 +129,8 @@
 (defn fiddle-src-renderer [val ctx props]
   (let [tab-state (r/atom (if (contains? tabs (:initial-tab props)) (:initial-tab props) :hf.src/query))]
     (fn [val ctx props]
-      (let [ctx (hyperfiddle.api/fiddle ctx)
-            ctx (hyperfiddle.api/element ctx)]
+      (let [ctx (hypercrud.browser.context/fiddle ctx)
+            ctx (hypercrud.browser.context/element ctx)]
         [:div (into {:key (str (:fiddle/ident val))} (select-keys props [:class]))
          [horizontal-tabs
           :tabs (->> [:hf.src/query :hf.src/links :hf.src/markdown :hf.src/view :hf.src/ns :hf.src/css :hf.src/fiddle]

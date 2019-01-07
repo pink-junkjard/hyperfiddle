@@ -361,7 +361,7 @@ User renderers should not be exposed to the reaction."
 (defn ^:export result "Default result renderer. Invoked as fn, returns seq-hiccup, hiccup or
 nil. call site must wrap with a Reagent component"          ; is this just hyper-control ?
   [val ctx & [props]]
-  (let [ctx (hyperfiddle.api/fiddle ctx)
+  (let [ctx (hypercrud.browser.context/fiddle ctx)
         qfind @(:hypercrud.browser/qfind ctx)]
     [:<>
      (hint val ctx props)

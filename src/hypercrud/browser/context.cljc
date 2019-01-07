@@ -41,9 +41,17 @@
           :hyperfiddle.ui/layout
 
           :hypercrud.browser/attr-renderers
+          :hypercrud.browser/schemas
           :hypercrud.browser/data
-          :hypercrud.browser/eav
+          :hypercrud.browser/data-index
+          :hypercrud.browser/link-index
           :hypercrud.browser/fiddle
+          :hypercrud.browser/qfind
+          :hypercrud.browser/element
+          :hypercrud.browser/element-index
+          :hypercrud.browser/eav
+
+
           :hypercrud.browser/parent
           :hypercrud.browser/path
           :hypercrud.browser/route
@@ -163,32 +171,76 @@
   {:pre [a']}                                               ; ?v' can be nil - sparse results
   [e a' ?v'])
 
+(defn ^:export fiddle "Fiddle level ctx adds the result to scope"
+  [ctx]
+  {:post [(s/assert :hypercrud/context %)
+          (contains? % :hypercrud.browser/qfind)            ; but it can be nil for :type :blank
+          (:hypercrud.browser/link-index %)]}
+  ; Deep inspect the elements to compute the enclosing pull shape for each element
+  ; Don't infer any further scopes, it is down-scope's job to infer anything it needs (which might be legacy compat at this point)
+  (as-> ctx ctx
+        (assoc ctx :hypercrud.browser/qfind (r/fmap-> (:hypercrud.browser/fiddle ctx) hypercrud.browser.context/parse-fiddle-data-shape :qfind))
+        (assoc ctx :hypercrud.browser/enclosing-pull-shapes (if @(:hypercrud.browser/qfind ctx)
+                                                              (r/apply contrib.datomic/enclosing-pull-shapes
+                                                                       ((juxt :hypercrud.browser/schemas
+                                                                              :hypercrud.browser/qfind
+                                                                              :hypercrud.browser/data) ctx))))
+        (assoc ctx :hypercrud.browser/validation-hints (contrib.validation/validate
+                                                         (s/get-spec @(r/fmap :fiddle/ident (:hypercrud.browser/fiddle ctx)))
+                                                         @(:hypercrud.browser/data ctx)
+                                                         (partial hypercrud.browser.context/row-keyfn ctx)))
+        (assoc ctx :hypercrud.browser/eav (r/apply hypercrud.browser.context/stable-eav-a
+                                                   [(:hypercrud.browser/eav ctx) (r/fmap :fiddle/ident (:hypercrud.browser/fiddle ctx))]))))
+
+(defn -infer-implicit-fiddle [ctx]
+  (or
+    (if-not (:hypercrud.browser/qfind ctx)
+      (hypercrud.browser.context/fiddle ctx))
+    ctx))
+
+(defn -infer-implicit-element "auto-focus single elements - legacy field path compat"
+  [ctx]
+  (or
+    (if-not (:hypercrud.browser/element ctx)
+      (if (#{FindColl FindScalar} (type @(:hypercrud.browser/qfind ctx)))
+        (hypercrud.browser.context/element ctx 0)))
+    ctx))
+
+(defn -validate-qfind-element [ctx]
+  {:pre [(s/assert r/reactive? (:hypercrud.browser/qfind ctx))
+         (s/assert r/reactive? (:hypercrud.browser/element ctx))]}
+  ctx)
+
 (defn attribute [ctx a]
-  {:pre [(s/assert :hypercrud/context ctx)
+  {:pre [#_(s/assert r/reactive? (:hypercrud.browser/enclosing-pull-shape ctx)) ; can be inferred
+         (s/assert :hypercrud/context ctx)
          (s/assert keyword? a)
          #_(do (println "attribute: " a) true)
          #_(do (println "... data pre: " (pr-str (some-> (:hypercrud.browser/data ctx) deref))) true)]
    :post [(s/assert :hypercrud/context %)
           #_(do (println (:hypercrud.browser/enclosing-pull-shape %)) true)
           #_(do (println "... data post: " (pr-str (some-> (:hypercrud.browser/data %) deref))) true)]}
-  (let [head-or-body (if (:hypercrud.browser/data ctx) :body :head)
-        r-eav (:hypercrud.browser/eav ctx)
-        ctx (-> ctx
-                (set-parent)
-                (update :hypercrud.browser/path conj a)
-                (assoc :hypercrud.browser/enclosing-pull-shape (r/fmap->> (:hypercrud.browser/enclosing-pull-shape ctx)
-                                                                          (contrib.datomic/pull-shape-refine a))))]
-    (case head-or-body
-      :head (assoc ctx :hypercrud.browser/eav (r/fmap-> r-eav (stable-eav-a a)))
-      :body (let [r-data (r/fmap a (:hypercrud.browser/data ctx))
-                  ; v may be nil - sparse resultset
-                  r-?v (r/fmap->> r-data (smart-entity-identifier ctx))] ; flagged
-              (-> (set-parent-data ctx)
-                  (update :hypercrud.browser/validation-hints #(for [[[p & ps] hint] % :when (= p a)]
-                                                                 [ps hint]))
-                  (assoc :hypercrud.browser/data r-data)
-                  (assoc :hypercrud.browser/eav (r/fmap-> r-eav (stable-eav-av a @r-?v))) ; insufficent stability on r-?v, fixme
-                  )))))
+  (as->
+    ctx ctx
+    (-infer-implicit-fiddle ctx)
+    (-infer-implicit-element ctx)
+    (-validate-qfind-element ctx)
+    (set-parent ctx)
+    (update ctx :hypercrud.browser/path conj a)
+    (assoc ctx :hypercrud.browser/enclosing-pull-shape (r/fmap->> (:hypercrud.browser/enclosing-pull-shape ctx)
+                                                                  (contrib.datomic/pull-shape-refine a)))
+    (let [head-or-body (if (:hypercrud.browser/data ctx) :body :head)]
+      (case head-or-body
+        :head (assoc ctx :hypercrud.browser/eav (r/fmap-> (:hypercrud.browser/eav ctx) (stable-eav-a a)))
+        :body (let [r-data (r/fmap a (:hypercrud.browser/data ctx))
+                    ; v may be nil - sparse resultset
+                    r-?v (r/fmap->> r-data (smart-entity-identifier ctx))] ; flagged
+                (-> (set-parent-data ctx)
+                    (update :hypercrud.browser/validation-hints #(for [[[p & ps] hint] % :when (= p a)]
+                                                                   [ps hint]))
+                    (assoc :hypercrud.browser/data r-data)
+                    ; insufficent stability on r-?v, fixme
+                    (assoc :hypercrud.browser/eav (r/fmap-> (:hypercrud.browser/eav ctx) (stable-eav-av a @r-?v)))))))))
 
 (defn get' "flipped arg order, for reactive partial"
   ([k o] (get o k))
@@ -202,13 +254,17 @@
     (r/fmap-> ?r-data (get i))))
 
 (defn element [ctx & [i]]                                   ; [nil :seattle/neighborhoods 1234345]
-  {:pre [#_(s/assert nil? (:hypercrud.browser/element ctx))
+
+  {:pre [#_(s/assert r/reactive? (:hypercrud.browser/qfind ctx)) ; can be inferred
+         #_(s/assert nil? (:hypercrud.browser/element ctx))
          #_(do (println "element: " i) true)
          #_(do (println "... data pre: " (pr-str (some-> (:hypercrud.browser/data ctx) deref))) true)]
-   :post [#_(s/assert :hypercrud/context %)
+   :post [(s/assert r/reactive? (:hypercrud.browser/qfind %))
+          #_(s/assert :hypercrud/context %)
           #_(do (some->> % :hypercrud.browser/data deref pr-str (println "... data post: ")) true)
           #_(every? some? @(:hypercrud.browser/data %))]}   ; bad in header, good in body
   (as-> ctx ctx
+        (-infer-implicit-fiddle ctx)
         (assoc ctx :hypercrud.browser/element (r/fmap-> (:hypercrud.browser/qfind ctx) datascript.parser/find-elements (get (or i 0))))
         (assoc ctx :hypercrud.browser/element-index (or i 0)) ; hack, don't drive tables like this, a breaking change
         (assoc ctx :hypercrud.browser/enclosing-pull-shape (r/fmap-> (:hypercrud.browser/enclosing-pull-shapes ctx)
