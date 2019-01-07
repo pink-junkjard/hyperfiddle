@@ -181,7 +181,7 @@
   (as-> ctx ctx
         (assoc ctx :hypercrud.browser/qfind (r/fmap-> (:hypercrud.browser/fiddle ctx) hypercrud.browser.context/parse-fiddle-data-shape :qfind))
         (assoc ctx :hypercrud.browser/enclosing-pull-shapes (if @(:hypercrud.browser/qfind ctx)
-                                                              (r/apply contrib.datomic/enclosing-pull-shapes
+                                                              (r/apply contrib.datomic/pull-enclosures
                                                                        ((juxt :hypercrud.browser/schemas
                                                                               :hypercrud.browser/qfind
                                                                               :hypercrud.browser/data) ctx))))
@@ -253,7 +253,7 @@
     #_(r/fmap->> ?r-data (mapv (r/partial get' i)))
     (r/fmap-> ?r-data (get i))))
 
-(defn element [ctx & [i]]                                   ; [nil :seattle/neighborhoods 1234345]
+(defn element [ctx i]                                   ; [nil :seattle/neighborhoods 1234345]
 
   {:pre [#_(s/assert r/reactive? (:hypercrud.browser/qfind ctx)) ; can be inferred
          #_(s/assert nil? (:hypercrud.browser/element ctx))
@@ -265,8 +265,8 @@
           #_(every? some? @(:hypercrud.browser/data %))]}   ; bad in header, good in body
   (as-> ctx ctx
         (-infer-implicit-fiddle ctx)
-        (assoc ctx :hypercrud.browser/element (r/fmap-> (:hypercrud.browser/qfind ctx) datascript.parser/find-elements (get (or i 0))))
-        (assoc ctx :hypercrud.browser/element-index (or i 0)) ; hack, don't drive tables like this, a breaking change
+        (assoc ctx :hypercrud.browser/element (r/fmap-> (:hypercrud.browser/qfind ctx) datascript.parser/find-elements (get i)))
+        (assoc ctx :hypercrud.browser/element-index i)
         (assoc ctx :hypercrud.browser/enclosing-pull-shape (r/fmap-> (:hypercrud.browser/enclosing-pull-shapes ctx)
                                                                      (get i)))
         (let [{data :hypercrud.browser/data} ctx]           ; head vs body

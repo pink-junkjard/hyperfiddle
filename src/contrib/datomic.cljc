@@ -100,8 +100,8 @@
        (remove nil?)
        vec))
 
-(defn pull-shape-union [& vs]
-  ; they have to be the same data-shape, which if this is a valid pull, they are
+(defn pull-union [& vs]
+  ; they have to be the same data-shape (schema), which if this is a valid pull, they are
   (cond
     (sequential? (first vs))
     (let [pull-pattern (apply concat vs)
@@ -109,13 +109,13 @@
       (vec
         (concat
           (distinct bs)
-          (if-let [as (apply pull-shape-union as)]         ; don't concat [nil]
+          (if-let [as (apply pull-union as)]         ; don't concat [nil]
             [as]))))
 
     (map? (first vs))
-    (apply merge-with pull-shape-union vs)))
+    (apply merge-with pull-union vs)))
 
-(defn pulled-tree-derivative "Derive a pull-shape which describes a pulled-tree"
+(defn tree-derivative "Derive a pull-shape which describes a pulled-tree"
   [schema pulled-tree]
   {:pre [schema (map? pulled-tree)]}
   (->> pulled-tree
@@ -124,14 +124,14 @@
            (conj acc (cond
                        (= :db/id k) k
                        (ref? schema k) {k (condp = (cardinality schema k)
-                                            :db.cardinality/one (pulled-tree-derivative schema v)
-                                            :db.cardinality/many (apply pull-shape-union (map (partial pulled-tree-derivative schema) v)))}
+                                            :db.cardinality/one (tree-derivative schema v)
+                                            :db.cardinality/many (apply pull-union (map (partial tree-derivative schema) v)))}
                        :else k)))
          [])))
 
-(defn enclosing-pull-shape "Union the requested pull-pattern-shape with the actual result shape"
+(defn pull-enclosure "Union the requested pull-pattern-shape with the actual result shape"
   [schema shape coll]
-  (apply pull-shape-union shape (map (partial pulled-tree-derivative schema) coll)))
+  (apply pull-union shape (map (partial tree-derivative schema) coll)))
 
 (defn pull-traverse "Manufacture superset of possible link paths
   Collapses {:reg/gender [:db/ident :db/id]} into :reg/gender"
@@ -197,7 +197,7 @@
   ; derivative oriented, ignores spread
   {:pre [schema]}
   (condp = (type e)
-    Pull (pull-traverse (enclosing-pull-shape schema (pull-shape pull-pattern) collection))
+    Pull (pull-traverse (pull-enclosure schema (pull-shape pull-pattern) collection))
     Variable [[]]
     Aggregate [[]]))
 
@@ -231,7 +231,7 @@
       (->> (apply merge))
       (get a)))
 
-(defn enclosing-pull-shapes [schemas qfind data]
+(defn pull-enclosures [schemas qfind data]
   {:pre [schemas qfind data]
    :post [vector?]}                                         ; associative by index
   (let [data (contrib.datomic/normalize-result qfind data)]
@@ -243,7 +243,7 @@
                           Pull (let [{{db :symbol} :source {pull-pattern :value} :pattern} element
                                      coll (mapv #(get % i) data)
                                      schema (get schemas (str db))]
-                                 (enclosing-pull-shape schema (pull-shape pull-pattern) coll)))))
+                                 (pull-enclosure schema (pull-shape pull-pattern) coll)))))
          vec)))
 
 (defn spread-elements' [f schemas qfind data]

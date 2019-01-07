@@ -1,8 +1,8 @@
 (ns contrib.datomic-test
   (:require
     [clojure.test :refer [deftest is testing]]
-    [contrib.datomic :refer [pull-shape pulled-tree-derivative enclosing-pull-shape pull-level
-                             pull-traverse pull-shape-union normalize-result]]
+    [contrib.datomic :refer [pull-shape tree-derivative pull-enclosure pull-level
+                             pull-traverse pull-union normalize-result]]
     [contrib.ct]
     [contrib.try$]
     [fixtures.ctx :refer [schema result-coll]]
@@ -86,7 +86,7 @@
   []
   (let [t derivative-tests]
     (doseq [[doc schema tree derivative] t]
-      (is (= (pulled-tree-derivative schema tree)
+      (is (= (tree-derivative schema tree)
              derivative)
           doc)))
   )
@@ -94,10 +94,10 @@
 (deftest pulled-tree-derivative-1
   []
   (is (= [:db/id]
-         (pulled-tree-derivative schema {:db/id 17592186046204})))
+         (tree-derivative schema {:db/id 17592186046204})))
 
   (is (= [:db/id :db/ident :hyperfiddle/owners #:reg{:gender [:db/id]}]
-         (pulled-tree-derivative schema {:db/id 17592186046209,
+         (tree-derivative schema {:db/id 17592186046209,
                                          :db/ident :shirt-size/womens-medium,
                                          :hyperfiddle/owners [#uuid "acd054a8-4e36-4d6c-a9ec-95bdc47f0d39"],
                                          :reg/gender {:db/id 17592186046204}})))
@@ -108,27 +108,28 @@
           :reg/age
           #:reg{:gender [:db/ident]}
           #:reg{:shirt-size [:db/id :db/ident :hyperfiddle/owners #:reg{:gender [:db/id]}]}]
-         (pulled-tree-derivative schema pulled-tree-1)))
+         (tree-derivative schema pulled-tree-1)))
   )
 
-(deftest pull-shape-union-
+(deftest pull-union-
   []
-  (is (= [:db/id :db/ident #:reg{:gender [:db/id :db/ident]}]
-         (pull-shape-union [:db/id {:reg/gender [:db/id]}]
-                           [:db/ident {:reg/gender [:db/ident]}])))
+  (is (= (pull-union [:db/id {:reg/gender [:db/id]}]
+                     [:db/ident {:reg/gender [:db/ident]}])
+         [:db/id :db/ident #:reg{:gender [:db/id :db/ident]}]))
 
-  (is (= #:reg{:gender [:db/id :db/ident]}
-         (pull-shape-union {:reg/gender [:db/id]}
-                           {:reg/gender [:db/ident]})))
+  (is (= (pull-union {:reg/gender [:db/id]}
+                     {:reg/gender [:db/ident]})
+         #:reg{:gender [:db/id :db/ident]}))
 
-  (is (= [:db/id :db/ident #:reg{:gender [:db/id :db/ident]}]
-         (pull-shape-union [:db/id {:reg/gender [:db/id]}]
-                           [:db/ident {:reg/gender [:db/ident]}])))
+  (is (= (pull-union [:db/id {:reg/gender [:db/id]}]
+                     [:db/ident {:reg/gender [:db/ident]}])
+         [:db/id :db/ident #:reg{:gender [:db/id :db/ident]}]))
 
-  (is (= [:db/id :db/ident #:reg{:gender [:db/id :db/ident]}]
-         (pull-shape-union []
-                           [:db/id {:reg/gender [:db/id]}]
-                           [:db/ident {:reg/gender [:db/ident]}])))
+  (is (= (pull-union []
+                     [:db/id {:reg/gender [:db/id]}]
+                     [:db/ident {:reg/gender [:db/ident]}])
+         [:db/id :db/ident #:reg{:gender [:db/id :db/ident]}]))
+
 
   (def pull-pattern-3 [:reg/email :reg/age #:reg{:gender [:db/ident], :shirt-size [:db/ident]} :db/id])
   (def result-derivatives [[:db/id
@@ -150,16 +151,16 @@
           :hyperfiddle/owners
           :reg/name
           #:reg{:gender [:db/ident], :shirt-size [:db/ident :db/id :hyperfiddle/owners #:reg{:gender [:db/id]}]}]
-         (apply pull-shape-union pull-pattern-3 result-derivatives)))
+         (apply pull-union pull-pattern-3 result-derivatives)))
   )
 
 
 
 (deftest enclosing-pull-shape-
   []
-  (enclosing-pull-shape schema [] [{:db/ident :foo} {:db/id 10 :db/ident :yo}])
-  (enclosing-pull-shape schema [:db/ident] [])
-  (enclosing-pull-shape schema [] [{:db/id 17592186046209,
+  (pull-enclosure schema [] [{:db/ident :foo} {:db/id 10 :db/ident :yo}])
+  (pull-enclosure schema [:db/ident] [])
+  (pull-enclosure schema [] [{:db/id 17592186046209,
                                     :db/ident :shirt-size/womens-medium,
                                     :hyperfiddle/owners [#uuid "acd054a8-4e36-4d6c-a9ec-95bdc47f0d39"],
                                     :reg/gender {:db/id 17592186046204}}
@@ -167,8 +168,8 @@
                                     :db/ident :shirt-size/womens-medium,
                                     :reg/gender {:db/id 17592186046204}}
                                    ])
-  (enclosing-pull-shape schema (pull-shape pull-pattern-1) result-coll)
-  (enclosing-pull-shape schema (pull-shape pull-pattern-1) [])
+  (pull-enclosure schema (pull-shape pull-pattern-1) result-coll)
+  (pull-enclosure schema (pull-shape pull-pattern-1) [])
   )
 
 (deftest form-traverse-
