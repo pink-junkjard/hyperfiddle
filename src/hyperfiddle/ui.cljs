@@ -167,7 +167,7 @@ User renderers should not be exposed to the reaction."
   (let [props (-> props
                   (update :class css "hyperfiddle")
                   (assoc :href (some->> (:route props) (hyperfiddle.foundation/route-encode (:peer ctx)))))]
-    (into [:a (select-keys props [:class :href])]
+    (into [:a (select-keys props [:class :href :style])]
           children)))
 
 (letfn [(prompt [link-ref ?label]
@@ -328,11 +328,11 @@ User renderers should not be exposed to the reaction."
   [columns ctx & [props]]
   (let [sort-col (r/atom (::sort/initial-sort props))]
     (fn [columns ctx & [props]]
-      (let [props (dissoc props ::sort/initial-sort)
+      (let [props (update props :class (fnil css "hyperfiddle") "unp") ; fnil case is iframe root (not a field :many)
             ctx (assoc ctx ::sort/sort-col sort-col
                            ::layout :hyperfiddle.ui.layout/table)]
-        [:table (update props :class (fnil css "hyperfiddle") "unp") ; fnil case is iframe root (not a field :many)
-         #_[:thead (into [:tr] (columns (dissoc ctx :hypercrud.browser/data)))]
+        [:table (select-keys props [:class])
+         [:thead (into [:tr] (columns (dissoc ctx :hypercrud.browser/data)))]
          ; filter? Group-by? You can't. This is data driven. Shape your data in the peer.
          (into [:tbody] (for [ctx (hyperfiddle.api/spread-rows ctx #(sort/sort-fn % sort-col))]
                           (into

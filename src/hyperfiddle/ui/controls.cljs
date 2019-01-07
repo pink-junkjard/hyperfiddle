@@ -54,11 +54,11 @@
     [debounced props contrib.ui/long]))
 
 (defn ^:export boolean [val ctx & [props]]
-  [:div props
+  [:div (select-keys props [:class :style])
    (let [props (assoc props
                  :checked (clojure.core/boolean val)
                  :on-change (with-entity-change! ctx))]
-     [contrib.ui/easy-checkbox props])])
+     [contrib.ui/easy-checkbox (select-keys props [:class :style :is-invalid :checked :on-change :disabled])])]) ; readonly?
 
 (let [adapter (fn [e]
                 (case (.-target.value e)
