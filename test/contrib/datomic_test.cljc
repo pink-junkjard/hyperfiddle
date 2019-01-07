@@ -130,6 +130,14 @@
                      [:db/ident {:reg/gender [:db/ident]}])
          [:db/id :db/ident #:reg{:gender [:db/id :db/ident]}]))
 
+  (is (= (pull-union [:dustingetz.reg/email
+                      :dustingetz.reg/name
+                      ; :dustingetz.reg/age
+                      ; :dustingetz.reg/birthdate
+                      {:dustingetz.reg/gender [:db/ident]}
+                      {:dustingetz.reg/shirt-size [:db/ident]}
+                      :db/id])
+         [:dustingetz.reg/email :dustingetz.reg/name :db/id #:dustingetz.reg{:gender [:db/ident]} #:dustingetz.reg{:shirt-size [:db/ident]}]))
 
   (def pull-pattern-3 [:reg/email :reg/age #:reg{:gender [:db/ident], :shirt-size [:db/ident]} :db/id])
   (def result-derivatives [[:db/id
