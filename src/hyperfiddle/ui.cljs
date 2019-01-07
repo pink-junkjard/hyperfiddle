@@ -331,7 +331,7 @@ User renderers should not be exposed to the reaction."
       (let [props (update props :class (fnil css "hyperfiddle") "unp") ; fnil case is iframe root (not a field :many)
             ctx (assoc ctx ::sort/sort-col sort-col
                            ::layout :hyperfiddle.ui.layout/table)]
-        [:table (select-keys props [:class])
+        [:table (select-keys props [:class :style])
          [:thead (into [:tr] (columns (dissoc ctx :hypercrud.browser/data)))]
          ; filter? Group-by? You can't. This is data driven. Shape your data in the peer.
          (into [:tbody] (for [ctx (hyperfiddle.api/spread-rows ctx #(sort/sort-fn % sort-col))]
