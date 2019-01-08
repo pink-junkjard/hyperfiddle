@@ -181,10 +181,10 @@
   (as-> ctx ctx
         (assoc ctx :hypercrud.browser/qfind (r/fmap-> (:hypercrud.browser/fiddle ctx) hypercrud.browser.context/parse-fiddle-data-shape :qfind))
         (assoc ctx :hypercrud.browser/enclosing-pull-shapes (if @(:hypercrud.browser/qfind ctx)
-                                                              (r/apply contrib.datomic/pull-enclosures
-                                                                       ((juxt :hypercrud.browser/schemas
-                                                                              :hypercrud.browser/qfind
-                                                                              :hypercrud.browser/data) ctx))))
+                                                              (r/ctx-apply contrib.datomic/pull-enclosures ctx
+                                                                           :hypercrud.browser/schemas
+                                                                           :hypercrud.browser/qfind
+                                                                           :hypercrud.browser/data)))
         (assoc ctx :hypercrud.browser/validation-hints (contrib.validation/validate
                                                          (s/get-spec @(r/fmap :fiddle/ident (:hypercrud.browser/fiddle ctx)))
                                                          @(:hypercrud.browser/data ctx)

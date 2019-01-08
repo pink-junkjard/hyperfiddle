@@ -199,7 +199,7 @@
    (->> (range @(fmap count rv))
         ; cursur indexing by index silently fails if @rv is a list here
         (map (fn [index] [(cursor rv [index]) index]))))
-  ([key-fn rv]
+  ([key-fn rv]                                              ; kill this arity
    {:pre [(reactive? rv)]}
    (let [lookup (fmap (partial util/group-by-unique key-fn) rv)] ; because results are vectors(sets) and we need to traverse by id
      (->> @(fmap (partial map key-fn) rv)
@@ -217,3 +217,8 @@
 (defn apply [f rvs]
   (fmap (partial clojure.core/apply f) (sequence rvs))
   #_(fmap->> (sequence rvs) (clojure.core/apply f)))        ; seems broken macro in cljs only `WARNING: Wrong number of args (1) passed to cljs.core/apply at line 219 reactive.cljc`
+
+(defn ctx-apply "reactive apply f to sequenced rvs extracted from map"
+  [stable-f ctx & ks]
+  (let [rvs ((clojure.core/apply juxt ks) ctx)]
+    (apply stable-f rvs)))
