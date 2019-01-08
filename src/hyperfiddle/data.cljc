@@ -16,16 +16,11 @@
   {:pre [#_(:hypercrud.browser/qfind ctx)                   ; :blank ?
          #_(:hypercrud.browser/element ctx)                 ; database color
          (:hypercrud.browser/link-index ctx)
-         (:hypercrud.browser/link-index ctx)
-         (:hypercrud.browser/link-index ctx)
-         (s/assert :hypercrud/context ctx) #_(:hypercrud.browser/eav ctx)] ; it can be Reaction of [nil nil nil]
+         (s/assert :hypercrud/context ctx)
+         #_(:hypercrud.browser/eav ctx)] ; it can be Reaction of [nil nil nil]
    :post [(r/reactive? %)]}                                 ; its also a vector, associative by index
-  (context/links-in-dimension-r                             ; hidden deref
-    (:hypercrud.browser/link-index ctx)                     ; if this is a protocol on ctx could react deeper?
-    (if-let [element (:hypercrud.browser/element ctx)] @element) ; optional?
-    (if-let [schema (:hypercrud.browser/schema ctx)] @schema)
-    (:hypercrud.browser/path ctx)                           ; optional?
-    (contrib.data/xorxs ?corcs #{})))
+  (context/links-in-dimension
+    ctx (contrib.data/xorxs ?corcs #{})))
 
 (defn validate-one+r [corcs r-links]                        ; Right[Reaction] or Left[Error] - broken, error should react too
   (let [n @(r/fmap count r-links)]

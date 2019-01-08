@@ -98,7 +98,7 @@
                        :hypercrud.browser/data-index (r/fmap->> reactive-result (contrib.data/group-by-unique keyfn))
                        ;:hypercrud.browser/datascript (contrib.datomic/datascript-from-result @reactive-result @r-schemas)
                        :hypercrud.browser/fiddle r-fiddle
-                       :hypercrud.browser/link-index (context/index-links r-schemas r-fiddle)
+                       :hypercrud.browser/link-index (r/fmap hypercrud.browser.context/-indexed-links-at r-fiddle)
                        :hypercrud.browser/eav (r/track identity [nil nil nil])
                        :hypercrud.browser/path [])]] ; legacy
       (return ctx))))

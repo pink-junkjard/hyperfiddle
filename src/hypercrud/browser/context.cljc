@@ -331,12 +331,6 @@
 ; lift out of current context in this case?
 ; Make sure to optimize the single-fe case to use the identity/value which will be unique
 
-(defprotocol FiddleLinksIndex
-  #_(links-at [this criterias])
-  #_(links-in-dimension [this element pullpath criterias])
-  (links-at-r [this criterias])                             ; criterias can contain nil, meaning toptop
-  (links-in-dimension-r [this element schema pullpath criterias]))
-
 (defn link-identifiers [fiddle-ident link]
   (let [idents (-> (set (:link/class link))
                    (conj (some-> link :link/fiddle :fiddle/ident))
@@ -352,30 +346,27 @@
   (->> (:fiddle/links fiddle)
        (map (partial link-identifiers (:fiddle/ident fiddle)))))
 
-(defn index-links "#{criteria} -> [link]
-  where criterias is some of #{ident txfn class class2}.
+(defn links-at "where criterias is some of #{ident txfn class class2}.
   Links include all links reachable by navigating :ref :one. (Change this by specifying an :ident)
   The index internals are reactive."
-  [r-schemas r-fiddle]
-  {:pre [#_(not-empty r-schemas)
-         (every? #(satisfies? contrib.datomic/SchemaIndexedNormalized %) (vals @r-schemas))]}
-  (let [indexed-links-at (r/fmap -indexed-links-at r-fiddle)]
-    (reify FiddleLinksIndex
-      (links-at-r [this criterias]
-        (r/fmap->> indexed-links-at
-                   (filter (partial link-criteria-match? criterias))
-                   (mapv second)))                          ; drop the index, just the links
-      (links-in-dimension-r [this ?element ?schema ?pullpath criterias] ; hidden deref
-        (if-not (and ?element ?schema ?pullpath)
-          (links-at-r this criterias)
-          (let [pull-pattern (get-in ?element [:pattern :value])]
-            (assert ?schema)
-            (->> (contrib.datomic/reachable-attrs ?schema (contrib.datomic/pull-shape pull-pattern) ?pullpath)
-                 (mapcat (fn [a]
-                           (links-at-r this (conj criterias a)))) ; deref
-                 r/sequence
-                 ; associative by index
-                 (r/fmap vec))))))))
+  [ctx criterias]                              ; criterias can contain nil, meaning toptop
+  (r/fmap->> (:hypercrud.browser/link-index ctx)
+             (filter (partial link-criteria-match? criterias))
+             (mapv second)))
+
+(defn links-in-dimension [ctx criterias]
+  (let [?element (some-> ctx :hypercrud.browser/element deref)
+        ?schema (some-> ctx :hypercrud.browser/schema deref)
+        ?pullpath (:hypercrud.browser/path ctx)]
+    (if-not (and ?element ?schema ?pullpath)
+      (links-at ctx criterias)
+      (let [pull-pattern (get-in ?element [:pattern :value])]
+        (->> (contrib.datomic/reachable-attrs ?schema (contrib.datomic/pull-shape pull-pattern) ?pullpath)
+             (mapcat (fn [a]
+                       (links-at ctx (conj criterias a)))) ; deref
+             r/sequence
+             ; associative by index
+             (r/fmap vec))))))
 
 (defn refocus "todo unify with refocus'
   From view, !link(:new-intent-naive :hf/remove) - find the closest ctx with all dependencies satisfied. Accounts for cardinality.
