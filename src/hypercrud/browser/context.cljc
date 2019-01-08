@@ -33,11 +33,31 @@
 ;  (schema [ctx]))
 
 (s/def :hypercrud/context
-  (s/keys :opt [:hypercrud.browser/data
-                :hypercrud.browser/eav]))
+  (s/keys :opt [:hypercrud.browser/route
+                :hypercrud.browser/schemas
+                :hypercrud.browser/schema
+                :hypercrud.browser/link-index
+                :hypercrud.browser/data
+                :hypercrud.browser/data-index
+                :hypercrud.browser/fiddle
+                :hypercrud.browser/qfind
+                :hypercrud.browser/result-enclosure
+                :hypercrud.browser/validation-hints
+                :hypercrud.browser/element
+                :hypercrud.browser/element-index
+                :hypercrud.browser/pull-enclosure
+                :hypercrud.browser/path
+                :hypercrud.browser/eav
+                :hyperfiddle.runtime/branch-aux
+                :hyperfiddle.ui.iframe/on-click
+                :hypercrud.ui/display-mode
+                :hyperfiddle.ui/layout
+                :hyperfiddle.ui.sort/sort-col]))
 
 (s/def :hypercrud.browser/eav r/reactive?)
 (s/def :hypercrud.browser/data r/reactive?)
+(s/def :hypercrud.browser/element r/reactive?)
+(s/def :hypercrud.browser/element-index int?)
 
 (defn clean [ctx]
   (dissoc ctx
@@ -200,7 +220,8 @@
                                                          @(:hypercrud.browser/data ctx)
                                                          (partial row-keyfn ctx)))
         (assoc ctx :hypercrud.browser/eav (r/apply hypercrud.browser.context/stable-eav-a
-                                                   [(:hypercrud.browser/eav ctx) (r/fmap :fiddle/ident (:hypercrud.browser/fiddle ctx))]))))
+                                                   [(:hypercrud.browser/eav ctx)
+                                                    (r/fmap :fiddle/ident (:hypercrud.browser/fiddle ctx))]))))
 
 (defn -infer-implicit-fiddle [ctx]
   (or
@@ -284,15 +305,20 @@
     (let [head-or-body (if (:hypercrud.browser/data ctx) :body :head)]
       (case head-or-body
         :head (assoc ctx :hypercrud.browser/eav (r/fmap-> (:hypercrud.browser/eav ctx) (stable-eav-a a)))
-        :body (let [r-data (r/fmap a (:hypercrud.browser/data ctx))
-                    ; v may be nil - sparse resultset
-                    r-?v (r/fmap->> r-data (smart-entity-identifier ctx))] ; flagged
+        :body (let [r-data (r/fmap a (:hypercrud.browser/data ctx))]
                 (-> (set-parent-data ctx)
                     (update :hypercrud.browser/validation-hints #(for [[[p & ps] hint] % :when (= p a)]
                                                                    [ps hint]))
                     (assoc :hypercrud.browser/data r-data)
-                    ; insufficent stability on r-?v, fixme
-                    (assoc :hypercrud.browser/eav (r/fmap-> (:hypercrud.browser/eav ctx) (stable-eav-av a @r-?v)))))))))
+                    ; V cardinality :many is fucked here. Query by EA if :many renderer?
+                    (assoc :hypercrud.browser/eav (case (contrib.datomic/cardinality @(:hypercrud.browser/schema ctx) a)
+                                                    ; insufficent stability on r-?v, fixme
+                                                    :db.cardinality/many (r/fmap-> (:hypercrud.browser/eav ctx) (stable-eav-a a))
+                                                    :db.cardinality/one (let [r-?v (r/fmap->> r-data (smart-entity-identifier ctx))] ; flagged
+                                                                          ; v may be nil - sparse resultset
+                                                                          (r/fmap-> (:hypercrud.browser/eav ctx) (stable-eav-av a @r-?v))))
+
+                           )))))))
 
 (defn focus "Unwind or go deeper, to where we need to be, within same dimension.
     Throws if you focus a higher dimension.
@@ -322,6 +348,53 @@
       (assoc :hypercrud.browser/data (r/fmap-> (:hypercrud.browser/data-index ctx) (apply [k]))) ; no change in eav
       (update :hypercrud.browser/validation-hints #(for [[[p & ps] hint] % :when (= k p)]
                                                      [ps hint]))))
+
+(defn ^:export spread-fiddle "automatically guards :fiddle/type :blank.
+  Use in a for comprehension!"
+  [ctx]
+  (let [fiddle-type @(r/fmap :fiddle/type (:hypercrud.browser/fiddle ctx))]
+    (condp some [fiddle-type]
+      #{:blank} []                                          ; don't we want the eav?
+      #{:query :entity} [(hypercrud.browser.context/fiddle ctx)])))
+
+(defn ^:export spread-rows "spread across resultset row-or-rows.
+  Automatically accounts for query dimension - no-op in the case of FindTuple and FindScalar."
+  [ctx & [sort-fn]]
+  {:pre [(:hypercrud.browser/qfind ctx)
+         (s/assert :hypercrud/context ctx)
+         #_(not (:hypercrud.browser/element ctx))]}           ; not yet, except in recursive case
+  (let [{r-eav :hypercrud.browser/eav
+         r-data :hypercrud.browser/data} ctx
+        [e a v :as eav] @r-eav]
+    ; Are we at the top relation, or are we in the graph?
+    (cond
+      (and a #_(contrib.datomic/cardinality? @(:hypercrud.browser/schema ctx) a :db.cardinality/many))
+      (for [[_ k] (->> (r/fmap (or sort-fn identity) r-data)
+                       (r/unsequence (r/partial stable-entity-key ctx)))]
+        (row ctx k))
+
+      ;(and a (contrib.datomic/cardinality? @(:hypercrud.browser/schema ctx) a :db.cardinality/one))
+      ;(assert false (str "can't spread-rows on eav: " eav))
+
+      (not a)
+      (let [{r-qfind :hypercrud.browser/qfind} ctx]
+        (condp some [(type @r-qfind)]
+          #{FindRel FindColl} (for [[_ k] (->> (r/fmap (or sort-fn identity) r-data)
+                                               (r/unsequence (r/partial row-keyfn ctx)))]
+                                (row ctx k))
+          #{FindTuple FindScalar} [ctx])))))
+
+(defn ^:export spread-elements "yields a ctx foreach element.
+  All query dimensions have at least one element."
+  [ctx]
+  {:pre [(:hypercrud.browser/qfind ctx)
+         (not (:hypercrud.browser/element ctx))]
+   #_#_:post [(s/assert :hypercrud/context %)]}
+  (let [r-qfind (:hypercrud.browser/qfind ctx)]
+    ; No unsequence here? What if find elements change? Can we use something other than (range) as keyfn?
+    (for [i (range (count (datascript.parser/find-elements @r-qfind)))]
+      (element ctx i))))
+
 
 ; var first, then can always use db/id on row. No not true – collisions! It is the [?e ?f] product which is unique
 

@@ -18,42 +18,10 @@
 (defn ^:export fiddle [ctx]                                 ; remove
   (hypercrud.browser.context/fiddle ctx))
 
-(defn ^:export spread-fiddle "automatically guards :fiddle/type :blank.
-  Use in a for comprehension!"
-  [ctx]
-  (let [fiddle-type @(r/fmap :fiddle/type (:hypercrud.browser/fiddle ctx))]
-    (condp some [fiddle-type]
-      #{:blank} []                                          ; don't we want the eav?
-      #{:query :entity} [(hypercrud.browser.context/fiddle ctx)])))
-
-(defn ^:export spread-rows "spread across resultset row-or-rows.
-  Automatically accounts for query dimension - no-op in the case of FindTuple and FindScalar."
-  [ctx & [sort-fn]]
-  {:pre [(:hypercrud.browser/qfind ctx)
-         (s/assert :hypercrud/context ctx)
-         #_(not (:hypercrud.browser/element ctx))]}           ; not yet, except in recursive case
-  (let [{r-qfind :hypercrud.browser/qfind r-data :hypercrud.browser/data} ctx]
-    (condp some [(type @r-qfind)]
-      #{FindRel FindColl} (for [[_ k] (->> (r/fmap (or sort-fn identity) r-data)
-                                           (r/unsequence (r/partial hypercrud.browser.context/row-keyfn ctx)))]
-                            (hypercrud.browser.context/row ctx k))
-      #{FindTuple FindScalar} [ctx])))
-
 (defn element [ctx & [i]]
   ;{:pre [(s/assert nil? (:hypercrud.browser/element ctx))]}
   #_{:post [(s/assert :hypercrud/context %)]}
   (hypercrud.browser.context/element ctx i))
-
-(defn ^:export spread-elements "yields a ctx foreach element.
-  All query dimensions have at least one element."
-  [ctx]
-  {:pre [(:hypercrud.browser/qfind ctx)
-         (not (:hypercrud.browser/element ctx))]
-   #_#_:post [(s/assert :hypercrud/context %)]}
-  (let [r-qfind (:hypercrud.browser/qfind ctx)]
-    ; No unsequence here? What if find elements change? Can we use something other than (range) as keyfn?
-    (for [i (range (count (datascript.parser/find-elements @r-qfind)))]
-      (element ctx i))))
 
 (defn attribute [ctx a]
   {:pre [ctx a]}

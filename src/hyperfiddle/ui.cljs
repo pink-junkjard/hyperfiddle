@@ -317,7 +317,7 @@ User renderers should not be exposed to the reaction."
 (defn columns-relation-product [ui-field ctx & [props]]
   {:pre [ctx]}
   (->> (for [[i element ctx-e] (map vector (range) (datascript.parser/find-elements @(:hypercrud.browser/qfind ctx))
-                                    (hyperfiddle.api/spread-elements ctx))]
+                                    (hypercrud.browser.context/spread-elements ctx))]
          (condp some [(type element)]
            #{Variable Aggregate} [[ui-field [i] ctx props]]
            #{Pull} (for [[a] (map vector (contrib.datomic/pull-level @(:hypercrud.browser/pull-enclosure ctx-e)))]
@@ -334,10 +334,11 @@ User renderers should not be exposed to the reaction."
         [:table (select-keys props [:class :style])
          [:thead (into [:tr] (columns (dissoc ctx :hypercrud.browser/data)))]
          ; filter? Group-by? You can't. This is data driven. Shape your data in the peer.
-         (into [:tbody] (for [ctx (hyperfiddle.api/spread-rows ctx #(sort/sort-fn % sort-col))]
-                          (into
-                            [:tr {:key (:hypercrud.browser/row-key ctx)}]
-                            (columns ctx))))]))))
+         (into [:tbody] (for [ctx (hypercrud.browser.context/spread-rows ctx #(sort/sort-fn % sort-col))]
+                          (let [cs (columns ctx)]
+                            (into
+                              [:tr {:key (:hypercrud.browser/row-key ctx)}]
+                              cs))))]))))
 
 (defn hint [val {:keys [hypercrud.browser/fiddle] :as ctx} props]
   (if (and (-> (:fiddle/type @fiddle) (= :entity))
