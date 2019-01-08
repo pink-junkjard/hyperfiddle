@@ -15,7 +15,8 @@
     #_[hyperfiddle.ui]
     [hyperfiddle.ui.docstring :refer [semantic-docstring]]
     [hyperfiddle.ui.select$ :refer [select]]
-    [hyperfiddle.ui.util :refer [with-entity-change! with-tx!]]))
+    [hyperfiddle.ui.util :refer [with-entity-change! with-tx!]]
+    [taoensso.timbre]))
 
 
 (defn value-validator [ctx]
@@ -85,20 +86,24 @@
     (some-> attr :db/cardinality :db/ident)))
 
 (defn dbid-label [_ ctx & [props]]
-  (let [parent-ctx (:hypercrud.browser/parent ctx)
-        [e a v] @(:hypercrud.browser/eav ctx)]
-    (into [:<> (label-with-docs a (semantic-docstring ctx) props)]
-          ; dbid links are at parent path, but we don't always have a parent #543
-          (condp = (some-> parent-ctx cardinality)
-            :db.cardinality/one nil                         ; :one is handled by the body
-            :db.cardinality/many
-            [(if-let [link (data/select-many-here parent-ctx :hf/new)]
-               [hyperfiddle.ui/ui-from-link link parent-ctx props "new"])]
+  {:pre [(:hypercrud.browser/element ctx)
+         (:hypercrud.browser/schema ctx)]}
+  (into
+    [:<>
+     (let [[e a v] @(:hypercrud.browser/eav ctx)]
+       (label-with-docs a (semantic-docstring ctx) props))]
+    ; dbid links are at parent path, but we don't always have a parent #543
+    (let [ctx (:hypercrud.browser/parent ctx)
+          [e a v] @(:hypercrud.browser/eav ctx)]
+      (cond
+        (and a (contrib.datomic/cardinality? @(:hypercrud.browser/schema ctx) a :db.cardinality/many)) ; :one is handled by the body
+        [(if-let [link (data/select-here+ ctx :hf/new)]
+           [hyperfiddle.ui/ui-from-link link ctx props "new"])]
 
-            ; This hack detects FindCol, which has no parent cardinality but does need the links
-            nil [(if-let [link (some-> parent-ctx (data/select-many-here :hf/new))]
-                   [hyperfiddle.ui/ui-from-link link parent-ctx props "new"])]
-            ))))
+        (#{FindColl} (type (:hypercrud.browser/element ctx))) ; Prob is mistake to exclude FindRel
+        [(if-let [link (some-> ctx (data/select-here+ :hf/new)
+                               (->> (contrib.ct/unwrap #(taoensso.timbre/warn %))))]
+           [hyperfiddle.ui/ui-from-link link ctx props "new"])]))))
 
 (defn id-prompt [ctx val]
   (pr-str (context/smart-entity-identifier ctx val)))
@@ -120,9 +125,9 @@
     (:options props) [select val ctx props]
     :else [:div
            [:div.input (interpose " " (cons (id-prompt ctx val) (related-links val ctx props)))]
-           (if-let [link (data/select-many-here ctx :hf/new)]
+           (if-let [link (contrib.ct/unwrap #(taoensso.timbre/warn %) (data/select-here+ ctx :hf/new))]
              [hyperfiddle.ui/ui-from-link link ctx props])
-           (if-let [link (data/select-many-here ctx :hf/remove)]
+           (if-let [link (contrib.ct/unwrap #(taoensso.timbre/warn %) (data/select-here+ ctx :hf/remove))]
              (if val
                [hyperfiddle.ui/ui-from-link link ctx props]))]))
 

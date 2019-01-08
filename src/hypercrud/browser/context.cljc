@@ -29,6 +29,9 @@
        (datascript.parser FindRel FindColl FindTuple FindScalar Variable Aggregate Pull))))
 
 
+;(defprotocol Context
+;  (schema [ctx]))
+
 (s/def :hypercrud/context
   (s/keys :opt [:hypercrud.browser/data
                 :hypercrud.browser/eav]))
@@ -236,8 +239,8 @@
         (assoc ctx :hypercrud.browser/element (r/fmap-> (:hypercrud.browser/qfind ctx) datascript.parser/find-elements (get i)))
         (assoc ctx :hypercrud.browser/element-index i)
         (assoc ctx :hypercrud.browser/schema (r/ctxf stable-element-schema ctx
-                                                     :hypercrud.browser/element
-                                                     :hypercrud.browser/schemas))
+                                                     :hypercrud.browser/schemas
+                                                     :hypercrud.browser/element))
         (assoc ctx :hypercrud.browser/enclosing-pull-shape (r/fmap-> (:hypercrud.browser/enclosing-pull-shapes ctx)
                                                                      (get i)))
         (let [{data :hypercrud.browser/data} ctx]           ; head vs body
@@ -362,14 +365,14 @@
         (r/fmap->> indexed-links-at
                    (filter (partial link-criteria-match? criterias))
                    (mapv second)))                          ; drop the index, just the links
-      (links-in-dimension-r [this ?element ?pullpath ?schema criterias] ; hidden deref
+      (links-in-dimension-r [this ?element ?schema ?pullpath criterias] ; hidden deref
         (if-not (and ?element ?schema ?pullpath)
           (links-at-r this criterias)
           (let [pull-pattern (get-in ?element [:pattern :value])]
             (assert ?schema)
             (->> (contrib.datomic/reachable-attrs ?schema (contrib.datomic/pull-shape pull-pattern) ?pullpath)
                  (mapcat (fn [a]
-                           (links-at-r this (conj criterias a))))
+                           (links-at-r this (conj criterias a)))) ; deref
                  r/sequence
                  ; associative by index
                  (r/fmap vec))))))))
