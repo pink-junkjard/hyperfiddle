@@ -202,6 +202,7 @@
     Aggregate [[]]))
 
 (defn normalize-result [qfind result]
+  ; nil should be treated as empty
   (when result                                              ; unclear if nil result should have been a server error https://github.com/hyperfiddle/hyperfiddle/issues/584
     (condp = (type qfind)
       FindRel result
@@ -231,17 +232,20 @@
       (->> (apply merge))
       (get a)))
 
-(defn pull-enclosures [schemas qfind data]
-  {:pre [schemas qfind data]
+(defn result-enclosure "
+  no data is not a well-formed result - probably invalid query, but it's less confusing to users
+  if the UI still works in this case, since tweaking a formshape does not require the form be populated"
+  [schemas qfind ?data]
+  {:pre [schemas qfind]
    :post [vector?]}                                         ; associative by index
-  (let [data (contrib.datomic/normalize-result qfind data)]
+  (let [?data (contrib.datomic/normalize-result qfind ?data)] ; nil data can mean no query or invalid query, we can still draw forms
     (->> (datascript.parser/find-elements qfind)
          (map-indexed (fn [i element]
                         (condp = (type element)
                           Variable nil
                           Aggregate nil
                           Pull (let [{{db :symbol} :source {pull-pattern :value} :pattern} element
-                                     coll (mapv #(get % i) data)
+                                     coll (mapv #(get % i) ?data)
                                      schema (get schemas (str db))]
                                  (pull-enclosure schema (pull-shape pull-pattern) coll)))))
          vec)))

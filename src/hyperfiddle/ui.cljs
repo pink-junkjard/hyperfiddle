@@ -105,7 +105,7 @@
   {:post [%]}
   (or (attr-renderer-control val ctx props)
       (let [[e a v] @(:hypercrud.browser/eav ctx)
-            children (contrib.datomic/pull-level @(:hypercrud.browser/enclosing-pull-shape ctx))]
+            children (contrib.datomic/pull-level @(:hypercrud.browser/pull-enclosure ctx))]
         (cond                                               ; Duplicate options test to avoid circular dependency in controls/ref
           (:options props) [(control val ctx props) val ctx props]
           (contains? #{:db/id :db/ident} a) [controls/id-or-ident val ctx props]
@@ -309,7 +309,7 @@ User renderers should not be exposed to the reaction."
 (defn columns [relpath ui-field ctx & [props]]
   (concat
     ; questionable enclosing-pull-shape here
-    (for [[k] (map vector (contrib.datomic/pull-level @(:hypercrud.browser/enclosing-pull-shape ctx)) #_(hyperfiddle.api/spread-pull ctx))]
+    (for [[k] (map vector (contrib.datomic/pull-level @(:hypercrud.browser/pull-enclosure ctx)) #_(hyperfiddle.api/spread-pull ctx))]
       ^{:key (str k)}
       [ui-field (conj relpath k) ctx nil props])
     [[ui-field relpath ctx nil props]]))                    ; fiddle segment (top)
@@ -320,7 +320,7 @@ User renderers should not be exposed to the reaction."
                                     (hyperfiddle.api/spread-elements ctx))]
          (condp some [(type element)]
            #{Variable Aggregate} [[ui-field [i] ctx props]]
-           #{Pull} (for [[a] (map vector (contrib.datomic/pull-level @(:hypercrud.browser/enclosing-pull-shape ctx-e)))]
+           #{Pull} (for [[a] (map vector (contrib.datomic/pull-level @(:hypercrud.browser/pull-enclosure ctx-e)))]
                      [ui-field [i a] ctx props])))
        (mapcat identity)))
 

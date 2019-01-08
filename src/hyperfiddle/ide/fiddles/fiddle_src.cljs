@@ -106,7 +106,7 @@
       (field [:fiddle/uuid] ctx hyper-control (assoc props :disabled true))
       (field [:fiddle/hydrate-result-as-fiddle] ctx hyper-control props)
       [:div.p "Additional attributes"]
-      (for [k (->> (contrib.datomic/pull-level @(:hypercrud.browser/enclosing-pull-shape ctx))
+      (for [k (->> (contrib.datomic/pull-level @(:hypercrud.browser/pull-enclosure ctx))
                    (remove (comp (partial = "fiddle") namespace))
                    (remove (partial = :db/id)))]
         ^{:key (str k)}

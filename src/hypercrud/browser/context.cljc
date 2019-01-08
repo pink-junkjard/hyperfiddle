@@ -190,11 +190,11 @@
   ; Don't infer any further scopes, it is down-scope's job to infer anything it needs (which might be legacy compat at this point)
   (as-> ctx ctx
         (assoc ctx :hypercrud.browser/qfind (r/fmap-> (:hypercrud.browser/fiddle ctx) hyperfiddle.fiddle/parse-fiddle-data-shape :qfind))
-        (assoc ctx :hypercrud.browser/enclosing-pull-shapes (if @(:hypercrud.browser/qfind ctx)
-                                                              (r/ctxf contrib.datomic/pull-enclosures ctx
-                                                                      :hypercrud.browser/schemas
-                                                                      :hypercrud.browser/qfind
-                                                                      :hypercrud.browser/data)))
+        (assoc ctx :hypercrud.browser/result-enclosure (if @(:hypercrud.browser/qfind ctx)
+                                                         (r/ctxf contrib.datomic/result-enclosure ctx
+                                                                 :hypercrud.browser/schemas
+                                                                 :hypercrud.browser/qfind
+                                                                 :hypercrud.browser/data)))
         (assoc ctx :hypercrud.browser/validation-hints (contrib.validation/validate
                                                          (s/get-spec @(r/fmap :fiddle/ident (:hypercrud.browser/fiddle ctx)))
                                                          @(:hypercrud.browser/data ctx)
@@ -241,8 +241,8 @@
         (assoc ctx :hypercrud.browser/schema (r/ctxf stable-element-schema ctx
                                                      :hypercrud.browser/schemas
                                                      :hypercrud.browser/element))
-        (assoc ctx :hypercrud.browser/enclosing-pull-shape (r/fmap-> (:hypercrud.browser/enclosing-pull-shapes ctx)
-                                                                     (get i)))
+        (assoc ctx :hypercrud.browser/pull-enclosure (r/fmap-> (:hypercrud.browser/result-enclosure ctx)
+                                                               (get i)))
         (let [{data :hypercrud.browser/data} ctx]           ; head vs body
           (if data
             (update ctx :hypercrud.browser/data (condp some [(type @(:hypercrud.browser/qfind ctx))]
@@ -264,13 +264,13 @@
   ctx)
 
 (defn attribute [ctx a]
-  {:pre [#_(s/assert r/reactive? (:hypercrud.browser/enclosing-pull-shape ctx)) ; can be inferred
+  {:pre [#_(s/assert r/reactive? (:hypercrud.browser/pull-enclosure ctx)) ; can be inferred
          (s/assert :hypercrud/context ctx)
          (s/assert keyword? a)
          #_(do (println "attribute: " a) true)
          #_(do (println "... data pre: " (pr-str (some-> (:hypercrud.browser/data ctx) deref))) true)]
    :post [(s/assert :hypercrud/context %)
-          #_(do (println (:hypercrud.browser/enclosing-pull-shape %)) true)
+          #_(do (println (:hypercrud.browser/pull-enclosure %)) true)
           #_(do (println "... data post: " (pr-str (some-> (:hypercrud.browser/data %) deref))) true)]}
   (as->
     ctx ctx
@@ -279,8 +279,8 @@
     (-validate-qfind-element ctx)
     (set-parent ctx)
     (update ctx :hypercrud.browser/path conj a)
-    (assoc ctx :hypercrud.browser/enclosing-pull-shape (r/fmap->> (:hypercrud.browser/enclosing-pull-shape ctx)
-                                                                  (contrib.datomic/pull-shape-refine a)))
+    (assoc ctx :hypercrud.browser/pull-enclosure (r/fmap->> (:hypercrud.browser/pull-enclosure ctx)
+                                                            (contrib.datomic/pull-shape-refine a)))
     (let [head-or-body (if (:hypercrud.browser/data ctx) :body :head)]
       (case head-or-body
         :head (assoc ctx :hypercrud.browser/eav (r/fmap-> (:hypercrud.browser/eav ctx) (stable-eav-a a)))

@@ -60,7 +60,7 @@
   (hypercrud.browser.context/attribute ctx a))
 
 (defn spread-pull [ctx]                                     ; not recursive
-  (for [k (contrib.datomic/pull-level @(:hypercrud.browser/enclosing-pull-shape ctx))]
+  (for [k (contrib.datomic/pull-level @(:hypercrud.browser/pull-enclosure ctx))]
     (attribute ctx k)))
 
 (defn spread-element [{:keys [:hypercrud.browser/qfind
@@ -74,7 +74,7 @@
   (condp = (type element)
     Variable [ctx]
     Aggregate [ctx]
-    Pull (for [k (contrib.datomic/pull-level @(:hypercrud.browser/enclosing-pull-shape ctx))]
+    Pull (for [k (contrib.datomic/pull-level @(:hypercrud.browser/pull-enclosure ctx))]
            (attribute ctx k))))
 
 (defn ^:export ^:legacy tempid-child
