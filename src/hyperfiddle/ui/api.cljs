@@ -6,8 +6,8 @@
     [hyperfiddle.data]))
 
 
-(defn with-result [ctx]
-  (for [ctx (hyperfiddle.api/spread-fiddle ctx)]
+(defn ctx->data [ctx]
+  (let [ctx (hypercrud.browser.context/fiddle ctx)]
     @(:hypercrud.browser/data ctx)))
 
 (defn api-data "{route data}
@@ -16,14 +16,14 @@
   [ctx]
   (merge
 
-    {@(:hypercrud.browser/route ctx) (with-result ctx)}
+    {@(:hypercrud.browser/route ctx) (ctx->data ctx)}
 
     (->> @(hyperfiddle.data/select-many-here ctx #{:hf/iframe}) ; this omits dependent iframes fixme
          (map (partial r/flip base/data-from-link! ctx))
-         (map (juxt :hypercrud.browser/route with-result)))
+         (map (juxt :hypercrud.browser/route ctx->data)))
 
     (when @(r/fmap :fiddle/hydrate-result-as-fiddle (:hypercrud.browser/fiddle ctx))
       (let [[_ [inner-fiddle & inner-args]] @(:hypercrud.browser/route ctx)
             route [inner-fiddle (vec inner-args)]
             ctx (base/data-from-route! route ctx)]
-        ((juxt :hypercrud.browser/route with-result) ctx)))))
+        ((juxt :hypercrud.browser/route ctx->data) ctx)))))
