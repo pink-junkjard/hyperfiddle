@@ -44,8 +44,10 @@
   ; Don't collect here, they get filtered down later
   (map form-cell-problem problems))
 
-(defn validate [spec value keyfn]
-  (-> (s/explain-data spec value)
-      (->> (explained-for-view keyfn))
-      ::s/problems
-      form-validation-hints))
+(defn validate [?spec value keyfn]
+  {:pre [keyfn]}
+  (when ?spec                                               ; just make this easy, specs are always sparse
+    (-> (s/explain-data ?spec value)
+        (->> (explained-for-view keyfn))
+        ::s/problems
+        form-validation-hints)))

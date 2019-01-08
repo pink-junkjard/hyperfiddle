@@ -218,7 +218,8 @@
   (fmap (partial clojure.core/apply f) (sequence rvs))
   #_(fmap->> (sequence rvs) (clojure.core/apply f)))        ; seems broken macro in cljs only `WARNING: Wrong number of args (1) passed to cljs.core/apply at line 219 reactive.cljc`
 
-(defn ctx-apply "reactive apply f to sequenced rvs extracted from map"
+(defn ctxf "reactive apply f to sequenced rvs extracted from map
+  ks can be fns, but must be stable refs"
   [stable-f ctx & ks]
   (let [rvs ((clojure.core/apply juxt ks) ctx)]
     (apply stable-f rvs)))

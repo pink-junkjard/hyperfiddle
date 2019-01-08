@@ -16,11 +16,14 @@
   {:pre [#_(:hypercrud.browser/qfind ctx)                   ; :blank ?
          #_(:hypercrud.browser/element ctx)                 ; database color
          (:hypercrud.browser/link-index ctx)
+         (:hypercrud.browser/link-index ctx)
+         (:hypercrud.browser/link-index ctx)
          (s/assert :hypercrud/context ctx) #_(:hypercrud.browser/eav ctx)] ; it can be Reaction of [nil nil nil]
-   :post [(r/reactive? %)]}
+   :post [(r/reactive? %)]}                                 ; its also a vector, associative by index
   (context/links-in-dimension-r                             ; hidden deref
     (:hypercrud.browser/link-index ctx)                     ; if this is a protocol on ctx could react deeper?
-    (:hypercrud.browser/element ctx)                        ; optional?
+    (if-let [element (:hypercrud.browser/element ctx)] @element) ; optional?
+    (if-let [schema (:hypercrud.browser/schema ctx)] @schema)
     (:hypercrud.browser/path ctx)                           ; optional?
     (contrib.data/xorxs ?corcs #{})))
 
@@ -55,7 +58,7 @@
 
 (defn ^:export select-here+ [ctx & [?corcs]]
   {:pre [(s/assert :hypercrud/context ctx)]
-   :post [(r/reactive? %)]}
+   :post [#_(r/reactive? %)]}                               ; Left[String]], Right[R[T]]
   (->> (select-many-here ctx ?corcs)
        (validate-one+r ?corcs)
        #_#_r/apply-inner-r deref))

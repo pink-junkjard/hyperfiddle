@@ -10,6 +10,7 @@
     [contrib.reader]
     [contrib.string]
     [contrib.try$ :refer [try-either]]
+    [contrib.validation]
     [clojure.set]
     [clojure.spec.alpha :as s]
     [datascript.parser #?@(:cljs [:refer [FindRel FindColl FindTuple FindScalar Variable Aggregate Pull]])]
@@ -47,10 +48,10 @@
           :hypercrud.browser/link-index
           :hypercrud.browser/fiddle
           :hypercrud.browser/qfind
-          :hypercrud.browser/element
           :hypercrud.browser/element-index
+          :hypercrud.browser/element
+          :hypercrud.browser/schema
           :hypercrud.browser/eav
-
 
           :hypercrud.browser/parent
           :hypercrud.browser/path
@@ -74,15 +75,6 @@
 (defn attribute-segment? [path-segment]
   (or (keyword? path-segment)
       (= '* path-segment)))
-
-(defn find-element-segment? [path-segment]
-  (integer? path-segment))
-
-(defn segment-type [segment]
-  (cond
-    (attribute-segment? segment) :attribute
-    (find-element-segment? segment) :element
-    :else :naked))
 
 (defn segment-type-2 [segment]
   (cond
@@ -150,7 +142,7 @@
 (defn- set-parent-data [ctx]
   (update ctx :hypercrud.browser/parent (fnil into {}) (select-keys ctx [:hypercrud.browser/data])))
 
-(defn identify [ctx]
+(defn identify [ctx]                                        ; legacy
   {:post [(not (map? %))]}
   ; When looking at an attr of type ref, figure out it's identity, based on all the ways it can be pulled.
   ; What if we pulled children without identity? Then we can't answer the question (should assert this)
@@ -158,6 +150,21 @@
     (or @(contrib.reactive/cursor data [:db/ident])
         @(contrib.reactive/cursor data [:db/id])
         @data)))
+
+(defn stable-entity-key "Like smart-entity-identifier but reverses top layer of tempids to stabilize view keys in branches. You
+  must pull db/id to trigger tempid detection! Don't use this in labels."
+  [ctx {:keys [:db/id :db/ident] :as v}]
+  ; https://github.com/hyperfiddle/hyperfiddle/issues/563 - Regression: Schema editor broken due to smart-id
+  ; https://github.com/hyperfiddle/hyperfiddle/issues/345 - Form jank when tempid entity transitions to real entity
+  (or (underlying-tempid ctx id)                            ; prefer the tempid for stability
+      (smart-entity-identifier ctx v)))
+
+(defn stable-relation-key "Stable key that works on scalars too. ctx is for tempid-reversing"
+  [ctx v]
+  (or (stable-entity-key ctx v) v))                         ; bad
+
+(defn row-keyfn [ctx row]
+  (r/row-keyfn' (partial stable-relation-key ctx) row))     ; bad
 
 (defn stable-eav-v' [[e a _] v']
   {:pre [e a v']}
@@ -179,16 +186,16 @@
   ; Deep inspect the elements to compute the enclosing pull shape for each element
   ; Don't infer any further scopes, it is down-scope's job to infer anything it needs (which might be legacy compat at this point)
   (as-> ctx ctx
-        (assoc ctx :hypercrud.browser/qfind (r/fmap-> (:hypercrud.browser/fiddle ctx) hypercrud.browser.context/parse-fiddle-data-shape :qfind))
+        (assoc ctx :hypercrud.browser/qfind (r/fmap-> (:hypercrud.browser/fiddle ctx) hyperfiddle.fiddle/parse-fiddle-data-shape :qfind))
         (assoc ctx :hypercrud.browser/enclosing-pull-shapes (if @(:hypercrud.browser/qfind ctx)
-                                                              (r/ctx-apply contrib.datomic/pull-enclosures ctx
-                                                                           :hypercrud.browser/schemas
-                                                                           :hypercrud.browser/qfind
-                                                                           :hypercrud.browser/data)))
+                                                              (r/ctxf contrib.datomic/pull-enclosures ctx
+                                                                      :hypercrud.browser/schemas
+                                                                      :hypercrud.browser/qfind
+                                                                      :hypercrud.browser/data)))
         (assoc ctx :hypercrud.browser/validation-hints (contrib.validation/validate
                                                          (s/get-spec @(r/fmap :fiddle/ident (:hypercrud.browser/fiddle ctx)))
                                                          @(:hypercrud.browser/data ctx)
-                                                         (partial hypercrud.browser.context/row-keyfn ctx)))
+                                                         (partial row-keyfn ctx)))
         (assoc ctx :hypercrud.browser/eav (r/apply hypercrud.browser.context/stable-eav-a
                                                    [(:hypercrud.browser/eav ctx) (r/fmap :fiddle/ident (:hypercrud.browser/fiddle ctx))]))))
 
@@ -197,6 +204,48 @@
     (if-not (:hypercrud.browser/qfind ctx)
       (hypercrud.browser.context/fiddle ctx))
     ctx))
+
+(defn get' "flipped arg order, for reactive partial"
+  ([k o] (get o k))
+  ([k o not-found] (get o k not-found)))
+
+(defn stable-tupled-v-extractor [i ?r-data]
+  {:pre [i #_(r/reactive? ?r-data)]                         ; It's a tuple (already spread row)
+   :post [#_(every? some? @%)]}
+  (when ?r-data                                             ; headers
+    #_(r/fmap->> ?r-data (mapv (r/partial get' i)))
+    (r/fmap-> ?r-data (get i))))
+
+(defn stable-element-schema [schemas element]
+  {:post [%]}
+  (let [{{db :symbol} :source {pull-pattern :value} :pattern} element]
+    (get schemas (str db))))
+
+(defn element [ctx i]                                   ; [nil :seattle/neighborhoods 1234345]
+  {:pre [#_(s/assert r/reactive? (:hypercrud.browser/qfind ctx)) ; can be inferred
+         #_(s/assert nil? (:hypercrud.browser/element ctx))
+         #_(do (println "element: " i) true)
+         #_(do (println "... data pre: " (pr-str (some-> (:hypercrud.browser/data ctx) deref))) true)]
+   :post [(s/assert r/reactive? (:hypercrud.browser/qfind %))
+          (s/assert r/reactive? (:hypercrud.browser/schema %))
+          #_(s/assert :hypercrud/context %)
+          #_(do (some->> % :hypercrud.browser/data deref pr-str (println "... data post: ")) true)
+          #_(every? some? @(:hypercrud.browser/data %))]}   ; bad in header, good in body
+  (as-> ctx ctx
+        (-infer-implicit-fiddle ctx)
+        (assoc ctx :hypercrud.browser/element (r/fmap-> (:hypercrud.browser/qfind ctx) datascript.parser/find-elements (get i)))
+        (assoc ctx :hypercrud.browser/element-index i)
+        (assoc ctx :hypercrud.browser/schema (r/ctxf stable-element-schema ctx
+                                                     :hypercrud.browser/element
+                                                     :hypercrud.browser/schemas))
+        (assoc ctx :hypercrud.browser/enclosing-pull-shape (r/fmap-> (:hypercrud.browser/enclosing-pull-shapes ctx)
+                                                                     (get i)))
+        (let [{data :hypercrud.browser/data} ctx]           ; head vs body
+          (if data
+            (update ctx :hypercrud.browser/data (condp some [(type @(:hypercrud.browser/qfind ctx))]
+                                                  #{FindRel FindTuple} (r/partial stable-tupled-v-extractor i)
+                                                  #{FindColl FindScalar} identity))
+            ctx))))
 
 (defn -infer-implicit-element "auto-focus single elements - legacy field path compat"
   [ctx]
@@ -242,40 +291,6 @@
                     ; insufficent stability on r-?v, fixme
                     (assoc :hypercrud.browser/eav (r/fmap-> (:hypercrud.browser/eav ctx) (stable-eav-av a @r-?v)))))))))
 
-(defn get' "flipped arg order, for reactive partial"
-  ([k o] (get o k))
-  ([k o not-found] (get o k not-found)))
-
-(defn stable-tupled-v-extractor [i ?r-data]
-  {:pre [i #_(r/reactive? ?r-data)]                         ; It's a tuple (already spread row)
-   :post [#_(every? some? @%)]}
-  (when ?r-data                                             ; headers
-    #_(r/fmap->> ?r-data (mapv (r/partial get' i)))
-    (r/fmap-> ?r-data (get i))))
-
-(defn element [ctx i]                                   ; [nil :seattle/neighborhoods 1234345]
-
-  {:pre [#_(s/assert r/reactive? (:hypercrud.browser/qfind ctx)) ; can be inferred
-         #_(s/assert nil? (:hypercrud.browser/element ctx))
-         #_(do (println "element: " i) true)
-         #_(do (println "... data pre: " (pr-str (some-> (:hypercrud.browser/data ctx) deref))) true)]
-   :post [(s/assert r/reactive? (:hypercrud.browser/qfind %))
-          #_(s/assert :hypercrud/context %)
-          #_(do (some->> % :hypercrud.browser/data deref pr-str (println "... data post: ")) true)
-          #_(every? some? @(:hypercrud.browser/data %))]}   ; bad in header, good in body
-  (as-> ctx ctx
-        (-infer-implicit-fiddle ctx)
-        (assoc ctx :hypercrud.browser/element (r/fmap-> (:hypercrud.browser/qfind ctx) datascript.parser/find-elements (get i)))
-        (assoc ctx :hypercrud.browser/element-index i)
-        (assoc ctx :hypercrud.browser/enclosing-pull-shape (r/fmap-> (:hypercrud.browser/enclosing-pull-shapes ctx)
-                                                                     (get i)))
-        (let [{data :hypercrud.browser/data} ctx]           ; head vs body
-          (if data
-            (update ctx :hypercrud.browser/data (condp some [(type @(:hypercrud.browser/qfind ctx))]
-                                                  #{FindRel FindTuple} (r/partial stable-tupled-v-extractor i)
-                                                  #{FindColl FindScalar} identity))
-            ctx))))
-
 (defn focus "Unwind or go deeper, to where we need to be, within same dimension.
     Throws if you focus a higher dimension.
     This is about navigation through pulledtrees which is why it is path-oriented."
@@ -305,7 +320,6 @@
       (update :hypercrud.browser/validation-hints #(for [[[p & ps] hint] % :when (= k p)]
                                                      [ps hint]))))
 
-(declare row-keyfn)
 ; var first, then can always use db/id on row. No not true – collisions! It is the [?e ?f] product which is unique
 
 ; keyfn must support entities & scalars (including aggregates)
@@ -314,24 +328,11 @@
 ; lift out of current context in this case?
 ; Make sure to optimize the single-fe case to use the identity/value which will be unique
 
-(defn parse-fiddle-data-shape [{:keys [fiddle/type fiddle/query fiddle/pull fiddle/pull-database]}]
-  (->> (case type
-         :blank nil
-         :entity (->> (contrib.reader/memoized-read-edn-string+ pull)
-                      (fmap (fn [pull]
-                              (let [source (symbol pull-database)
-                                    fake-q `[:find (~'pull ~source ~'?e ~pull) . :where [~'?e]]]
-                                (datascript.parser/parse-query fake-q))))
-                      (unwrap (constantly nil)))
-         :query (->> (contrib.reader/memoized-read-edn-string+ query)
-                     (=<< #(try-either (datascript.parser/parse-query %)))
-                     (unwrap (constantly nil))))))
-
 (defprotocol FiddleLinksIndex
   #_(links-at [this criterias])
   #_(links-in-dimension [this element pullpath criterias])
   (links-at-r [this criterias])                             ; criterias can contain nil, meaning toptop
-  (links-in-dimension-r [this element pullpath criterias]))
+  (links-in-dimension-r [this element schema pullpath criterias]))
 
 (defn link-identifiers [fiddle-ident link]
   (let [idents (-> (set (:link/class link))
@@ -360,18 +361,18 @@
       (links-at-r [this criterias]
         (r/fmap->> indexed-links-at
                    (filter (partial link-criteria-match? criterias))
-                   (map second)))                           ; drop the index, just the links
-
-      (links-in-dimension-r [this ?element ?pullpath criterias] ; hidden deref
-        (if-not (and ?element @?element ?pullpath)
+                   (mapv second)))                          ; drop the index, just the links
+      (links-in-dimension-r [this ?element ?pullpath ?schema criterias] ; hidden deref
+        (if-not (and ?element ?schema ?pullpath)
           (links-at-r this criterias)
-          (let [{{db :symbol} :source {pull-pattern :value} :pattern} @?element
-                schema (get @r-schemas (str db))]             ; track schema in ctx too
-            (->> (when schema
-                   (contrib.datomic/reachable-attrs schema (contrib.datomic/pull-shape pull-pattern) ?pullpath))
+          (let [pull-pattern (get-in ?element [:pattern :value])]
+            (assert ?schema)
+            (->> (contrib.datomic/reachable-attrs ?schema (contrib.datomic/pull-shape pull-pattern) ?pullpath)
                  (mapcat (fn [a]
                            (links-at-r this (conj criterias a))))
-                 r/sequence)))))))
+                 r/sequence
+                 ; associative by index
+                 (r/fmap vec))))))))
 
 (defn refocus "todo unify with refocus'
   From view, !link(:new-intent-naive :hf/remove) - find the closest ctx with all dependencies satisfied. Accounts for cardinality.
@@ -533,21 +534,6 @@
     (cond #_#_(seq unused) (either/left {:message "unused param" :data {:query q :params params' :unused unused}})
       (not= (count params') (count query-holes)) (either/left {:message "missing params" :data {:query q :params params' :unused unused}})
       :else-valid (either/right params'))))
-
-(defn stable-entity-key "Like smart-entity-identifier but reverses top layer of tempids to stabilize view keys in branches. You
-  must pull db/id to trigger tempid detection! Don't use this in labels."
-  [ctx {:keys [:db/id :db/ident] :as v}]
-  ; https://github.com/hyperfiddle/hyperfiddle/issues/563 - Regression: Schema editor broken due to smart-id
-  ; https://github.com/hyperfiddle/hyperfiddle/issues/345 - Form jank when tempid entity transitions to real entity
-  (or (underlying-tempid ctx id)                            ; prefer the tempid for stability
-      (smart-entity-identifier ctx v)))
-
-(defn stable-relation-key "Stable key that works on scalars too. ctx is for tempid-reversing"
-  [ctx v]
-  (or (stable-entity-key ctx v) v))                         ; bad
-
-(defn row-keyfn [ctx row]
-  (r/row-keyfn' (partial stable-relation-key ctx) row))     ; bad
 
 (defn hash-ctx-data [ctx]                                   ; todo there are collisions when two links share the same 'location'
   (let [{r-data :hypercrud.browser/data

@@ -1,6 +1,6 @@
 (ns hyperfiddle.fiddle
   (:require
-    [cats.core :as cats]
+    [cats.core :as cats :refer [mlet return =<< fmap]]
     [clojure.spec.alpha :as s]
     [contrib.ct :refer [unwrap]]
     [contrib.data :refer [update-existing]]
@@ -163,3 +163,16 @@
        (unwrap #(timbre/error %))                           ; too late to report anything to the dev
        last                                                 ; Adapt legacy to attribute
        ))
+
+(defn parse-fiddle-data-shape [{:keys [fiddle/type fiddle/query fiddle/pull fiddle/pull-database]}]
+  (->> (case type
+         :blank nil
+         :entity (->> (contrib.reader/memoized-read-edn-string+ pull)
+                      (fmap (fn [pull]
+                              (let [source (symbol pull-database)
+                                    fake-q `[:find (~'pull ~source ~'?e ~pull) . :where [~'?e]]]
+                                (datascript.parser/parse-query fake-q))))
+                      (unwrap (constantly nil)))
+         :query (->> (contrib.reader/memoized-read-edn-string+ query)
+                     (=<< #(try-either (datascript.parser/parse-query %)))
+                     (unwrap (constantly nil))))))

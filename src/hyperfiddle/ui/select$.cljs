@@ -103,7 +103,7 @@
         (return
           (let [default-props {:on-change (with-entity-change! ctx)}
                 props (-> (merge default-props props)
-                          (assoc :value (str (context/identify ctx))))
+                          (assoc :value (str (context/identify ctx)))) ; eav
                 props (-> (select-keys props [:class])
                           (assoc :user-renderer (r/partial select-view-validated select-anchor-renderer' props {:disabled (compute-disabled ctx props)})))
                 ctx (assoc ctx

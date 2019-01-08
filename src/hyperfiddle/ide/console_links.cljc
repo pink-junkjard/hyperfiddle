@@ -95,7 +95,7 @@
 (defn console-links-fiddle
   "All sys links can be matched and merged with user-links. Matching is determined by link/rel and link/path"
   [schemas fiddle data]
-  (if-let [{qfind :qfind} (hypercrud.browser.context/parse-fiddle-data-shape fiddle)]
+  (if-let [{qfind :qfind} (hyperfiddle.fiddle/parse-fiddle-data-shape fiddle)]
     (map (comp fiddle/auto-link console-link)
          (repeat qfind)
          (contrib.data/ungroup (query-links-impl schemas qfind data)))))
