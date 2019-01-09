@@ -46,7 +46,7 @@
                 :hypercrud.browser/element
                 :hypercrud.browser/element-index
                 :hypercrud.browser/pull-enclosure
-                :hypercrud.browser/path
+                :hypercrud.browser/path                     ; used only by refocus and links-in-dimension
                 :hypercrud.browser/eav
                 :hyperfiddle.runtime/branch-aux
                 :hyperfiddle.ui.iframe/on-click
@@ -56,8 +56,10 @@
 
 (s/def :hypercrud.browser/eav r/reactive?)
 (s/def :hypercrud.browser/data r/reactive?)
+(s/def :hypercrud.browser/data-index r/reactive?)
 (s/def :hypercrud.browser/element r/reactive?)
 (s/def :hypercrud.browser/element-index int?)
+(s/def :hypercrud.browser/path (s/coll-of keyword?))
 
 (defn clean [ctx]
   (dissoc ctx
@@ -75,7 +77,6 @@
           :hypercrud.browser/element
           :hypercrud.browser/schema
           :hypercrud.browser/eav
-
           :hypercrud.browser/parent
           :hypercrud.browser/path
           :hypercrud.browser/route
@@ -100,6 +101,7 @@
       (= '* path-segment)))
 
 (defn segment-type-2 [segment]
+  ; BROKEN, always attr now
   (cond
     (= '* segment) :splat
     (keyword? segment) :attribute
@@ -302,23 +304,22 @@
     (update ctx :hypercrud.browser/path conj a)
     (assoc ctx :hypercrud.browser/pull-enclosure (r/fmap->> (:hypercrud.browser/pull-enclosure ctx)
                                                             (contrib.datomic/pull-shape-refine a)))
-    (let [head-or-body (if (:hypercrud.browser/data ctx) :body :head)]
-      (case head-or-body
-        :head (assoc ctx :hypercrud.browser/eav (r/fmap-> (:hypercrud.browser/eav ctx) (stable-eav-a a)))
-        :body (let [r-data (r/fmap a (:hypercrud.browser/data ctx))]
-                (-> (set-parent-data ctx)
-                    (update :hypercrud.browser/validation-hints #(for [[[p & ps] hint] % :when (= p a)]
-                                                                   [ps hint]))
-                    (assoc :hypercrud.browser/data r-data)
-                    ; V cardinality :many is fucked here. Query by EA if :many renderer?
-                    (assoc :hypercrud.browser/eav (case (contrib.datomic/cardinality @(:hypercrud.browser/schema ctx) a)
-                                                    ; insufficent stability on r-?v, fixme
-                                                    :db.cardinality/many (r/fmap-> (:hypercrud.browser/eav ctx) (stable-eav-a a))
-                                                    :db.cardinality/one (let [r-?v (r/fmap->> r-data (smart-entity-identifier ctx))] ; flagged
-                                                                          ; v may be nil - sparse resultset
-                                                                          (r/fmap-> (:hypercrud.browser/eav ctx) (stable-eav-av a @r-?v))))
+    (case (if (:hypercrud.browser/data ctx) :body :head)
+      :head (assoc ctx :hypercrud.browser/eav (r/fmap-> (:hypercrud.browser/eav ctx) (stable-eav-a a)))
+      :body (let [r-data (r/fmap a (:hypercrud.browser/data ctx))] ; track a resultpath instead?
+              (-> (set-parent-data ctx)
+                  (update :hypercrud.browser/validation-hints #(for [[[p & ps] hint] % :when (= p a)]
+                                                                 [ps hint]))
+                  (assoc :hypercrud.browser/data r-data)
+                  ; V cardinality :many is fucked here. Query by EA if :many renderer?
+                  (assoc :hypercrud.browser/eav (case (contrib.datomic/cardinality @(:hypercrud.browser/schema ctx) a)
+                                                  ; insufficent stability on r-?v, fixme
+                                                  :db.cardinality/many (r/fmap-> (:hypercrud.browser/eav ctx) (stable-eav-a a))
+                                                  :db.cardinality/one (let [r-?v (r/fmap->> r-data (smart-entity-identifier ctx))] ; flagged
+                                                                        ; v may be nil - sparse resultset
+                                                                        (r/fmap-> (:hypercrud.browser/eav ctx) (stable-eav-av a @r-?v))))
 
-                           )))))))
+                         ))))))
 
 (defn focus "Unwind or go deeper, to where we need to be, within same dimension.
     Throws if you focus a higher dimension.
@@ -460,7 +461,7 @@
   ; if target-attr = last path, we're already here! How did that happen? Should be harmless, will noop
   (let [{{db :symbol} :source {pull-pattern :value} :pattern} (:hypercrud.browser/element ctx)
         root-pull (contrib.datomic/pull-shape pull-pattern)
-        current-path (drop-while int? (:hypercrud.browser/path ctx))
+        current-path (:hypercrud.browser/path ctx)
         schema (get (summon-schemas-grouped-by-dbname ctx) (str db))
 
         ; find a reachable path that contains the target-attr in the fewest hops

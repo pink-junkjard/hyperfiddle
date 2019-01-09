@@ -45,12 +45,13 @@
                              (fn [e] (throw e))
                              (fn [f] (into [f] args))))]
   (defn attr-renderer-control [val ctx & [props]]
-    ; The only way to stabilize this is for this type signature to become a react class.
-    (when-let [user-f (-> @(r/cursor (:hypercrud.browser/attr-renderers ctx) [(last (:hypercrud.browser/path ctx))])
-                          blank->nil)]
-      [user-portal (ui-error/error-comp ctx) nil
-       ; ?user-f is stable due to memoizing eval (and only due to this)
-       [eval-renderer-comp user-f val ctx props]])))
+    (let [[e a v] @(:hypercrud.browser/eav ctx)]
+      ; The only way to stabilize this is for this type signature to become a react class.
+      (when-let [user-f (-> @(r/cursor (:hypercrud.browser/attr-renderers ctx) [a])
+                            blank->nil)]
+        [user-portal (ui-error/error-comp ctx) nil
+         ; ?user-f is stable due to memoizing eval (and only due to this)
+         [eval-renderer-comp user-f val ctx props]]))))
 
 (declare result)
 (declare pull)
@@ -135,25 +136,25 @@
                       (label-with-docs label (semantic-docstring ctx) props)))))
 
 
-(defn ^:export semantic-css [ctx]
+(defn ^:export semantic-css [ctx]                           ; works at element level, and attr
   ; Include the fiddle level ident css.
   ; Semantic css needs to be prefixed with - to avoid collisions. todo
-  (->> (concat
-         ["hyperfiddle"
-          (context/dbname ctx)                              ; color
-          (name (context/segment-type-2 (last (:hypercrud.browser/path ctx))))
-          (string/join "/" (:hypercrud.browser/path ctx))   ; legacy unique selector for each location
-          (->> (:hypercrud.browser/path ctx)                ; actually generate a unique selector for each location
-               (cons :hypercrud.browser/path)               ; need to prefix the path with something to differentiate between attr and single attr paths
-               (string/join "/"))]
-         (when (context/attribute-segment? (last (:hypercrud.browser/path ctx)))
-           (let [attr-ident (last (:hypercrud.browser/path ctx))]
-             [@(context/hydrate-attribute ctx attr-ident :db/valueType :db/ident)
-              @(context/hydrate-attribute ctx attr-ident :db/cardinality :db/ident)
-              (some-> @(context/hydrate-attribute ctx attr-ident :db/isComponent) (if :component))]))
-         (:hypercrud.browser/path ctx))
-       (map css-slugify)
-       (apply css)))
+  (let [[e a v] @(:hypercrud.browser/eav ctx)]
+    (->> (concat
+           ["hyperfiddle"
+            (context/dbname ctx)                            ; color
+            (name (context/segment-type-2 a))
+            (string/join "/" (:hypercrud.browser/path ctx)) ; legacy unique selector for each location
+            (->> (:hypercrud.browser/path ctx)              ; actually generate a unique selector for each location
+                 (cons :hypercrud.browser/path)             ; need to prefix the path with something to differentiate between attr and single attr paths
+                 (string/join "/"))]
+           (when (context/attribute-segment? a)
+             [@(context/hydrate-attribute ctx a :db/valueType :db/ident)
+              @(context/hydrate-attribute ctx a :db/cardinality :db/ident)
+              (some-> @(context/hydrate-attribute ctx a :db/isComponent) (if :component))])
+           (:hypercrud.browser/path ctx))
+         (map css-slugify)
+         (apply css))))
 
 (defn ^:export value "Relation level value renderer. Works in forms and lists but not tables (which need head/body structure).
 User renderers should not be exposed to the reaction."

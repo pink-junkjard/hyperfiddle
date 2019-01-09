@@ -81,8 +81,8 @@
      [:label.hyperfiddle label-props label (if help-md [:sup "†"])])])
 
 (defn cardinality [ctx]
-  (let [segment (last (:hypercrud.browser/path ctx))
-        attr @(context/hydrate-attribute ctx segment)]
+  (let [[e a v] @(:hypercrud.browser/eav ctx)
+        attr @(context/hydrate-attribute ctx a)]
     (some-> attr :db/cardinality :db/ident)))
 
 (defn dbid-label [_ ctx & [props]]

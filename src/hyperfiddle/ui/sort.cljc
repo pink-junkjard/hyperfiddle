@@ -6,11 +6,12 @@
 
 (defn sortable? [ctx]
   (let [?dbname (context/dbname ctx)
-        ?last-segment (last (:hypercrud.browser/path ctx))]
+        [e a v] @(:hypercrud.browser/eav ctx)]
     ; Used to check links dont break sorting, but those cases don't happen anymore.
-    (if (and ?dbname (context/attribute-segment? ?last-segment)) ; [fe attr] or [attr], NOT [fe] or []
+    (assert (context/attribute-segment? a))
+    (if (and ?dbname #_(context/attribute-segment? a)) ; [fe attr] or [attr], NOT [fe] or []
       (let [uri (context/uri ?dbname ctx)
-            {:keys [:db/cardinality :db/valueType]} @(runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :schemas uri ?last-segment])]
+            {:keys [:db/cardinality :db/valueType]} @(runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :schemas uri a])]
         (and
           (= (:db/ident cardinality) :db.cardinality/one)
           ; ref requires more work (inspect label-prop)
@@ -29,7 +30,7 @@
                        :db.type/code}
                      (:db/ident valueType))))
       ; [fe] when aggregates or variables
-      (and (not ?dbname) ?last-segment))))
+      (and (not ?dbname) a))))
 
 (defn sort-direction [relative-path ctx]
   (let [[sort-path direction] @(::sort-col ctx)]

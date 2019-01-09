@@ -100,7 +100,7 @@
                        :hypercrud.browser/fiddle r-fiddle
                        :hypercrud.browser/link-index (r/fmap hypercrud.browser.context/-indexed-links-at r-fiddle)
                        :hypercrud.browser/eav (r/track identity [nil nil nil])
-                       :hypercrud.browser/path [])]] ; legacy
+                       :hypercrud.browser/path [])]]
       (return ctx))))
 
 (defn data-from-route "either ctx, ctx-from-route" [route ctx]                           ; todo rename

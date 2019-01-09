@@ -45,7 +45,7 @@
       empty-renderer (fn [val ctx props]
                        (link #{:fiddle/links :hf/remove} ctx))
       link-control (fn [val ctx props]
-                     (let [#_#_props (if-some [f (get fiddle/link-defaults (last (:hypercrud.browser/path ctx)))]
+                     (let [#_#_props (if-some [f (get fiddle/link-defaults a)]
                                    (assoc props :default-value @(r/fmap f (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data])))
                                    props)]
                        (hyper-control val ctx props))
