@@ -1,12 +1,16 @@
 (ns hyperfiddle.service.pedestal.interceptors
   (:require
     [bidi.bidi :as bidi]
+    [cats.monad.either :as either]
     [clojure.core.async :refer [chan >!!]]
     [clojure.string :as string]
     [cognitect.transit :as transit]
+    [contrib.uri :refer [->URI]]
     [hypercrud.transit :as hc-t]
     [hypercrud.types.Err :refer [->Err]]
-    [hyperfiddle.io.http :as http]
+    [hyperfiddle.domain :as domain]
+    [hyperfiddle.io.core :as io]
+    [hyperfiddle.io.routes :as routes]
     [hyperfiddle.service.cookie :as cookie]
     [hyperfiddle.service.http :refer [handle-route]]
     [hyperfiddle.service.jwt :as jwt]
@@ -28,12 +32,15 @@
    :headers {}                                              ; todo retry-after on 503
    :body (->Err (.getMessage e))})
 
-(defn platform->pedestal-req-handler [platform-req-handler req]
+(defn platform->pedestal-req-handler [env platform-req-handler req]
   (platform-req-handler
-    :host-env (:host-env req)
+    :build (:BUILD env)
+    :domain (:domain req)
+    :service-uri (->URI (str (name (:scheme req)) "://" (:server-name req)))
     :route-params (:route-params req)
     :request-body (:body-params req)
     :jwt (:jwt req)
+    :user (:user req)
     :user-id (:user-id req)))
 
 (def combine-body-params
@@ -65,7 +72,7 @@
    "application/transit+json"
    (fn [body]
      (fn [^OutputStream output-stream]
-       (transit/write (transit/writer output-stream :json
+       (transit/write (transit/writer output-stream :json-verbose
                                       {:handlers hc-t/write-handlers}) body)
        (.flush output-stream)))
 
@@ -114,50 +121,80 @@
                                (>!! channel (assoc context :response {:status 500 :body (pr-str err)})))))
                 channel)))})
 
-(defn set-host-environment [f]
-  (interceptor/before
-    (fn [context]
-      (let [scheme (name (get-in context [:request :scheme]))
-            hostname (get-in context [:request :server-name])]
-        (assoc-in context [:request :host-env] (f scheme hostname))))))
+(defn domain [domain-for-fqdn]
+  {:name ::domain
+   :enter (fn [context]
+            (let [channel (chan)]
+              (p/branch
+                (domain-for-fqdn (get-in context [:request :server-name]))
+                (fn [domain]
+                  (>!! channel (assoc-in context [:request :domain] domain)))
+                (fn [e]
+                  (timbre/error e)
+                  ; todo are we sure we want to terminate completely? what about auto content type?
+                  (>!! channel (assoc (terminate context) :response (e->response e)))))
+              channel))})
 
-(defn with-user [jwt-secret jwt-issuer]
-  (let [verify (jwt/build-verifier jwt-secret jwt-issuer)]
-    (interceptor/before
-      (fn [context]
-        (let [jwt-cookie (get-in context [:request :cookies "jwt" :value])
-              jwt-header (some->> (get-in context [:request :headers "authorization"])
-                                  (re-find #"^Bearer (.+)$")
-                                  (second))
-              with-jwt (fn [jwt]
-                         (-> context
-                             (assoc-in [:request :user-id] (some-> jwt (verify) :user-id UUID/fromString))
-                             (assoc-in [:request :jwt] jwt)))]
-          (cond
-            (or (nil? jwt-header) (= jwt-cookie jwt-header))
-            (try (with-jwt jwt-cookie)
-                 (catch JWTVerificationException e
-                   (timbre/error e)
-                   (-> (terminate context)
-                       (assoc :response {:status 401
-                                         :cookies {"jwt" (-> (get-in context [:request :host-env :auth/root])
-                                                             (cookie/jwt-options-pedestal)
-                                                             (assoc :value jwt-cookie
-                                                                    :expires "Thu, 01 Jan 1970 00:00:00 GMT"))}
-                                         :body (->Err (.getMessage e))}))))
+(defn with-user-id [jwt-secret jwt-issuer]
+  {:name ::with-user-id
+   :enter (fn [context]
+            context
+            #_(let [#_#_{:keys [jwt-secret jwt-issuer]} (-> (get-in context [:request :domain])
+                                                            domain/environment-secure :jwt)
+                    verify (jwt/build-verifier jwt-secret jwt-issuer)
+                    jwt-cookie (get-in context [:request :cookies "jwt" :value])
+                    jwt-header (some->> (get-in context [:request :headers "authorization"])
+                                        (re-find #"^Bearer (.+)$")
+                                        (second))
+                    with-jwt (fn [jwt]
+                               (-> context
+                                   (assoc-in [:request :user-id] (some-> jwt (verify) :user-id UUID/fromString))
+                                   (assoc-in [:request :jwt] jwt)))]
+                (cond
+                  (or (nil? jwt-header) (= jwt-cookie jwt-header))
+                  (try (with-jwt jwt-cookie)
+                       (catch JWTVerificationException e
+                         (timbre/error e)
+                         (-> (terminate context)
+                             (assoc :response {:status 401
+                                               :cookies {"jwt" (-> (get-in context [:request :domain])
+                                                                   (domain/auth-root)
+                                                                   (cookie/jwt-options-pedestal)
+                                                                   (assoc :value jwt-cookie
+                                                                          :expires "Thu, 01 Jan 1970 00:00:00 GMT"))}
+                                               :body (->Err (.getMessage e))}))))
 
-            (nil? jwt-cookie)
-            (try (with-jwt jwt-header)
-                 (catch JWTVerificationException e
-                   (timbre/error e)
-                   (-> (terminate context)
-                       (assoc :response {:status 401 :body (->Err (.getMessage e))}))))
+                  (nil? jwt-cookie)
+                  (try (with-jwt jwt-header)
+                       (catch JWTVerificationException e
+                         (timbre/error e)
+                         (-> (terminate context)
+                             (assoc :response {:status 401 :body (->Err (.getMessage e))}))))
 
-            :else (-> (terminate context)
-                      (assoc :response {:status 400 :body (->Err "Conflicting cookies and auth bearer")}))))))))
+                  :else (-> (terminate context)
+                            (assoc :response {:status 400 :body (->Err "Conflicting cookies and auth bearer")})))))})
+
+(defn with-user []
+  {:name ::with-user
+   :enter (fn [context]
+            context
+            #_(if-let [user-id (get-in context [:request :user-id])]
+                (let [channel (chan)]
+                  (-> (let [local-basis (assert false "todo")
+                            staged-branches nil
+                            request (domain/user-request (get-in context [:request :domain]) user-id)]
+                        (io/hydrate-one! what-io? local-basis staged-branches request))
+                      (p/branch
+                        (fn [user] (>!! channel (assoc-in context [:request :user] user)))
+                        (fn [e]
+                          (timbre/error e)
+                          (>!! channel (-> (terminate context)
+                                           (assoc :response {:status 500 :body (->Err (.getMessage e))}))))))
+                  channel)
+                context))})
 
 (defn build-router [env]
-  (let [routes (http/build-routes (:BUILD env))]
+  (let [routes (routes/build (:BUILD env))]
     (fn [req]
       (let [path (:path-info req)
             request-method (:request-method req)

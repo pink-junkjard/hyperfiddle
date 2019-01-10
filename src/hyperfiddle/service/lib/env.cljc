@@ -3,6 +3,7 @@
     #?(:cljs [cljs.nodejs :as node])
     [clojure.string :as string]
     [contrib.data :refer [update-existing]]
+    [contrib.uri :refer [->URI]]
     #?(:cljs [goog.object :as object]))
   #?(:clj
      (:import [clojure.lang ILookup])))
@@ -32,6 +33,11 @@
                     :STATIC_RESOURCES
                     :NODE_PORT}
          optional #{:ANALYTICS :HF_ALIAS_HOSTNAMES :SERVICE_HOST
+
+                    :DOMAINS_API_URI
+                    :DOMAINS_TRANSACTOR_URI
+                    :DOMAINS_USER_ID
+
                     :SENTRY_DSN :SENTRY_ENV
                     :AWS_ACCESS_KEY_ID :AWS_SECRET_KEY}
          env (-> (->> (concat required optional)
@@ -40,6 +46,10 @@
                               {}))
                  (update :ANALYTICS #(not= % "false"))      ; todo this check is garbage
                  (update :HF_HOSTNAMES #(string/split % #";"))
+
+                 (update :DOMAINS_API_URI ->URI)
+                 (update :DOMAINS_TRANSACTOR_URI ->URI)
+
                  (update :SERVICE_PORT #(#?(:clj Integer/parseInt :cljs js/parseInt) %))
                  (update-existing :HF_ALIAS_HOSTNAMES #(string/split % #";")))]
      (doseq [v required]

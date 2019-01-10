@@ -1,13 +1,15 @@
 (ns hyperfiddle.service.express-js.middleware
   (:require
     [bidi.bidi :as bidi]
+    [contrib.uri :refer [->URI]]
     [contrib.uuid :refer [read-uuid]]
     [goog.object :as object]
     [hypercrud.transit :as transit]
     [hypercrud.types.Err :refer [->Err]]
-    [hyperfiddle.io.http :refer [build-routes]]
+    [hyperfiddle.domain :as domain]
+    [hyperfiddle.io.routes :as routes]
     [hyperfiddle.service.cookie :as cookie]
-    [hyperfiddle.service.http :refer [handle-route]]
+    [hyperfiddle.service.http :as http-service :refer [handle-route]]
     [hyperfiddle.service.jwt :as jwt]
     [promesa.core :as p]
     [taoensso.timbre :as timbre]))
@@ -17,48 +19,70 @@
   ; no-body shows up as json {} in spite of our text body parser
   (if (string? buggy-body) buggy-body nil))
 
-(defn platform->express-req-handler [platform-req-handler req res]
+(defn send-platform-response [express-res platform-response]
+  (doseq [[k v] (:headers platform-response)]
+    (.append express-res k v))
+  (doto express-res
+    (.status (:status platform-response))
+    (.format #js {"application/transit+json" #(.send express-res (transit/encode (:body platform-response)))
+                  "text/html" (fn []
+                                (if (string? (:body platform-response))
+                                  (.send express-res (:body platform-response))
+                                  (.send express-res (pr-str (:body platform-response)))))})))
+
+(defn platform->express-req-handler [env platform-req-handler req res]
   (-> (platform-req-handler
-        :host-env (object/get req "host-env")
+        :build (:BUILD env)
+        :domain (object/get req "domain")
+        :service-uri (->URI (str (.-protocol req) "://" (.-hostname req)))
         :route-params (object/get req "route-params")
         :request-body (some-> req .-body hack-buggy-express-body-text-parser transit/decode)
         :jwt (object/get req "jwt")
+        :user (object/get req "user")
         :user-id (object/get req "user-id"))
-      (p/then
-        (fn [platform-response]
-          (doseq [[k v] (:headers platform-response)]
-            (.append res k v))
-          (doto res
-            (.status (:status platform-response))
-            (.format #js {"application/transit+json" #(.send res (transit/encode (:body platform-response)))}))))))
+      (p/then (partial send-platform-response res))))
 
-(defn set-host-environment [f]
+(defn domain [domain-for-fqdn]
   (fn [req res next]
-    (object/set req "host-env" (f (.-protocol req) (.-hostname req)))
+    (p/branch
+      (domain-for-fqdn (.-hostname req))
+      (fn [domain]
+        (object/set req "domain" domain)
+        (next))
+      (fn [e]
+        (timbre/error e)
+        (->> (http-service/e->platform-response e)
+             (send-platform-response res))))))
+
+(defn with-user-id [jwt-secret jwt-issuer]
+  (fn [req res next]
+    (next)
+    #_(let [#_#_{:keys [jwt-secret jwt-issuer]} (-> (get-in context [:request :domain])
+                                                    domain/environment-secure :jwt)
+            verify (jwt/build-verifier jwt-secret jwt-issuer)]
+        ; todo support auth bearer
+        (try
+          (let [jwt-cookie (some-> req .-cookies .-jwt)]
+            (object/set req "jwt" jwt-cookie)
+            (object/set req "user-id" (some-> jwt-cookie verify :user-id read-uuid))
+            (next))
+          (catch js/Error e
+            (timbre/error e)
+            (doto res
+              (.status 401)
+              (.clearCookie "jwt" (-> (domain/auth-root (object/get req "domain"))
+                                      (cookie/jwt-options-express)
+                                      clj->js))
+              (.format #js {"application/transit+json" #(.send res (transit/encode (->Err (ex-message e))))
+                            ; todo flesh out a real session expiration page
+                            "text/html" #(.send res "Session expired, please refresh and login")})))))))
+
+(defn with-user []
+  (fn [req res next]
     (next)))
 
-(defn with-user [jwt-secret jwt-issuer]
-  (let [verify (jwt/build-verifier jwt-secret jwt-issuer)]
-    (fn [req res next]
-      ; todo support auth bearer
-      (try
-        (let [jwt-cookie (some-> req .-cookies .-jwt)]
-          (object/set req "jwt" jwt-cookie)
-          (object/set req "user-id" (some-> jwt-cookie verify :user-id read-uuid))
-          (next))
-        (catch js/Error e
-          (timbre/error e)
-          (doto res
-            (.status 401)
-            (.clearCookie "jwt" (-> (:auth/root (object/get req "host-env"))
-                                    (cookie/jwt-options-express)
-                                    clj->js))
-            (.format #js {"application/transit+json" #(.send res (transit/encode (->Err (ex-message e))))
-                          ; todo flesh out a real session expiration page
-                          "text/html" #(.send res "Session expired, please refresh and login")})))))))
-
 (defn build-router [env]
-  (let [routes (build-routes (:BUILD env))]
+  (let [routes (routes/build (:BUILD env))]
     (fn [req res]
       (let [path (.-path req)
             request-method (keyword (.toLowerCase (.-method req)))
