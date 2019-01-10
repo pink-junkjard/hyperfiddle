@@ -103,70 +103,12 @@
 (def ctx
   {:hyperfiddle.ui/debug-tooltips true,
    :hypercrud.browser/path [],
-   :peer (let [state (r/atom {::runtime/partitions {nil {:schemas {#uri "datomic:free://datomic:4334/hyperfiddle-blog-source" schema}}}})]
+   :peer (let [state (r/atom {::runtime/partitions {nil {:schemas {"$" schema}}}})]
            (reify runtime/State
              (runtime/state [_] state)
              (runtime/state [_ path] (r/cursor state path)))),
    :hyperfiddle.ui.iframe/on-click nil,
    :hypercrud.browser/route (r/track identity [:demo/hyper-control nil]),
-   :hypercrud.browser/source-domain
-   {:db/id 17592186045517,
-    :domain/home-route
-    "[:hyperfiddle/topnav [#entity[\"$\" \"tempid\"]]]",
-    :domain/databases
-    [{:domain.database/name "$domains",
-      :domain.database/record
-      {:database/uri #uri "datomic:free://datomic:4334/domains",
-       :database/write-security
-       {:db/ident :hyperfiddle.security/authenticated-users-only},
-       :hyperfiddle/owners
-       [#uuid "87108fa3-e7d5-4ed5-a87a-81a6eb6e1aae"
-        #uuid "acd054a8-4e36-4d6c-a9ec-95bdc47f0d39"]}}
-     {:domain.database/name "$users",
-      :domain.database/record
-      {:database/uri
-       #uri "datomic:free://datomic:4334/hyperfiddle-users",
-       :database/write-security
-       {:db/ident :hyperfiddle.security/allow-anonymous},
-       :hyperfiddle/owners
-       [#uuid "87108fa3-e7d5-4ed5-a87a-81a6eb6e1aae"
-        #uuid "acd054a8-4e36-4d6c-a9ec-95bdc47f0d39"]}}
-     {:domain.database/name "$",
-      :domain.database/record
-      {:database/uri #uri "datomic:free://datomic:4334/root",
-       :database/write-security
-       {:db/ident :hyperfiddle.security/owner-only},
-       :hyperfiddle/owners
-       [#uuid "87108fa3-e7d5-4ed5-a87a-81a6eb6e1aae"
-        #uuid "acd054a8-4e36-4d6c-a9ec-95bdc47f0d39"]}}],
-    :hyperfiddle/owners
-    [#uuid "87108fa3-e7d5-4ed5-a87a-81a6eb6e1aae"
-     #uuid "acd054a8-4e36-4d6c-a9ec-95bdc47f0d39"
-     #uuid "ca192cc8-4ccb-48c6-853f-6fc7dcdd1810"],
-    :domain/fiddle-database
-    {:database/uri #uri "datomic:free://datomic:4334/root",
-     :database/write-security
-     {:db/ident :hyperfiddle.security/owner-only},
-     :hyperfiddle/owners
-     [#uuid "87108fa3-e7d5-4ed5-a87a-81a6eb6e1aae"
-      #uuid "acd054a8-4e36-4d6c-a9ec-95bdc47f0d39"]},
-    :domain/css
-    "/* Not th – that hits fiddle shortcuts */\ndiv.hyperfiddle.ui div.hyperfiddle.field.-fiddle-pull,\ndiv.hyperfiddle.ui div.hyperfiddle.field.-fiddle-query,\ndiv.hyperfiddle.ui div.hyperfiddle.field.-fiddle-cljs-ns,\ndiv.hyperfiddle.ui div.hyperfiddle.field.-fiddle-renderer,\ndiv.hyperfiddle.ui div.hyperfiddle.field.-fiddle-css,\ndiv.hyperfiddle.ui div.hyperfiddle.field.-fiddle-markdown { display: block !important; }",
-    :domain/ident "hyperfiddle",
-    :domain/environment
-    {:auth0
-     {"hyperfiddle.net"
-      {:domain "https://hypercrud.auth0.com",
-       :client-id "HKjJJXteIwACAPO2y7AFtJCkuQj1y2yt"},
-      "hfmaster.xyz"
-      {:domain "https://hypercrud-master.auth0.com",
-       :client-id "IGkBUHFdxiO1uvc52B5InIvNFoGgY229"},
-      "hffeature.xyz"
-      {:domain "https://hypercrud-master.auth0.com",
-       :client-id "IGkBUHFdxiO1uvc52B5InIvNFoGgY229"},
-      "hyperfiddle.site"
-      {:domain "https://hypercrud-dev.auth0.com",
-       :client-id "FV2T2B6QDSdakM0Hg57VygzdvZctn7oj"}}}},
    :hypercrud.ui/display-mode (r/track identity :hypercrud.browser.browser-ui/xray),
    :hypercrud.browser/fiddle
    (r/track identity {:fiddle/cljs-ns "(contrib.cljs-platform/merge-user!\n  {\"navi\"\n   (fn [ref props ctx]\n     (let [call [:span \"Hey, listen!\"]\n           fairy [:img {:src \"https://i.imgur.com/fkbfjYU.png\"}]]\n       [:div.navi.p.alert.alert-info props call fairy\n        [hyperfiddle.ui/markdown @ref {:hyperfiddle.ui/unp true}]]))})",
@@ -195,35 +137,6 @@
                                        :link/formula "identity"}),
                       :fiddle/markdown "### Example registration form\n\n!field[](:reg/email)\n!field[](:reg/name)\n!field[](:reg/age)\n!field[](:reg/birthdate)\n!field[](:reg/gender){options=genders}\n\nWould you like a tee-shirt with that?\n\n!field[](:reg/shirt-size){options=shirt-sizes}\n\n!block[Change `:gender` to `:female` ☝️ and the shirt-size options will update.]{.alert .alert-info}",
                       :fiddle/query "[:find  \n (pull ?e [:db/id \n           :reg/email \n           :reg/name \n           :reg/age\n           :reg/birthdate \n           {:reg/gender [:db/ident]}\n           {:reg/shirt-size [:db/ident]}])\n .\n :where \n [?e :reg/email \"dustin@example.com\"]]"}),
-   :hypercrud.browser/domain
-   {:domain/home-route "[:index]",
-    :domain/databases
-    [{:domain.database/name "$",
-      :domain.database/record
-      {:database/uri
-       #uri "datomic:free://datomic:4334/hyperfiddle-blog-source",
-       :database/write-security
-       {:db/ident :hyperfiddle.security/owner-only},
-       :hyperfiddle/owners
-       [#uuid "87108fa3-e7d5-4ed5-a87a-81a6eb6e1aae"
-        #uuid "acd054a8-4e36-4d6c-a9ec-95bdc47f0d39"]}}],
-    :hyperfiddle/owners
-    [#uuid "87108fa3-e7d5-4ed5-a87a-81a6eb6e1aae"
-     #uuid "acd054a8-4e36-4d6c-a9ec-95bdc47f0d39"],
-    :domain/fiddle-database
-    {:database/uri
-     #uri "datomic:free://datomic:4334/hyperfiddle-blog-source",
-     :database/write-security
-     {:db/ident :hyperfiddle.security/owner-only},
-     :hyperfiddle/owners
-     [#uuid "87108fa3-e7d5-4ed5-a87a-81a6eb6e1aae"
-      #uuid "acd054a8-4e36-4d6c-a9ec-95bdc47f0d39"]},
-    :domain/css "main .p, section .p { max-width: 55rem; }\n/* max-width: 1140px; magic twbs constant */\n\nmain { padding-top: 2em; } /* Pad main, not the H1, there might be something above the H1 */\nmain h1 { } /* Only one h1 per page please */\n:not(.hf-live) :not(.hyperfiddle-popover-body) .hyperfiddle-user h2 { margin-top: 2rem; }\n:not(.hf-live) :not(.hyperfiddle-popover-body) .hyperfiddle-user h3 { margin-top: 1rem; }\n:not(.hf-live) :not(.hyperfiddle-popover-body) .hyperfiddle-user h4 { margin-top: 1rem; }\n:not(.hf-live) :not(.hyperfiddle-popover-body) .hyperfiddle-user h5 { margin-top: 1rem; }\n\n.hf-live .ui:not(.devsrc) { background-color: white; }\n\nbody { background-color: #f8fbff; height: auto; }\n#root { height: auto; }\n.hyperfiddle-user a { color: #42a2b5; }\n.hyperfiddle-user { background-color: inherit; }\n\n/* copied from dustingetzcom */\nfigure { width: 100%; }\nfigcaption.figure-caption { text-align: center; font-size: 1.12em; } /* For images of varying sizes, override to align left */\nfigure div.hf-live.row { margin-bottom: 0; } /* Eschew row margin for caption alignment */\n/* figure { margin-top: 4em; margin-bottom: 4em; } bad default for images */\nfigure img { width: 100%; }\nimg { max-width: 80rem; }\nimg.half { width: 50% !important; display: inline-block; }\nimg.smaller { width: 75% !important; }\n\ncode { background: inherit; border-color: #0002; } /* works on any color background */\n\n.highlight { background-color: #d1ecf1; }\n.spacer-sm { margin-top: 3em !important; }\n.spacer { margin-top: 6em !important; }\n\nth.-hyperblog-post-published, th.-hyperblog-post-hidden { width: 20px; }\nth.-hyperblog-post-sort-index1 { width: 30px; }\nth.-hyperblog-post-title { min-width: 130px; }\nth.-hyperblog-nav-children { width: 50px; }\nth.-fiddle-ident { width: 130px; }\n.-tutorial th.element.n0, .-docs-index.xray th.element.n0 { width: 100px; }",
-    :domain/code "(contrib.cljs-platform/merge-user!\n  {\"docs_fiddle_ident_link\"\n   (fn [val prop ctx]\n     [:a (merge props {:href (hypercrud.browser.router/encode [val])})\n      (str val)])\n   \"docs_nav_items\"\n   (letfn [(ol [parent-path result]\n            (into [:ol.p] (lis parent-path result)))\n           (lis [parent-path result]\n             (->> result\n               (remove :hyperblog.post/hidden)\n               (sort-by (juxt :hyperblog.post/sort-index1 :hyperblog.post/title)\n                        (fn [[a b] [a' b']] (if (= a a') (< b b') (< a a'))))\n               (map (fn nav-item [{:keys [:hyperblog.post/title\n                                          :hyperblog.post/published\n                                          :fiddle/ident\n                                          :hyperblog.nav/children]}]\n                      [:li (if (and ident published)\n                             [:a {:href (str parent-path (hypercrud.browser.router/-encode-pchar ident))} (or (contrib.string/blank->nil title) \"–\")]\n                             title)\n                        (if (seq children) \n                          (ol parent-path children))]))))]\n     ol)\n   \"cookbook_link\"\n   (fn [val props ctx]\n     [:a (merge props {:href (hypercrud.browser.router/encode [val])})\n      (name val)])\n   \"fiddle_link\"\n   (fn [{:as fiddle-val} props ctx]\n     [(if (:hyperblog.post/draft-placeholder fiddle-val) :span :a)\n      {:href (hypercrud.browser.router/encode [(:fiddle/ident fiddle-val)])}\n      (or (:hyperblog.post/title fiddle) (:fiddle/ident fiddle-val))])\n   \"fiddle_index\"\n   (fn [fiddles-val props ctx]\n     (into\n       [:ul]\n       (->> fiddles-val\n            (sort-by :hyperblog.post/sort-index1)\n            (map (comp (partial vector :li.p)\n                       (partial vector js/user.fiddle-link))))))})\n   ",
-    :domain/ident "www",
-    :db/id 17592186045522,
-    :domain/disable-javascript false},
-   :hyperfiddle.runtime/branch-aux {:hyperfiddle.ide/foo "user"},
    :hypercrud.browser/field
    (r/track identity '{
                        ;:hypercrud.browser.field/query {:qfind #datascript.parser.FindScalar{:element #datascript.parser.Pull{:source #datascript.parser.SrcVar{:symbol $},

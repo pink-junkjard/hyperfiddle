@@ -8,16 +8,15 @@
     [contrib.reactive :as r]
     [contrib.string]
     [contrib.try$ :refer [try-either]]
-    [clojure.set]
+    [clojure.set :as set]
     [clojure.spec.alpha :as s]
     [hypercrud.browser.field :as field]
     [hypercrud.browser.link]
     [hypercrud.browser.q-util]
-    [hypercrud.client.core :as hc]
+    [hypercrud.types.DbRef :refer [->DbRef]]
     [hypercrud.types.ThinEntity :refer [->ThinEntity #?(:cljs ThinEntity)]]
     [hypercrud.util.branch]
-    [hyperfiddle.domain :as domain]
-    [hyperfiddle.route]
+    [hyperfiddle.route :as route]
     [hyperfiddle.runtime :as runtime])
   #?(:clj
      (:import (hypercrud.types.ThinEntity ThinEntity))))
@@ -68,19 +67,17 @@
     ; it can also be entity-[], which has implied :element, this also happens in the query [?e ...] case
     :else :naked-or-element))
 
-(defn target-route [ctx] @(runtime/state (:peer ctx) [::runtime/partitions nil :route]))
-
 (defn dbname [ctx] (some->> (:hypercrud.browser/field ctx) (r/fmap ::field/source-symbol) deref str))
 
-(defn uri
-  ([ctx] (uri (dbname ctx) ctx))
-  ([dbname ctx] (some-> dbname (domain/dbname->uri (:hypercrud.browser/domain ctx)))))
+(defn ^:deprecated uri
+  ([ctx] (dbname ctx))
+  ([dbname ctx] dbname))
 
 (defn ctx->id-lookup "light ctx dependency - needs :branch and :peer"
-  ([ctx] (ctx->id-lookup (uri ctx) ctx))
-  ([uri ctx]
+  ([ctx] (ctx->id-lookup (dbname ctx) ctx))
+  ([dbname ctx]
     ; todo what about if the tempid is on a higher branch in the uri?
-   (some-> uri
+   (some-> dbname
            (->> (conj [::runtime/partitions (:branch ctx) :tempid-lookups])
                 (runtime/state (:peer ctx))
                 deref)
@@ -110,7 +107,7 @@
         )))
 
 (defn hydrate-attribute [ctx ident & ?more-path]
-  (runtime/state (:peer ctx) (concat [::runtime/partitions (:branch ctx) :schemas (uri ctx)] (cons ident ?more-path))))
+  (runtime/state (:peer ctx) (concat [::runtime/partitions (:branch ctx) :schemas (dbname ctx)] (cons ident ?more-path))))
 
 (defn- set-parent [ctx]
   (assoc ctx :hypercrud.browser/parent (dissoc ctx :hypercrud.browser/data)))
@@ -123,8 +120,8 @@
            (filter #(= (::field/path-segment %) path-segment))
            first)
       (when (keyword? path-segment)
-        (let [uri (uri (str (::field/source-symbol @field)) ctx)
-              schema @(runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :schemas uri])]
+        (let [dbname (str (::field/source-symbol @field))
+              schema @(runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :schemas dbname])]
           (field/summon schema (::field/source-symbol @field) path-segment)))))
 
 (defn find-parent-field [ctx]
@@ -204,21 +201,21 @@
     (focus common-ancestor-ctx (ancestry-divergence path current-path))))
 
 (defn id->tempid+ [route ctx]
-  (let [invert-id (fn [id uri]
+  (let [invert-id (fn [dbname id]
                     (if (contrib.datomic/tempid? id)
                       id
-                      (let [id->tempid (ctx->id-lookup uri ctx)]
+                      (let [id->tempid (ctx->id-lookup dbname ctx)]
                         (get id->tempid id id))))]
-    (try-either (hyperfiddle.route/invert-route (:hypercrud.browser/domain ctx) route invert-id))))
+    (try-either (route/invert-route route invert-id))))
 
 (defn tempid->id+ [route ctx]
-  (let [invert-id (fn [temp-id uri]
-                    (if (contrib.datomic/tempid? temp-id)
-                      (let [tempid->id (-> (ctx->id-lookup uri ctx)
-                                           (clojure.set/map-invert))]
-                        (get tempid->id temp-id temp-id))
-                      temp-id))]
-    (try-either (hyperfiddle.route/invert-route (:hypercrud.browser/domain ctx) route invert-id))))
+  (let [invert-id (fn [dbname id]
+                    (if (contrib.datomic/tempid? id)
+                      (let [tempid->id (-> (ctx->id-lookup dbname ctx)
+                                           (set/map-invert))]
+                        (get tempid->id id id))
+                      id))]
+    (try-either (route/invert-route route invert-id))))
 
 (defn normalize-args [porps]
   ; There is some weird shit hitting this assert, like {:db/id nil}
@@ -298,7 +295,7 @@
      (tempid! dbname ctx)))
   ([dbname ctx]                                             ; deprecated arity, i think
    @(r/fmap->> (runtime/state (:peer ctx) [::runtime/partitions])
-               (hypercrud.util.branch/branch-val (uri dbname ctx) (:branch ctx))
+               (hypercrud.util.branch/branch-val dbname (:branch ctx))
                hash str)))
 
 (defn- fix-param [ctx param]
@@ -308,16 +305,13 @@
 
 (defn validate-query-params+ [q args ctx]
   (mlet [query-holes (try-either (hypercrud.browser.q-util/parse-holes q)) #_"normalizes for :in $"
-         :let [db-lookup (->> (get-in ctx [:hypercrud.browser/domain :domain/databases])
-                              (map (juxt :domain.database/name #(hc/db (:peer ctx) (get-in % [:domain.database/record :database/uri]) (:branch ctx))))
-                              (into {}))
-               ; Add in named database params that aren't formula params
-               [params' unused] (loop [acc []
+         :let [[params' unused] (loop [acc []
                                        args args
                                        [x & xs] query-holes]
                                   (let [is-db (clojure.string/starts-with? x "$")
-                                        next-arg (if is-db (get db-lookup x)
-                                                           (fix-param ctx (first args)))
+                                        next-arg (if is-db
+                                                   (->DbRef x (:branch ctx))
+                                                   (fix-param ctx (first args)))
                                         args (if is-db args (rest args))
                                         acc (conj acc next-arg)]
                                     (if xs

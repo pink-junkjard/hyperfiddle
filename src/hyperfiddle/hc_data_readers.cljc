@@ -3,6 +3,7 @@
     #?(:cljs [contrib.uuid :refer [read-uuid]])
     [#?(:cljs cljs.reader :clj clojure.tools.reader.default-data-readers)]
     [hyperfiddle.readers]                                   ; important
+    [hypercrud.types.DbRef :refer [map->DbRef]]
     [hypercrud.types.DbVal :refer [read-DbVal]]
     [hypercrud.types.EntityRequest :refer [read-EntityRequest]]
     [hypercrud.types.Err :refer [read-Err]]
@@ -18,6 +19,7 @@
    ;'js #?(:cljs cljs.tagged-literals/read-js) ; compiler, not reader ?
    'entity read-ThinEntity
    'uri read-URI
+   'hypercrud.types.DbRef.DbRef map->DbRef
    'hypercrud.types.DbVal.DbVal read-DbVal
    'hypercrud.types.EntityRequest.EntityRequest read-EntityRequest
    'hypercrud.types.Err.Err read-Err

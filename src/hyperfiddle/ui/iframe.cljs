@@ -10,15 +10,12 @@
     [contrib.string :refer [blank->nil]]
     [contrib.ui.safe-render :refer [user-portal]]
     [hypercrud.browser.base :as base]
-    [hypercrud.browser.context :as context]
-    [hypercrud.browser.routing :as routing]
     [hypercrud.client.peer :as peer]
     [hypercrud.transit :as transit]
     [hypercrud.types.Err :as Err]
     [hypercrud.types.ThinEntity :refer [->ThinEntity]]
     [hypercrud.ui.error :as ui-error]
     [hypercrud.ui.stale :as stale]
-    [hyperfiddle.fiddle :as fiddle]
     [hyperfiddle.runtime :as runtime]
     [reagent.core :as reagent]))
 
@@ -53,7 +50,7 @@
   (let [value @(:hypercrud.browser/data ctx)
         props (update props :class css (auto-ui-css-class ctx))
         view-props (select-keys props [:class :initial-tab :on-click #_:disabled]) ; https://github.com/hyperfiddle/hyperfiddle/issues/698
-        display-mode @(:hypercrud.ui/display-mode ctx)
+        display-mode (or (some-> (:hypercrud.ui/display-mode ctx) deref) :hypercrud.browser.browser-ui/user)
         error-props (-> (select-keys props [:class :on-click])
                         (update :class css "hyperfiddle-error"))]
     ^{:key (str display-mode)}

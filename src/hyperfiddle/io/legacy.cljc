@@ -1,7 +1,8 @@
-(ns hyperfiddle.io.util
-  (:require [cats.monad.either :as either]
-            [contrib.datomic-errors :refer [datomic-error-cleaner]]
-            [hypercrud.types.Err :refer [#?(:cljs Err)]])
+(ns hyperfiddle.io.legacy
+  (:require
+    [cats.monad.either :as either]
+    [contrib.datomic-errors :refer [datomic-error-cleaner]]
+    [hypercrud.types.Err :refer [#?(:cljs Err)]])
   #?(:clj
      (:import (hypercrud.types.Err Err))))
 
@@ -19,3 +20,12 @@
   (if (instance? Err resultset-or-error)
     (either/left (human-error resultset-or-error request))
     (either/right resultset-or-error)))
+
+(defn stage->staged-branches [stage-val]
+  (->> stage-val
+       (mapcat (fn [[branch-ident branch-content]]
+                 (->> branch-content
+                      (map (fn [[dbname tx]]
+                             {:branch-ident branch-ident
+                              :dbname dbname
+                              :tx tx})))))))

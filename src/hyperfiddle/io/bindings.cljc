@@ -1,4 +1,4 @@
-(ns hyperfiddle.io.bindings)
+(ns hyperfiddle.io.bindings)                                ; todo merge into hf.io.core
 
 
 (def ^:dynamic *subject*)

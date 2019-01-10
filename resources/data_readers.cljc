@@ -2,6 +2,7 @@
  uri hyperfiddle.readers/uri
 
  ; defrecords get these for free in clj
+ hypercrud.types.DbRef.DbRef hypercrud.types.DbRef/map->DbRef
  hypercrud.types.DbVal.DbVal hypercrud.types.DbVal/read-DbVal
  hypercrud.types.EntityRequest.EntityRequest hypercrud.types.EntityRequest/read-EntityRequest
  hypercrud.types.Err.Err hypercrud.types.Err/read-Err

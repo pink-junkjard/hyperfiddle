@@ -2,5 +2,4 @@
 
 
 (defprotocol Peer
-  (hydrate [this branch request])
-  (db [this uri branch]))
+  (hydrate [this branch request]))

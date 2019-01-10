@@ -14,9 +14,9 @@
             [hyperfiddle.ide.system-fiddle :as system-fiddle]
             [hypercrud.client.core :as hc]
             [hyperfiddle.project :as project]
+            [hypercrud.types.DbRef :refer [->DbRef]]
             [hypercrud.types.EntityRequest :refer [->EntityRequest]]
             [hypercrud.types.QueryRequest :refer [->QueryRequest]]
-            [hyperfiddle.domain :as domain]
             [hyperfiddle.fiddle :as fiddle]
             [hyperfiddle.ide.console-links]                 ; just the parser
             )
@@ -37,8 +37,7 @@
     (try-either
       (let [fiddle @(r/fmap first (:hypercrud.browser/route ctx))
             _ (assert fiddle "missing fiddle-id")
-            _ (assert (:hypercrud.browser/domain ctx) "missing domain")
-            dbval (hc/db (:peer ctx) (get-in ctx [:hypercrud.browser/domain :domain/fiddle-database :database/uri]) (:branch ctx))]
+            dbval (->DbRef 'hyperfiddle.domain/fiddle-database (:branch ctx))]
         (->EntityRequest (legacy-fiddle-ident->lookup-ref fiddle) dbval fiddle/browser-pull)))))
 
 (defn validate-fiddle [fiddle]
@@ -66,14 +65,12 @@
 
     :entity
     (if-let [dbname @(r/cursor fiddle [:fiddle/pull-database])]
-      (if-let [uri (domain/dbname->uri dbname (:hypercrud.browser/domain ctx))]
-        (let [[_ [?e :as args]] @(:hypercrud.browser/route ctx) ; Missing entity param is valid state now https://github.com/hyperfiddle/hyperfiddle/issues/268
-              db (hc/db (:peer ctx) uri (:branch ctx))
-              pull-exp (or (-> (memoized-read-edn-string+ @(r/cursor fiddle [:fiddle/pull]))
-                               (either/branch (constantly nil) identity))
-                           ['*])]
-          (either/right (->EntityRequest (or (:db/id ?e) ?e) db pull-exp)))
-        (either/left (ex-info (str "Invalid :fiddle/pull-database " dbname) {})))
+      (let [[_ [?e :as args]] @(:hypercrud.browser/route ctx) ; Missing entity param is valid state now https://github.com/hyperfiddle/hyperfiddle/issues/268
+            db (->DbRef dbname (:branch ctx))
+            pull-exp (or (-> (memoized-read-edn-string+ @(r/cursor fiddle [:fiddle/pull]))
+                             (either/branch (constantly nil) identity))
+                         ['*])]
+        (either/right (->EntityRequest (or (:db/id ?e) ?e) db pull-exp)))
       (either/left (ex-info "Missing :fiddle/pull-database" {:fiddle @(r/cursor fiddle [:fiddle/ident])})))
 
     :blank (either/right nil)
@@ -84,7 +81,7 @@
                        (if-let [?request @request]
                          @(hc/hydrate peer branch ?request)
                          (either/right nil)))]
-  (defn process-results "either ctx" [fiddle request ctx]                ; todo rename to (context/result)
+  (defn process-results "either ctx" [fiddle request ctx]   ; todo rename to (context/result)
     (mlet [reactive-attrs @(r/apply-inner-r (project/hydrate-attrs ctx))
            reactive-result @(r/apply-inner-r (r/track nil-or-hydrate (:peer ctx) (:branch ctx) request))
            :let [fiddle-parsed (hyperfiddle.ide.console-links/parse-fiddle-data-shape @fiddle)
@@ -104,7 +101,7 @@
                          (if-let [spec (s/get-spec (:fiddle/ident @fiddle))]
                            (contrib.validation/validate spec @reactive-result (partial context/row-keyfn ctx))))))))
 
-(defn data-from-route "either ctx, ctx-from-route" [route ctx]                           ; todo rename
+(defn data-from-route "either ctx, ctx-from-route" [route ctx] ; todo rename
   (mlet [ctx (-> (context/clean ctx)
                  (routing/route+ route))
          meta-fiddle-request @(r/apply-inner-r (r/track meta-request-for-fiddle ctx))

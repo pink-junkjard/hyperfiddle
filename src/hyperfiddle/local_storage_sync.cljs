@@ -72,13 +72,12 @@
           (add-watch (runtime/state rt) :local-storage local-storage-state-watcher)
           (foundation/bootstrap-data rt init-level foundation/LEVEL-HYDRATE-PAGE (document/root-rel-url!) (::runtime/global-basis current-state) different-stage))))))
 
-(defn- init-auto-tx [ls ssr host-env]
+(defn- init-auto-tx [ls ssr]
   (reduce-kv (fn [acc k ssr-v]
                (let [ls-v (get ls k)]
                  (assoc acc k (cond
                                 (false? ssr-v) false        ; ssr false trumps local storage
                                 (some? ls-v) ls-v           ; user may have opted in to auto-tx
-                                (:active-ide? host-env) false ; ignore ssr and default to false
                                 :else ssr-v                 ; no ide (likely alias so no visible staging area), trust ssr
                                 ))))
              {}
@@ -97,7 +96,7 @@
                                                       :last-modified
                                                       :stage
                                                       :version])
-                               (update ::runtime/auto-transact init-auto-tx (::runtime/auto-transact initial-state) (runtime/host-env rt))
+                               (update ::runtime/auto-transact init-auto-tx (::runtime/auto-transact initial-state))
                                (assoc ::runtime/user-id (::runtime/user-id initial-state)) ; ssr always win (it has access to cookies)
                                (update ::runtime/global-basis (fn [gb]
                                                                 (if (<= 0 (global-basis/compare (::runtime/global-basis initial-state) gb))
@@ -109,7 +108,7 @@
                                (when-not (nil? ls-state) (timbre/error "Unable to migrate local-storage: " ls-state))
                                (-> (state->local-storage initial-state)
                                    (assoc :last-modified (.now js/Date))
-                                   (update ::runtime/auto-transact #(init-auto-tx nil % (runtime/host-env rt))))))))]
+                                   (update ::runtime/auto-transact #(init-auto-tx nil %)))))))]
       (when-not (= ls-state new-ls-state)
         (local-storage/set-item! :STATE new-ls-state))
       ; todo, we should be dispatching

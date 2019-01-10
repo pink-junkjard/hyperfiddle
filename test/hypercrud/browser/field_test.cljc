@@ -3,10 +3,9 @@
   (:require [clojure.test :refer [deftest is testing]]
             [contrib.data :as data]
             [contrib.reactive :as r]
-            [contrib.uri :refer [->URI]]
             [hypercrud.browser.context :as context]
             [hypercrud.browser.field :as field :refer [auto-field infer-attrs]]
-            [hypercrud.types.DbVal :refer [->DbVal]]
+            [hypercrud.types.DbRef :refer [->DbRef]]
             [hypercrud.types.EntityRequest :refer [->EntityRequest]]
             [hypercrud.types.QueryRequest :refer [->QueryRequest]]
             [hypercrud.types.ThinEntity :refer [->ThinEntity]]
@@ -76,14 +75,12 @@
          :db/valueType {:db/ident :db.type/string}}]
        (data/group-by-assume-unique :db/ident)))
 
-(def $uri (->URI "example.com/$"))
-
 (defn build-ctx [fiddle result]                             ; this is starting to look a lot like base/process-results
-  {:hypercrud.browser/domain {:domain/databases [{:domain.database/name "$" :domain.database/record {:database/uri $uri}}]}
-   :hypercrud.browser/fiddle (r/atom fiddle)
+  {:hypercrud.browser/fiddle (r/atom fiddle)
    :hypercrud.browser/data (r/atom result)
-   :peer (let [state (r/atom {::runtime/partitions {nil {:schemas {$uri test-schema}}}})]
-           (reify runtime/State
+   :peer (let [state (r/atom {::runtime/partitions {nil {:schemas {"$" test-schema}}}})]
+           (reify
+             runtime/State
              (runtime/state [_] state)
              (runtime/state [_ path] (r/cursor state path))))})
 
@@ -243,7 +240,7 @@
 (deftest entity []
   (pull->attr-tests {:fiddle/type :entity
                      :fiddle/pull-database "$"}
-                    #(->EntityRequest 1 (->DbVal nil nil) %)
+                    #(->EntityRequest 1 (->DbRef nil nil) %)
                     merge-into-one))
 
 (deftest query-rel []

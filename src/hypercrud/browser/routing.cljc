@@ -1,13 +1,10 @@
 (ns hypercrud.browser.routing                               ; Just merge into context, this is context
   (:require
-    [cats.core :as cats :refer [mlet return]]
+    [cats.core :as cats :refer [mlet]]
     [cats.monad.either :as either :refer [left right]]
     [contrib.ct :refer [unwrap]]
-    [contrib.datomic]
     [contrib.reactive :as r]
     [contrib.reader :as reader]
-    [contrib.string :refer [blank->nil]]
-    [contrib.try$ :refer [try-either]]
     [hypercrud.browser.context :as context]
     [taoensso.timbre :as timbre]))
 

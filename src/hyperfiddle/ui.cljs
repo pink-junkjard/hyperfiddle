@@ -24,10 +24,10 @@
     [hypercrud.ui.error :as ui-error]
     [hypercrud.ui.stale :as stale]
     [hyperfiddle.data :as data]
-    [hyperfiddle.domain]
+    [hyperfiddle.domain :as domain]
     [hyperfiddle.ide.console-links]
     [hyperfiddle.route :as route]
-    [hyperfiddle.runtime]
+    [hyperfiddle.runtime :as runtime]
     [hyperfiddle.security.client :as security]
     [hyperfiddle.ui.api]
     [hyperfiddle.ui.controls :as controls :refer [label-with-docs dbid-label magic-new]]
@@ -160,7 +160,7 @@ User renderers should not be exposed to the reaction."
   (let [props (-> props
                   (update :class css "hyperfiddle")
                   (dissoc :route)
-                  (assoc :href (some->> (:route props) (hyperfiddle.foundation/route-encode (:peer ctx)))))]
+                  (assoc :href (some->> (:route props) (domain/url-encode (runtime/domain (:peer ctx))))))]
     (into [:a props] children)))
 
 (letfn [(prompt [link-ref ?label]
@@ -389,9 +389,7 @@ nil. call site must wrap with a Reagent component"          ; is this just hyper
                                  (comp blank->nil :link/path))
                            new-links)))]
   (defn inject-console-links [ctx]
-    (let [schemas (-> (->> @(hyperfiddle.runtime/state (:peer ctx) [:hyperfiddle.runtime/partitions (:branch ctx) :schemas])
-                           (contrib.data/map-keys #(hyperfiddle.domain/uri->dbname % (:hypercrud.browser/domain ctx))))
-                      (dissoc nil))
+    (let [schemas @(runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :schemas])
           links (hyperfiddle.ide.console-links/console-links-fiddle schemas @(:hypercrud.browser/fiddle ctx) @(:hypercrud.browser/data ctx))]
       (update ctx :hypercrud.browser/fiddle #(r/fmap->> % (f links))))))
 

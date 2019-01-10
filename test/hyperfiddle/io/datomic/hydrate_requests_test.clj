@@ -7,6 +7,11 @@
 
 
 (def test-uri "datomic:mem://test")
+(def test-dbname "$test")
+
+(def test-domain
+  {:domain/databases #{{:domain.database/name test-dbname
+                        :domain.database/record {:database/uri test-uri}}}})
 
 (def schema [{:db/ident :person/name
               :db/valueType :db.type/string
@@ -22,19 +27,19 @@
                       (d/delete-database test-uri)))
 
 (defn build-get-secure-db-with [& args]
-  (let [get-secure-db-with+ (apply datomic-hydrate-requests/build-get-secure-db-with+ args)]
+  (let [get-secure-db-with+ (apply datomic-hydrate-requests/build-get-secure-db-with+ test-domain args)]
     (fn [& args] (exception/extract (apply get-secure-db-with+ args)))))
 
 (deftest schema-alteration []
   (let [conn (d/connect test-uri)
         staged-branches [{:branch-ident nil
-                          :uri test-uri
+                          :dbname test-dbname
                           :tx [[:db/add "-1" :db/ident :x/y]
                                [:db/add "-1" :db/valueType :db.type/string]
                                [:db/add "-1" :db/cardinality :db.cardinality/one]]}]
-        local-basis {test-uri (d/basis-t (d/db conn))}
+        local-basis {"$test" (d/basis-t (d/db conn))}
         get-secure-db-with (build-get-secure-db-with staged-branches (atom {}) local-basis)
-        $ (:db (get-secure-db-with test-uri "nil"))]
+        $ (:db (get-secure-db-with "$test" "nil"))]
     (is (= (as-> (d/touch (d/entity $ :x/y)) entity
              (into {} entity)
              (dissoc entity :db/id))
@@ -45,67 +50,67 @@
 (deftest branch-once []
   (let [conn (d/connect test-uri)
         staged-branches [{:branch-ident nil
-                          :uri test-uri
+                          :dbname test-dbname
                           :tx [{:db/id "-1" :person/name "John" :person/age 30}]}]
-        local-basis {test-uri (d/basis-t (d/db conn))}
+        local-basis {test-dbname (d/basis-t (d/db conn))}
         get-secure-db-with (build-get-secure-db-with staged-branches (atom {}) local-basis)
-        $ (:db (get-secure-db-with test-uri "nil"))]
+        $ (:db (get-secure-db-with test-dbname "nil"))]
     (is (= (d/q '[:find ?age . :where [?person :person/age ?age] [?person :person/name "John"]] $) 30))))
 
 (deftest branch-once-stale []
   (let [conn (d/connect test-uri)
         staged-branches [{:branch-ident nil
-                          :uri test-uri
+                          :dbname test-dbname
                           :tx [{:db/id "-1" :person/name "John" :person/age 30}]}]
-        local-basis {test-uri (d/basis-t (d/db conn))}      ; get a stale basis before another user transacts
+        local-basis {test-dbname (d/basis-t (d/db conn))}   ; get a stale basis before another user transacts
         _ @(d/transact conn [{:db/id "-1" :person/name "Bob" :person/age 50}])
         get-secure-db-with (build-get-secure-db-with staged-branches (atom {}) local-basis)]
     (is (thrown-with-msg? RuntimeException (re-pattern datomic-hydrate-requests/ERROR-BRANCH-PAST)
-                          (get-secure-db-with test-uri "nil")))))
+                          (get-secure-db-with test-dbname "nil")))))
 
 (deftest branch-popover []
   (let [conn (d/connect test-uri)
         staged-branches [{:branch-ident nil
-                          :uri test-uri
+                          :dbname test-dbname
                           :tx nil}
                          {:branch-ident "2"
-                          :uri test-uri
+                          :dbname test-dbname
                           :tx [{:db/id "-1" :person/name "John" :person/age 30}]}]
-        local-basis {test-uri (d/basis-t (d/db conn))}
+        local-basis {test-dbname (d/basis-t (d/db conn))}
         get-secure-db-with (build-get-secure-db-with staged-branches (atom {}) local-basis)
-        $-nil (:db (get-secure-db-with test-uri "nil"))
-        $-2 (:db (get-secure-db-with test-uri "2"))]
+        $-nil (:db (get-secure-db-with test-dbname "nil"))
+        $-2 (:db (get-secure-db-with test-dbname "2"))]
     (is (= (d/q '[:find ?age . :where [?person :person/age ?age] [?person :person/name "John"]] $-nil) nil))
     (is (= (d/q '[:find ?age . :where [?person :person/age ?age] [?person :person/name "John"]] $-2) 30))))
 
 (deftest branch-popover-stale []
   (let [conn (d/connect test-uri)
         staged-branches [{:branch-ident nil
-                          :uri test-uri
+                          :dbname test-dbname
                           :tx nil}
                          {:branch-ident "2"
-                          :uri test-uri
+                          :dbname test-dbname
                           :tx [{:db/id "-1" :person/name "John" :person/age 30}]}]
-        local-basis {test-uri (d/basis-t (d/db conn))}      ; get a stale basis before another user transacts
+        local-basis {test-dbname (d/basis-t (d/db conn))}   ; get a stale basis before another user transacts
         _ @(d/transact conn [{:db/id "-1" :person/name "Bob" :person/age 50}])
         get-secure-db-with (build-get-secure-db-with staged-branches (atom {}) local-basis)
-        $-nil (:db (get-secure-db-with test-uri "nil"))]
+        $-nil (:db (get-secure-db-with test-dbname "nil"))]
     (is (= (d/q '[:find ?age . :where [?person :person/age ?age] [?person :person/name "John"]] $-nil) nil))
     (is (thrown-with-msg? RuntimeException (re-pattern datomic-hydrate-requests/ERROR-BRANCH-PAST)
-                          (get-secure-db-with test-uri "2")))))
+                          (get-secure-db-with test-dbname "2")))))
 
 (deftest branch-twice []
   (let [conn (d/connect test-uri)
         staged-branches [{:branch-ident nil
-                          :uri test-uri
+                          :dbname test-dbname
                           :tx [{:db/id "-1" :person/name "John" :person/age 30}]}
                          {:branch-ident "2"
-                          :uri test-uri
+                          :dbname test-dbname
                           :tx [{:db/id "-2" :person/name "Alice" :person/age 40}]}]
-        local-basis {test-uri (d/basis-t (d/db conn))}
+        local-basis {test-dbname (d/basis-t (d/db conn))}
         get-secure-db-with (build-get-secure-db-with staged-branches (atom {}) local-basis)
-        $-nil (:db (get-secure-db-with test-uri "nil"))
-        $-2 (:db (get-secure-db-with test-uri "2"))]
+        $-nil (:db (get-secure-db-with test-dbname "nil"))
+        $-2 (:db (get-secure-db-with test-dbname "2"))]
     (is (= (d/q '[:find ?age . :where [?person :person/age ?age] [?person :person/name "John"]] $-nil) 30))
     (is (= (d/q '[:find ?age . :where [?person :person/age ?age] [?person :person/name "Alice"]] $-nil) nil))
     (is (= (d/q '[:find ?age . :where [?person :person/age ?age] [?person :person/name "John"]] $-2) 30))
@@ -114,15 +119,15 @@
 (deftest branch-twice-stale []
   (let [conn (d/connect test-uri)
         staged-branches [{:branch-ident nil
-                          :uri test-uri
+                          :dbname test-dbname
                           :tx [{:db/id "-1" :person/name "John" :person/age 30}]}
                          {:branch-ident "2"
-                          :uri test-uri
+                          :dbname test-dbname
                           :tx [{:db/id "-2" :person/name "Alice" :person/age 40}]}]
-        local-basis {test-uri (d/basis-t (d/db conn))}      ; get a stale basis before another user transacts
+        local-basis {test-dbname (d/basis-t (d/db conn))}   ; get a stale basis before another user transacts
         _ @(d/transact conn [{:db/id "-1" :person/name "Bob" :person/age 50}])
         get-secure-db-with (build-get-secure-db-with staged-branches (atom {}) local-basis)]
     (is (thrown-with-msg? RuntimeException (re-pattern datomic-hydrate-requests/ERROR-BRANCH-PAST)
-                          (get-secure-db-with test-uri "nil")))
+                          (get-secure-db-with test-dbname "nil")))
     (is (thrown-with-msg? RuntimeException (re-pattern datomic-hydrate-requests/ERROR-BRANCH-PAST)
-                          (get-secure-db-with test-uri "2")))))
+                          (get-secure-db-with test-dbname "2")))))

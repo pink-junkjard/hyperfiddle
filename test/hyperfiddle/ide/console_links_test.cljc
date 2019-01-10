@@ -11,7 +11,7 @@
     [contrib.template :as template]
     [contrib.try$ :refer [try-either]]
     [datascript.parser :as parser #?@(:cljs [:refer [FindRel FindColl FindTuple FindScalar Variable Aggregate Pull]])]
-    [fixtures.ctx :refer [ctx result-coll query-coll]]
+    [fixtures.ctx :refer [result-coll query-coll]]
     [fixtures.domains]
     [hypercrud.browser.field :as field]
     [hyperfiddle.api]

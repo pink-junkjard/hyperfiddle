@@ -1,10 +1,14 @@
 (ns hyperfiddle.security.owner-only-test
-  (:require [clojure.test :refer [compose-fixtures deftest is use-fixtures testing]]
-            [hyperfiddle.integration-fixtures :as fixtures]
-            [hyperfiddle.io.transact :as transact]
-            [hyperfiddle.security :as security]
-            [hyperfiddle.security.entity-ownership :as entity-ownership])
-  (:import (java.util UUID)))
+  (:require
+    [clojure.test :refer [compose-fixtures deftest is use-fixtures testing]]
+    [datomic.api :as d]
+    [hyperfiddle.database :as db]
+    [hyperfiddle.integration-fixtures :as fixtures]
+    [hyperfiddle.io.datomic.transact :as transact]
+    [hyperfiddle.security :as security]
+    [hyperfiddle.security.entity-ownership :as entity-ownership])
+  (:import
+    (java.util UUID)))
 
 
 (def schema
@@ -26,34 +30,42 @@
     (fixtures/domains-fixture #{db-owner})
     (fixtures/db-fixture fixtures/test-uri #{db-owner} db-owner :schema schema :security ::security/owner-only)))
 
-(deftest test-merging-tx-statements[]
+(defn process-tx [domains-uri subject hf-db-uri tx]
+  (let [hf-db (-> (d/db (d/connect (str domains-uri)))
+                  (d/entity [:database/uri hf-db-uri]))]
+    (transact/process-tx hf-db subject tx)))
+
+(defn transact! [domains-uri subject tx-groups]
+  (transact/transact! (db/build-util-domain domains-uri) subject tx-groups))
+
+(deftest test-merging-tx-statements []
   (let [email "asdf@example.com"]
-    (transact/transact! fixtures/test-domains-uri db-owner
-                        {fixtures/test-uri
-                         [[:db/add "-1" :person/email email]
-                          [:db/add "-1" :person/name "Asdf"]]})
+    (transact! fixtures/test-domains-uri db-owner
+               {fixtures/test-uri
+                [[:db/add "-1" :person/email email]
+                 [:db/add "-1" :person/name "Asdf"]]})
     (let [mergable-tx [[:db/add "-1" :person/email email]
                        [:db/add "-1" :person/age 1]]]
       (testing "fails for non-owner"
         (is (thrown-with-msg?
               RuntimeException #"user tx failed validation"
-              (transact/process-tx fixtures/test-domains-uri "someone-else" fixtures/test-uri mergable-tx))))
+              (process-tx fixtures/test-domains-uri "someone-else" fixtures/test-uri mergable-tx))))
 
       (testing "succeeds for owner"
-        (is (= mergable-tx (transact/process-tx fixtures/test-domains-uri db-owner fixtures/test-uri mergable-tx)))))))
+        (is (= mergable-tx (process-tx fixtures/test-domains-uri db-owner fixtures/test-uri mergable-tx)))))))
 
 (deftest test-merging-tx-maps []
   (let [email "asdf@example.com"]
-    (transact/transact! fixtures/test-domains-uri db-owner
-                        {fixtures/test-uri
-                         [{:person/email email
-                           :person/name "Asdf"}]})
+    (transact! fixtures/test-domains-uri db-owner
+               {fixtures/test-uri
+                [{:person/email email
+                  :person/name "Asdf"}]})
     (let [mergable-tx [{:person/email email
                         :person/age 1}]]
       (testing "fails for non-owner"
         (is (thrown-with-msg?
               RuntimeException #"user tx failed validation"
-              (transact/process-tx fixtures/test-domains-uri "someone-else" fixtures/test-uri mergable-tx))))
+              (process-tx fixtures/test-domains-uri "someone-else" fixtures/test-uri mergable-tx))))
 
       (testing "succeeds for owner"
-        (is (= mergable-tx (transact/process-tx fixtures/test-domains-uri db-owner fixtures/test-uri mergable-tx)))))))
+        (is (= mergable-tx (process-tx fixtures/test-domains-uri db-owner fixtures/test-uri mergable-tx)))))))

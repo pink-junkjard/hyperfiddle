@@ -41,11 +41,6 @@
     :set-global-basis (first args)
     global-basis))
 
-(defn domain-reducer [domain action & args]
-  (case action
-    :hyperfiddle.runtime/set-domain (first args)
-    domain))
-
 (defn display-mode-reducer [display-mode action & args]
   (case action
     :toggle-display-mode (case display-mode
@@ -55,23 +50,22 @@
     (or display-mode :hypercrud.browser.browser-ui/user)))
 
 (defn partitions-reducer [partitions action & args]
-  (let [with (fn [partition uri tx]
-               (let [schema (get-in partition [:schemas uri])]
-                 (update-in partition [:stage uri] (partial tx/into-tx schema) tx)))]
+  (let [with (fn [partition dbname tx]
+               (let [schema (get-in partition [:schemas dbname])]
+                 (update-in partition [:stage dbname] (partial tx/into-tx schema) tx)))]
     (->> (case action
            :transact!-success
-           (let [[uris] args]
+           (let [[dbnames] args]
              (-> partitions
                  (assoc-in [nil :hydrate-id] "hack; dont flicker while page rebuilds")
-                 (update-in [nil :stage] #(apply dissoc % uris))))
+                 (update-in [nil :stage] #(apply dissoc % dbnames))))
 
-           :add-partition (let [[branch route branch-aux] args]
+           :add-partition (let [[branch route] args]
                             (update partitions branch
                                     (fn [current-branch]
                                       (if (route/compare-routes route (:route current-branch))
                                         (assoc current-branch :route route)
-                                        {:route route
-                                         :hyperfiddle.runtime/branch-aux branch-aux}))))
+                                        {:route route}))))
 
            :discard-partition (let [[branch] args]
                                 (dissoc partitions branch))
@@ -89,13 +83,13 @@
                                     (assoc-in [branch :route] route)
                                     #_(dissoc :error :ptm :tempid-lookups))))
 
-           :with (let [[branch uri tx] args]
-                   (update partitions branch with uri tx))
+           :with (let [[branch dbname tx] args]
+                   (update partitions branch with dbname tx))
 
            :merge (let [[branch] args
                         parent-branch (branch/decode-parent-branch branch)]
-                    (-> (reduce (fn [partitions [uri tx]]
-                                  (update partitions parent-branch with uri tx))
+                    (-> (reduce (fn [partitions [dbname tx]]
+                                  (update partitions parent-branch with dbname tx))
                                 partitions
                                 (get-in partitions [branch :stage]))
                         (update branch dissoc :stage)))
@@ -105,7 +99,7 @@
                                      (fn [partition]
                                        (assoc partition
                                          :hydrate-id
-                                         (hash (select-keys partition [:hyperfiddle.runtime/branch-aux :route :stage :local-basis]))))))
+                                         (hash (select-keys partition [:route :stage :local-basis]))))))
 
            :hydrate!-success (let [[branch ptm tempid-lookups] args]
                                (update partitions branch
@@ -143,8 +137,8 @@
            :reset-stage-branch (let [[branch v] args]
                                  (assoc-in partitions [branch :stage] v))
 
-           :reset-stage-uri (let [[branch uri tx] args]
-                              (assoc-in partitions [branch :stage uri] tx))
+           :reset-stage-db (let [[branch dbname tx] args]
+                              (assoc-in partitions [branch :stage dbname] tx))
 
            (or partitions {}))
          (map-values (fn [partition]
@@ -155,10 +149,9 @@
 
                              ; data needed to hydrate a partition
                              :route identity
-                             :hyperfiddle.runtime/branch-aux identity
                              :stage (fn [multi-color-tx]
                                       (->> multi-color-tx
-                                           (remove (fn [[uri tx]] (empty? tx)))
+                                           (remove (fn [[dbname tx]] (empty? tx)))
                                            (into {})))
                              :local-basis identity
 
@@ -171,8 +164,8 @@
 (defn auto-transact-reducer [auto-tx action & args]
   (case action
     :set-auto-transact (first args)
-    :toggle-auto-transact (let [[uri] args]
-                            (update auto-tx uri not))
+    :toggle-auto-transact (let [[dbname] args]
+                            (update auto-tx dbname not))
     (or auto-tx {})))
 
 (defn user-id-reducer [user-id action & args]
@@ -191,7 +184,6 @@
     uri))
 
 (def reducer-map {:hyperfiddle.runtime/fatal-error fatal-error-reducer
-                  :hyperfiddle.runtime/domain domain-reducer
                   :hyperfiddle.runtime/global-basis global-basis-reducer
                   :hyperfiddle.runtime/partitions partitions-reducer
                   :hyperfiddle.runtime/auto-transact auto-transact-reducer

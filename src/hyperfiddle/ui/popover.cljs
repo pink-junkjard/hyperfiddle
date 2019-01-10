@@ -60,9 +60,7 @@
                                         #(->> (swap-fn-async)
                                               (fmap
                                                 (fn [tx]
-                                                  (-> {:tx {(or (hypercrud.browser.context/uri ctx)
-                                                                ; https://github.com/hyperfiddle/hyperfiddle/issues/816
-                                                                (hypercrud.browser.context/uri "$" ctx))
+                                                  (-> {:tx {(or (hypercrud.browser.context/dbname ctx) "$") ; https://github.com/hyperfiddle/hyperfiddle/issues/816
                                                             tx}
                                                        :app-route (if-let [f (::redirect props)] (f @r-popover-data))}
                                                       dissoc-nils))))
@@ -98,7 +96,7 @@
 (defn open! [route popover-id child-branch ctx]
   (runtime/dispatch! (:peer ctx)
                      (if child-branch
-                       (actions/add-partition (:peer ctx) route child-branch (::runtime/branch-aux ctx)
+                       (actions/add-partition (:peer ctx) route child-branch
                                               (actions/open-popover (:branch ctx) popover-id))
                        (actions/open-popover (:branch ctx) popover-id))))
 
@@ -116,7 +114,7 @@
     (letfn [(f [swap-fn-async]
               (-> (->> (swap-fn-async)
                        (fmap (fn [tx]
-                               (-> {:tx {(hypercrud.browser.context/uri ctx) tx}
+                               (-> {:tx {(hypercrud.browser.context/dbname ctx) tx}
                                     :app-route (if-let [f (::redirect props)] (f popover-data))}
                                    dissoc-nils))))
                   (p/then

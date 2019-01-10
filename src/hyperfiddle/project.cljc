@@ -1,15 +1,21 @@
 (ns hyperfiddle.project
   (:require
     [cats.core :as cats]
+    #?(:cljs [contrib.eval-cljs :as eval-cljs])
     [contrib.reactive :as r]
+    [contrib.try$ :refer [try-either]]
     [hypercrud.client.core :as hc]
+    [hyperfiddle.domain :as domain]
+    [hyperfiddle.runtime :as runtime]
+    [hypercrud.types.DbRef :refer [->DbRef]]
+    [hypercrud.types.EntityRequest :refer [->EntityRequest]]
     [hypercrud.types.QueryRequest :refer [->QueryRequest]]))
 
 
 (defn attrs-request [ctx]
   (->QueryRequest '[:find [(pull ?attr [:attribute/ident :attribute/renderer]) ...]
                     :where [?attr :attribute/ident]]
-                  [(hc/db (:peer ctx) (get-in ctx [:hypercrud.browser/domain :domain/fiddle-database :database/uri]) (:branch ctx))]))
+                  [(->DbRef 'hyperfiddle.domain/fiddle-database (:branch ctx))]))
 
 (let [f (fn [attrs]
           (->> attrs
@@ -18,3 +24,15 @@
   (defn hydrate-attrs [ctx]
     (r/fmap->> (hc/hydrate (:peer ctx) (:branch ctx) (attrs-request ctx))
                (cats/fmap f))))
+
+(defn project-request [ctx]
+  (->EntityRequest
+    [:domain/ident (domain/ident (runtime/domain (:peer ctx)))]
+    (->DbRef 'hyperfiddle.domain/fiddle-database (:branch ctx))
+    [:db/id
+     :project/code
+     :project/css]))
+
+#?(:cljs
+   (defn eval-domain-code!+ [code-str]
+     (try-either (some->> code-str (eval-cljs/eval-statement-str! 'user.domain)))))

@@ -9,8 +9,7 @@
         ?last-segment (last (:hypercrud.browser/path ctx))]
     ; Used to check links dont break sorting, but those cases don't happen anymore.
     (if (and ?dbname (context/attribute-segment? ?last-segment)) ; [fe attr] or [attr], NOT [fe] or []
-      (let [uri (context/uri ?dbname ctx)
-            {:keys [:db/cardinality :db/valueType]} @(runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :schemas uri ?last-segment])]
+      (let [{:keys [:db/cardinality :db/valueType]} @(runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :schemas ?dbname ?last-segment])]
         (and
           (= (:db/ident cardinality) :db.cardinality/one)
           ; ref requires more work (inspect label-prop)

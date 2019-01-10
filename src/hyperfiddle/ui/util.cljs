@@ -30,10 +30,8 @@
   ([ctx tx]
    (with-tx! ctx (context/dbname ctx) tx))
   ([ctx dbname tx]
-   (let [uri (context/uri dbname ctx)]
-     (assert uri)
-     (->> (actions/with-groups (:peer ctx) (:branch ctx) {uri tx})
-          (runtime/dispatch! (:peer ctx))))))
+   (->> (actions/with-groups (:peer ctx) (:branch ctx) {dbname tx})
+        (runtime/dispatch! (:peer ctx)))))
 
 (defn with-entity-change! [ctx] (r/comp (r/partial with-tx! ctx) (r/partial entity-change->tx ctx)))
 

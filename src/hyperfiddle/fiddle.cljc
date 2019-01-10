@@ -32,7 +32,7 @@
                   :fiddle/hydrate-result-as-fiddle
                   :hyperfiddle/owners])))
 
-(s/def :hyperfiddle.ide/new-fiddle (s/keys :req [:fiddle/ident]))
+(s/def :hyperfiddle.ide/new-fiddle (s/keys :req [:fiddle/ident])) ; todo remove from this ns
 
 (s/def :fiddle/ident keyword?)
 (s/def :fiddle/uuid uuid?)

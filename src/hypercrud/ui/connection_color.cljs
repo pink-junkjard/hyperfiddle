@@ -16,11 +16,11 @@
   (str/format "hsl(%s, %s%, %s%)" h s l))
 
 (defn connection-color [ctx & [l]]
-  (let [uri (context/uri ctx)]
-    (condp = uri
+  (let [dbname (context/dbname ctx)]
+    (condp = dbname
       nil no-conn
       ;(get-in ctx [:hypercrud.browser/domain :domain/fiddle-database :database/uri]) root-conn
-      (hsl (* 360 (mod (+ seed (* (hash uri) golden-ratio)) 1))
+      (hsl (* 360 (mod (+ seed (* (hash dbname) golden-ratio)) 1))
            55  #_"Too bright hurts the eyes"
            (or l 70)) #_"Medium gray (50) can be read on white and black backgrounds"
       )))

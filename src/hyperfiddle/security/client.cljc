@@ -40,13 +40,13 @@
                    (if @(context/hydrate-attribute ctx ?ident :db/isComponent)
                      (parent-m (:hypercrud.browser/parent ctx))
                      (some-> (:hypercrud.browser/data ctx) deref))))
-      new-entity? (fn new-entity? [peer uri dbid branch]
+      new-entity? (fn new-entity? [peer dbname dbid branch]
                     (or (contrib.datomic/tempid? dbid)
-                        (some-> @(runtime/state peer [::runtime/partitions branch :tempid-lookups uri])
+                        (some-> @(runtime/state peer [::runtime/partitions branch :tempid-lookups dbname])
                                 (either/branch #(throw (ex-info % {})) #(get % dbid))
                                 some?)
                         (if (some? branch)
-                          (new-entity? peer uri dbid (branch/decode-parent-branch branch))
+                          (new-entity? peer dbname dbid (branch/decode-parent-branch branch))
                           false)))]
   (def entity-ownership
     {:subject-can-transact? (fn [hf-db subject user] (some? subject))
@@ -55,8 +55,8 @@
                          (and (some? subject)
                               (or (contains? (set (:hyperfiddle/owners hf-db)) subject)
                                   (-> (mlet [m (maybe (parent-m ctx))
-                                             uri (maybe (context/uri ctx))]
-                                        (return (or (new-entity? (:peer ctx) uri (:db/id m) (:branch ctx))
+                                             dbname (maybe (context/dbname ctx))]
+                                        (return (or (new-entity? (:peer ctx) dbname (:db/id m) (:branch ctx))
                                                     (contains? (set (:hyperfiddle/owners m)) subject))))
                                       ; ui probably in an invalid/error state when m or uri are nil
                                       (maybe/from-maybe false)))))}))
@@ -76,7 +76,8 @@
 
 (defn can-create? [ctx]
   (-> (mlet [:let [dbname (context/dbname ctx)
-                   hf-db (domain/dbname->hfdb dbname (:hypercrud.browser/domain ctx))
+                   hf-db (-> (runtime/domain (:peer ctx))
+                             (domain/database dbname))
                    subject @(runtime/state (:peer ctx) [::runtime/user-id])]
              client-sec (eval-client-sec hf-db)
              :let [f (or (:can-create? client-sec) (constantly true))]]
@@ -89,7 +90,8 @@
 
 (defn writable-entity? [ctx]
   (-> (mlet [:let [dbname (context/dbname ctx)
-                   hf-db (domain/dbname->hfdb dbname (:hypercrud.browser/domain ctx))
+                   hf-db (-> (runtime/domain (:peer ctx))
+                             (domain/database dbname))
                    subject @(runtime/state (:peer ctx) [::runtime/user-id])]
              client-sec (eval-client-sec hf-db)
              :let [f (or (:writable-entity? client-sec) (constantly true))]]

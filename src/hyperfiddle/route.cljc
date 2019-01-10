@@ -87,6 +87,10 @@
              (if (empty->nil frag) (str "#" (-> frag encode-ednish encode-rfc3986-pchar))))))))
 
 (def url-regex #"/([^;/?#]*)(?:;([^/?#]*))?(?:/([^?#]*))?(?:\?([^#]*))?(?:#(.*))?")
+;                /|________|   ;|_______|     /|______|      ?|_____|     #|__|
+;                     |             |             |              |          |
+;      url        seg[0]path    seg[0]matrix   seg[1 ...]     query        fragment
+;      hf-route   fiddle        fiddle-args    datomic-args   service-args fragment
 
 (defn url-decode [s home-route]
   {:pre [(str/starts-with? s "/") (s/valid? :hyperfiddle/route home-route)]
@@ -108,12 +112,11 @@
             (fn [e] (decoding-error e s))
             identity)))))
 
-(defn invert-route [domain [_ args :as route] invert-id]
+(defn invert-route [[_ args :as route] invert-id]
   (->> args
        (mapv (fn [v]
                (if (instance? ThinEntity v)
-                 (let [id (invert-id (.-id v) (hyperfiddle.domain/dbname->uri (.-dbname v) domain))]
-                   (->ThinEntity (.-dbname v) id))
+                 (->ThinEntity (.-dbname v) (invert-id (.-dbname v) (.-id v)))
                  v)))
        (assoc route 1)
        (apply canonicalize)))

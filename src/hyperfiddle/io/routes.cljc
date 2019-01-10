@@ -1,4 +1,4 @@
-(ns hyperfiddle.io.http)
+(ns hyperfiddle.io.routes)
 
 
 (def api
@@ -10,12 +10,12 @@
                                                   #".+" :404
                                                   true :405}
 
-   ["hydrate-route/" [#"[^/]*" :local-basis] "/" [#"[^/]*" :branch] "/" [#"[^/]*" :branch-aux] "/" [#".*" :encoded-route]]
+   ["hydrate-route/" [#"[^/]*" :local-basis] "/" [#"[^/]*" :branch] "/" [#".*" :encoded-route]]
    {:get :hydrate-route
     :post :hydrate-route
     true :405}
 
-   ["local-basis/" [#"[^/]*" :global-basis] "/" [#"[^/]*" :branch] "/" [#"[^/]*" :branch-aux] "/" [#".*" :encoded-route]]
+   ["local-basis/" [#"[^/]*" :global-basis] "/" [#".*" :encoded-route]]
    {:get :local-basis
     :post :local-basis
     true :405}
@@ -30,7 +30,7 @@
 
    true :404})
 
-(defn build-routes [build]
+(defn build [build]
   ["/" {"api/" {(str build "/") api
                 [[#"[^/]*" :build] "/"] {true :force-refresh}
                 true :404}

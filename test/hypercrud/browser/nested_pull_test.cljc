@@ -3,7 +3,6 @@
             [clojure.walk :as walk]
             [contrib.data :as data]
             [contrib.reactive :as r]
-            [contrib.uri :refer [->URI]]
             [hypercrud.browser.field :as field :refer [auto-field]]
             [hypercrud.types.QueryRequest :refer [->QueryRequest]]
             [hyperfiddle.runtime :as runtime]))
@@ -27,14 +26,12 @@
          :db/valueType {:db/ident :db.type/ref}}]
        (data/group-by-assume-unique :db/ident)))
 
-(def $uri (->URI "example.com/$"))
-
 (defn build-ctx [fiddle result]                             ; this is starting to look a lot like base/process-results
-  {:hypercrud.browser/domain {:domain/databases [{:domain.database/name "$" :domain.database/record {:database/uri $uri}}]}
-   :hypercrud.browser/fiddle (r/atom fiddle)
+  {:hypercrud.browser/fiddle (r/atom fiddle)
    :hypercrud.browser/data (r/atom result)
-   :peer (let [state (r/atom {::runtime/partitions {nil {:schemas {$uri test-schema}}}})]
-           (reify runtime/State
+   :peer (let [state (r/atom {::runtime/partitions {nil {:schemas {"$" test-schema}}}})]
+           (reify
+             runtime/State
              (runtime/state [_] state)
              (runtime/state [_ path] (r/cursor state path))))})
 

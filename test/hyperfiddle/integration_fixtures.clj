@@ -1,8 +1,9 @@
 (ns hyperfiddle.integration-fixtures
-  (:require [contrib.uri :refer [->URI]]
-            [hyperfiddle.database :as db]
-            [hyperfiddle.io.transact :as transact]
-            [datomic.api :as d]))
+  (:require
+    [contrib.uri :refer [->URI]]
+    [datomic.api :as d]
+    [hyperfiddle.database :as db]
+    [hyperfiddle.io.datomic.transact :as transact]))
 
 
 (def test-domains-uri (->URI "datomic:mem://test-domains"))
@@ -20,11 +21,14 @@
     (db/provision! uri db-owners test-domains-uri subject)
     (try
       (when security
-        (transact/transact! test-domains-uri subject {test-domains-uri [(cond-> {:database/uri uri
-                                                                                 :database/write-security security}
-                                                                          (:client custom-security) (assoc :database.custom-security/client (:client custom-security))
-                                                                          (:server custom-security) (assoc :database.custom-security/server (:server custom-security)))]}))
+        (let [domain (db/build-util-domain test-domains-uri)
+              tx-groups {test-domains-uri [(cond-> {:database/uri uri
+                                                    :database/write-security security}
+                                             (:client custom-security) (assoc :database.custom-security/client (:client custom-security))
+                                             (:server custom-security) (assoc :database.custom-security/server (:server custom-security)))]}]
+          (transact/transact! domain subject tx-groups)))
       (when schema
-        (transact/transact! test-domains-uri subject {uri schema}))
+        (let [domain (db/build-util-domain test-domains-uri)] ; rebuild because we just altered
+          (transact/transact! domain subject {uri schema})))
       (f)
       (finally (db/deprovision! uri test-domains-uri subject)))))

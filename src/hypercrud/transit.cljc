@@ -4,63 +4,57 @@
     [cognitect.transit :as t]
     #?(:cljs [com.cognitect.transit.types])
     [contrib.uri :refer [->URI #?(:cljs URI)]]
+    [hypercrud.types.DbRef :refer [->DbRef #?(:cljs DbRef)]]
     [hypercrud.types.DbVal :refer [->DbVal #?(:cljs DbVal)]]
     [hypercrud.types.EntityRequest :refer [->EntityRequest #?(:cljs EntityRequest)]]
     [hypercrud.types.Err :refer [->Err #?(:cljs Err)]]
     [hypercrud.types.QueryRequest :refer [->QueryRequest #?(:cljs QueryRequest)]]
     [hypercrud.types.ThinEntity :refer [->ThinEntity #?(:cljs ThinEntity)]]
-    [hyperfiddle.runtime :refer [map->HostEnvironment #?(:cljs HostEnvironment)]])
+    [hyperfiddle.domains.bidi :refer [map->BidiDomain #?(:cljs BidiDomain)]]
+    [hyperfiddle.domains.ednish :refer [map->EdnishDomain #?(:cljs EdnishDomain)]])
   #?(:clj
      (:import
        (cats.monad.either Left Right)
+       (hypercrud.types.DbRef DbRef)
        (hypercrud.types.DbVal DbVal)
        (hypercrud.types.EntityRequest EntityRequest)
        (hypercrud.types.Err Err)
        (hypercrud.types.QueryRequest QueryRequest)
        (hypercrud.types.ThinEntity ThinEntity)
-       (hyperfiddle.runtime HostEnvironment)
+       (hyperfiddle.domains.bidi BidiDomain)
+       (hyperfiddle.domains.ednish EdnishDomain)
        (java.io ByteArrayInputStream ByteArrayOutputStream))))
 
 
 (def read-handlers
-  {"DbVal" (t/read-handler #(apply ->DbVal %))
+  {
+   "DbRef" (t/read-handler #(apply ->DbRef %))
+   "DbVal" (t/read-handler #(apply ->DbVal %))
    "EReq" (t/read-handler #(apply ->EntityRequest %))
    "err" (t/read-handler ->Err)
    "QReq" (t/read-handler #(apply ->QueryRequest %))
    "entity" (t/read-handler #(apply ->ThinEntity %))
    "r" (t/read-handler ->URI)
-   "HostEnvironment" (t/read-handler map->HostEnvironment)
    "left" (t/read-handler #(either/left %))
-   "right" (t/read-handler #(either/right %))})
+   "right" (t/read-handler #(either/right %))
+   "BidiDomain" (t/read-handler map->BidiDomain)
+   "EdnishDomain" (t/read-handler map->EdnishDomain)
+   })
 
 (def write-handlers
-  {DbVal
-   (t/write-handler (constantly "DbVal") (fn [v] [(:uri v) (:branch v)]))
-
-   EntityRequest
-   (t/write-handler (constantly "EReq") (fn [v] [(:e v) (:db v) (:pull-exp v)]))
-
-   Err
-   (t/write-handler (constantly "err") #(:msg %))
-
-   QueryRequest
-   (t/write-handler (constantly "QReq") (fn [v] [(:query v) (:params v)]))
-
-   ThinEntity
-   (t/write-handler (constantly "entity") (fn [v] [(.-dbname v) (.-id v)]))
-
-   HostEnvironment
-   (t/write-handler (constantly "HostEnvironment") #(into {} %))
-
-   Left
-   (t/write-handler (constantly "left") deref)
-
-   Right
-   (t/write-handler (constantly "right") deref)
-
-   #?@(:cljs
-       [URI
-        (t/write-handler (constantly "r") (fn [v] (.-uri-str v)))])})
+  {
+   DbRef (t/write-handler (constantly "DbRef") (fn [v] [(:dbname v) (:branch v)]))
+   DbVal (t/write-handler (constantly "DbVal") (fn [v] [(:uri v) (:branch v)]))
+   EntityRequest (t/write-handler (constantly "EReq") (fn [v] [(:e v) (:db v) (:pull-exp v)]))
+   Err (t/write-handler (constantly "err") #(:msg %))
+   QueryRequest (t/write-handler (constantly "QReq") (fn [v] [(:query v) (:params v)]))
+   ThinEntity (t/write-handler (constantly "entity") (fn [v] [(.-dbname v) (.-id v)]))
+   Left (t/write-handler (constantly "left") deref)
+   Right (t/write-handler (constantly "right") deref)
+   BidiDomain (t/write-handler (constantly "BidiDomain") #(into {} %))
+   EdnishDomain (t/write-handler (constantly "EdnishDomain") #(into {} %))
+   #?@(:cljs [URI (t/write-handler (constantly "r") (fn [v] (.-uri-str v)))])
+   })
 
 (def ^:dynamic *string-encoding* "UTF-8")
 

@@ -2,11 +2,10 @@
   (:require [cats.core :as cats :refer [mlet]]
             [cats.monad.either :as either]
             [clojure.set :as set]
-            [contrib.data :as data :refer [transpose]]
+            [contrib.data :refer [transpose]]
             [contrib.reactive :as r]
             [contrib.try$ :refer [try-either]]
             [datascript.parser :as parser #?@(:cljs [:refer [FindRel FindColl FindTuple FindScalar Variable Aggregate Pull]])]
-            [hyperfiddle.domain :as domain]
             [hyperfiddle.runtime :as runtime])
   #?(:clj (:import (datascript.parser FindRel FindColl FindTuple FindScalar Variable Aggregate Pull))))
 
@@ -191,9 +190,7 @@
    ::source-symbol nil})
 
 (defn auto-field [request {:keys [:hypercrud.browser/data] :as ctx}]
-  (let [schemas (-> (->> @(runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :schemas])
-                         (data/map-keys #(domain/uri->dbname % (:hypercrud.browser/domain ctx))))
-                    (dissoc nil))]
+  (let [schemas @(runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :schemas])]
     (case @(r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/type])
       :entity (let [dbname @(r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/pull-database])
                     source-symbol (symbol dbname)

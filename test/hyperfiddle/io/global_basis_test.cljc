@@ -1,89 +1,60 @@
 (ns hyperfiddle.io.global-basis-test
   (:refer-clojure :exclude [compare])
-  (:require [clojure.test :refer [deftest is]]
-            [hyperfiddle.io.global-basis :as global-basis :refer [compare]]))
+  (:require
+    [clojure.test :refer [deftest is]]
+    [hyperfiddle.io.global-basis :as global-basis :refer [compare]]))
 
 
 (deftest compare-identical []
-  (is (= 0 (compare {:domain {#uri "domains" 0}
-                     :ide {#uri "A" 1}
-                     :user {#uri "X" 1}}
-                    {:domain {#uri "domains" 0}
-                     :ide {#uri "A" 1}
-                     :user {#uri "X" 1}}))))
+  (is (= 0 (compare {:domain 0
+                     :user {"$x" 1}}
+                    {:domain {"$domains" 0}
+                     :user {"$x" 1}}))))
 
 (deftest compare-different-domain-t []
-  (is (= -1 (compare {:domain {#uri "domains" 0}
-                      :ide {#uri "A" 1}
-                      :user {#uri "X" 1}}
-                     {:domain {#uri "domains" 1}
-                      :ide {#uri "B" 1}
-                      :user {#uri "Y" 1}})))
+  (is (= -1 (compare {:domain 0
+                      :user {"$x" 1}}
+                     {:domain {"$domains" 1}
+                      :user {"$y" 1}})))
 
-  (is (= 1 (compare {:domain {#uri "domains" 1}
-                     :ide {#uri "B" 1}
-                     :user {#uri "Y" 1}}
-                    {:domain {#uri "domains" 0}
-                     :ide {#uri "A" 1}
-                     :user {#uri "Y" 1}}))))
+  (is (= 1 (compare {:domain 1
+                     :user {"$y" 1}}
+                    {:domain 0
+                     :user {"$y" 1}}))))
 
-(deftest compare-user-ide-t []
-  (is (= -1 (compare {:domain {#uri "domains" 0}
-                      :ide {#uri "A" 0}
-                      :user {#uri "X" 1}}
-                     {:domain {#uri "domains" 0}
-                      :ide {#uri "A" 1}
-                      :user {#uri "X" 1}})))
+(deftest compare-user-t []
+  (is (= -1 (compare {:domain 0
+                      :user {"$x" 0}}
+                     {:domain 0
+                      :user {"$x" 1}})))
 
-  (is (= 0 (compare {:domain {#uri "domains" 0}
-                     :ide {#uri "A" 1}
-                     :user {#uri "X" 1}}
-                    {:domain {#uri "domains" 0}
-                     :ide {#uri "A" 1}
-                     :user {#uri "X" 1}})))
-
-  (is (= 1 (compare {:domain {#uri "domains" 0}
-                     :ide {#uri "A" 1}
-                     :user {#uri "X" 1}}
-                    {:domain {#uri "domains" 0}
-                     :ide {#uri "A" 1}
-                     :user {#uri "X" 0}}))))
+  (is (= 1 (compare {:domain 0
+                     :user {"$x" 1}}
+                    {:domain 0
+                     :user {"$x" 0}}))))
 
 (deftest compare-mismatched-uris []
   (is (thrown-with-msg? #?(:clj RuntimeException :cljs js/Error)
-                        (re-pattern global-basis/ERROR-MISMATCHED-URIS)
-                        (compare {:domain {#uri "NOT-domains" 0}
-                                  :ide {#uri "A" 1}
-                                  :user {#uri "X" 1}}
-                                 {:domain {#uri "domains" 0}
-                                  :ide {#uri "A" 1}
-                                  :user {#uri "X" 1}})))
+                        (re-pattern global-basis/ERROR-MISMATCHED-DBNAMES)
+                        (compare {:domain 0
+                                  :user {"$x" 1}}
+                                 {:domain 0
+                                  :user {"$y" 1}})))
 
   (is (thrown-with-msg? #?(:clj RuntimeException :cljs js/Error)
-                        (re-pattern global-basis/ERROR-MISMATCHED-URIS)
-                        (compare {:domain {#uri "domains" 0}
-                                  :ide {#uri "A" 1}
-                                  :user {#uri "X" 1}}
-                                 {:domain {#uri "domains" 0}
-                                  :ide {#uri "B" 1}
-                                  :user {#uri "X" 1}})))
-
-  (is (thrown-with-msg? #?(:clj RuntimeException :cljs js/Error)
-                        (re-pattern global-basis/ERROR-MISMATCHED-URIS)
-                        (compare {:domain {#uri "domains" 0}
-                                  :ide {#uri "A" 1}
-                                  :user {#uri "X" 1}}
-                                 {:domain {#uri "domains" 0}
-                                  :ide {#uri "A" 1
-                                        #uri "I" 1}
-                                  :user {#uri "X" 1}}))))
+                        (re-pattern global-basis/ERROR-MISMATCHED-DBNAMES)
+                        (compare {:domain 0
+                                  :user {"$x" 1}}
+                                 {:domain 0
+                                  :user {"$x" 1
+                                         "$y" 1}}))))
 
 (deftest compare-greater-and-less-than []
   (is (thrown-with-msg? #?(:clj RuntimeException :cljs js/Error)
                         (re-pattern global-basis/ERROR-BOTH-GREATER-AND-LESS-THAN)
-                        (compare {:domain {#uri "domains" 0}
-                                  :ide {#uri "A" 1}
-                                  :user {#uri "X" 2}}
-                                 {:domain {#uri "domains" 0}
-                                  :ide {#uri "A" 2}
-                                  :user {#uri "X" 1}}))))
+                        (compare {:domain 0
+                                  :user {"$x" 2
+                                         "$y" 1}}
+                                 {:domain 0
+                                  :user {"$x" 1
+                                         "$y" 2}}))))

@@ -4,7 +4,7 @@
     [contrib.reactive :as r]
     [contrib.ui :refer [markdown]]
     [hypercrud.types.Err :as Err]
-    [hyperfiddle.foundation :as foundation]))
+    [hyperfiddle.ide.staging :refer [staging]]))
 
 
 (defn e->map [e]
@@ -37,7 +37,7 @@
   [:<>
    [error-block e props]
    (when (:branch ctx)
-     [foundation/staging ctx])])
+     [staging ctx])])
 
 (defn error-comp [ctx]
   ; :find-element :attribute :value

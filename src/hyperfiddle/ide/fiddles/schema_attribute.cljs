@@ -25,9 +25,8 @@
 
 (defn valueType-and-cardinality-with-tx! [special-attrs-state ctx tx]
   (let [entity @(get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data])
-        uri @(r/fmap-> (:hypercrud.browser/fiddle ctx) :fiddle/ident name
-                       (context/uri ctx))
-        schema @(runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :schemas uri])
+        dbname @(r/fmap-> (:hypercrud.browser/fiddle ctx) :fiddle/ident name)
+        schema @(runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :schemas dbname])
         new-entity (merge-in-tx entity tx ctx)]
     (case [(completed? entity) (completed? new-entity)]
       [false false]
@@ -47,9 +46,8 @@
 
 (defn ident-with-tx! [special-attrs-state ctx tx]
   (let [entity @(get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data])
-        uri @(r/fmap-> (:hypercrud.browser/fiddle ctx) :fiddle/ident name
-                       (context/uri ctx))
-        schema @(runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :schemas uri])
+        dbname @(r/fmap-> (:hypercrud.browser/fiddle ctx) :fiddle/ident name)
+        schema @(runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :schemas dbname])
         new-entity (merge-in-tx entity tx ctx)]
     (case [(completed? entity) (completed? new-entity)]
       [false false]
