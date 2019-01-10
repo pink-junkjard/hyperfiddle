@@ -66,7 +66,7 @@
 
 (defn- fiddle-css-renderer [s] [:style {:dangerouslySetInnerHTML {:__html @s}}])
 
-(defn iframe-cmp [ctx {:keys [route] :as props}]    ; :: [route ctx & [?f props]]
+(defn iframe-cmp [ctx {:keys [route] :as props}]            ; :: [route ctx & [?f props]]
   (let [click-fn (or (::on-click ctx) (constantly nil))     ; parent ctx receives click event, not child frame
         either-v (or (some-> @(runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :error]) either/left)
                      (base/data-from-route route ctx))
