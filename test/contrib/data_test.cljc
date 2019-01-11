@@ -1,6 +1,6 @@
 (ns contrib.data-test
   (:require
-    [clojure.test :refer [deftest is]]
+    [clojure.test :refer [deftest is testing]]
     [contrib.string :refer [blank->nil]]
     [contrib.data :refer [xorxs
                           cond-let map-pad pad rtrim-coll fix-arity fvor take-to ungroup dissoc-nils
@@ -138,4 +138,21 @@
          #{:a}))
   (is (= nil
          (xorxs nil)))
+  )
+
+(def result (->> (iterate inc 0)
+                 (take 10)
+                 (map #(assoc {} :id %))))
+
+(last result)
+
+(deftest group-by-
+  (testing "maintains order"
+    (is (= (->> result
+                reverse
+                (contrib.data/group-by-unique-ordered :id)
+                last)
+           [0 {:id 0}]))
+
+    )
   )

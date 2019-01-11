@@ -24,6 +24,20 @@
                    (conj acc kv)))
                {})))
 
+(defn group-by-unique-ordered "Take care to never update this value, it will lose the ordered type.
+  Unused, has linear lookup, needs clj-commons/ordered which needs to be ported to CLJC."
+  [f xs]
+  (->> xs
+       (map (juxt f identity))
+       (reduce (fn [acc [k _ :as kv]]
+                 #_(if (contains? acc k)
+                     (throw (ex-info "Duplicate key" k)))
+                 (conj acc kv))
+               [])
+       flatten
+       ; Use https://github.com/clj-commons/ordered instead, array-map has linear lookups
+       (apply array-map)))
+
 (defn merge-by [f as bs]
   (->> (merge
          (group-by f as)
