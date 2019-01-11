@@ -11,7 +11,6 @@
     [hypercrud.types.QueryRequest :refer [->QueryRequest]]
     [hyperfiddle.core]
     [hyperfiddle.domain :as domain]
-    [hyperfiddle.ide]
     [hyperfiddle.ide.fiddles.schema :as schema-fiddle]
     [hyperfiddle.project :as project]
     [hyperfiddle.route :as route]
@@ -34,7 +33,7 @@
   (state [rt path] (r/cursor state-atom path))
 
   runtime/HF-Runtime
-  (runtime/domain [rt] test-domain)
+  (domain [rt] test-domain)
 
   Peer
   (hydrate [this branch request]

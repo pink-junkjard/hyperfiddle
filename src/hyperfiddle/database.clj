@@ -1,18 +1,22 @@
 (ns hyperfiddle.database
   (:require
     [datomic.api :as d]
+    [hyperfiddle.domain :as domain]
+    [hyperfiddle.domains.multi-datomic :as multi-datomic]
     [hyperfiddle.io.datomic.transact :as transact]
     [hyperfiddle.security :as security]
     [hyperfiddle.security.domains]))
 
 
 (defn build-util-domain [domains-uri]                       ; todo this is junk
-  {:domain/databases (->> (d/connect domains-uri) d/db
-                          (d/q '[:find [(pull ?e [*]) ...] :where [?e :database/uri]])
-                          (map (fn [hf-db]
-                                 {:domain.database/name (:database/uri hf-db)
-                                  :domain.database/record hf-db}))
-                          (into #{}))})
+  (let [dbs (->> (d/connect (str domains-uri)) d/db
+                 (d/q '[:find ?uri (pull ?db db-pull)
+                        :in db-pull $
+                        :where [?db :database/uri ?uri]]
+                      multi-datomic/database-pull)
+                 (into {}))]
+    (reify domain/Domain
+      (databases [domain] dbs))))
 
 (defn provision! [uri owners domains-uri subject]
   (let [domain (build-util-domain domains-uri)]             ; todo domains domain?

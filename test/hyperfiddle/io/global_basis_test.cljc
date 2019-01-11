@@ -8,13 +8,13 @@
 (deftest compare-identical []
   (is (= 0 (compare {:domain 0
                      :user {"$x" 1}}
-                    {:domain {"$domains" 0}
+                    {:domain 0
                      :user {"$x" 1}}))))
 
 (deftest compare-different-domain-t []
   (is (= -1 (compare {:domain 0
                       :user {"$x" 1}}
-                     {:domain {"$domains" 1}
+                     {:domain 1
                       :user {"$y" 1}})))
 
   (is (= 1 (compare {:domain 1

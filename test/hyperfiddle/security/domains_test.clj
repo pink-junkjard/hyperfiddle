@@ -3,6 +3,7 @@
     [clojure.test :refer [join-fixtures deftest is use-fixtures testing]]
     [datomic.api :as d]
     [hyperfiddle.database :as db]
+    [hyperfiddle.domain :as domain]
     [hyperfiddle.integration-fixtures :as fixtures]
     [hyperfiddle.io.datomic.transact :as transact]
     [hyperfiddle.security :as security]
@@ -53,8 +54,8 @@
                           :custom-security {:server (str `hyperfiddle.security.domains/server)})]))
 
 (defn process-tx [domains-uri subject hf-db-uri tx]
-  (let [hf-db (-> (d/db (d/connect (str domains-uri)))
-                  (d/entity [:database/uri hf-db-uri]))]
+  (let [hf-db (-> (db/build-util-domain domains-uri)
+                  (domain/database hf-db-uri))]
     (transact/process-tx hf-db subject tx)))
 
 (defn transact! [domains-uri subject tx-groups]

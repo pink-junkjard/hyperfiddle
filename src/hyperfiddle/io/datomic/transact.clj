@@ -10,13 +10,14 @@
 
 (let [memoized-eval-string!+ (memoize eval/eval-expr-str!+)]
   (defn process-tx [hf-db subject tx]
-    (let [f (case (:database/write-security hf-db ::security/allow-anonymous) ; todo yank this default
+    (let [f (case (get-in hf-db [:database/write-security :db/ident] ::security/allow-anonymous) ; todo yank this default
               ::security/owner-only security/write-owner-only
               ::security/authenticated-users-only security/write-authenticated-users-only
               ::security/allow-anonymous security/write-allow-anonymous
               ::security/custom (-> (memoized-eval-string!+ (:database.custom-security/server hf-db))
                                     (either/branch
                                       (fn [e]
+                                        (timbre/debug (:database.custom-security/server hf-db))
                                         (timbre/error e)
                                         (throw (ex-info "Misconfigured database security" {:hyperfiddle.io/http-status-code 500
                                                                                            :uri (:database/uri hf-db)

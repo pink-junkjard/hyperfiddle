@@ -2,7 +2,9 @@
   (:require
     [cats.monad.exception :as exception]
     [clojure.test :refer [deftest is use-fixtures]]
+    [contrib.uri :refer [->URI]]
     [datomic.api :as d]
+    [hyperfiddle.domain :as domain]
     [hyperfiddle.io.datomic.hydrate-requests :as datomic-hydrate-requests]))
 
 
@@ -10,8 +12,9 @@
 (def test-dbname "$test")
 
 (def test-domain
-  {:domain/databases #{{:domain.database/name test-dbname
-                        :domain.database/record {:database/uri test-uri}}}})
+  (reify domain/Domain
+    (databases [domain]
+      {test-dbname {:database/uri (->URI test-uri)}})))
 
 (def schema [{:db/ident :person/name
               :db/valueType :db.type/string

@@ -9,18 +9,19 @@
     [promesa.core :as p]))
 
 
+(def database-pull
+  [:database/uri
+   :database.custom-security/client
+   :database.custom-security/server
+   {:database/write-security [:db/ident]}
+   :hyperfiddle/owners])
+
 (def domain-pull
   [:db/id
    :hyperfiddle/owners
    {:domain/databases [:domain.database/name
-                       {:domain.database/record [:database/uri
-                                                 :database.custom-security/client
-                                                 {:database/write-security [:db/ident]}
-                                                 :hyperfiddle/owners]}]
-    :domain/fiddle-database [:database/uri
-                             :database.custom-security/client
-                             {:database/write-security [:db/ident]}
-                             :hyperfiddle/owners]}
+                       {:domain.database/record database-pull}]
+    :domain/fiddle-database database-pull}
    :domain/disable-javascript
    :domain/environment
    :domain/ident
