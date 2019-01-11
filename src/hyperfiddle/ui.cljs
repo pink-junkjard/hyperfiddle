@@ -338,7 +338,7 @@ User renderers should not be exposed to the reaction."
          (into [:tbody] (for [ctx (hypercrud.browser.context/spread-rows ctx #(sort/sort-fn % sort-col))]
                           (let [cs (columns ctx)]
                             (into
-                              [:tr {:key (:hypercrud.browser/row-key ctx)}]
+                              [:tr {:key (str (:hypercrud.browser/result-path ctx))}]
                               cs))))]))))
 
 (defn hint [val {:keys [hypercrud.browser/fiddle] :as ctx} props]

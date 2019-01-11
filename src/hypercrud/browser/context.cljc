@@ -37,7 +37,7 @@
                 :hypercrud.browser/schemas
                 :hypercrud.browser/schema
                 :hypercrud.browser/link-index
-                :hypercrud.browser/data
+                :hypercrud.browser/result                   ; collapse with data-index? also manipulated to drive head-or-body
                 :hypercrud.browser/data-index
                 :hypercrud.browser/fiddle
                 :hypercrud.browser/qfind
@@ -68,7 +68,7 @@
 
           :hypercrud.browser/attr-renderers
           :hypercrud.browser/schemas
-          :hypercrud.browser/data
+          :hypercrud.browser/result
           :hypercrud.browser/data-index
           :hypercrud.browser/link-index
           :hypercrud.browser/fiddle
@@ -114,7 +114,7 @@
 (defn dbname [ctx]
   (some-> (:hypercrud.browser/element ctx) deref :source :symbol str))
 
-(defn uri
+(defn uri                                                   ; equivalent to element or schema, i think?
   ([ctx] (uri (dbname ctx) ctx))
   ([dbname ctx] (some-> dbname (domain/dbname->uri (:hypercrud.browser/domain ctx)))))
 
@@ -162,19 +162,7 @@
   (runtime/state (:peer ctx) (concat [::runtime/partitions (:branch ctx) :schemas (uri ctx)] (cons ident ?more-path))))
 
 (defn- set-parent [ctx]
-  (assoc ctx :hypercrud.browser/parent (dissoc ctx :hypercrud.browser/data)))
-
-(defn- set-parent-data [ctx]
-  (update ctx :hypercrud.browser/parent (fnil into {}) (select-keys ctx [:hypercrud.browser/data])))
-
-(defn identify [ctx]                                        ; legacy
-  {:post [(not (map? %))]}
-  ; When looking at an attr of type ref, figure out it's identity, based on all the ways it can be pulled.
-  ; What if we pulled children without identity? Then we can't answer the question (should assert this)
-  (if-let [data (:hypercrud.browser/data ctx)]              ; Guard is for txfn popover call site
-    (or @(contrib.reactive/cursor data [:db/ident])
-        @(contrib.reactive/cursor data [:db/id])
-        @data)))
+  (assoc ctx :hypercrud.browser/parent (dissoc ctx :hypercrud.browser/result :hypercrud.browser/result-indexed)))
 
 (defn stable-entity-key "Like smart-entity-identifier but reverses top layer of tempids to stabilize view keys in branches. You
   must pull db/id to trigger tempid detection! Don't use this in labels."
@@ -216,10 +204,11 @@
                                                          (r/ctxf contrib.datomic/result-enclosure ctx
                                                                  :hypercrud.browser/schemas
                                                                  :hypercrud.browser/qfind
-                                                                 :hypercrud.browser/data)))
+                                                                 :hypercrud.browser/result)))
+        ; flag for nested
         (assoc ctx :hypercrud.browser/validation-hints (contrib.validation/validate
                                                          (s/get-spec @(r/fmap :fiddle/ident (:hypercrud.browser/fiddle ctx)))
-                                                         @(:hypercrud.browser/data ctx)
+                                                         @(:hypercrud.browser/result ctx)
                                                          (partial row-keyfn ctx)))
         (assoc ctx :hypercrud.browser/eav (r/apply hypercrud.browser.context/stable-eav-a
                                                    [(:hypercrud.browser/eav ctx)
@@ -231,23 +220,12 @@
       (hypercrud.browser.context/fiddle ctx))
     ctx))
 
-(defn get' "flipped arg order, for reactive partial"
-  ([k o] (get o k))
-  ([k o not-found] (get o k not-found)))
-
-(defn stable-tupled-v-extractor [i ?r-data]
-  {:pre [i #_(r/reactive? ?r-data)]                         ; It's a tuple (already spread row)
-   :post [#_(every? some? @%)]}
-  (when ?r-data                                             ; headers
-    #_(r/fmap->> ?r-data (mapv (r/partial get' i)))
-    (r/fmap-> ?r-data (get i))))
-
 (defn stable-element-schema [schemas element]
   {:post [%]}
   (let [{{db :symbol} :source {pull-pattern :value} :pattern} element]
     (get schemas (str db))))
 
-(defn element [ctx i]                                   ; [nil :seattle/neighborhoods 1234345]
+(defn element [ctx i]                                       ; [nil :seattle/neighborhoods 1234345]
   {:pre [#_(s/assert r/reactive? (:hypercrud.browser/qfind ctx)) ; can be inferred
          #_(s/assert nil? (:hypercrud.browser/element ctx))
          #_(do (println "element: " i) true)
@@ -266,12 +244,9 @@
                                                      :hypercrud.browser/element))
         (assoc ctx :hypercrud.browser/pull-enclosure (r/fmap-> (:hypercrud.browser/result-enclosure ctx)
                                                                (get i)))
-        (let [{data :hypercrud.browser/data} ctx]           ; head vs body
-          (if data
-            (update ctx :hypercrud.browser/data (condp some [(type @(:hypercrud.browser/qfind ctx))]
-                                                  #{FindRel FindTuple} (r/partial stable-tupled-v-extractor i)
-                                                  #{FindColl FindScalar} identity))
-            ctx))))
+        (condp some [(type @(:hypercrud.browser/qfind ctx))]
+          #{FindRel FindTuple} (assoc ctx :hypercrud.browser/result-path update conj i)
+          #{FindColl FindScalar} ctx)))
 
 (defn -infer-implicit-element "auto-focus single elements - legacy field path compat"
   [ctx]
@@ -286,40 +261,34 @@
          (s/assert r/reactive? (:hypercrud.browser/element ctx))]}
   ctx)
 
-(defn attribute [ctx a]
-  {:pre [#_(s/assert r/reactive? (:hypercrud.browser/pull-enclosure ctx)) ; can be inferred
-         (s/assert :hypercrud/context ctx)
-         (s/assert keyword? a)
-         #_(do (println "attribute: " a) true)
-         #_(do (println "... data pre: " (pr-str (some-> (:hypercrud.browser/data ctx) deref))) true)]
-   :post [(s/assert :hypercrud/context %)
-          #_(do (println (:hypercrud.browser/pull-enclosure %)) true)
-          #_(do (println "... data post: " (pr-str (some-> (:hypercrud.browser/data %) deref))) true)]}
-  (as->
-    ctx ctx
-    (-infer-implicit-fiddle ctx)
-    (-infer-implicit-element ctx)
-    (-validate-qfind-element ctx)
-    (set-parent ctx)
-    (update ctx :hypercrud.browser/path conj a)
-    (assoc ctx :hypercrud.browser/pull-enclosure (r/fmap->> (:hypercrud.browser/pull-enclosure ctx)
-                                                            (contrib.datomic/pull-shape-refine a)))
-    (case (if (:hypercrud.browser/data ctx) :body :head)
-      :head (assoc ctx :hypercrud.browser/eav (r/fmap-> (:hypercrud.browser/eav ctx) (stable-eav-a a)))
-      :body (let [r-data (r/fmap a (:hypercrud.browser/data ctx))] ; track a resultpath instead?
-              (-> (set-parent-data ctx)
-                  (update :hypercrud.browser/validation-hints #(for [[[p & ps] hint] % :when (= p a)]
-                                                                 [ps hint]))
-                  (assoc :hypercrud.browser/data r-data)
-                  ; V cardinality :many is fucked here. Query by EA if :many renderer?
-                  (assoc :hypercrud.browser/eav (case (contrib.datomic/cardinality @(:hypercrud.browser/schema ctx) a)
-                                                  ; insufficent stability on r-?v, fixme
-                                                  :db.cardinality/many (r/fmap-> (:hypercrud.browser/eav ctx) (stable-eav-a a))
-                                                  :db.cardinality/one (let [r-?v (r/fmap->> r-data (smart-entity-identifier ctx))] ; flagged
-                                                                        ; v may be nil - sparse resultset
-                                                                        (r/fmap-> (:hypercrud.browser/eav ctx) (stable-eav-av a @r-?v))))
-
-                         ))))))
+(defn attribute [ctx a']
+  {:pre [(s/assert :hypercrud/context ctx)
+         (s/assert keyword? a')]
+   :post [(s/assert :hypercrud/context %)]}
+  ; (r/fmap-> (:hypercrud.browser/data-index ctx) (apply [k]))
+  (let [{:keys [:hypercrud.browser/path
+                :hypercrud.browser/result-path]} ctx
+        result-path (conj result-path a')
+        [e a ?v] @(:hypercrud.browser/eav ctx)              ; ?v indicates head-or-body
+        ?r-data (if ?v (r/cursor (:hypercrud.browser/result-indexed ctx) result-path))
+        ?v' (if ?r-data (smart-entity-identifier ctx @?r-data))] ; v nil in head, maybe nil in :body (sparse resultset)
+    (as->
+      ctx ctx
+      (-infer-implicit-fiddle ctx)                          ; ensure result-enclosure
+      (-infer-implicit-element ctx)                         ; ensure pull-enclosure
+      (-validate-qfind-element ctx)
+      (set-parent ctx)
+      (update ctx :hypercrud.browser/path conj a')
+      (if ?v (update ctx :hypercrud.browser/result-path conj a') ctx)
+      (assoc ctx :hypercrud.browser/pull-enclosure (r/fmap->> (:hypercrud.browser/pull-enclosure ctx)
+                                                              (contrib.datomic/pull-shape-refine a')))
+      (assoc ctx :hypercrud.browser/eav                     ; insufficent stability on r-?v? fixme
+                 (case (contrib.datomic/cardinality @(:hypercrud.browser/schema ctx) a')
+                   :db.cardinality/many (r/fmap-> (:hypercrud.browser/eav ctx) (stable-eav-a a'))
+                   :db.cardinality/one (r/fmap-> (:hypercrud.browser/eav ctx) (stable-eav-av a' ?v'))))
+      (if ?v (update ctx :hypercrud.browser/validation-hints #(for [[[p & ps] hint] % :when (= p a')]
+                                                                [ps hint]))
+             ctx))))
 
 (defn focus "Unwind or go deeper, to where we need to be, within same dimension.
     Throws if you focus a higher dimension.
@@ -344,9 +313,7 @@
           #_(do (println (:hypercrud.browser/data ctx)) true)]}
   (-> ctx
       (set-parent)
-      (set-parent-data)
-      (assoc :hypercrud.browser/row-key k)
-      (assoc :hypercrud.browser/data (r/fmap-> (:hypercrud.browser/data-index ctx) (apply [k]))) ; no change in eav
+      (update :hypercrud.browser/result-path conj k)        ; no change in eav
       (update :hypercrud.browser/validation-hints #(for [[[p & ps] hint] % :when (= k p)]
                                                      [ps hint]))))
 
@@ -358,17 +325,40 @@
       #{:blank} []                                          ; don't we want the eav?
       #{:query :entity} [(hypercrud.browser.context/fiddle ctx)])))
 
+(defn result-index [{:keys [:hypercrud.browser/result] :as ctx} keyfn]
+  (let [r (r/fmap (r/partial contrib.data/group-by-unique keyfn) result)]
+    (assoc ctx :hypercrud.browser/result-indexed r)))
+
+(defn data [ctx]
+  (r/cursor (:hypercrud.browser/result-indexed ctx)
+            (:hypercrud.browser/result-path ctx)))
+
 (defn ^:export spread-rows "spread across resultset row-or-rows.
   Automatically accounts for query dimension - no-op in the case of FindTuple and FindScalar."
   [ctx & [sort-fn]]
   {:pre [(:hypercrud.browser/qfind ctx)
          (s/assert :hypercrud/context ctx)
-         #_(not (:hypercrud.browser/element ctx))]}           ; not yet, except in recursive case
+         #_(not (:hypercrud.browser/element ctx))]}         ; not yet, except in recursive case
   (let [{r-eav :hypercrud.browser/eav
          r-data :hypercrud.browser/data} ctx
         [e a v :as eav] @r-eav]
     ; Are we at the top relation, or are we in the graph?
     (cond
+      (not a)
+      (let [{r-qfind :hypercrud.browser/qfind} ctx]
+        (condp some [(type @r-qfind)]
+          ; sorting doesn't index keyfn lookup by design
+          #{FindRel FindColl}
+          (let [keyfn (partial row-keyfn ctx)
+                ctx (result-index ctx keyfn)                      ; not all results need to be indexed
+                sort-fn (or sort-fn identity)]
+            ; Rows are ordered, but the result value is indexed for lookup (not order)
+            ; So drive index-key by row order
+            (for [k (->> (sort-fn (:hypercrud.browser/result ctx)) ; client side sorting – should happen in backend
+                         (map keyfn))]
+              (row ctx k)))
+          #{FindTuple FindScalar} [ctx]))
+
       (and a #_(contrib.datomic/cardinality? @(:hypercrud.browser/schema ctx) a :db.cardinality/many))
       (for [[_ k] (->> (r/fmap (or sort-fn identity) r-data)
                        (r/unsequence (r/partial stable-entity-key ctx)))]
@@ -377,13 +367,7 @@
       ;(and a (contrib.datomic/cardinality? @(:hypercrud.browser/schema ctx) a :db.cardinality/one))
       ;(assert false (str "can't spread-rows on eav: " eav))
 
-      (not a)
-      (let [{r-qfind :hypercrud.browser/qfind} ctx]
-        (condp some [(type @r-qfind)]
-          #{FindRel FindColl} (for [[_ k] (->> (r/fmap (or sort-fn identity) r-data)
-                                               (r/unsequence (r/partial row-keyfn ctx)))]
-                                (row ctx k))
-          #{FindTuple FindScalar} [ctx])))))
+      )))
 
 (defn ^:export spread-elements "yields a ctx foreach element.
   All query dimensions have at least one element."
@@ -617,7 +601,9 @@
 
 (defn tempid "stable" [ctx]
   ; recurse all the way up the path? just data + parent-data is relative not fully qualified, which is not unique
-  (-> (str (:hypercrud.browser/path ctx) "."
-           (hash-ctx-data (:hypercrud.browser/parent ctx)) "."
-           (hash-ctx-data ctx))
-      hash str))
+  ; is this just eav?
+  (str @(:hypercrud.browser/eav ctx))
+  #_(-> (str (:hypercrud.browser/path ctx) "."
+             (hash-ctx-data (:hypercrud.browser/parent ctx)) "."
+             (hash-ctx-data ctx))
+        hash str))

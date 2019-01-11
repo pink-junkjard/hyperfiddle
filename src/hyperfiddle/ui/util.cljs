@@ -9,22 +9,23 @@
     [hyperfiddle.runtime :as runtime]))
 
 
-(defn entity-change->tx
-  ([ctx n]
-   (let [entity @(get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data])
-         attr-ident (last (:hypercrud.browser/path ctx))
-         {:keys [:db/cardinality :db/valueType]} @(context/hydrate-attribute ctx attr-ident)
-         o (if (not= (:db/ident valueType) :db.type/ref)
-             (get entity attr-ident)
-             (case (:db/ident cardinality)
-               :db.cardinality/one (context/smart-entity-identifier ctx (get entity attr-ident))
-               :db.cardinality/many (map (partial context/smart-entity-identifier ctx) (get entity attr-ident))))]
-     (entity-change->tx ctx o n)))
+(defn entity-change->tx                                     ; :Many editor is probably not idiomatic
+  ([ctx vorvs]
+    ; wut is going on with eav here in :many case
+    ; the parent would still be in scope i guess
+   (let [[e a v] @(:hypercrud.browser/eav ctx)              ; is this set yet in the :card :many case?
+         {{valueType :db/ident} :db/valueType {cardinality :db/ident} :db/cardinality} @(context/hydrate-attribute ctx a)
+         o (if (not= :db.type/ref valueType)
+             v                                              ;(get entity a)      ; scalar
+             (case cardinality
+               :db.cardinality/one v                        ;(context/smart-entity-identifier ctx (get entity a))
+               :db.cardinality/many (map (partial context/smart-entity-identifier ctx) vorvs)))]
+     (entity-change->tx ctx o vorvs)))
   ([ctx o n]
-   (let [id @(r/fmap (r/partial context/smart-entity-identifier ctx) (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data]))
-         attribute @(context/hydrate-attribute ctx (last (:hypercrud.browser/path ctx)))
+   (let [[e a v] @(:hypercrud.browser/eav ctx)
+         attr @(context/hydrate-attribute ctx a)
          n (empty->nil n)]                                  ; hack for garbage string controls
-     (tx/edit-entity id attribute o n))))
+     (tx/edit-entity e attr o n))))
 
 (defn with-tx!
   ([ctx tx]
@@ -40,5 +41,5 @@
 (defn writable-entity? [ctx]
   (and
     ; If the db/id was not pulled, we cannot write through to the entity
-    (boolean @(r/fmap :db/id (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data] (r/track identity nil))))
+    (boolean (let [[e a v] @(:hypercrud.browser/eav ctx)] e))
     @(r/track security/writable-entity? (:hypercrud.browser/parent ctx))))

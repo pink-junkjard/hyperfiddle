@@ -89,7 +89,7 @@
     [select-error-cmp "Only fiddle type `query` is supported for select options"]))
 
 (defn compute-disabled [ctx props]
-  (let [entity (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data])] ; how can this be loading??
+  (let [entity (hypercrud.browser.context/data ctx)]        ; how can this be loading??
     (or (boolean (:disabled props))
         (boolean (:read-only props))                        ; legacy
         ; no value at all
@@ -103,7 +103,7 @@
         (return
           (let [default-props {:on-change (with-entity-change! ctx)}
                 props (-> (merge default-props props)
-                          (assoc :value (str (context/identify ctx)))) ; eav
+                          (assoc :value (str (let [[e] @(:hypercrud.browser/eav ctx)] e))))
                 props (-> (select-keys props [:class])
                           (assoc :user-renderer (r/partial select-view-validated select-anchor-renderer' props {:disabled (compute-disabled ctx props)})))
                 ctx (assoc ctx

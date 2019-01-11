@@ -38,7 +38,7 @@
                  (let [[e a v] @(:hypercrud.browser/eav ctx)]
                    (if @(context/hydrate-attribute ctx a :db/isComponent)
                      (parent-m (:hypercrud.browser/parent ctx))
-                     (some-> (:hypercrud.browser/data ctx) deref))))
+                     (some-> (hypercrud.browser.context/data ctx) deref))))
       new-entity? (fn new-entity? [peer uri dbid branch]
                     (or (contrib.datomic/tempid? dbid)
                         (some-> @(runtime/state peer [::runtime/partitions branch :tempid-lookups uri])

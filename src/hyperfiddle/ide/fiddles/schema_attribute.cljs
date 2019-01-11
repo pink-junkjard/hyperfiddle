@@ -24,7 +24,7 @@
           tx))
 
 (defn valueType-and-cardinality-with-tx! [special-attrs-state ctx tx]
-  (let [entity @(get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data])
+  (let [entity @(hypercrud.browser.context/data ctx)
         uri @(r/fmap-> (:hypercrud.browser/fiddle ctx) :fiddle/ident name
                        (context/uri ctx))
         schema @(runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :schemas uri])
@@ -46,7 +46,7 @@
       (with-tx! ctx tx))))
 
 (defn ident-with-tx! [special-attrs-state ctx tx]
-  (let [entity @(get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data])
+  (let [entity @(hypercrud.browser.context/data ctx)
         uri @(r/fmap-> (:hypercrud.browser/fiddle ctx) :fiddle/ident name
                        (context/uri ctx))
         schema @(runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :schemas uri])

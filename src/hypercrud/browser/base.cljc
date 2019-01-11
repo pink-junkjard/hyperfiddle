@@ -86,16 +86,15 @@
     [r-fiddle request ctx]
     ; Blow mlet in case of (right _) -> (left _), but don't recompute if (right :a) -> (right :b).
     (mlet [reactive-attrs @(r/apply-inner-r (project/hydrate-attrs ctx))
-           reactive-result @(r/apply-inner-r (r/track nil-or-hydrate (:peer ctx) (:branch ctx) request))
+           r-result @(r/apply-inner-r (r/track nil-or-hydrate (:peer ctx) (:branch ctx) request))
            :let [#_#_sort-fn (hyperfiddle.ui.sort/sort-fn % sort-col)
                  r-schemas (r/track context/summon-schemas-grouped-by-dbname ctx)
-                 keyfn (r/partial hypercrud.browser.context/row-keyfn ctx)
                  ctx (assoc ctx
                        :hypercrud.browser/attr-renderers reactive-attrs
                        :hypercrud.browser/schemas r-schemas
-                       :hypercrud.browser/data reactive-result
-                       ; sorting doesn't index keyfn lookup by design
-                       :hypercrud.browser/data-index (r/fmap->> reactive-result (contrib.data/group-by-unique keyfn))
+                       :hypercrud.browser/result r-result ; this one SHOULD be sorted out of jvm, though isn't yet
+                       ; Don't compute result-indexed yet, because it might not even be a collection
+                       :hypercrud.browser/result-path []
                        ;:hypercrud.browser/datascript (contrib.datomic/datascript-from-result @reactive-result @r-schemas)
                        :hypercrud.browser/fiddle r-fiddle
                        :hypercrud.browser/link-index (r/fmap hypercrud.browser.context/-indexed-links-at r-fiddle)

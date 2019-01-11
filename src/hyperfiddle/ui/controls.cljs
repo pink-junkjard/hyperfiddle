@@ -229,8 +229,7 @@
                                   :on-change (with-entity-change! ctx)))]))))))
 
 (defn -magic-new-change! [state ctx #_ov v]
-  (let [e @(r/fmap (r/partial context/smart-entity-identifier ctx)
-                   (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data]))]
+  (let [[e _ _] @(:hypercrud.browser/eav ctx)]
     (with-tx! ctx [[:db/add e @state v]])))
 
 (defn magic-new [val ctx props]
