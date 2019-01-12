@@ -26,8 +26,8 @@
         customHeaders nil]
     (OAuth2. clientID clientSecret baseSite authorizationUrl tokenUrl customHeaders)))
 
-(defn fetch-id-token [env hostname oauth-authorization-code]
-  (let [redirect-uri (str "http://" hostname (bidi/path-for (routes/build (:BUILD env)) :auth0-redirect))]
+(defn fetch-id-token [env service-uri oauth-authorization-code]
+  (let [redirect-uri (str service-uri (bidi/path-for (routes/build (:BUILD env)) :auth0-redirect))]
     (p/promise (fn [resolve! reject!]
                  (.getOAuthAccessToken
                    (oauth2 env) oauth-authorization-code #js {"grant_type" "authorization_code"
@@ -35,8 +35,8 @@
                    (fn [e access_token refresh_token params]
                      (if e (reject! e) (resolve! (object/get params "id_token")))))))))
 
-(defn login [env hostname io oauth-authorization-code]
-  (mlet [encoded-id-token (fetch-id-token env hostname oauth-authorization-code)
+(defn login [env service-uri io oauth-authorization-code]
+  (mlet [encoded-id-token (fetch-id-token env service-uri oauth-authorization-code)
          id-token ((jwt/build-verifier (:AUTH0_CLIENT_SECRET env) (str (:AUTH0_DOMAIN env) "/")) encoded-id-token)
          basis (io/sync io #{"$users"})
          user-record (->> (map->EntityRequest {:e [:user/sub (:sub id-token)]
@@ -51,6 +51,6 @@
                                                 :user/last-seen (js/Date. (js/Date.now))
                                                 :user/user-id user-id}
                                          (nil? (:user/created-date user-record)) (assoc :user/created-date (js/Date.)))]})]
-        (-> (assoc id-token :user-id (str user-id))
-            (jwt/sign (:AUTH0_CLIENT_SECRET env))               ; todo maybe use a different secret to sign
-            (return))))
+    (-> (assoc id-token :user-id (str user-id))
+        (jwt/sign (:AUTH0_CLIENT_SECRET env))               ; todo maybe use a different secret to sign
+        (return))))
