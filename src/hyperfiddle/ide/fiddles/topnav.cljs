@@ -24,11 +24,15 @@
   [:div props
    [:div.left-nav
     [tooltip {:label "Home"} [:a {:href "/"} (domain/ident (runtime/domain (:peer ctx)))]]
-    (let [fiddle-ident (first (hyperfiddle.ide/user-route ctx))
-          ; domain editor doesn't target a fiddle at all, and some fiddles are named by uuid
-          fiddle-name (if (keyword? fiddle-ident) (name fiddle-ident))]
-      [tooltip {:label fiddle-name}
-       [:span fiddle-name]])
+    [:span (let [[fiddle-ident :as route] @(runtime/state (:peer ctx) [::runtime/partitions nil :route])]
+             (cond
+               (= fiddle-ident :hyperfiddle.ide/edit) (let [[_ [user-fiddle-ident]] route]
+                                                        (str "Editing: "
+                                                             (if (keyword? user-fiddle-ident)
+                                                               (name user-fiddle-ident)
+                                                               user-fiddle-ident)))
+               (keyword? fiddle-ident) (name fiddle-ident)
+               :else fiddle-ident))]
     (let [props {:tooltip [nil "Fiddles in this domain"]
                  :iframe-as-popover true}]
       [ui/link :fiddle-shortcuts ctx "index" props])]

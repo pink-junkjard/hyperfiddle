@@ -11,7 +11,6 @@
     [hypercrud.types.QueryRequest :refer [->QueryRequest]]
     [hyperfiddle.domain :as domain]
     [hyperfiddle.domains.multi-datomic :as multi-datomic]
-    [hyperfiddle.ide]
     [hyperfiddle.io.core :as io]
     [hyperfiddle.route :as route]
     [promesa.core :as p]))
@@ -82,8 +81,12 @@
       (p/then (fn [local-basis]
                 (if-let [app-domain-ident (some #(second (re-find (re-pattern (str "^(.*)\\." % "$")) fqdn)) app-domains)]
                   (multi-datomic/hydrate-app-domain io local-basis [:domain/ident app-domain-ident])
-                  (if-let [app-domain-ident (some #(second (re-find (re-pattern (str "^(.*)\\." % "$")) fqdn)) ide-domains)]
+                  (if-let [[app-domain-ident ide-domain] (->> ide-domains
+                                                              (map #(re-pattern (str "^(.*)\\.(" % ")$")))
+                                                              (some #(re-find % fqdn))
+                                                              rest)]
                     (if (= "www" app-domain-ident)          ; todo this check is NOT ide
                       (multi-datomic/hydrate-app-domain io local-basis [:domain/ident "www"])
-                      (hydrate-ide-domain io local-basis app-domain-ident))
+                      (-> (hydrate-ide-domain io local-basis app-domain-ident)
+                          (p/then #(assoc % :fqdn fqdn :ide-domain ide-domain))))
                     (multi-datomic/hydrate-app-domain io local-basis [:domain/aliases fqdn])))))))
