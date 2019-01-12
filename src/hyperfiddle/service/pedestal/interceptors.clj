@@ -138,8 +138,9 @@
 (defn with-user-id [jwt-secret jwt-issuer]
   {:name ::with-user-id
    :enter (fn [context]
-            context
-            #_(let [#_#_{:keys [jwt-secret jwt-issuer]} (-> (get-in context [:request :domain])
+            (if-not (= "hyperfiddle" (domain/ident (get-in context [:request :domain])))
+              context
+              (let [#_#_{:keys [jwt-secret jwt-issuer]} (-> (get-in context [:request :domain])
                                                             domain/environment-secure :jwt)
                     verify (jwt/build-verifier jwt-secret jwt-issuer)
                     jwt-cookie (get-in context [:request :cookies "jwt" :value])
@@ -157,8 +158,7 @@
                          (timbre/error e)
                          (-> (terminate context)
                              (assoc :response {:status 401
-                                               :cookies {"jwt" (-> (get-in context [:request :domain])
-                                                                   (domain/auth-root)
+                                               :cookies {"jwt" (-> (get-in context [:request :domain :ide-domain])
                                                                    (cookie/jwt-options-pedestal)
                                                                    (assoc :value jwt-cookie
                                                                           :expires "Thu, 01 Jan 1970 00:00:00 GMT"))}
@@ -172,7 +172,7 @@
                              (assoc :response {:status 401 :body (->Err (.getMessage e))}))))
 
                   :else (-> (terminate context)
-                            (assoc :response {:status 400 :body (->Err "Conflicting cookies and auth bearer")})))))})
+                            (assoc :response {:status 400 :body (->Err "Conflicting cookies and auth bearer")}))))))})
 
 (defn with-user []
   {:name ::with-user

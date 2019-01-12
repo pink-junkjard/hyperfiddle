@@ -56,8 +56,9 @@
 
 (defn with-user-id [jwt-secret jwt-issuer]
   (fn [req res next]
-    (next)
-    #_(let [#_#_{:keys [jwt-secret jwt-issuer]} (-> (get-in context [:request :domain])
+    (if-not (= "hyperfiddle" (domain/ident (object/get req "domain")))
+      (next)
+      (let [#_#_{:keys [jwt-secret jwt-issuer]} (-> (get-in context [:request :domain])
                                                     domain/environment-secure :jwt)
             verify (jwt/build-verifier jwt-secret jwt-issuer)]
         ; todo support auth bearer
@@ -70,12 +71,13 @@
             (timbre/error e)
             (doto res
               (.status 401)
-              (.clearCookie "jwt" (-> (domain/auth-root (object/get req "domain"))
-                                      (cookie/jwt-options-express)
+              (.clearCookie "jwt" (-> (object/get req "domain")
+                                      (get :ide-domain)
+                                      cookie/jwt-options-express
                                       clj->js))
               (.format #js {"application/transit+json" #(.send res (transit/encode (->Err (ex-message e))))
                             ; todo flesh out a real session expiration page
-                            "text/html" #(.send res "Session expired, please refresh and login")})))))))
+                            "text/html" #(.send res "Session expired, please refresh and login")}))))))))
 
 (defn with-user []
   (fn [req res next]
