@@ -149,7 +149,7 @@
             (name (context/segment-type-2 a))
             (string/join "/" (:hypercrud.browser/pull-path ctx)) ; legacy unique selector for each location
             (->> (:hypercrud.browser/pull-path ctx)              ; actually generate a unique selector for each location
-                 (cons :hypercrud.browser/pull-path)             ; need to prefix the path with something to differentiate between attr and single attr paths
+                 (cons :hypercrud.browser/pull-path)             ; path prefix differentiates between attr and single attr paths
                  (string/join "/"))]
            (when (context/attribute-segment? a)
              [@(context/hydrate-attribute ctx a :db/valueType :db/ident)
@@ -185,7 +185,8 @@ User renderers should not be exposed to the reaction."
                  (map pr-str) (interpose " ") (apply str))))
         (validated-route-tooltip-props [r+?route link-ref ctx props] ; link is for validation
           ; this is a fine place to eval, put error message in the tooltip prop
-          ; each prop might have special rules about his default, for example :visible is default true, does this get handled here?
+          ; each prop might have special rules about his default, for example :visible is default true,
+          ; does this get handled here?
           (let [+route (>>= @r+?route #(routing/validated-route+ (:link/fiddle @link-ref) % ctx))
                 errors (->> [+route] (filter either/left?) (map cats/extract) (into #{}))
                 ?route (unwrap (constantly nil) +route)]
@@ -210,7 +211,8 @@ User renderers should not be exposed to the reaction."
     {:pre [link-ref (r/reactive? link-ref)]}
     (let [visual-ctx ctx
           [ctx r+?route] (context/refocus' ctx link-ref)    ; route reaction isn't even real
-          style {:color nil #_(connection-color ctx (cond (hyperfiddle.ide.console-links/system-link? (:db/id @link-ref)) 60 :else 40))}
+          style {:color nil #_(connection-color ctx (cond (hyperfiddle.ide.console-links/system-link?
+                                                            (:db/id @link-ref)) 60 :else 40))}
           props (update props :style #(or % style))
           has-tx-fn @(r/fmap-> link-ref :link/tx-fn blank->nil boolean)
           is-iframe @(r/fmap->> link-ref :link/class (some #{:hf/iframe}))]
@@ -224,13 +226,14 @@ User renderers should not be exposed to the reaction."
         (or has-tx-fn (and is-iframe (:iframe-as-popover props)))
         (let [props (-> @(r/track validated-route-tooltip-props r+?route link-ref ctx props)
                         (dissoc :iframe-as-popover)
-                        (update :class css "hyperfiddle")   ; should this be in popover-cmp? what is this class? – unify with semantic css
+                        (update :class css "hyperfiddle")   ; should this be in popover-cmp? unify with semantic css
                         (update :disabled #(or % (disabled? link-ref ctx))))
               label @(r/track prompt link-ref ?label)]
           [popover-cmp link-ref ctx visual-ctx props label])
 
         is-iframe
-        [stale/loading (stale/can-be-loading? ctx) (fmap #(route/assoc-frag % (:frag props)) @r+?route) ; what is this frag noise?
+        [stale/loading (stale/can-be-loading? ctx)
+         (fmap #(route/assoc-frag % (:frag props)) @r+?route) ; what is this frag noise?
          (fn [e] [(ui-error/error-comp ctx) e])
          (fn [route]
            (let [iframe (or (::custom-iframe props) iframe-cmp)]
@@ -249,8 +252,10 @@ User renderers should not be exposed to the reaction."
                    [anchor ctx props @(r/track prompt link-ref ?label)])])
         ))))
 
-(defn ^:export link "Relation level link renderer. Works in forms and lists but not tables." ; this is dumb, use a field renderer
-  [corcs ctx & [?label props]]                              ; path should be optional, for disambiguation only. Naked can be hard-linked in markdown?
+(defn ^:export link "Relation level link renderer. Works in forms and lists but not tables.
+  path should be optional, for disambiguation only. Naked can be hard-linked in markdown?
+  This is dumb, use a field-renderer"
+  [corcs ctx & [?label props]]
   (either/branch
     (data/select+ ctx corcs)
     #(vector :span %)
@@ -288,7 +293,8 @@ User renderers should not be exposed to the reaction."
     :head [:th {:class (css "field" (:class props))         ; hoist
                 :style {:background-color (connection-color ctx)}}
            [Head nil ctx (-> props
-                             (update :class css (when (sort/sortable? ctx) "sortable") (some-> (sort/sort-direction (:hypercrud.browser/pull0path ctx) ctx) name))
+                             (update :class css (when (sort/sortable? ctx) "sortable")
+                                     (some-> (sort/sort-direction (:hypercrud.browser/pull-path ctx) ctx) name))
                              (assoc :on-click (r/partial sort/toggle-sort! (:hypercrud.browser/pull-path ctx) ctx)))]]
     ; Field omits [] but table does not, because we use it to specifically draw repeating anchors with a field renderer.
     :body [:td {:class (css "field" (:class props))
@@ -313,7 +319,8 @@ User renderers should not be exposed to the reaction."
 (defn columns [relpath ui-field ctx & [props]]
   (concat
     ; questionable enclosing-pull-shape here
-    (for [[k] (map vector (contrib.datomic/pull-level @(:hypercrud.browser/pull-enclosure ctx)) #_(hyperfiddle.api/spread-pull ctx))]
+    (for [[k] (map vector (contrib.datomic/pull-level @(:hypercrud.browser/pull-enclosure ctx))
+                   #_(hyperfiddle.api/spread-pull ctx))]
       ^{:key (str k)}
       [ui-field (conj relpath k) ctx nil props])
     [[ui-field relpath ctx nil props]]))                    ; fiddle segment (top)
@@ -348,7 +355,8 @@ User renderers should not be exposed to the reaction."
 (defn hint [val {:keys [hypercrud.browser/fiddle] :as ctx} props]
   (if (and (-> (:fiddle/type @fiddle) (= :entity))
            (empty? val))
-    [:div.alert.alert-warning "Warning: invalid route (d/pull requires an entity argument). To add a tempid entity to the URL, click here: "
+    [:div.alert.alert-warning "Warning: invalid route (d/pull requires an entity argument). To add a tempid entity to
+    the URL, click here: "
      [:a {:href "~entity('$','tempid')"} [:code "~entity('$','tempid')"]] "."]))
 
 (defn form "Not an abstraction." [fields val ctx & [props]]
