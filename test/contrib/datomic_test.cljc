@@ -218,15 +218,8 @@
                                 :reg/shirt-size [:db/ident]}]) ; self at gender level
                      ...]
               :where [?e :reg/email]]
-   FindRel '[:find
-             (sum ?age)
-             (pull ?g [:db/ident])
-             :where
-             [?e :reg/email ?email]
-             [?e :reg/age ?age]
-             [(clojure.string/includes? ?email "b")]
-             [?e :reg/gender ?g]]
-   FindTuple nil
+   FindRel '[:find (sum ?age) (pull ?g [:db/ident])]
+   FindTuple '[:find [(pull ?e [:db/id :fiddle/ident]) (max ?tx) ?entrypoint]]
    FindScalar nil})
 
 (defn parse-query [q] (->> (contrib.try$/try-either (datascript.parser/parse-query q)) (contrib.ct/unwrap (constantly nil))))
@@ -236,7 +229,7 @@
 (def results
   {FindColl [{:reg/email "alice"} {:reg/email "bob"}]
    FindRel [[20 {:db/ident :gender/male}] [65 {:db/ident :gender/female}]]
-   FindTuple nil
+   FindTuple [{:db/id 136, :fiddle/ident :dustingetz/games} 13194139536334 true]
    FindScalar nil})
 
 (deftest normalize-result-
@@ -247,6 +240,8 @@
          []))
   (is (= (normalize-result (:qfind (qparsed FindRel)) (results FindRel))
          (results FindRel)))
+  (is (= (normalize-result (:qfind (qparsed FindTuple)) (results FindTuple))
+         [[{:db/id 136, :fiddle/ident :dustingetz/games} 13194139536334 true]]))
   )
 
 (deftest pull-strata-

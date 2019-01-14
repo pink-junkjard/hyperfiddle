@@ -207,7 +207,7 @@
     (condp = (type qfind)
       FindRel result
       FindColl (mapv vector result)
-      FindTuple (mapv vector result)
+      FindTuple (vector result)
       FindScalar [[result]])))
 
 (defn spread-elements [f schemas qfind result]
