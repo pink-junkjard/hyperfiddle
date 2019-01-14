@@ -378,12 +378,12 @@
          #_(not (:hypercrud.browser/element ctx))]}         ; not yet, except in recursive case
   (let [ctx (assoc ctx :hypercrud.browser/head-sentinel false) ; hack
         sort-fn (or sort-fn identity)
-        r-ordered-result (:hypercrud.browser/result ctx)
         depth (count (:hypercrud.browser/result-path ctx))]
     (cond                                                   ; We're either fiddle | nested attr (otherwise already spread)
 
       (= depth 0)                                           ; fiddle level
-      (let [{r-qfind :hypercrud.browser/qfind} ctx]
+      (let [{r-qfind :hypercrud.browser/qfind} ctx
+            r-ordered-result (:hypercrud.browser/result ctx)] ; don't have a result-path, thus use raw result
         (condp some [(type @r-qfind)]
           ; sorting doesn't index keyfn lookup by design
           #{FindRel FindColl}
@@ -401,9 +401,17 @@
           [ctx]))
 
       (> depth 0)                                           ; nested attr
-      (for [k (->> (sort-fn @r-ordered-result)
-                   (map (partial stable-entity-key ctx)))]
-        [k (row ctx k)]))))
+      (let [keyfn (partial stable-entity-key ctx)           ; Group again by keyfn, we have seq and need lookup
+            ;r-ordered-result (data ctx)                    ; remember row order
+            r-ordered-result (r/cursor (:hypercrud.browser/result ctx) (:hypercrud.browser/result-path ctx)) ; exploded for clarity
+            ; Deep update result in-place, at result-path, to index it. Don't clobber it!
+            ctx (assoc ctx :hypercrud.browser/result (r/fmap-> (:hypercrud.browser/result ctx)
+                                                               (update-in (:hypercrud.browser/result-path ctx)
+                                                                          ; not r/partial
+                                                                          (partial contrib.data/group-by-unique keyfn))))]
+        (for [k (->> (sort-fn @r-ordered-result)
+                     (map keyfn))]
+          [k (row ctx k)])))))
 
 (defn ^:export spread-elements "yields [i ctx] foreach element.
   All query dimensions have at least one element."

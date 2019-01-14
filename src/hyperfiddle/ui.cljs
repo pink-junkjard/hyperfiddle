@@ -346,8 +346,8 @@ User renderers should not be exposed to the reaction."
         [:table (select-keys props [:class :style])
          [:thead (into [:tr] (columns ctx))]
          ; filter? Group-by? You can't. This is data driven. Shape your data in the peer.
-         (into [:tbody] (for [[k ctx1] (hypercrud.browser.context/spread-rows ctx #(sort/sort-fn % sort-col))]
-                          (let [cs (columns ctx1)]
+         (into [:tbody] (for [[k ctx] (hypercrud.browser.context/spread-rows ctx #(sort/sort-fn % sort-col))]
+                          (let [cs (columns ctx)]
                             (into
                               [:tr {:key (str k)}]
                               cs))))]))))
