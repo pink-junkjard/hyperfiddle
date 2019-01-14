@@ -135,6 +135,7 @@
 (defn smart-entity-identifier "Generates the best Datomic lookup ref for a given pull. ctx needs :branch and :peer"
   ; flip params for fmap->
   [ctx {:keys [:db/id :db/ident] :as v}]                    ; v can be a ThinEntity or a pull i guess
+  {:post [(not (coll? %))]}
   ; This must be called only on refs.
   ; If we have a color, and a (last path), ensure it is a ref.
   ; If we have a color and [] path, it is definitely a ref.
@@ -146,8 +147,9 @@
         ident
         identity-lookup
         id
-        (if-not (map? v) v)                                 ; id-scalar
+        (if-not (coll? v) v)                                ; id-scalar
         nil                                                 ; This is an entity but you didn't pull any identity - error?
+        ; Or it could be a relation. Why did this get called?
         )))
 
 (defn summon-schemas-grouped-by-dbname [ctx]
@@ -181,13 +183,15 @@
   {:pre [a v']}
   [?e a v'])
 
-(defn stable-eav-a [[?e _ _] a']
+(defn stable-eav-av "v becomes e. In top cases, this is nil->nil; only Pulls have defined E.
+  ?v' can be nil - sparse results."
+  [[_ _ ?v] a' ?v']
   {:pre [a']}
-  [?e a' nil])
+  [?v a' ?v'])
 
-(defn stable-eav-av [[?e _ _] a' ?v']
-  {:pre [a']}                                               ; ?v' can be nil - sparse results
-  [?e a' ?v'])
+(defn stable-eav-a [[_ _ v] a']
+  ; v becomes e
+  [v a' nil])
 
 (defn ^:export fiddle "Fiddle level ctx adds the result to scope"
   [ctx]
@@ -225,7 +229,7 @@
   (let [{{db :symbol} :source {pull-pattern :value} :pattern} element]
     (get schemas (str db))))
 
-(defn data "Works in any context"
+(defn data "Works in any context"                           ; todo provide data! ??
   [{:keys [:hypercrud.browser/qfind
            :hypercrud.browser/element
            :hypercrud.browser/result
@@ -238,6 +242,16 @@
         result)
       result)
     nil))
+
+(defn v! [ctx]                                              ; It's just easier to end the reaction earlier
+  {:post [(not (coll? %))]}                                 ; V is identity | nil
+  ; Don't pass whole results or tuples to smart-entity-identifier, that's dumb
+  ; Do we have an element but not a pull?
+  ; If no element at all, (just a fiddle), not much to do. Always need an element at least.
+  (if-not (:hypercrud.browser/head-sentinel ctx)
+    (if (:hypercrud.browser/element ctx)                    ; Otherwise we have a result but not focused at anything identifiable
+      ; Sparse resultset, v can still be nil
+      (smart-entity-identifier ctx @(data ctx)))))
 
 (defn element [ctx i]                                       ; [nil :seattle/neighborhoods 1234345]
   ; eav is ea, data is a tree and can request from resultpath
@@ -262,19 +276,18 @@
                                                        :hypercrud.browser/element))
           (assoc ctx :hypercrud.browser/pull-enclosure (r/fmap-> (:hypercrud.browser/result-enclosure ctx)
                                                                  (get i)))
-          ; TODO remove v from eav everywhere
-          (assoc ctx :hypercrud.browser/eav (r/fmap-> (:hypercrud.browser/eav ctx) (stable-eav-a i)))  ; [nil i tree]
-          ; If there is only one element, should we set V?
-          ; Hard to interpret it since we don't know what it is (entity, aggregate, var)
-
-          ; Setting :hypercrud.browser/validation-hints doesn't make sense here as specs are keyword oriented
-          ; so at the fiddle level, or at the attribute level, but not relations.
-
           (condp some [(type @(:hypercrud.browser/qfind ctx))]
             #{FindRel FindTuple} (as-> ctx ctx
                                        (update ctx :hypercrud.browser/result-path (fnil conj []) i)
                                        (assoc ctx :hypercrud.browser/element-index i)) ; used only in labels
-            #{FindColl FindScalar} ctx))))
+            #{FindColl FindScalar} ctx)
+
+          ; Do last, result-path is set
+          ; If there is only one element, should we set V?
+          ; Hard to interpret it since we don't know what it is (entity, aggregate, var)
+          ; Setting :hypercrud.browser/validation-hints doesn't make sense here as specs are keyword oriented
+          ; so at the fiddle level, or at the attribute level, but not relations.
+          (assoc ctx :hypercrud.browser/eav (r/fmap-> (:hypercrud.browser/eav ctx) (stable-eav-av i (v! ctx)))))))
 
 (defn -infer-implicit-element "auto-focus single elements - legacy field path compat"
   [ctx]
@@ -289,7 +302,8 @@
          (s/assert r/reactive? (:hypercrud.browser/element ctx))]}
   ctx)
 
-(defn attribute "Will still set EA and V if we have it, e.g. works in table-head position (no row set)."
+(defn attribute "Will still set EA and V if we have it, e.g. works in table-head position (no row set).
+  V becomes E"
   [ctx a']
   {:pre [(s/assert :hypercrud/context ctx)
          (s/assert keyword? a')]
@@ -312,17 +326,13 @@
                                                                  [ps hint]))))
       (assoc ctx :hypercrud.browser/pull-enclosure (r/fmap->> (:hypercrud.browser/pull-enclosure ctx)
                                                               (contrib.datomic/pull-shape-refine a')))
-      ; v is for formulas
+      ; V is for formulas, E is for security and on-change. V becomes E. E is nil if we don't know identity.
       (assoc ctx :hypercrud.browser/eav                     ; insufficent stability on r-?v? fixme
                  (case (if (= a' :db/id)
                          :db.cardinality/one                ; :db/id is currently addressable (e.g. user wants to render that column)
                          (contrib.datomic/cardinality @(:hypercrud.browser/schema ctx) a'))
                    :db.cardinality/many (r/fmap-> (:hypercrud.browser/eav ctx) (stable-eav-a a')) ; dont have v yet
-                   :db.cardinality/one (r/fmap-> (:hypercrud.browser/eav ctx) (stable-eav-av
-                                                                                a' (if-not (:hypercrud.browser/head-sentinel ctx)
-                                                                                     (smart-entity-identifier
-                                                                                       ; Sparse resultset, v can still be nil
-                                                                                       ctx @(data ctx))))))))))
+                   :db.cardinality/one (r/fmap-> (:hypercrud.browser/eav ctx) (stable-eav-av a' (v! ctx))))))))
 
 (defn focus "Unwind or go deeper, to where we need to be, within same dimension.
     Throws if you focus a higher dimension.
