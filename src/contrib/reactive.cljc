@@ -187,7 +187,7 @@
             (atom ())
             rvs))
 
-(defn unsequence
+(defn unsequence                                            ; legacy, soon dead.
   "Expand a reference of a list into a list of references while maintaining order.
 
   If `key-fn` is provided, the children cursors will be pathed by the provided key-fn, NOT index.
