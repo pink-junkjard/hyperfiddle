@@ -55,9 +55,9 @@
     (concat
       (->> @(data/select-many-here ctx #{:hf/iframe})
            (mapcat #(request-from-link % ctx)))
-      (for [ctx (hypercrud.browser.context/spread-rows ctx)
+      (for [[_ ctx] (hypercrud.browser.context/spread-rows ctx)
             ; tuple level iframes - how would we address them?
-            ctx (hypercrud.browser.context/spread-elements ctx)]
+            [_ ctx] (hypercrud.browser.context/spread-elements ctx)]
         ; element level iframes could be addressed by element index or name
         (condp = (type (:hypercrud.browser/element ctx))    ; (let [{{db :symbol} :source {pull-pattern :value} :pattern} element])
           Variable []

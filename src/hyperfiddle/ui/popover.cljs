@@ -82,7 +82,7 @@
   (let [popover-ctx-pre (cond-> (context/clean ctx)         ; hack clean for block level errors
                                 ?child-branch (assoc :branch ?child-branch))
         +popover-ctx-post (base/data-from-route route popover-ctx-pre)
-        r-popover-data (r/>>= :hypercrud.browser/data +popover-ctx-post)
+        r-popover-data (r/>>= :hypercrud.browser/result +popover-ctx-post) ; focus the fiddle at least then call @(context/data) ?
         popover-invalid (->> +popover-ctx-post (unwrap (constantly nil)) context/tree-invalid?)]
     [:div.hyperfiddle-popover-body                          ; wrpaper helps with popover max-width, hard to layout without this
      ; NOTE: this ctx logic and structure is the same as the popover branch of browser-request/recurse-request

@@ -50,7 +50,7 @@
               (fn [f] [f value ctx props])))))))
 
 (defn- ui-comp [ctx & [props]]                              ; user-renderer comes through here
-  (let [value @(:hypercrud.browser/data ctx)
+  (let [value @(:hypercrud.browser/result ctx)              ; TODO remove this, make them ask
         props (update props :class css (auto-ui-css-class ctx))
         view-props (select-keys props [:class :initial-tab :on-click #_:disabled]) ; https://github.com/hyperfiddle/hyperfiddle/issues/698
         display-mode @(:hypercrud.ui/display-mode ctx)

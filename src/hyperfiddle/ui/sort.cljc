@@ -1,36 +1,22 @@
 (ns hyperfiddle.ui.sort
   (:require
-    [hypercrud.browser.context :as context]
-    [hyperfiddle.runtime :as runtime]))
+    [datascript.parser #?@(:cljs [:refer [FindRel FindColl FindTuple FindScalar Variable Aggregate Pull]])]
+    [hypercrud.browser.context :as context])
+  #?(:clj
+     (:import
+       (datascript.parser FindRel FindColl FindTuple FindScalar Variable Aggregate Pull))))
 
 
 (defn sortable? [ctx]
-  (let [?dbname (context/dbname ctx)
-        [e a v] @(:hypercrud.browser/eav ctx)]
+  (let [element (:hypercrud.browser/element ctx)]
     ; Used to check links dont break sorting, but those cases don't happen anymore.
-    (assert (context/attribute-segment? a))
-    (if (and ?dbname #_(context/attribute-segment? a)) ; [fe attr] or [attr], NOT [fe] or []
-      (let [uri (context/uri ?dbname ctx)
-            {:keys [:db/cardinality :db/valueType]} @(runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :schemas uri a])]
-        (and
-          (= (:db/ident cardinality) :db.cardinality/one)
-          ; ref requires more work (inspect label-prop)
-          (contains? #{:db.type/keyword
-                       :db.type/string
-                       :db.type/boolean
-                       :db.type/long
-                       :db.type/bigint
-                       :db.type/float
-                       :db.type/double
-                       :db.type/bigdec
-                       :db.type/instant
-                       :db.type/uuid
-                       :db.type/uri
-                       :db.type/bytes
-                       :db.type/code}
-                     (:db/ident valueType))))
-      ; [fe] when aggregates or variables
-      (and (not ?dbname) a))))
+    (condp some [(type @element)]
+      #{Aggregate Variable} true
+      #{Pull} (let [[_ a _] @(:hypercrud.browser/eav ctx)]
+                (and
+                  (contrib.datomic/cardinality? @(:hypercrud.browser/schema ctx) a :db.cardinality/one)
+                  ; ref requires more work (inspect label-prop)
+                  (not= (:db.type/ref (contrib.datomic/valueType @(:hypercrud.browser/schema ctx) a))))))))
 
 (defn sort-direction [relative-path ctx]
   (let [[sort-path direction] @(::sort-col ctx)]

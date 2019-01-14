@@ -216,14 +216,16 @@
           (datascript.parser/find-elements qfind)
           (contrib.data/pad nil (contrib.data/transpose (normalize-result qfind result)))))
 
-(defn pull-level [pullshape]                               ; see downtree-pullpaths
+(defn pull-level "Get next level e.g. for driving UI forms."
+  [pullshape]                                               ; see downtree-pullpaths
   {:pre [(or (sequential? pullshape)
              (nil? pullshape))]}
   (->> pullshape
        (mapcat (fn [attr-spec]
                  (cond
                    (keyword? attr-spec) [attr-spec]
-                   (map? attr-spec) (keys attr-spec))))))   ; Could verify :ref against schema here
+                   (map? attr-spec) (keys attr-spec))))     ; Could verify :ref against schema here
+       #_(remove (partial = :db/id))))
 
 
 (defn pull-shape-refine [a pull-shape]

@@ -34,7 +34,7 @@
                          (interpose " ") (apply str))
         help-md (blank->nil
                   ; Use path over a because it could have flattened the nesting and attr is ambiguous
-                  (str (if typedoc (str "`" (pr-str (:hypercrud.browser/path ctx)) " " typedoc "`\n\n")) ; markdown needs double line-break
+                  (str (if typedoc (str "`" (pr-str (:hypercrud.browser/pull-path ctx)) " " typedoc "`\n\n")) ; markdown needs double line-break
                        (or doc-override (some-> @(r/cursor attr [:db/doc]) blank->nil))
                        ))]
     help-md))

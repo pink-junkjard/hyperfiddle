@@ -45,7 +45,7 @@
                              (fn [e] (throw e))
                              (fn [f] (into [f] args))))]
   (defn attr-renderer-control [val ctx & [props]]
-    (let [[e a v] @(:hypercrud.browser/eav ctx)]
+    (let [[_ a _] @(:hypercrud.browser/eav ctx)]
       ; The only way to stabilize this is for this type signature to become a react class.
       (when-let [user-f (-> @(r/cursor (:hypercrud.browser/attr-renderers ctx) [a])
                             blank->nil)]
@@ -85,7 +85,7 @@
   (defn control "this is a function, which returns component"
     [val ctx & [props]]                                     ; returns Func[(ref, props, ctx) => DOM]
     (let [element @(:hypercrud.browser/element ctx)
-          [e a v] @(:hypercrud.browser/eav ctx)
+          [_ a _] @(:hypercrud.browser/eav ctx)
           attr @(context/hydrate-attribute ctx a)
           value-type (some-> attr :db/valueType :db/ident name keyword)
           cardinality (some-> attr :db/cardinality :db/ident name keyword)]
@@ -105,11 +105,12 @@
 (defn ^:export hyper-control [val ctx & [props]]            ; eav ctx props - use defmethod, not fn
   {:post [%]}
   (or (attr-renderer-control val ctx props)
-      (let [[e a v] @(:hypercrud.browser/eav ctx)
+      (let [[_ a _] @(:hypercrud.browser/eav ctx)
             children (contrib.datomic/pull-level @(:hypercrud.browser/pull-enclosure ctx))]
         (cond                                               ; Duplicate options test to avoid circular dependency in controls/ref
           (:options props) [(control val ctx props) val ctx props]
           (contains? #{:db/id :db/ident} a) [controls/id-or-ident val ctx props]
+          ;(int? a) [controls/id-or-ident]
           (and (seq children)
                (every? #{:db/id :db/ident} children)) (let [W (control val ctx props)]
                                                         [W val ctx props]) ; flatten useless nesting
@@ -125,10 +126,12 @@
         Variable Variable
         Aggregate Aggregate
         element @(:hypercrud.browser/element ctx)
-        [e a v] @(:hypercrud.browser/eav ctx)]
+        i (:hypercrud.browser/element-index ctx)
+        [_ a _] @(:hypercrud.browser/eav ctx)]              ; a can be int now for findelement - hax
     (match* [(type element) a]                              ; has-child-fields @(r/fmap-> (:hypercrud.browser/field ctx) ::field/children nil? not)
-      [Pull :db/id] (dbid-label _ ctx props)                ; fixme
+      [Pull :db/id] (dbid-label _ ctx props)                ; fixme, is this even in play?
       [Pull :db/ident] (dbid-label _ ctx props)
+      [Pull (true :<< int?)] (label-with-docs (get-in element [:variable :symbol]) (semantic-docstring ctx) props)
       [Pull aa] (label-with-docs (name aa) (semantic-docstring ctx) props)
       [Variable _] (label-with-docs (get-in element [:variable :symbol]) (semantic-docstring ctx) props)
       [Aggregate _] (let [label (str (cons (get-in element [:fn :symbol])
@@ -139,20 +142,20 @@
 (defn ^:export semantic-css [ctx]                           ; works at element level, and attr
   ; Include the fiddle level ident css.
   ; Semantic css needs to be prefixed with - to avoid collisions. todo
-  (let [[e a v] @(:hypercrud.browser/eav ctx)]
+  (let [[_ a _] @(:hypercrud.browser/eav ctx)]
     (->> (concat
            ["hyperfiddle"
             (context/dbname ctx)                            ; color
             (name (context/segment-type-2 a))
-            (string/join "/" (:hypercrud.browser/path ctx)) ; legacy unique selector for each location
-            (->> (:hypercrud.browser/path ctx)              ; actually generate a unique selector for each location
-                 (cons :hypercrud.browser/path)             ; need to prefix the path with something to differentiate between attr and single attr paths
+            (string/join "/" (:hypercrud.browser/pull-path ctx)) ; legacy unique selector for each location
+            (->> (:hypercrud.browser/pull-path ctx)              ; actually generate a unique selector for each location
+                 (cons :hypercrud.browser/pull-path)             ; need to prefix the path with something to differentiate between attr and single attr paths
                  (string/join "/"))]
            (when (context/attribute-segment? a)
              [@(context/hydrate-attribute ctx a :db/valueType :db/ident)
               @(context/hydrate-attribute ctx a :db/cardinality :db/ident)
               (some-> @(context/hydrate-attribute ctx a :db/isComponent) (if :component))])
-           (:hypercrud.browser/path ctx))
+           (:hypercrud.browser/pull-path ctx))
          (map css-slugify)
          (apply css))))
 
@@ -162,7 +165,7 @@ User renderers should not be exposed to the reaction."
   [relative-path ctx ?f & [props]]                          ; ?f :: (ref, props, ctx) => DOM
   (let [ctx (context/focus ctx relative-path)
         props (update props :class css (semantic-css ctx))]
-    [(or ?f hyper-control) @(:hypercrud.browser/data ctx) ctx props]))
+    [(or ?f hyper-control) @(hypercrud.browser.context/data ctx) ctx props]))
 
 (defn ^:export anchor [ctx props & children]
   (let [props (-> props
@@ -266,27 +269,27 @@ User renderers should not be exposed to the reaction."
       (fn [link-ref]
         [ui-from-link link-ref ctx props]))))
 
-(defn form-field "Form fields are label AND value. Table fields are label OR value."
+(defn form-field "Form fields are label AND value. Table fields are label OR value.
+  EAV is already set."
   [ctx Body Head props]
-  [:div {:class (css "field" (:class props))
-         :style {:border-color (connection-color ctx)}}
-   [Head nil (dissoc ctx :hypercrud.browser/data) props]    ; eav
-   (let [[e a v] @(:hypercrud.browser/eav ctx)
-         props (as-> props props
-                     (update props :disabled #(or % (not @(r/track writable-entity? ctx))))
-                     (update props :is-invalid #(or % (context/leaf-invalid? ctx)))
-                     (update props :class css (if (:disabled props) "disabled")))]
-     [Body v ctx props])])
+  (let []
+    [:div {:class (css "field" (:class props))
+           :style {:border-color (connection-color ctx)}}
+     [Head nil ctx props]                                   ; suppress ?v in head even if defined
+     (let [props (as-> props props
+                       (update props :disabled #(or % (not @(r/track writable-entity? ctx))))
+                       (update props :is-invalid #(or % (context/leaf-invalid? ctx)))
+                       (update props :class css (if (:disabled props) "disabled")))]
+       [Body @(hypercrud.browser.context/data ctx) ctx props])]))
 
 (defn table-field "Form fields are label AND value. Table fields are label OR value."
   [ctx Body Head props]                                     ; Body :: (val props ctx) => DOM, invoked as component
-  ; Presence of data to detect head vs body? Kind of dumb
-  (case (if (:hypercrud.browser/data ctx) :body :head)      ; this is ugly and not uniform with form-field NOTE: NO DEREF ON THIS NIL CHECK
+  (case (if (:hypercrud.browser/head-sentinel ctx) :head :body)        ; broken
     :head [:th {:class (css "field" (:class props))         ; hoist
                 :style {:background-color (connection-color ctx)}}
            [Head nil ctx (-> props
-                             (update :class css (when (sort/sortable? ctx) "sortable") (some-> (sort/sort-direction (:hypercrud.browser/path ctx) ctx) name))
-                             (assoc :on-click (r/partial sort/toggle-sort! (:hypercrud.browser/path ctx) ctx)))]]
+                             (update :class css (when (sort/sortable? ctx) "sortable") (some-> (sort/sort-direction (:hypercrud.browser/pull0path ctx) ctx) name))
+                             (assoc :on-click (r/partial sort/toggle-sort! (:hypercrud.browser/pull-path ctx) ctx)))]]
     ; Field omits [] but table does not, because we use it to specifically draw repeating anchors with a field renderer.
     :body [:td {:class (css "field" (:class props))
                 :style {:border-color (connection-color ctx)}}
@@ -294,7 +297,7 @@ User renderers should not be exposed to the reaction."
                              (update props :disabled #(or % (not @(r/track writable-entity? ctx))))
                              (update props :is-invalid #(or % (context/leaf-invalid? ctx)))
                              (update props :class css (if (:disabled props) "disabled")))]
-             [Body @(:hypercrud.browser/data ctx) ctx props])]))
+             [Body @(hypercrud.browser.context/data ctx) ctx props])]))
 
 (defn ^:export field "Works in a form or table context. Draws label and/or value."
   [relative-path ctx & [?f props]]
@@ -317,8 +320,8 @@ User renderers should not be exposed to the reaction."
 
 (defn columns-relation-product [ui-field ctx & [props]]
   {:pre [ctx]}
-  (->> (for [[i element ctx-e] (map vector (range) (datascript.parser/find-elements @(:hypercrud.browser/qfind ctx))
-                                    (hypercrud.browser.context/spread-elements ctx))]
+  (->> (for [[element [i ctx-e]] (map vector (datascript.parser/find-elements @(:hypercrud.browser/qfind ctx))
+                                      (hypercrud.browser.context/spread-elements ctx))]
          (condp some [(type element)]
            #{Variable Aggregate} [[ui-field [i] ctx props]]
            #{Pull} (for [[a] (map vector (contrib.datomic/pull-level @(:hypercrud.browser/pull-enclosure ctx-e)))]
@@ -331,14 +334,15 @@ User renderers should not be exposed to the reaction."
     (fn [columns ctx & [props]]
       (let [props (update props :class (fnil css "hyperfiddle") "unp") ; fnil case is iframe root (not a field :many)
             ctx (assoc ctx ::sort/sort-col sort-col
+                           :hypercrud.browser/head-sentinel true
                            ::layout :hyperfiddle.ui.layout/table)]
         [:table (select-keys props [:class :style])
-         [:thead (into [:tr] (columns (dissoc ctx :hypercrud.browser/data)))]
+         [:thead (into [:tr] (columns ctx))]
          ; filter? Group-by? You can't. This is data driven. Shape your data in the peer.
-         (into [:tbody] (for [ctx (hypercrud.browser.context/spread-rows ctx #(sort/sort-fn % sort-col))]
-                          (let [cs (columns ctx)]
+         (into [:tbody] (for [[k ctx1] (hypercrud.browser.context/spread-rows ctx #(sort/sort-fn % sort-col))]
+                          (let [cs (columns ctx1)]
                             (into
-                              [:tr {:key (str (:hypercrud.browser/result-path ctx))}]
+                              [:tr {:key (str k)}]
                               cs))))]))))
 
 (defn hint [val {:keys [hypercrud.browser/fiddle] :as ctx} props]
@@ -353,7 +357,7 @@ User renderers should not be exposed to the reaction."
 
 (defn pull "handles any datomic result that isn't a relation, recursively"
   [field val ctx & [props]]
-  (let [[e a v] @(:hypercrud.browser/eav ctx)
+  (let [[_ a _] @(:hypercrud.browser/eav ctx)
         attr @(context/hydrate-attribute ctx a)
         cardinality (some-> attr :db/cardinality :db/ident name keyword)]
     (match* [cardinality]

@@ -46,7 +46,7 @@
   [ctx & [?corcs]]
   {:pre [(s/assert :hypercrud/context ctx)]
    :post [(r/reactive? %)]}
-  (let [[e a v] @(:hypercrud.browser/eav ctx)]
+  (let [[_ a _] @(:hypercrud.browser/eav ctx)]
     (-> (contrib.data/xorxs ?corcs #{})
         (conj a)
         (->> (select-many ctx)))))

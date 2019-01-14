@@ -67,10 +67,10 @@
 
 (def tabs
   {:hf.src/query
-   (fn [val ctx props]
+   (fn [val ctx props]                                      ; val is the toplevel val
      [:<>
       (field [:fiddle/type] ctx (r/partial query-composite-stable ctx) props)
-      (case (or @(r/cursor (:hypercrud.browser/data ctx) [:fiddle/type])
+      (case (or (:fiddle/type val)
                 ((:fiddle/type fiddle/fiddle-defaults)
                   val))
         :entity ^{:key "pull"} [field [:fiddle/pull] ctx hyper-control (with-fiddle-default props val :fiddle/pull)]
@@ -127,11 +127,12 @@
                    (clojure.pprint/pprint
                      (:hypercrud.browser/validation-hints ctx)))}]])})
 
-(defn fiddle-src-renderer [val ctx props]
+(defn fiddle-src-renderer [_ ctx props]
   (let [tab-state (r/atom (if (contains? tabs (:initial-tab props)) (:initial-tab props) :hf.src/query))]
-    (fn [val ctx props]
+    (fn [_ ctx props]
       (let [ctx (hypercrud.browser.context/fiddle ctx)
-            ctx (hypercrud.browser.context/element ctx 0)]
+            ctx (hypercrud.browser.context/element ctx 0)
+            val @(hypercrud.browser.context/data ctx)]
         [:div (into {:key (str (:fiddle/ident val))} (select-keys props [:class]))
          [horizontal-tabs
           :tabs (->> [:hf.src/query :hf.src/links :hf.src/markdown :hf.src/view :hf.src/ns :hf.src/css :hf.src/fiddle]

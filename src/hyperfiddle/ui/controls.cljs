@@ -9,6 +9,7 @@
     [contrib.ui.recom-date :refer [recom-date]]
     [contrib.ui.tooltip :refer [tooltip-thick]]
     [contrib.uri :refer [is-uri?]]
+    [datascript.parser :refer [FindRel FindColl FindTuple FindScalar Variable Aggregate Pull]]
     [hypercrud.browser.context :as context]
     [hyperfiddle.data :as data]
     [hyperfiddle.runtime :as runtime]
@@ -20,21 +21,22 @@
 
 
 (defn value-validator [ctx]
-  (case @(context/hydrate-attribute ctx (last (:hypercrud.browser/path ctx)) :db/valueType :db/ident)
-    :db.type/bigdec any?                                    ;  todo
-    :db.type/bigint any?                                    ;  todo
-    :db.type/boolean boolean?
-    :db.type/bytes any?                                     ;  todo
-    :db.type/double number?
-    :db.type/float number?
-    :db.type/fn any?                                        ;  todo
-    :db.type/instant any?                                   ;  todo
-    :db.type/keyword keyword?
-    :db.type/long any?                                      ;  todo
-    :db.type/ref any?                                       ;  todo
-    :db.type/string string?
-    :db.type/uri is-uri?
-    :db.type/uuid uuid?))
+  (let [[_ a _] @(:hypercrud.browser/eav ctx)]
+    (case (contrib.datomic/valueType @(:hypercrud.browser/schema ctx) a)
+      :db.type/bigdec any?                                  ;  todo
+      :db.type/bigint any?                                  ;  todo
+      :db.type/boolean boolean?
+      :db.type/bytes any?                                   ;  todo
+      :db.type/double number?
+      :db.type/float number?
+      :db.type/fn any?                                      ;  todo
+      :db.type/instant any?                                 ;  todo
+      :db.type/keyword keyword?
+      :db.type/long any?                                    ;  todo
+      :db.type/ref any?                                     ;  todo
+      :db.type/string string?
+      :db.type/uri is-uri?
+      :db.type/uuid uuid?)))
 
 (defn ^:export keyword [val ctx & [props]]
   (let [props (-> (assoc props
@@ -81,7 +83,7 @@
      [:label.hyperfiddle label-props label (if help-md [:sup "†"])])])
 
 (defn cardinality [ctx]
-  (let [[e a v] @(:hypercrud.browser/eav ctx)
+  (let [[_ a _] @(:hypercrud.browser/eav ctx)
         attr @(context/hydrate-attribute ctx a)]
     (some-> attr :db/cardinality :db/ident)))
 
@@ -90,11 +92,11 @@
          (:hypercrud.browser/schema ctx)]}
   (into
     [:<>
-     (let [[e a v] @(:hypercrud.browser/eav ctx)]
+     (let [[_ a _] @(:hypercrud.browser/eav ctx)]
        (label-with-docs a (semantic-docstring ctx) props))]
     ; dbid links are at parent path, but we don't always have a parent #543
     (let [ctx (:hypercrud.browser/parent ctx)
-          [e a v] @(:hypercrud.browser/eav ctx)]
+          [_ a _] @(:hypercrud.browser/eav ctx)]
       (cond
         (and a (contrib.datomic/cardinality? @(:hypercrud.browser/schema ctx) a :db.cardinality/many)) ; :one is handled by the body
         [(if-let [link (data/select-here+ ctx :hf/new)]
@@ -191,8 +193,10 @@
                        (assert (every? value-pred v))
                        v))]
   (defn ^:export edn-many [val ctx & [props]]
-    (let [valueType @(context/hydrate-attribute ctx (last (:hypercrud.browser/path ctx)) :db/valueType :db/ident)
-          val (set (if (= valueType :db.type/ref) (map (r/partial context/smart-entity-identifier ctx) val) val))
+    (let [[_ a _] @(:hypercrud.browser/eav ctx)
+          val (set (if (contrib.datomic/valueType? @(:hypercrud.browser/schema ctx) a :db.type/ref)
+                     (map (r/partial context/smart-entity-identifier ctx) val)
+                     val))
           props (-> (assoc props
                       :value val
                       :mode "clojure"
@@ -230,6 +234,7 @@
 
 (defn -magic-new-change! [state ctx #_ov v]
   (let [[e _ _] @(:hypercrud.browser/eav ctx)]
+    (assert e)
     (with-tx! ctx [[:db/add e @state v]])))
 
 (defn magic-new [val ctx props]

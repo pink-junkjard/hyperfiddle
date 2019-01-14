@@ -93,13 +93,12 @@
                        :hypercrud.browser/attr-renderers reactive-attrs
                        :hypercrud.browser/schemas r-schemas
                        :hypercrud.browser/result r-result ; this one SHOULD be sorted out of jvm, though isn't yet
-                       ; Don't compute result-indexed yet, because it might not even be a collection
-                       :hypercrud.browser/result-path []
                        ;:hypercrud.browser/datascript (contrib.datomic/datascript-from-result @reactive-result @r-schemas)
                        :hypercrud.browser/fiddle r-fiddle
                        :hypercrud.browser/link-index (r/fmap hypercrud.browser.context/-indexed-links-at r-fiddle)
-                       :hypercrud.browser/eav (r/track identity [nil nil nil])
-                       :hypercrud.browser/path [])]]
+                       :hypercrud.browser/pull-path []
+                       :hypercrud.browser/eav (r/track identity nil) ; must lift into reaction so downstream can r/apply
+                       )]]
       (return ctx))))
 
 (defn data-from-route "either ctx, ctx-from-route" [route ctx]                           ; todo rename

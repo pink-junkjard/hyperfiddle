@@ -57,10 +57,11 @@
   ([ctx]
    (hypercrud.browser.context/tempid! ctx)))
 
-(defn ^:export tempid! [{r-eav :hypercrud.browser/eav :as ctx}]
-  (if @(r/fmap-> r-eav (get 1))                             ; TODO and not a find-element, which will soon be the case. Currently broken for find elements https://github.com/hyperfiddle/hyperfiddle/issues/826
-    (hypercrud.browser.context/tempid ctx)
-    (hypercrud.browser.context/tempid! ctx)))
+(defn ^:export tempid! [ctx]
+  (let [[_ a _] @(:hypercrud.browser/eav ctx)]
+    (if (keyword? a)                                        ; not find-elements
+      (hypercrud.browser.context/tempid ctx)
+      (hypercrud.browser.context/tempid! ctx))))
 
 (defmulti txfn (fn [user-txfn e a v ctx] user-txfn))
 

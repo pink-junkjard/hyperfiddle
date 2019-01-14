@@ -35,7 +35,7 @@
      :writable-entity? (fn [hf-db subject ctx] (owned-by? hf-db subject))}))
 
 (let [parent-m (fn parent-m [ctx]
-                 (let [[e a v] @(:hypercrud.browser/eav ctx)]
+                 (let [[_ a _] @(:hypercrud.browser/eav ctx)]
                    (if @(context/hydrate-attribute ctx a :db/isComponent)
                      (parent-m (:hypercrud.browser/parent ctx))
                      (some-> (hypercrud.browser.context/data ctx) deref))))

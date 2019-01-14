@@ -73,7 +73,7 @@
         ident-f (fn [val ctx props]
                   (let [on-change! (r/comp (r/partial ident-with-tx! special-attrs-state ctx)
                                            (r/partial entity-change->tx ctx))
-                        props (assoc props :value @(:hypercrud.browser/data ctx)
+                        props (assoc props :value @(:hypercrud.browser/result ctx)
                                            :on-change on-change!)]
                     [debounced props contrib.ui/keyword]))
         valueType-and-cardinality-f (fn [val ctx props]
@@ -81,8 +81,8 @@
                                                                (r/partial entity-change->tx ctx))]
                                         [hyperfiddle.ui/hyper-control val ctx (assoc props :on-change on-change!)]))]
     (fn [val ctx props]
-      (let [ctx (update ctx :hypercrud.browser/data (partial r/track reactive-merge))
-            valid-attr? @(r/fmap completed? (:hypercrud.browser/data ctx))]
+      (let [ctx (update ctx :hypercrud.browser/result (partial r/track reactive-merge))
+            valid-attr? @(r/fmap completed? (:hypercrud.browser/result ctx))]
         [:div props
          [markdown "See [Datomic schema docs](https://docs.datomic.com/on-prem/schema.html)."]
          (field [:db/ident] ctx ident-f)
