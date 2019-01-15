@@ -63,7 +63,8 @@
         option-value-fn (fn [row]
                           (let [element (if (vector? row) (first row) row)] ; inspect datalog
                             (pr-str (or (context/smart-entity-identifier ctx element) element))))]
-    [:select.ui (select-keys props [:value :class :style :on-change :read-only]) ;(dissoc props :option-label) ; value
+    ; assert value is in options?
+    [:select.ui (select-keys props [:value :class :style :on-change :read-only :on-click]) ;(dissoc props :option-label) ; value
      ; .ui is because options are an iframe and need the pink box
      (conj
        (->> @(hypercrud.browser.context/data ctx)
@@ -104,7 +105,7 @@
         (return
           (let [default-props {:on-change (with-entity-change! ctx)}
                 props (-> (merge default-props props)
-                          (assoc :value (str (let [[e] @(:hypercrud.browser/eav ctx)] e))))
+                          (assoc :value (str (let [[_ _ v] @(:hypercrud.browser/eav ctx)] v))))
                 props (-> (select-keys props [:class])
                           (assoc :user-renderer (r/partial select-view-validated select-anchor-renderer' props {:disabled (compute-disabled ctx props)})))
                 ctx (assoc ctx

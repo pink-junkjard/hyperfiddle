@@ -359,12 +359,12 @@
 (defn row ""
   [ctx & [k]]
   {:pre [(s/assert :hypercrud/context ctx)]
-   :post [(s/assert :hypercrud/context %)
-          #_(do (println (:hypercrud.browser/data ctx)) true)]}
-  (-> ctx
-      (set-parent)
-      (update :hypercrud.browser/result-path (fnil conj []) k)        ; no change in eav
-      (update :hypercrud.browser/validation-hints #(for [[[p & ps] hint] % :when (= k p)]
+   :post [(s/assert :hypercrud/context %)]}
+  (as-> ctx ctx
+      (set-parent ctx)
+      (update ctx :hypercrud.browser/result-path (fnil conj []) k)
+      (assoc ctx :hypercrud.browser/eav (r/fmap-> (:hypercrud.browser/eav ctx) (stable-eav-v (v! ctx))))
+      (update ctx :hypercrud.browser/validation-hints #(for [[[p & ps] hint] % :when (= k p)]
                                                      [ps hint]))))
 
 (defn ^:export spread-fiddle "automatically guards :fiddle/type :blank.
