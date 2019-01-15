@@ -5,23 +5,12 @@
                              pull-traverse pull-union normalize-result]]
     [contrib.ct]
     [contrib.try$]
-    [fixtures.ctx :refer [schema result-coll]]
+    [fixtures.ctx]
     [fixtures.domains]
+    [fixtures.hfhf]
     [datascript.parser #?@(:cljs [:refer [FindRel FindColl FindTuple FindScalar Variable Aggregate Pull]])])
   #?(:clj (:import (datascript.parser FindRel FindColl FindTuple FindScalar Variable Aggregate Pull))))
 
-
-(def pull-pattern-2
-  '[:a/a
-    [:a/comp-one :as "comp-one"]
-    :a/comp-many
-    *
-    (limit :a/v 1)
-    {(default :a/s {}) [* :b/a :b/b {:c/a [*]} {:c/b [:d/a]}]
-     [:a/t :as "T"] [*]
-     (limit :a/u 2) [*]
-     :a/x [*]}
-    (default :a/z "a/z default")])
 
 (def pull-pattern-1 '[:reg/email
                       :reg/age
@@ -33,8 +22,17 @@
 
 (deftest pull-shape-
   []
-  (is (= [:a/a :a/comp-one :a/comp-many :a/v #:a{:s [:b/a :b/b #:c{:a []} #:c{:b [:d/a]}], :t [], :u [], :x []} :a/z]
-         (pull-shape pull-pattern-2)))
+  (is (= (pull-shape '[:a/a
+                       [:a/comp-one :as "comp-one"]
+                       :a/comp-many
+                       *
+                       (limit :a/v 1)
+                       {(default :a/s {}) [* :b/a :b/b {:c/a [*]} {:c/b [:d/a]}]
+                        [:a/t :as "T"] [*]
+                        (limit :a/u 2) [*]
+                        :a/x [*]}
+                       (default :a/z "a/z default")])
+         [:a/a :a/comp-one :a/comp-many :a/v #:a{:s [:b/a :b/b #:c{:a []} #:c{:b [:d/a]}], :t [], :u [], :x []} :a/z]))
   (is (= [:reg/email
           :reg/age
           #:reg{:gender [:db/ident],
@@ -94,10 +92,10 @@
 (deftest pulled-tree-derivative-1
   []
   (is (= [:db/id]
-         (tree-derivative schema {:db/id 17592186046204})))
+         (tree-derivative fixtures.ctx/schema {:db/id 17592186046204})))
 
   (is (= [:db/id :db/ident :hyperfiddle/owners #:reg{:gender [:db/id]}]
-         (tree-derivative schema {:db/id 17592186046209,
+         (tree-derivative fixtures.ctx/schema {:db/id 17592186046209,
                                          :db/ident :shirt-size/womens-medium,
                                          :hyperfiddle/owners [#uuid "acd054a8-4e36-4d6c-a9ec-95bdc47f0d39"],
                                          :reg/gender {:db/id 17592186046204}})))
@@ -108,7 +106,7 @@
           :reg/age
           #:reg{:gender [:db/ident]}
           #:reg{:shirt-size [:db/id :db/ident :hyperfiddle/owners #:reg{:gender [:db/id]}]}]
-         (tree-derivative schema pulled-tree-1)))
+         (tree-derivative fixtures.ctx/schema pulled-tree-1)))
   )
 
 (deftest pull-union-
@@ -139,36 +137,36 @@
                       :db/id])
          [:dustingetz.reg/email :dustingetz.reg/name :db/id #:dustingetz.reg{:gender [:db/ident]} #:dustingetz.reg{:shirt-size [:db/ident]}]))
 
-  (def pull-pattern-3 [:reg/email :reg/age #:reg{:gender [:db/ident], :shirt-size [:db/ident]} :db/id])
-  (def result-derivatives [[:db/id
-                            :hyperfiddle/owners
-                            :reg/email
-                            :reg/age
-                            #:reg{:gender [:db/ident]}
-                            #:reg{:shirt-size [:db/id :db/ident :hyperfiddle/owners #:reg{:gender [:db/id]}]}]
-                           [:db/id
-                            :hyperfiddle/owners
-                            :reg/email
-                            :reg/name
-                            :reg/age
-                            #:reg{:gender [:db/ident]}
-                            #:reg{:shirt-size [:db/id :db/ident :hyperfiddle/owners #:reg{:gender [:db/id]}]}]])
-  (is (= [:reg/email
+  (is (= (apply pull-union
+                [:reg/email :reg/age #:reg{:gender [:db/ident], :shirt-size [:db/ident]} :db/id]
+                [[:db/id
+                  :hyperfiddle/owners
+                  :reg/email
+                  :reg/age
+                  #:reg{:gender [:db/ident]}
+                  #:reg{:shirt-size [:db/id :db/ident :hyperfiddle/owners #:reg{:gender [:db/id]}]}]
+                 [:db/id
+                  :hyperfiddle/owners
+                  :reg/email
+                  :reg/name
+                  :reg/age
+                  #:reg{:gender [:db/ident]}
+                  #:reg{:shirt-size [:db/id :db/ident :hyperfiddle/owners #:reg{:gender [:db/id]}]}]])
+         [:reg/email
           :reg/age
           :db/id
           :hyperfiddle/owners
           :reg/name
-          #:reg{:gender [:db/ident], :shirt-size [:db/ident :db/id :hyperfiddle/owners #:reg{:gender [:db/id]}]}]
-         (apply pull-union pull-pattern-3 result-derivatives)))
+          #:reg{:gender [:db/ident], :shirt-size [:db/ident :db/id :hyperfiddle/owners #:reg{:gender [:db/id]}]}]))
   )
 
 
 
 (deftest enclosing-pull-shape-
   []
-  (pull-enclosure schema [] [{:db/ident :foo} {:db/id 10 :db/ident :yo}])
-  (pull-enclosure schema [:db/ident] [])
-  (pull-enclosure schema [] [{:db/id 17592186046209,
+  (pull-enclosure fixtures.ctx/schema [] [{:db/ident :foo} {:db/id 10 :db/ident :yo}])
+  (pull-enclosure fixtures.ctx/schema [:db/ident] [])
+  (pull-enclosure fixtures.ctx/schema [] [{:db/id 17592186046209,
                                     :db/ident :shirt-size/womens-medium,
                                     :hyperfiddle/owners [#uuid "acd054a8-4e36-4d6c-a9ec-95bdc47f0d39"],
                                     :reg/gender {:db/id 17592186046204}}
@@ -176,8 +174,8 @@
                                     :db/ident :shirt-size/womens-medium,
                                     :reg/gender {:db/id 17592186046204}}
                                    ])
-  (pull-enclosure schema (pull-shape pull-pattern-1) result-coll)
-  (pull-enclosure schema (pull-shape pull-pattern-1) [])
+  (pull-enclosure fixtures.ctx/schema (pull-shape pull-pattern-1) fixtures.ctx/result-coll)
+  (pull-enclosure fixtures.ctx/schema (pull-shape pull-pattern-1) [])
   )
 
 (deftest form-traverse-
@@ -246,17 +244,17 @@
 
 (deftest pull-strata-
   []
-  (def a [:dustingetz.reg/email
-          :dustingetz.reg/name
-          ; :dustingetz.reg/age
-          ; :dustingetz.reg/birthdate
-          {:dustingetz.reg/gender [:db/ident]}
-          {:dustingetz.reg/shirt-size [:db/ident]}
-          :db/id])
+  (def pull [:dustingetz.reg/email
+             :dustingetz.reg/name
+             ; :dustingetz.reg/age
+             ; :dustingetz.reg/birthdate
+             {:dustingetz.reg/gender [:db/ident]}
+             {:dustingetz.reg/shirt-size [:db/ident]}
+             :db/id])
   (testing "nested pulls"
-    (is (= (contrib.datomic/pull-level a)
+    (is (= (contrib.datomic/pull-level pull)
            '(:dustingetz.reg/email :dustingetz.reg/name :dustingetz.reg/gender :dustingetz.reg/shirt-size :db/id)))
-    (is (= (contrib.datomic/pull-shape-refine :dustingetz.reg/gender a)
+    (is (= (contrib.datomic/pullshape-get pull :dustingetz.reg/gender)
            '(:db/ident))))
 
   (testing "identity"
@@ -264,3 +262,38 @@
            '(:db/id :db/ident :hyperfiddle/owners :reg/gender))))
   )
 
+(deftest schema
+  (testing "schema helpers"
+    (is (satisfies? contrib.datomic/SchemaIndexedNormalized fixtures.hfhf/schema))
+    (is (= (contrib.datomic/valueType fixtures.hfhf/schema :link/fiddle) :db.type/ref))
+    (is (contrib.datomic/valueType? fixtures.hfhf/schema :link/fiddle :db.type/ref))
+    (is (= (contrib.datomic/cardinality fixtures.hfhf/schema :link/fiddle) :db.cardinality/one))
+    (is (contrib.datomic/cardinality? fixtures.hfhf/schema :link/fiddle :db.cardinality/one))
+    (is (contrib.datomic/ref-one? fixtures.hfhf/schema :link/fiddle))
+    )
+  )
+
+
+(def pull-link [:db/id :link/class :link/formula :link/path :link/rel :link/tx-fn
+                #:link{:fiddle [:db/id :fiddle/ident :fiddle/query :fiddle/type]}])
+(def pull-fiddle [:db/id :fiddle/css :fiddle/ident #:fiddle{:links pull-link}])
+
+(deftest pull
+  []
+  (testing "pull navigation"
+    #_(is (= (contrib.datomic/downtree-pullpaths fixtures.hfhf/schema pull-link)
+           '([] [:link/fiddle])))
+    (is (= (contrib.datomic/pullpath-unwind-while (contrib.datomic/ref-one? fixtures.hfhf/schema) [:fiddle/links :link/fiddle])
+           '(:fiddle/links)))
+
+
+    (is (= (contrib.datomic/reachable-pullpaths fixtures.hfhf/schema pull-fiddle [:fiddle/links :link/fiddle])
+           '([] [:link/fiddle])))
+
+
+    (is (= (contrib.datomic/reachable-pullpaths fixtures.hfhf/schema pull-fiddle [:fiddle/links])
+           '([] [:link/fiddle])))
+
+    (is (= (contrib.datomic/reachable-attrs fixtures.hfhf/schema pull-fiddle [:fiddle/links])
+           '(nil :link/fiddle)))
+    ))

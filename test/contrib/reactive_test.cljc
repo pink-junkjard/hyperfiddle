@@ -1,6 +1,6 @@
 (ns contrib.reactive-test
   (:require
-    [clojure.test :refer [deftest is]]
+    [clojure.test :refer [deftest is testing]]
     [contrib.reactive :as r]))
 
 
@@ -46,3 +46,11 @@
   []
   (is (= @(r/apply + [(r/atom 1) (r/atom 2)])
          3)))
+
+(def empty [])
+(deftest sequence
+  []
+  (testing "empty list"
+    (is (= (deref (r/sequence []))
+           []))
+    ))

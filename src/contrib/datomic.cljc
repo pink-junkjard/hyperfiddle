@@ -52,7 +52,7 @@
   (valueType [this a] (-attr this a :db/valueType))
   (cardinality [this a] (-attr this a :db/cardinality))
   (valueType? [this a k] (= k (valueType this a)))
-  (cardinality? [this a k] (= k (valueType this a)))
+  (cardinality? [this a k] (= k (cardinality this a)))
   (ref? [this k] (valueType? this k :db.type/ref))
 
   #?@(:clj
@@ -167,31 +167,46 @@
   {:pre [schema]}
   (count (filter #(cardinality? schema % :db.cardinality/many))))
 
-(defn ref-one? [schema a]
-  {:pre [(satisfies? SchemaIndexedNormalized schema)]}
-  (and (valueType? schema a :db.type/ref)
-       (cardinality? schema a :db.cardinality/one)))
+(defn ref-one?
+  ([schema] (fn [a] (ref-one? schema a)))
+  ([schema a]
+   {:pre [#_(satisfies? SchemaIndexedNormalized schema)]}
+   (and (valueType? schema a :db.type/ref)
+        (cardinality? schema a :db.cardinality/one))))
 
-(defn downtree-pullpaths [schema pullshape]
+#_(defn downtree-pullpaths [schema pullshape]
   (pull-traverse pullshape (partial ref-one? schema)))
 
-(defn unwind-pullpath "Find the oldest ancestor of the same dimension"
-  [schema pullpath]
+(defn pullpath-unwind-while "Find oldest ancestor matching pred.
+  Hint: Pred probably closes over schema."
+  [f? pullpath]
+  #_(drop-while f? (reverse pullpath))
   (loop [[a & as :as here] (reverse pullpath)]              ; pullpath is guaranteed to align with pullshape
-    (if (ref-one? schema a)
+    (if (f? a)
       (recur as)
       here)))
 
-(defn reachable-paths [schema root-pullshape pullpath]
-  {:pre [schema]}
-  (->> (unwind-pullpath schema pullpath)
-       (get root-pullshape)
-       (downtree-pullpaths schema)))
+(defn pullshape-get [pullshape a]                        ; arg order is like 'get
+  (-> pullshape
+      (->> (filter map?))
+      (->> (apply merge))
+      (get a)))
+
+(defn pullshape-get-in [pullshape as]
+  (reduce pullshape-get pullshape as))
+
+(defn reachable-pullpaths [schema root-pullshape pullpath]
+  ; Include the one we are at now? There is an off by one in here
+  {:pre [schema #_(satisfies? SchemaIndexedNormalized schema)]}
+  (let [ancestor-path (pullpath-unwind-while (ref-one? schema) pullpath)
+        ancestor-pull (pullshape-get-in root-pullshape ancestor-path)]
+    (pull-traverse ancestor-pull (ref-one? schema))))
 
 (defn reachable-attrs [schema root-pullshape pullpath]
-  {:pre [(satisfies? SchemaIndexedNormalized schema)]}
-  (->> (reachable-paths schema root-pullshape pullpath)
-       (map last)))
+  {:pre [#_(satisfies? SchemaIndexedNormalized schema)]}
+  (->> (reachable-pullpaths schema root-pullshape pullpath)
+       (map last)
+       (remove nil?)))
 
 (defn element-spread [schema {{pull-pattern :value} :pattern :as e} collection]
   ; derivative oriented, ignores spread
@@ -226,13 +241,6 @@
                    (keyword? attr-spec) [attr-spec]
                    (map? attr-spec) (keys attr-spec))))     ; Could verify :ref against schema here
        #_(remove (partial = :db/id))))
-
-
-(defn pull-shape-refine [a pull-shape]
-  (-> pull-shape
-      (->> (filter map?))
-      (->> (apply merge))
-      (get a)))
 
 (defn result-enclosure "
   no data is not a well-formed result - probably invalid query, but it's less confusing to users

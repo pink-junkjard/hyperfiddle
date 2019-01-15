@@ -1,9 +1,12 @@
 (ns hypercrud.browser.context-test
   (:require
     [clojure.test :refer [deftest is]]
-    [hypercrud.browser.context :refer []]
-    ))
+    [contrib.reactive :as r]
+    [hypercrud.browser.context]))
 
+; Connect to real tank
+
+; [nil 1 99]
 
 ; This interface needs ctx now so the tests are hard
 

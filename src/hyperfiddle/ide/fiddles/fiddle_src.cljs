@@ -111,8 +111,8 @@
                    (remove (partial = :db/id)))]
         ^{:key (str k)}
         [field [k] ctx])
-      (field [:db/id] ctx (fn [val ctx props]
-                            [:div (link #{:hyperfiddle/ide :hf/remove} ctx "Remove fiddle" {:class "btn-outline-danger"})]))
+      (field [] ctx (fn [val ctx props]
+                      [:div (link #{:hyperfiddle/ide :hf/remove} ctx "Remove fiddle" {:class "btn-outline-danger"})]))
       #_[:div.p "Spec debugging"]
       #_[:pre
          (with-out-str

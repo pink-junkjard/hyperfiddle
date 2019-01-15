@@ -128,13 +128,13 @@
         element @(:hypercrud.browser/element ctx)
         i (:hypercrud.browser/element-index ctx)
         [_ a _] @(:hypercrud.browser/eav ctx)]              ; a can be int now for findelement - hax
-    (match* [(type element) a]                              ; has-child-fields @(r/fmap-> (:hypercrud.browser/field ctx) ::field/children nil? not)
-      [Pull :db/id] (dbid-label _ ctx props)                ; fixme, is this even in play?
-      [Pull :db/ident] (dbid-label _ ctx props)
-      [Pull (true :<< int?)] (label-with-docs (get-in element [:variable :symbol]) (semantic-docstring ctx) props)
-      [Pull aa] (label-with-docs (name aa) (semantic-docstring ctx) props)
-      [Variable _] (label-with-docs (get-in element [:variable :symbol]) (semantic-docstring ctx) props)
-      [Aggregate _] (let [label (str (cons (get-in element [:fn :symbol])
+    (match* [i (type element) a]                            ; has-child-fields @(r/fmap-> (:hypercrud.browser/field ctx) ::field/children nil? not)
+      [_ Pull :db/id] (dbid-label _ ctx props)                ; fixme, is this even in play?
+      [_ Pull :db/ident] (dbid-label _ ctx props)
+      [i Pull nil] (label-with-docs (get-in element [:variable :symbol]) (semantic-docstring ctx) props)
+      [_ Pull aa] (label-with-docs (name aa) (semantic-docstring ctx) props)
+      [_ Variable _] (label-with-docs (get-in element [:variable :symbol]) (semantic-docstring ctx) props)
+      [_ Aggregate _] (let [label (str (cons (get-in element [:fn :symbol])
                                            (map (comp second first) (:args element))))]
                       (label-with-docs label (semantic-docstring ctx) props)))))
 
@@ -202,8 +202,8 @@ User renderers should not be exposed to the reaction."
         (disabled? [link-ref ctx]
           (condp some @(r/fmap :link/class link-ref)
             #{:hf/new} nil #_(not @(r/track security/can-create? ctx)) ; flag
-            #{:hf/remove} (if @(r/cursor (:hypercrud.browser/eav ctx) [1])
-                            (not @(r/track security/writable-entity? (:hypercrud.browser/parent ctx)))
+            #{:hf/remove} (if (let [[_ a _] @(:hypercrud.browser/eav ctx)] a)
+                            (if-let [ctx (:hypercrud.browser/parent ctx)] (not @(r/track security/writable-entity? ctx))) ; check logic
                             (not @(r/track security/writable-entity? ctx)))
             ; else we don't know the semantics, just nil out
             nil))]

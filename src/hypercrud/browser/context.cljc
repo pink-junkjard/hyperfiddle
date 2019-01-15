@@ -179,9 +179,11 @@
 (defn row-keyfn [ctx row]
   (r/row-keyfn' (partial stable-relation-key ctx) row))     ; bad
 
-(defn stable-eav-v [[?e a _] v']
-  {:pre [a v']}
-  [?e a v'])
+(defn stable-eav-v [[?e a _] ?v']
+  {:pre [a
+         #_?v'                                              ; Never know with ?v, did they pull identity?
+         ]}
+  [?e a ?v'])
 
 (defn stable-eav-av "v becomes e. In top cases, this is nil->nil; only Pulls have defined E.
   ?v' can be nil - sparse results."
@@ -287,7 +289,10 @@
           ; Hard to interpret it since we don't know what it is (entity, aggregate, var)
           ; Setting :hypercrud.browser/validation-hints doesn't make sense here as specs are keyword oriented
           ; so at the fiddle level, or at the attribute level, but not relations.
-          (assoc ctx :hypercrud.browser/eav (r/fmap-> (:hypercrud.browser/eav ctx) (stable-eav-av i (v! ctx)))))))
+          ;
+          ; We can set i as the a, but you can't have links on i, we want to leave the fiddle-ident as the a.
+          ; a has to be semantic. does it matter?
+          (assoc ctx :hypercrud.browser/eav (r/fmap-> (:hypercrud.browser/eav ctx) (stable-eav-v (v! ctx)))))))
 
 (defn -infer-implicit-element "auto-focus single elements - legacy field path compat"
   [ctx]
@@ -324,8 +329,8 @@
               (update ctx :hypercrud.browser/result-path (fnil conj []) a') ; no result-path in head
               (update ctx :hypercrud.browser/validation-hints #(for [[[p & ps] hint] % :when (= p a')]
                                                                  [ps hint]))))
-      (assoc ctx :hypercrud.browser/pull-enclosure (r/fmap->> (:hypercrud.browser/pull-enclosure ctx)
-                                                              (contrib.datomic/pull-shape-refine a')))
+      (assoc ctx :hypercrud.browser/pull-enclosure (r/fmap-> (:hypercrud.browser/pull-enclosure ctx)
+                                                             (contrib.datomic/pullshape-get a')))
       ; V is for formulas, E is for security and on-change. V becomes E. E is nil if we don't know identity.
       (assoc ctx :hypercrud.browser/eav                     ; insufficent stability on r-?v? fixme
                  (case (if (= a' :db/id)
@@ -455,19 +460,30 @@
              (filter (partial link-criteria-match? criterias))
              (mapv second)))
 
-(defn links-in-dimension [ctx criterias]
+(defn links-in-dimension' [ctx criterias]
+  {:post [(not (r/reactive? %))]}
   (let [?element (some-> ctx :hypercrud.browser/element deref)
         ?schema (some-> ctx :hypercrud.browser/schema deref)
         ?pullpath (:hypercrud.browser/pull-path ctx)]
     (if-not (and ?element ?schema ?pullpath)
-      (links-at ctx criterias)
-      (let [pull-pattern (get-in ?element [:pattern :value])]
-        (->> (contrib.datomic/reachable-attrs ?schema (contrib.datomic/pull-shape pull-pattern) ?pullpath)
-             (mapcat (fn [a]
-                       (links-at ctx (conj criterias a)))) ; deref
-             r/sequence
-             ; associative by index
-             (r/fmap vec))))))
+      @(links-at ctx criterias)
+      (let [pull-pattern (get-in ?element [:pattern :value])
+            ; if pullpath is [], add fiddle-ident. Or if EAV a is not a keyword.
+            ; EAV A may already be the fiddle-ident, or if its an int, use fiddle-ident too.
+            ; reachable link locations, not just attrs.
+            as (contrib.datomic/reachable-attrs ?schema (contrib.datomic/pull-shape pull-pattern) ?pullpath)
+            links (->> as
+                       ; Places within reach
+                       (mapcat (fn [a]
+                                 @(links-at ctx (conj criterias a))))
+
+                       ; This place is where we are now
+                       (concat @(links-at ctx criterias)))]
+        (vec links) ; associative by index
+        #_(->> links r/sequence (r/fmap vec))))))
+
+(defn links-in-dimension [ctx criterias]
+  (r/track links-in-dimension' ctx criterias))
 
 (defn refocus "todo unify with refocus'
   From view, !link(:new-intent-naive :hf/remove) - find the closest ctx with all dependencies satisfied. Accounts for cardinality.
@@ -495,7 +511,7 @@
         ;   me->mother ; me->sister->mother ; closest ctx is selected
         ; What if there is more than one?  me->sister->mother; me->father->mother
         ; Ambiguous, how did we even select this link? Probably need full datascript query language.
-        target-path (->> (contrib.datomic/reachable-paths schema root-pull current-path)
+        target-path (->> (contrib.datomic/reachable-pullpaths schema root-pull current-path)
                          (filter #(some target-attr %))
                          (map (partial take-while (partial not= target-attr)))
                          (sort-by count)
