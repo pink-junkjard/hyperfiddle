@@ -149,7 +149,7 @@
             (name (context/segment-type-2 a))
             (string/join "/" (:hypercrud.browser/pull-path ctx)) ; legacy unique selector for each location
             (->> (:hypercrud.browser/pull-path ctx)              ; actually generate a unique selector for each location
-                 (cons :hypercrud.browser/pull-path)             ; path prefix differentiates between attr and single attr paths
+                 (cons "-hypercrud-browser-path")                ; path prefix differentiates between attr and single attr paths
                  (string/join "/"))]
            (when (context/attribute-segment? a)
              [@(context/hydrate-attribute ctx a :db/valueType :db/ident)
