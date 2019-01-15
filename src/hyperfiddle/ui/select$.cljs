@@ -44,10 +44,10 @@
       (interpose ", ")
       (apply str))))
 
-(defn select-anchor-renderer' [props option-props ctx]
+(defn select-anchor-renderer' [props option-props ctx]      ; element, etc
   ; hack in the selected value if we don't have options hydrated?
   ; Can't, since we only have the #DbId hydrated, and it gets complicated with relaton vs entity etc
-  (let [is-no-options @(r/fmap empty? (:hypercrud.browser/data ctx))
+  (let [is-no-options @(r/fmap empty? (hypercrud.browser.context/data ctx))
         props (-> props
                   (update :on-change (fn [on-change]
                                        (fn [e]
@@ -63,10 +63,10 @@
         option-value-fn (fn [row]
                           (let [element (if (vector? row) (first row) row)] ; inspect datalog
                             (pr-str (or (context/smart-entity-identifier ctx element) element))))]
-    [:select.ui (dissoc props :option-label)                ; value
+    [:select.ui (select-keys props [:value :class :style :on-change :read-only]) ;(dissoc props :option-label) ; value
      ; .ui is because options are an iframe and need the pink box
      (conj
-       (->> @(:hypercrud.browser/data ctx)
+       (->> @(hypercrud.browser.context/data ctx)
             (mapv (juxt option-value-fn #(label-fn % ctx)))
             (sort-by second)
             (map (fn [[id label]]
@@ -77,16 +77,17 @@
   [:span msg])
 
 (defn select-view-validated [select-view props option-props val ctx props2]
-  (case @(r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/type])
-    :entity [select-error-cmp "Only fiddle type `query` is supported for select options"]
-    :blank [select-error-cmp "Only fiddle type `query` is supported for select options"]
-    :query (let [qfind (:hypercrud.browser/qfind ctx)]
-             (condp some [(type qfind)]
-               #{FindRel FindColl} (let [props (into props (select-keys props2 [:on-click]))]
-                                     [select-view props option-props ctx])
-               #{FindScalar FindTuple} [select-error-cmp "Tuples and scalars are unsupported for select options. Please change your options query to return a relation or collection"]))
-    ; default
-    [select-error-cmp "Only fiddle type `query` is supported for select options"]))
+  (let [ctx (hypercrud.browser.context/fiddle ctx)]
+    (case @(r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/type])
+      :entity [select-error-cmp "Only fiddle type `query` is supported for select options"]
+      :blank [select-error-cmp "Only fiddle type `query` is supported for select options"]
+      :query (let [qfind @(:hypercrud.browser/qfind ctx)]
+               (condp some [(type qfind)]
+                 #{FindRel FindColl} (let [props (into props (select-keys props2 [:on-click]))]
+                                       [select-view props option-props ctx])
+                 #{FindScalar FindTuple} [select-error-cmp "Tuples and scalars are unsupported for select options. Please change your options query to return a relation or collection"]))
+      ; default
+      [select-error-cmp "Only fiddle type `query` is supported for select options"])))
 
 (defn compute-disabled [ctx props]
   (let [entity (hypercrud.browser.context/data ctx)]        ; how can this be loading??

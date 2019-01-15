@@ -478,8 +478,8 @@
                                  @(links-at ctx (conj criterias a))))
 
                        ; This place is where we are now
-                       (concat @(links-at ctx criterias)))]
-        (vec links) ; associative by index
+                       (concat @(links-at ctx criterias)))] ; this causes duplicates, there are bugs here
+        (vec (distinct links))                              ; associative by index
         #_(->> links r/sequence (r/fmap vec))))))
 
 (defn links-in-dimension [ctx criterias]
