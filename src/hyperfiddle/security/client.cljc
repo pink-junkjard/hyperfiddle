@@ -23,7 +23,7 @@
    :writable-entity? (constantly true)})
 
 (def authenticated-users-only
-  {:subject-can-transact? (fn [hf-db subject user] (some? subject))
+  {:subject-can-transact? (fn [hf-db subject] (some? subject))
    :can-create? (fn [hf-db subject ctx] (some? subject))
    :writable-entity? (fn [hf-db subject ctx] (some? subject))})
 
@@ -31,7 +31,7 @@
                   (-> (into #{} (:hyperfiddle/owners hf-db))
                       (contains? subject)))]
   (def owner-only
-    {:subject-can-transact? (fn [hf-db subject user] (owned-by? hf-db subject))
+    {:subject-can-transact? (fn [hf-db subject] (owned-by? hf-db subject))
      :can-create? (fn [hf-db subject ctx] (owned-by? hf-db subject))
      :writable-entity? (fn [hf-db subject ctx] (owned-by? hf-db subject))}))
 
@@ -49,7 +49,7 @@
                           (new-entity? peer dbname dbid (branch/decode-parent-branch branch))
                           false)))]
   (def entity-ownership
-    {:subject-can-transact? (fn [hf-db subject user] (some? subject))
+    {:subject-can-transact? (fn [hf-db subject] (some? subject))
      :can-create? (fn [hf-db subject ctx] (some? subject))
      :writable-entity? (fn [hf-db subject ctx]
                          (and (some? subject)
@@ -69,10 +69,10 @@
       ::security/owner-only (right owner-only)
       ::security/custom (memoized-safe-eval-string (:database.custom-security/client hf-db)))))
 
-(defn subject-can-transact? [hf-db subject user]            ; todo merge subject into user
+(defn subject-can-transact? [hf-db subject]
   (mlet [client-sec (eval-client-sec hf-db)
          :let [f (or (:subject-can-transact? client-sec) (constantly true))]]
-    (try-either (f hf-db subject user))))
+    (try-either (f hf-db subject))))
 
 (defn can-create? [ctx]
   (-> (mlet [:let [dbname (context/dbname ctx)

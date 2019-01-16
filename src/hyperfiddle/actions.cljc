@@ -8,7 +8,6 @@
     [contrib.datomic-tx :as tx]
     [hypercrud.types.Err :as Err]
     [hypercrud.util.branch :as branch]
-    [hyperfiddle.domain :as domain]
     [hyperfiddle.io.core :as io]
     [hyperfiddle.route :as route]
     [hyperfiddle.runtime :as runtime]
@@ -62,22 +61,6 @@
                 (dispatch! [:partition-schema branch schema])))
       (p/catch (fn [error]
                  (dispatch! [:partition-error branch error])
-                 (throw error)))))
-
-(defn refresh-user [rt dispatch! get-state]
-  (dispatch! [:set-user nil])
-  (p/resolved nil)
-  #_(-> (if-let [user-id @(runtime/state rt [::runtime/user-id])]
-        (let [branch nil
-              local-basis @(runtime/state rt [::runtime/partitions branch :local-basis])
-              staged-branches nil
-              request (domain/user-request (runtime/domain rt) user-id)]
-          (io/hydrate-one! (runtime/io rt) local-basis staged-branches request))
-        (p/resolved nil))
-      (p/then (fn [response]
-                (dispatch! [:set-user response])))
-      (p/catch (fn [error]
-                 (dispatch! [:set-error error])
                  (throw error)))))
 
 (defn add-partition [rt route branch & on-start]
@@ -145,7 +128,6 @@
                 ; todo should just call foundation/bootstrap-data
                 (mlet [:let [on-finally (into [[:transact!-success (keys tx-groups)]] post-tx)]
                        _ (refresh-global-basis rt on-finally dispatch! get-state)
-                       _ (refresh-user rt dispatch! get-state)
                        :let [current-route (get-in (get-state) [::runtime/partitions nil :route])]]
                   (either/branch
                     (or (some-> route route/validate-route+) ; arbitrary user input, need to validate

@@ -173,11 +173,6 @@
     :set-user-id (first args)
     user-id))
 
-(defn user-reducer [user action & args]
-  (case action
-    :set-user (first args)
-    user))
-
 (defn selected-uri-reducer [uri action & args]
   (case action
     :select-uri (first args)
@@ -188,7 +183,6 @@
                   :hyperfiddle.runtime/partitions partitions-reducer
                   :hyperfiddle.runtime/auto-transact auto-transact-reducer
                   :hyperfiddle.runtime/user-id user-id-reducer
-                  :hyperfiddle.runtime/user user-reducer
 
                   ; user
                   :display-mode display-mode-reducer

@@ -66,11 +66,10 @@
 
 (def LEVEL-NONE 0)
 (def LEVEL-GLOBAL-BASIS 1)
-(def LEVEL-USER 2)
-(def LEVEL-ROUTE 3)
-(def LEVEL-LOCAL-BASIS 4)
-(def LEVEL-SCHEMA 5)
-(def LEVEL-HYDRATE-PAGE 6)
+(def LEVEL-ROUTE 2)
+(def LEVEL-LOCAL-BASIS 3)
+(def LEVEL-SCHEMA 4)
+(def LEVEL-HYDRATE-PAGE 5)
 
 ; this needs to be a bit smarter; this should be invoked by everyone (all service endpoints, ssr, browser)
 ; e.g. for service/hydrate-route, we have route, and local-basis, just need to fetch domain & hydrate
@@ -82,7 +81,6 @@
     (p/resolved nil)
     (-> (condp = (inc init-level)
           LEVEL-GLOBAL-BASIS (actions/refresh-global-basis rt nil (partial runtime/dispatch! rt) #(deref (runtime/state rt)))
-          LEVEL-USER (actions/refresh-user rt (partial runtime/dispatch! rt) #(deref (runtime/state rt)))
           LEVEL-ROUTE (let [route (domain/url-decode (runtime/domain rt) encoded-route)]
                         (runtime/dispatch! rt [:add-partition nil route])
                         (p/resolved nil))

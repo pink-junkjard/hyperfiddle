@@ -166,7 +166,7 @@
   (let [props (-> (assoc props
                     :value val
                     :on-change (with-entity-change! ctx)
-                    :parinfer @(runtime/state (:peer ctx) [::runtime/user :hyperfiddle.ide/parinfer]))
+                    :parinfer (:contrib.ui/parinfer ctx))
                   (update :mode #(or % "clojure")))]
     [debounced props (code-comp ctx)]))
 
