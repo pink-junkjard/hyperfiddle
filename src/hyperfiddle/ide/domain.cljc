@@ -22,13 +22,21 @@
   (fiddle-database [domain] fiddle-database)
   (databases [domain] databases)
   (environment [domain] environment)
+
+  ; todo unit test url encode/decode
   (url-decode [domain s]
     (let [[fiddle-ident & rest :as route] (route/url-decode s home-route)]
       (if (and (keyword? fiddle-ident) (= "hyperfiddle.ide" (namespace fiddle-ident)))
         route
         ; todo handle args and frag
         (route/canonicalize :hyperfiddle.ide/edit [(base/legacy-fiddle-ident->lookup-ref fiddle-ident)] rest))))
-  (url-encode [domain route] (route/url-encode route home-route))
+  (url-encode [domain route]
+    (if (= :hyperfiddle.ide/edit (first route))
+      ; todo handle args and frag
+      (let [[_ [lookup-ref] rest] route]
+        (-> (route/canonicalize (base/legacy-lookup-ref->fiddle-ident lookup-ref) rest)
+            (route/url-encode home-route)))
+      (route/url-encode route home-route)))
   )
 
 (defn build+ [datomic-record]
@@ -86,5 +94,5 @@
                     (if (= "www" app-domain-ident)          ; todo this check is NOT ide
                       (multi-datomic/hydrate-app-domain io local-basis [:domain/ident "www"])
                       (-> (hydrate-ide-domain io local-basis app-domain-ident)
-                          (p/then #(assoc % :fqdn fqdn :ide-domain ide-domain))))
+                          (p/then #(assoc % :fqdn fqdn :ide-domain ide-domain :app-domain-ident app-domain-ident))))
                     (multi-datomic/hydrate-app-domain io local-basis [:domain/aliases fqdn])))))))

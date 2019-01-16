@@ -20,22 +20,25 @@
   (if @(r/track any-loading? (:peer ctx))
     [:div.display-inline-flex [re-com.core/throbber]]))
 
-(defn renderer' [val ctx props]
+(defn renderer' [value ctx props]
   [:div props
    [:div.left-nav
     [tooltip {:label "Home"} [:a {:href "/"} (domain/ident (runtime/domain (:peer ctx)))]]
+    (let [props {:tooltip [nil "Fiddles in this domain"]
+                 :iframe-as-popover true}]
+      [ui/link :fiddle-shortcuts ctx "index" props])
     [:span (let [[fiddle-ident :as route] @(runtime/state (:peer ctx) [::runtime/partitions nil :route])]
              (cond
                (= fiddle-ident :hyperfiddle.ide/edit) (let [[_ [user-fiddle-ident]] route]
-                                                        (str "Editing: "
-                                                             (if (keyword? user-fiddle-ident)
-                                                               (name user-fiddle-ident)
+                                                        (str "edit: "
+                                                             (if (and (coll? user-fiddle-ident) (= :fiddle/ident (first user-fiddle-ident)))
+                                                               (let [user-fiddle-ident (second user-fiddle-ident)]
+                                                                 (if (keyword? user-fiddle-ident)
+                                                                   (name user-fiddle-ident)
+                                                                   user-fiddle-ident))
                                                                user-fiddle-ident)))
                (keyword? fiddle-ident) (name fiddle-ident)
-               :else fiddle-ident))]
-    (let [props {:tooltip [nil "Fiddles in this domain"]
-                 :iframe-as-popover true}]
-      [ui/link :fiddle-shortcuts ctx "index" props])]
+               :else fiddle-ident))]]
 
    [:div.right-nav {:key "right-nav"}                       ; CAREFUL; this key prevents popover flickering
     [loading-spinner ctx]
@@ -74,18 +77,18 @@
           [ui/link :account ctx @(r/fmap :user/name data) props]))
       [:a {:href (hyperfiddle.ide/stateless-login-url ctx)} "login"])]])
 
-(defn hack-login-renderer [val ctx props]
+(defn hack-login-renderer [value ctx props]
   [:div props
    [:div.left-nav
     [tooltip {:label "Home"} [:a (domain/ident (runtime/domain (:peer ctx)))]]]
    [:div.right-nav {:key "right-nav"}                       ; CAREFUL; this key prevents popover flickering
     [loading-spinner ctx]]])
 
-(defn renderer [val ctx props]
+(defn renderer [value ctx props]
   (let [f (if (= :hyperfiddle.ide/please-login (first @(runtime/state (:peer ctx) [::runtime/partitions nil :route])))
             hack-login-renderer
             renderer')]
-    [f val ctx props]))
+    [f value ctx props]))
 
 (letfn [(toggle-auto-transact! [ctx selected-dbname]
           (runtime/dispatch! (:peer ctx) [:toggle-auto-transact @selected-dbname]))]
