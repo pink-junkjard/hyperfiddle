@@ -36,6 +36,8 @@
                     (concat
                       (some-> @fiddle-request vector)
                       (->> (base/process-results fiddle fiddle-request ctx)
+                           ; Don't set context/fiddle (would set A to fiddle-ident)
+                           ; Context methods must be robust to fiddle-attrs now.
                            (cats/fmap requests)
                            (-quiet-unwrap))))))))))
 

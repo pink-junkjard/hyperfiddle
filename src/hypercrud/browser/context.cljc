@@ -485,6 +485,12 @@
 (defn links-in-dimension [ctx criterias]
   (r/track links-in-dimension' ctx criterias))
 
+(defn depth [ctx]
+  (count (:hypercrud.browser/result-path ctx)))
+
+(defn unwind [ctx n]
+  ((apply comp (repeat n :hypercrud.browser/parent)) ctx))
+
 (defn refocus "todo unify with refocus'
   From view, !link(:new-intent-naive :hf/remove) - find the closest ctx with all dependencies satisfied. Accounts for cardinality.
   Caller asserts that the deps are satisfied (right stuff is in scope).
@@ -492,35 +498,40 @@
   If there is more than one path, is this an error?"
   ; fiddle means eav starts at fiddle level
   [ctx target-attr]
-  {:pre [(:hypercrud.browser/element ctx)                   ; even FindScalar has an element, :blank does not need to refocus
+  {:pre [#_(:hypercrud.browser/element ctx)                   ; even FindScalar has an element, :blank does not need to refocus
+         ; Fiddle-attr targets now do not have element.
          ctx]
    ; If you don't have this stuff why do we need to focus?
-   :post [(->> (keys %) (clojure.set/superset? #{:hypercrud.browser/eav
-                                                 :hypercrud.browser/element
-                                                 :hypercrud.browser/qfind}))]}
+   :post [#_(->> (keys %) (clojure.set/superset? #{#_:hypercrud.browser/eav ; in the server, there isn't an eav in scope at fiddle level which hits htis now
+                                                 #_:hypercrud.browser/element ; fiddle-attr doesn't have
+                                                 #_:hypercrud.browser/qfind ; fiddle-attr doesn't have
+                                                 }))]}
 
-  ; are we focusing from blank? Impossible, there's no result to focus
-  ; Are we refocusing to blank? That would mean whacking the ctx entirely?
-  ; if target-attr = last path, we're already here! How did that happen? Should be harmless, will noop
-  (let [{{db :symbol} :source {pull-pattern :value} :pattern} (:hypercrud.browser/element ctx)
-        root-pull (contrib.datomic/pull-shape pull-pattern)
-        current-path (:hypercrud.browser/pull-path ctx)
-        schema (get (summon-schemas-grouped-by-dbname ctx) (str db))
+  (if (= target-attr (@(:hypercrud.browser/fiddle ctx) :fiddle/ident))
+    (unwind ctx (depth ctx))                                ; if no element, we already there (depth = 0)
 
-        ; find a reachable path that contains the target-attr in the fewest hops
-        ;   me->mother ; me->sister->mother ; closest ctx is selected
-        ; What if there is more than one?  me->sister->mother; me->father->mother
-        ; Ambiguous, how did we even select this link? Probably need full datascript query language.
-        target-path (->> (contrib.datomic/reachable-pullpaths schema root-pull current-path)
-                         (filter #(some target-attr %))
-                         (map (partial take-while (partial not= target-attr)))
-                         (sort-by count)
-                         first)
+    ; are we focusing from blank? Impossible, there's no result to focus
+    ; Are we refocusing to blank? That would mean whacking the ctx entirely?
+    ; if target-attr = last path, we're already here! How did that happen? Should be harmless, will noop
+    (let [{{db :symbol} :source {pull-pattern :value} :pattern} (:hypercrud.browser/element ctx)
+          root-pull (contrib.datomic/pull-shape pull-pattern)
+          current-path (:hypercrud.browser/pull-path ctx)
+          schema (get (summon-schemas-grouped-by-dbname ctx) (str db))
 
-        common-ancestor-path (ancestry-common current-path target-path)
-        unwind-offset (- (count current-path) (count common-ancestor-path))
-        common-ancestor-ctx ((apply comp (repeat unwind-offset :hypercrud.browser/parent)) ctx)]
-    (focus common-ancestor-ctx (ancestry-divergence target-path current-path))))
+          ; find a reachable path that contains the target-attr in the fewest hops
+          ;   me->mother ; me->sister->mother ; closest ctx is selected
+          ; What if there is more than one?  me->sister->mother; me->father->mother
+          ; Ambiguous, how did we even select this link? Probably need full datascript query language.
+          target-path (->> (contrib.datomic/reachable-pullpaths schema root-pull current-path)
+                           (filter #(some target-attr %))
+                           (map (partial take-while (partial not= target-attr)))
+                           (sort-by count)
+                           first)
+
+          common-ancestor-path (ancestry-common current-path target-path)
+          unwind-offset (- (count current-path) (count common-ancestor-path))
+          common-ancestor-ctx (unwind ctx unwind-offset)]
+      (focus common-ancestor-ctx (ancestry-divergence target-path current-path)))))
 
 (defn id->tempid+ [route ctx]
   (let [invert-id (fn [id uri]
