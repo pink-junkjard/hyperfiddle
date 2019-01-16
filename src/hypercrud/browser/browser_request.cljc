@@ -53,7 +53,7 @@
            (requests-for-pull-iframes ctx)))))                             ; recur
 
 (defn with-result [ctx]
-  (for [ctx (hypercrud.browser.context/spread-fiddle ctx)]
+  (for [[_ ctx] (hypercrud.browser.context/spread-fiddle ctx)]
     (concat
       (->> @(data/select-many-here ctx #{:hf/iframe})
            (mapcat #(request-from-link % ctx)))

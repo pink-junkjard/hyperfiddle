@@ -29,8 +29,8 @@
        (datascript.parser FindRel FindColl FindTuple FindScalar Variable Aggregate Pull))))
 
 
-;(defprotocol Context
-;  (schema [ctx]))
+; This file is coded in reactive style, which means no closures because they cause unstable references.
+; All "closures" must be explicitly closed with a deftype that implements IEquiv, see helpers in contrib.reactive
 
 (s/def :hypercrud/context
   (s/keys :opt [:hypercrud.browser/route
@@ -199,6 +199,12 @@
   ; v becomes e
   [v a' nil])
 
+;(defprotocol EAV
+;  (eav [this])
+;  (e [this])
+;  (a [this])
+;  (v [this]))
+
 (defn ^:export fiddle "Fiddle level ctx adds the result to scope"
   [ctx]
   {:post [(s/assert :hypercrud/context %)
@@ -218,7 +224,7 @@
                                                          (s/get-spec @(r/fmap :fiddle/ident (:hypercrud.browser/fiddle ctx)))
                                                          @(:hypercrud.browser/result ctx)
                                                          (partial row-keyfn ctx)))
-        (assoc ctx :hypercrud.browser/eav (r/apply hypercrud.browser.context/stable-eav-av
+        (assoc ctx :hypercrud.browser/eav (r/apply stable-eav-av
                                                    [(:hypercrud.browser/eav ctx)
                                                     (r/fmap :fiddle/ident (:hypercrud.browser/fiddle ctx))
                                                     ; What about head vs body? We're in body now!
@@ -227,7 +233,7 @@
 (defn -infer-implicit-fiddle [ctx]
   (or
     (if-not (:hypercrud.browser/qfind ctx)
-      (hypercrud.browser.context/fiddle ctx))
+      (fiddle ctx))
     ctx))
 
 (defn stable-element-schema [schemas element]
@@ -303,7 +309,7 @@
   (or
     (if-not (:hypercrud.browser/element ctx)
       (if (#{FindColl FindScalar} (type @(:hypercrud.browser/qfind ctx)))
-        (hypercrud.browser.context/element ctx 0)))
+        (element ctx 0)))
     ctx))
 
 (defn -validate-qfind-element [ctx]
@@ -369,13 +375,12 @@
       (update ctx :hypercrud.browser/validation-hints #(for [[[p & ps] hint] % :when (= k p)]
                                                      [ps hint]))))
 
-(defn ^:export spread-fiddle "automatically guards :fiddle/type :blank.
-  Use in a for comprehension!"
-  [ctx]
-  (let [fiddle-type @(r/fmap :fiddle/type (:hypercrud.browser/fiddle ctx))]
-    (condp some [fiddle-type]
-      #{:blank} []                                          ; don't we want the eav?
-      #{:query :entity} [(hypercrud.browser.context/fiddle ctx)])))
+(defn ^:export spread-fiddle "Use in a for comprehension to automatically guard :fiddle/type :blank.
+  Returns [k ctx] for uniformity with other spreads. You should probably use the key."
+  [{:keys [:hypercrud.browser/fiddle] :as ctx}]
+  (condp some [(:fiddle/type @fiddle)]
+    #{:blank} []                                            ; don't we want the eav?
+    #{:query :entity} [(:fiddle/ident @fiddle) (fiddle ctx)]))
 
 (defn ^:export spread-rows "spread across resultset row-or-rows; returns [k ctx] for your react key.
   Automatically accounts for query dimension - no-op in the case of FindTuple and FindScalar."
@@ -430,6 +435,15 @@
     ; No unsequence here? What if find elements change? Can we use something other than (range) as keyfn?
     (for [i (range (count (datascript.parser/find-elements @r-qfind)))]
       [i (element ctx i)])))
+
+(defn spread-attributes "not recursive, just one entity level"
+  [{:keys [:hypercrud.browser/element] :as ctx}]
+  {:pre [element]}
+  (condp = (type @element)
+    Variable [ctx]
+    Aggregate [ctx]
+    Pull (for [k (contrib.datomic/pull-level @(:hypercrud.browser/pull-enclosure ctx))]
+           [k (hypercrud.browser.context/attribute ctx k)])))
 
 ; var first, then can always use db/id on row. No not true – collisions! It is the [?e ?f] product which is unique
 
@@ -607,7 +621,7 @@
               ctx)
         +args @(r/fmap->> link-ref (build-args+ ctx))
         [v' & vs] (->> +args (contrib.ct/unwrap (constantly nil))) ; EAV sugar is not interested in tuple case, that txfn is way off happy path
-        ctx (assoc ctx :hypercrud.browser/eav (r/apply hypercrud.browser.context/stable-eav-v
+        ctx (assoc ctx :hypercrud.browser/eav (r/apply stable-eav-v
                                                        [(:hypercrud.browser/eav ctx)
                                                         (r/track identity v')]))
         r+?route (r/fmap->> link-ref (build-route' +args ctx))]
@@ -675,7 +689,9 @@
 (defn tempid "stable" [ctx]
   ; recurse all the way up the path? just data + parent-data is relative not fully qualified, which is not unique
   ; is this just eav?
-  (str @(:hypercrud.browser/eav ctx))
+  (->> (map pr-str @(:hypercrud.browser/eav ctx))
+       (cons "tempid")
+       (clojure.string/join "-"))
   #_(-> (str (:hypercrud.browser/pull-path ctx) "."
              (hash-ctx-data (:hypercrud.browser/parent ctx)) "."
              (hash-ctx-data ctx))

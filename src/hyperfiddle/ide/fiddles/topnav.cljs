@@ -83,7 +83,7 @@
 
 (defn renderer [val ctx props]
   (let [ctx (hypercrud.browser.context/fiddle ctx)
-        #_#_ctx (hyperfiddle.api/element ctx)               ; its blank
+        #_#_ctx (hypercrud.browser.context/element ctx)               ; its blank
         f (if (and (= :hyperfiddle.ide/please-login (first (context/target-route ctx)))
                    (not= [:domain/ident foundation/source-domain-ident] (:domain-eid (runtime/host-env (:peer ctx)))))
             hack-login-renderer
