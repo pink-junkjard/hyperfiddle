@@ -38,7 +38,6 @@
         :route-params (object/get req "route-params")
         :request-body (some-> req .-body hack-buggy-express-body-text-parser transit/decode)
         :jwt (object/get req "jwt")
-        :user (object/get req "user")
         :user-id (object/get req "user-id"))
       (p/then (partial send-platform-response res))))
 
@@ -78,10 +77,6 @@
               (.format #js {"application/transit+json" #(.send res (transit/encode (->Err (ex-message e))))
                             ; todo flesh out a real session expiration page
                             "text/html" #(.send res "Session expired, please refresh and login")}))))))))
-
-(defn with-user []
-  (fn [req res next]
-    (next)))
 
 (defn build-router [env]
   (let [routes (routes/build (:BUILD env))]

@@ -40,7 +40,6 @@
     :route-params (:route-params req)
     :request-body (:body-params req)
     :jwt (:jwt req)
-    :user (:user req)
     :user-id (:user-id req)))
 
 (def combine-body-params
@@ -173,25 +172,6 @@
 
                   :else (-> (terminate context)
                             (assoc :response {:status 400 :body (->Err "Conflicting cookies and auth bearer")}))))))})
-
-(defn with-user []
-  {:name ::with-user
-   :enter (fn [context]
-            context
-            #_(if-let [user-id (get-in context [:request :user-id])]
-                (let [channel (chan)]
-                  (-> (let [local-basis (assert false "todo")
-                            staged-branches nil
-                            request (domain/user-request (get-in context [:request :domain]) user-id)]
-                        (io/hydrate-one! what-io? local-basis staged-branches request))
-                      (p/branch
-                        (fn [user] (>!! channel (assoc-in context [:request :user] user)))
-                        (fn [e]
-                          (timbre/error e)
-                          (>!! channel (-> (terminate context)
-                                           (assoc :response {:status 500 :body (->Err (.getMessage e))}))))))
-                  channel)
-                context))})
 
 (defn build-router [env]
   (let [routes (routes/build (:BUILD env))]

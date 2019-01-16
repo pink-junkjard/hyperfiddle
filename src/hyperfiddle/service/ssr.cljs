@@ -119,12 +119,11 @@
         load-level foundation/LEVEL-HYDRATE-PAGE]
     (-> (foundation/bootstrap-data rt foundation/LEVEL-NONE load-level path @(runtime/state rt [::runtime/global-basis]))
         (p/then (fn []
-                  (let [subject @(runtime/state rt [::runtime/user-id])
-                        user @(runtime/state rt [::runtime/user])]
+                  (let [subject @(runtime/state rt [::runtime/user-id])]
                     (->> (domain/databases (runtime/domain rt))
                          (data/map-values (fn [hf-db]
                                             (either/branch
-                                              (security/subject-can-transact? hf-db subject user)
+                                              (security/subject-can-transact? hf-db subject)
                                               (constantly false)
                                               identity)))
                          (into {})
