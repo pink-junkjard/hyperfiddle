@@ -111,7 +111,7 @@
 
 (defn transact! [rt tx-groups dispatch! get-state & {:keys [route post-tx]}]
   (dispatch! [:transact!-start])
-  (-> (io/transact! rt tx-groups)
+  (-> (io/transact! (runtime/io rt) tx-groups)
       (p/catch (fn [e]
                  #?(:cljs
                     (let [message (cond
