@@ -164,16 +164,20 @@
 (defn- set-parent [ctx]
   (assoc ctx :hypercrud.browser/parent (dissoc ctx :hypercrud.browser/result)))
 
-(defn stable-entity-key "Like smart-entity-identifier but reverses top layer of tempids to stabilize view keys in branches. You
-  must pull db/id to trigger tempid detection! Don't use this in labels."
+(defn stable-entity-key "Like smart-entity-identifier but reverses top layer of tempids to stabilize view keys in branches.
+  You must pull db/id to trigger tempid detection! Don't use this in labels."
   [ctx {:keys [:db/id :db/ident] :as v}]
+  {:post [%]}
   ; https://github.com/hyperfiddle/hyperfiddle/issues/563 - Regression: Schema editor broken due to smart-id
   ; https://github.com/hyperfiddle/hyperfiddle/issues/345 - Form jank when tempid entity transitions to real entity
-  (or (underlying-tempid ctx id)                            ; prefer the tempid for stability
-      (smart-entity-identifier ctx v)))
+  (or (underlying-tempid ctx id)                            ; Note we use the tempid as the key, not the dbid
+      (smart-entity-identifier ctx v)                       ; this also checks tempid but uses the dbid
+      (hash v)                                              ; fallback to hash if they didn't pull identity
+      ))
 
 (defn stable-relation-key "Stable key that works on scalars too. ctx is for tempid-reversing"
   [ctx v]
+  {:post [%]}
   (or (stable-entity-key ctx v) v))                         ; bad
 
 (defn row-keyfn [ctx row]
@@ -333,9 +337,7 @@
                                                              (contrib.datomic/pullshape-get a')))
       ; V is for formulas, E is for security and on-change. V becomes E. E is nil if we don't know identity.
       (assoc ctx :hypercrud.browser/eav                     ; insufficent stability on r-?v? fixme
-                 (case (if (= a' :db/id)
-                         :db.cardinality/one                ; :db/id is currently addressable (e.g. user wants to render that column)
-                         (contrib.datomic/cardinality @(:hypercrud.browser/schema ctx) a'))
+                 (case (contrib.datomic/cardinality-loose @(:hypercrud.browser/schema ctx) a')
                    :db.cardinality/many (r/fmap-> (:hypercrud.browser/eav ctx) (stable-eav-a a')) ; dont have v yet
                    :db.cardinality/one (r/fmap-> (:hypercrud.browser/eav ctx) (stable-eav-av a' (v! ctx))))))))
 

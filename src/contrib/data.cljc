@@ -19,10 +19,12 @@
   (->> xs
        (map (juxt f identity))
        (reduce (fn [acc [k _ :as kv]]
-                 (if (contains? acc k)
-                   (throw (ex-info "Duplicate key" k))
-                   (conj acc kv)))
-               {})))
+                 (assert k (str "group-by-unique, nil key: " k))
+                 (assert (not (contains? acc k)) (str "group-by-unique, duplicate key: " k))
+                 (conj acc kv))
+               {})
+       doall                                                ; catch duplicate key errors sooner
+       ))
 
 (defn group-by-unique-ordered "Take care to never update this value, it will lose the ordered type.
   Unused, has linear lookup, needs clj-commons/ordered which needs to be ported to CLJC."

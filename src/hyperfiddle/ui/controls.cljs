@@ -82,11 +82,6 @@
    (let [label-props (select-keys props [:on-click :class])] ; https://github.com/hyperfiddle/hyperfiddle/issues/511
      [:label.hyperfiddle label-props label (if help-md [:sup "†"])])])
 
-(defn cardinality [ctx]
-  (let [[_ a _] @(:hypercrud.browser/eav ctx)
-        attr @(context/hydrate-attribute ctx a)]
-    (some-> attr :db/cardinality :db/ident)))
-
 (defn dbid-label [_ ctx & [props]]
   {:pre [(:hypercrud.browser/element ctx)
          (:hypercrud.browser/schema ctx)]}
@@ -146,7 +141,8 @@
      ; pr-str here to disambiguate `"tempid"` from `17592186046396` and `:gender/male`
      ; ... This is dumb datomic hacks, views should never even see tempids
      [:div.input (interpose " " (cons (id-prompt ctx val) (related-links val ctx props)))]
-     (if (some-> ctx cardinality (= :db.cardinality/one))
+     (if (let [[_ a _] @(:hypercrud.browser/eav ctx)]
+           (= :db.cardinality/one (contrib.datomic/cardinality-loose @(:hypercrud.browser/schema ctx) a)))
        (if-let [link (data/select-many-here ctx :hf/new)]
          [hyperfiddle.ui/ui-from-link link ctx props]))
      (if-not (context/underlying-tempid ctx val)

@@ -86,9 +86,8 @@
     [val ctx & [props]]                                     ; returns Func[(ref, props, ctx) => DOM]
     (let [element @(:hypercrud.browser/element ctx)
           [_ a _] @(:hypercrud.browser/eav ctx)
-          attr @(context/hydrate-attribute ctx a)
-          value-type (some-> attr :db/valueType :db/ident name keyword)
-          cardinality (some-> attr :db/cardinality :db/ident name keyword)]
+          value-type (keyword (name (contrib.datomic/valueType @(:hypercrud.browser/schema ctx) a)))
+          cardinality (keyword (name (contrib.datomic/cardinality-loose @(:hypercrud.browser/schema ctx) a)))]
       (match* [(type element) value-type cardinality]
         [Variable _ _] controls/string
         [Aggregate _ _] controls/string
@@ -139,7 +138,8 @@
                       (label-with-docs label (semantic-docstring ctx) props)))))
 
 
-(defn ^:export semantic-css [ctx]                           ; works at element level, and attr
+(defn ^:export semantic-css "Works at all levels: attr, element and fiddle."
+  [ctx]
   ; Include the fiddle level ident css.
   ; Semantic css needs to be prefixed with - to avoid collisions. todo
   (let [[_ a _] @(:hypercrud.browser/eav ctx)]
@@ -151,10 +151,11 @@
             (->> (:hypercrud.browser/pull-path ctx)              ; actually generate a unique selector for each location
                  (cons "-hypercrud-browser-path")                ; path prefix differentiates between attr and single attr paths
                  (string/join "/"))]
-           (when (context/attribute-segment? a)
-             [@(context/hydrate-attribute ctx a :db/valueType :db/ident)
-              @(context/hydrate-attribute ctx a :db/cardinality :db/ident)
-              (some-> @(context/hydrate-attribute ctx a :db/isComponent) (if :component))])
+           (when (and (> (count (:hypercrud.browser/result-path ctx)) 0) ; fiddle segments don't have schema, they have qfind instead, todo use that
+                      (context/attribute-segment? a))
+             [(contrib.datomic/valueType @(:hypercrud.browser/schema ctx) a)
+              (contrib.datomic/cardinality-loose @(:hypercrud.browser/schema ctx) a)
+              (if (contrib.datomic/isComponent @(:hypercrud.browser/schema ctx) a) :component)])
            (:hypercrud.browser/pull-path ctx))
          (map css-slugify)
          (apply css))))
@@ -365,12 +366,11 @@ User renderers should not be exposed to the reaction."
 
 (defn pull "handles any datomic result that isn't a relation, recursively"
   [field val ctx & [props]]
-  (let [[_ a _] @(:hypercrud.browser/eav ctx)
-        attr @(context/hydrate-attribute ctx a)
-        cardinality (some-> attr :db/cardinality :db/ident name keyword)]
-    (match* [cardinality]
-      [:one] [form (r/partial columns [] field) val ctx props]
-      [:many] [table (r/partial columns [] field) ctx props])))
+  (let [[_ a _] @(:hypercrud.browser/eav ctx)]
+    ; detect top and do fiddle-level here, instead of in columns?
+    (match* [(contrib.datomic/cardinality-loose @(:hypercrud.browser/schema ctx) a)] ; this is parent - not focused?
+      [:db.cardinality/one] [form (r/partial columns [] field) val ctx props]
+      [:db.cardinality/many] [table (r/partial columns [] field) ctx props])))
 
 (defn ^:export result "Default result renderer. Invoked as fn, returns seq-hiccup, hiccup or
 nil. call site must wrap with a Reagent component"          ; is this just hyper-control ?

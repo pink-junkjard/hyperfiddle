@@ -1,6 +1,5 @@
 (ns fixtures.domains
   (:require
-    [contrib.data :refer [group-by-unique]]
     [contrib.datomic]
     [contrib.reader]))
 

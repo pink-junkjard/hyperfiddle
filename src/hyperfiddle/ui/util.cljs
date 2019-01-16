@@ -13,11 +13,10 @@
   ([ctx vorvs]
     ; wut is going on with eav here in :many case
     ; the parent would still be in scope i guess
-   (let [[e a v] @(:hypercrud.browser/eav ctx)              ; is this set yet in the :card :many case?
-         {{valueType :db/ident} :db/valueType {cardinality :db/ident} :db/cardinality} @(context/hydrate-attribute ctx a)
-         o (if (not= :db.type/ref valueType)
+   (let [[_ a v] @(:hypercrud.browser/eav ctx)
+         o (if (not= :db.type/ref (contrib.datomic/valueType @(:hypercrud.browser/schema ctx) a))
              v                                              ;(get entity a)      ; scalar
-             (case cardinality
+             (case (contrib.datomic/cardinality-loose @(:hypercrud.browser/schema ctx) a) ; backwards refs good here? lol
                :db.cardinality/one v                        ;(context/smart-entity-identifier ctx (get entity a))
                :db.cardinality/many (map (partial context/smart-entity-identifier ctx) vorvs)))]
      (entity-change->tx ctx o vorvs)))

@@ -32,15 +32,20 @@
 
 (defprotocol SchemaIndexedNormalized
   ; Implement this interface in both peer and Hypercrud client
-  (-repr-portable-hack [this])
   (-attr [this a k])
-  (valueType [this a])
-  (valueType? [this a k])
+  (-repr-portable-hack [this])
   (cardinality [this a])
   (cardinality? [this a k])
-  (ref? [this attr]))
+  (cardinality-loose [this a])
+  (isComponent [this a])                                   ; follows Datomic naming case conventions
+  (valueType [this a])
+  (valueType? [this a k])
+  (ref? [this attr])
+  (unique [this a]))
 
-;(defn- schema-repr [o] (str "#schema" (pr-str (-v o))))
+(defn attr-unreverse [a]
+  {:pre [(-> (name a) (subs 0 1) (= "_"))]}
+  (keyword (namespace a) (-> (name a) (subs 1))))
 
 (deftype Schema [schema-pulledtree schema-by-attr]
   SchemaIndexedNormalized
@@ -51,8 +56,21 @@
       (get-in schema-by-attr [a k])))
   (valueType [this a] (-attr this a :db/valueType))
   (cardinality [this a] (-attr this a :db/cardinality))
+  (isComponent [this a] (-attr this a :db/isComponent))
+  (unique [this a] (-attr this a :db/unique))
   (valueType? [this a k] (= k (valueType this a)))
   (cardinality? [this a k] (= k (cardinality this a)))
+  (cardinality-loose [this a]
+    (let [is-reverse-nav (-> (name a) (subs 0 1) (= "_"))]
+      (cond
+        (= a :db/id) :db.cardinality/one                    ; :db/id is currently addressable (e.g. user wants to render that column)
+        ; unique scalars can't be pulled in reverse
+        ; unique ref doesn't imply that _no other attr_ points to the entityvalue
+        ; isComponent implies a 1-1 relationship, so the reverse of an isComponent attr will be cardinality-one
+        is-reverse-nav (if (isComponent this (attr-unreverse a))
+                         :db.cardinality/one
+                         :db.cardinality/many)
+        :else (cardinality this a))))
   (ref? [this k] (valueType? this k :db.type/ref))
 
   #?@(:clj
