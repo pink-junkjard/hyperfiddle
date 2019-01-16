@@ -31,6 +31,14 @@
     (uuid? fiddle) [:fiddle/uuid fiddle]
     :else fiddle))
 
+(defn legacy-lookup-ref->fiddle-ident [lookup-ref]
+  (if (coll? lookup-ref)
+    (case (first lookup-ref)
+      :fiddle/ident (second lookup-ref)
+      :fiddle/uuid (second lookup-ref)
+      lookup-ref)
+    lookup-ref))
+
 (defn meta-request-for-fiddle [ctx]
   (if @(r/fmap-> (:hypercrud.browser/route ctx) first system-fiddle/system-fiddle?)
     (either/right nil)
