@@ -29,8 +29,6 @@
         ; todo handle args and frag
         (route/canonicalize :hyperfiddle.ide/edit [(base/legacy-fiddle-ident->lookup-ref fiddle-ident)] rest))))
   (url-encode [domain route] (route/url-encode route home-route))
-
-  #_(user-request [domain user-id] (->EntityRequest [:user/user-id user-id] (->DbRef "$users" nil) [:hyperfiddle.ide/parinfer]))
   )
 
 (defn build+ [datomic-record]

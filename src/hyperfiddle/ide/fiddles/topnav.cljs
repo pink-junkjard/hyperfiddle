@@ -91,9 +91,8 @@
           (runtime/dispatch! (:peer ctx) [:toggle-auto-transact @selected-dbname]))]
   (defn ^:export stage-ui-buttons [selected-dbname stage ctx]
     (let [writes-allowed?+ (let [hf-db (domain/database (runtime/domain (:peer ctx)) @selected-dbname)
-                                 subject @(runtime/state (:peer ctx) [::runtime/user-id])
-                                 user @(runtime/state (:peer ctx) [::runtime/user])]
-                             (security/subject-can-transact? hf-db subject user))
+                                 subject @(runtime/state (:peer ctx) [::runtime/user-id])]
+                             (security/subject-can-transact? hf-db subject))
           anonymous? (nil? @(runtime/state (:peer ctx) [::runtime/user-id]))]
       [:<>
        [tooltip (either/branch
