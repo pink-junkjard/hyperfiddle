@@ -150,14 +150,15 @@
   (defn checkbox [props]
     [:input (-> (assoc props :type "checkbox")
                 (update-existing :on-change r/comp checked)
-                (select-keys [:type :checked :on-change :disabled :class :style #_:is-invalid]))]))
+                (select-keys [:type :checked :on-change :disabled :read-only :class :style #_:is-invalid]))]))
 
 (let [target-value (fn [e] (.. e -target -value))]          ; letfn not working #470
   (defn text [props]
-    [:input (-> (assoc props :type "text")
-                (dissoc :is-invalid)
-                (cond-> (:is-invalid props) (update :class css "invalid"))
-                (update-existing :on-change r/comp target-value))]))
+    (let [props (-> (assoc props :type "text")
+                    (dissoc :is-invalid)
+                    (cond-> (:is-invalid props) (update :class css "invalid"))
+                    (update-existing :on-change r/comp target-value))]
+      [:input (select-keys props [:type :value :on-change :class :style :read-only :disabled])])))
 
 (let [parse-string (fn [s]                                  ; letfn not working #470
                      (let [v (some-> s contrib.reader/read-edn-string!)]
