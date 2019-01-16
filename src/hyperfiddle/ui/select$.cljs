@@ -13,36 +13,33 @@
     [hyperfiddle.ui.util :refer [with-entity-change! writable-entity?]]
     [taoensso.timbre :as timbre]))
 
-(defn field-label [v]
+(defn ident->label [v]
   (if (instance? cljs.core/Keyword v)
     (name v)                                                ; A sensible default for userland whose idents usually share a long namespace.
     (str v)))
 
-(defn option-label [row ctx]
-  ; This logic duplicates ui/columns-relation-product &co
-  (let [qfind @(:hypercrud.browser/qfind ctx)]
-    (->>
-      (condp = (type qfind)
-        FindRel
-        (mapcat (fn [element v]
-                  (condp = (type element)
-                    Variable [v]
-                    Aggregate [v]
-                    Pull (let [children (contrib.datomic/pull-level (get-in element [:pattern :value]))]
-                           (->> children (mapv #(field-label (get % v)))))))
-                (:elements qfind)
-                row)
-        FindColl
-        (condp = (type (:element qfind))
-          Variable [row]
-          Aggregate [row]
-          Pull (let [children (contrib.datomic/pull-level (get-in (:element qfind) [:pattern :value]))]
-                 (->> children (mapv #(field-label (get % row))))))
-        FindTuple [row]                                     ; bug - bad wrapper?
-        FindScalar [row])
-      (remove nil?)
-      (interpose ", ")
-      (apply str))))
+;(defn option-label-default' [row ctx]                                ; typechecks with keyword
+;  ; spread-rows is external, f.
+;  (->>
+;    (for [[_ ctx] (hypercrud.browser.context/spread-fiddle ctx)
+;          [_ ctx] (hypercrud.browser.context/spread-elements ctx)]
+;      (let [[_ _ v] @(:hypercrud.browser/eav ctx)]
+;        (condp = (type @(:hypercrud.browser/element ctx))
+;          Variable [v]
+;          Aggregate [v]
+;          Pull (for [[_ ctx] (hypercrud.browser.context/spread-attributes ctx)]
+;                 (let [[_ _ v] @(:hypercrud.browser/eav ctx)]
+;                   (ident->label v))))))
+;    (mapcat identity)
+;    (remove nil?)
+;    (interpose ", ")
+;    (apply str)))
+
+(defn option-label-default [row ctx]
+  ; row is FindRel or FindCol
+  (or
+    (some-> (hypercrud.browser.context/smart-entity-identifier ctx row) ident->label)
+    (clojure.string/join " " (vals row))))
 
 (defn select-anchor-renderer' [props option-props ctx]      ; element, etc
   ; hack in the selected value if we don't have options hydrated?
@@ -59,7 +56,7 @@
                   (dissoc :disabled)                        ; Use :read-only instead to allow click to expand options
                   (update :read-only #(or % (:disabled props) is-no-options))
                   (update :class #(str % (if (:disabled option-props) " disabled"))))
-        label-fn (contrib.eval/ensure-fn (:option-label props option-label))
+        label-fn (contrib.eval/ensure-fn (:option-label props option-label-default))
         option-value-fn (fn [row]
                           (let [element (if (vector? row) (first row) row)] ; inspect datalog
                             (pr-str (or (context/smart-entity-identifier ctx element) element))))]
