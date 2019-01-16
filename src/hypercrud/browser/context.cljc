@@ -237,9 +237,9 @@
     ctx))
 
 (defn stable-element-schema [schemas element]
-  {:post [%]}
-  (let [{{db :symbol} :source {pull-pattern :value} :pattern} element]
-    (get schemas (str db))))
+  (let [{{db :symbol} :source} element]
+    (if db
+      (get schemas (str db)))))
 
 (defn data "Works in any context"                           ; todo provide data! ??
   [{:keys [:hypercrud.browser/qfind

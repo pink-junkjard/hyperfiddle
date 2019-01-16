@@ -86,20 +86,20 @@
     [val ctx & [props]]                                     ; returns Func[(ref, props, ctx) => DOM]
     (let [element @(:hypercrud.browser/element ctx)
           [_ a _] @(:hypercrud.browser/eav ctx)
-          value-type (keyword (name (contrib.datomic/valueType @(:hypercrud.browser/schema ctx) a)))
-          cardinality (keyword (name (contrib.datomic/cardinality-loose @(:hypercrud.browser/schema ctx) a)))]
+          value-type (some-> (:hypercrud.browser/schema ctx) deref (contrib.datomic/valueType a)) ; put protocol on ctx to remove guard
+          cardinality (some-> (:hypercrud.browser/schema ctx) deref (contrib.datomic/cardinality-loose a))]
       (match* [(type element) value-type cardinality]
         [Variable _ _] controls/string
         [Aggregate _ _] controls/string
-        [Pull :boolean :one] controls/boolean
-        [Pull :keyword :one] controls/keyword
-        [Pull :string :one] controls/string
-        [Pull :long :one] controls/long
-        [Pull :instant :one] controls/instant
-        [Pull :ref :one] controls/ref
-        [Pull :ref :many] controls/ref-many
-        [_ _ :one] controls/edn
-        [_ _ :many] controls/edn-many))))
+        [Pull :db.type/boolean :db.cardinality/one] controls/boolean
+        [Pull :db.type/keyword :db.cardinality/one] controls/keyword
+        [Pull :db.type/string :db.cardinality/one] controls/string
+        [Pull :db.type/long :db.cardinality/one] controls/long
+        [Pull :db.type/instant :db.cardinality/one] controls/instant
+        [Pull :db.type/ref :db.cardinality/one] controls/ref
+        [Pull :db.type/ref :db.cardinality/many] controls/ref-many
+        [_ _ :db.cardinality/one] controls/edn
+        [_ _ :db.cardinality/many] controls/edn-many))))
 
 (defn ^:export hyper-control [val ctx & [props]]            ; eav ctx props - use defmethod, not fn
   {:post [%]}
@@ -146,17 +146,16 @@
     (->> (concat
            ["hyperfiddle"
             (context/dbname ctx)                            ; color
-            (name (context/segment-type-2 a))
+            (name (context/segment-type-2 a))               ; false :attribute on fiddle-ident fixme
             (string/join "/" (:hypercrud.browser/pull-path ctx)) ; legacy unique selector for each location
             (->> (:hypercrud.browser/pull-path ctx)              ; actually generate a unique selector for each location
                  (cons "-hypercrud-browser-path")                ; path prefix differentiates between attr and single attr paths
                  (string/join "/"))]
-           (when (and (> (count (:hypercrud.browser/result-path ctx)) 0) ; fiddle segments don't have schema, they have qfind instead, todo use that
-                      (context/attribute-segment? a))
+           (when (> (count (:hypercrud.browser/pull-path ctx)) 0) ; differentiate pull from fiddle-ident
              [(contrib.datomic/valueType @(:hypercrud.browser/schema ctx) a)
               (contrib.datomic/cardinality-loose @(:hypercrud.browser/schema ctx) a)
               (if (contrib.datomic/isComponent @(:hypercrud.browser/schema ctx) a) :component)])
-           (:hypercrud.browser/pull-path ctx))
+           (:hypercrud.browser/pull-path ctx))              ; pullpath is legacy, remove from css todo
          (map css-slugify)
          (apply css))))
 
