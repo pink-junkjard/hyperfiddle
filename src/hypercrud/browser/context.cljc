@@ -205,17 +205,26 @@
 ;  (a [this])
 ;  (v [this]))
 
-(defn link-identifiers [fiddle-ident link]
-  (let [idents (-> (set (:link/class link))
+(defn link-identifiers [link]
+  (let [idents (-> (set (:link/class link))                 ; for narrowing if same fiddle in several places? legacy?
+
+                   ; generally name links like this
                    (conj (some-> link :link/fiddle :fiddle/ident))
-                   ; fiddle-ident is named in the link/path (e.g. to name a FindScalar)
-                   (conj (some-> link :link/path hyperfiddle.fiddle/read-path)) ; nil is semantically valid and well-defined
-                   (conj (some-> link :link/tx-fn (subs 1) keyword)))]
+
+                   ; fast way to name a button without a fiddle
+                   (conj (some-> link :link/tx-fn (subs 1) keyword))
+
+                   ; link/a is probably not useful except for narrowing, maybe
+                   ; nil path is no longer defined, use fiddle-ident instead
+                   (conj (some-> link :link/path hyperfiddle.fiddle/read-path))
+
+                   ; nil #{txfn linkpath fiddleident} is not meaningful
+                   (disj nil))]                             ; Preserve set type
     [idents link]))
 
 (defn -indexed-links-at [fiddle]
   (->> (:fiddle/links fiddle)
-       (map (partial link-identifiers (:fiddle/ident fiddle)))))
+       (map link-identifiers)))
 
 (defn fiddle "Runtime sets this up, not public."
   [ctx r-fiddle r-schemas r-result]
