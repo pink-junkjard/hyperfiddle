@@ -523,7 +523,7 @@
     ; are we focusing from blank? Impossible, there's no result to focus
     ; Are we refocusing to blank? That would mean whacking the ctx entirely?
     ; if target-attr = last path, we're already here! How did that happen? Should be harmless, will noop
-    (let [{{db :symbol} :source {pull-pattern :value} :pattern} (:hypercrud.browser/element ctx)
+    (let [{{db :symbol} :source {pull-pattern :value} :pattern} @(:hypercrud.browser/element ctx)
           root-pull (contrib.datomic/pull-shape pull-pattern)
           current-path (:hypercrud.browser/pull-path ctx)
           schema (get (summon-schemas-grouped-by-dbname ctx) (str db))

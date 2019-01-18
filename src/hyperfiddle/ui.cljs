@@ -124,7 +124,8 @@
   (let [Pull Pull
         Variable Variable
         Aggregate Aggregate
-        element-type (some-> (:hypercrud.browser/element ctx) deref type)
+        element (:hypercrud.browser/element ctx)
+        element-type (some-> element deref type)
         i (:hypercrud.browser/element-index ctx)
         [_ a _] @(:hypercrud.browser/eav ctx)]              ; a can be int now for findelement - hax
     (match* [i element-type a]                              ; has-child-fields @(r/fmap-> (:hypercrud.browser/field ctx) ::field/children nil? not)
