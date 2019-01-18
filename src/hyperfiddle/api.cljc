@@ -16,10 +16,13 @@
    (hypercrud.browser.context/tempid! ctx)))
 
 (defn ^:export tempid! [ctx]
-  (let [[_ a _] @(:hypercrud.browser/eav ctx)]
-    (if (keyword? a)                                        ; not find-elements
-      (hypercrud.browser.context/tempid ctx)
-      (hypercrud.browser.context/tempid! ctx))))
+  ; includes fiddle ident level now
+  (assert (:hypercrud.browser/element ctx) (str ":hf/new auto-tempid requires specified find-element for eav: " @(:hypercrud.browser/eav ctx)))
+
+  ; This is buggy. We want Collections and Sets to inspect the stage for unique generation?
+  (if (= 0 (hypercrud.browser.context/pull-depth ctx))
+    (hypercrud.browser.context/tempid! ctx)
+    (hypercrud.browser.context/tempid ctx)))
 
 (defmulti txfn (fn [user-txfn e a v ctx] user-txfn))
 
