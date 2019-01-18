@@ -7,8 +7,7 @@
 
 
 (defn ctx->data [ctx]
-  (let [ctx (hypercrud.browser.context/fiddle ctx)]
-    @(:hypercrud.browser/result ctx)))
+  @(:hypercrud.browser/result ctx))
 
 (defn api-data "{route data}
   At this point we only care about inline links

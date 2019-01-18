@@ -124,11 +124,12 @@
   (let [Pull Pull
         Variable Variable
         Aggregate Aggregate
-        element @(:hypercrud.browser/element ctx)
+        element-type (some-> (:hypercrud.browser/element ctx) deref type)
         i (:hypercrud.browser/element-index ctx)
         [_ a _] @(:hypercrud.browser/eav ctx)]              ; a can be int now for findelement - hax
-    (match* [i (type element) a]                            ; has-child-fields @(r/fmap-> (:hypercrud.browser/field ctx) ::field/children nil? not)
-      [_ Pull :db/id] (dbid-label _ ctx props)                ; fixme, is this even in play?
+    (match* [i element-type a]                              ; has-child-fields @(r/fmap-> (:hypercrud.browser/field ctx) ::field/children nil? not)
+      [_ nil _] nil                                         ; e.g. !field[js/user.hyperblog-post-link]()
+      [_ Pull :db/id] (dbid-label _ ctx props)              ; fixme, is this even in play?
       [_ Pull :db/ident] (dbid-label _ ctx props)
       [i Pull nil] (label-with-docs (get-in element [:variable :symbol]) (semantic-docstring ctx) props)
       [_ Pull aa] (label-with-docs (name aa) (semantic-docstring ctx) props)
@@ -151,7 +152,7 @@
             (->> (:hypercrud.browser/pull-path ctx)              ; actually generate a unique selector for each location
                  (cons "-hypercrud-browser-path")                ; path prefix differentiates between attr and single attr paths
                  (string/join "/"))]
-           (when (> (count (:hypercrud.browser/pull-path ctx)) 0) ; differentiate pull from fiddle-ident
+           (when (> (hypercrud.browser.context/pull-depth ctx) 0) ; differentiate pull from fiddle-ident
              [(contrib.datomic/valueType @(:hypercrud.browser/schema ctx) a)
               (contrib.datomic/cardinality-loose @(:hypercrud.browser/schema ctx) a)
               (if (contrib.datomic/isComponent @(:hypercrud.browser/schema ctx) a) :component)])
@@ -374,15 +375,15 @@ User renderers should not be exposed to the reaction."
 (defn ^:export result "Default result renderer. Invoked as fn, returns seq-hiccup, hiccup or
 nil. call site must wrap with a Reagent component"          ; is this just hyper-control ?
   [val ctx & [props]]
-  (let [ctx (hypercrud.browser.context/fiddle ctx)
-        qfind @(:hypercrud.browser/qfind ctx)]
-    [:<>
-     (hint val ctx props)
-     (when qfind
-       (condp some [(type qfind)]
-         #{FindRel FindColl} [table (r/partial columns-relation-product hyperfiddle.ui/field) ctx props]
-         #{FindTuple FindScalar} [form (r/partial columns-relation-product hyperfiddle.ui/field) val ctx props]))
-     [iframe-field-default val ctx props]]))
+  [:<>
+   (doall
+     (for [[k ctx] (hypercrud.browser.context/spread-result ctx)]
+       [:<> {:key k}
+        (hint val ctx props)
+        (condp some [(type @(:hypercrud.browser/qfind ctx))]
+          #{FindRel FindColl} [table (r/partial columns-relation-product hyperfiddle.ui/field) ctx props]
+          #{FindTuple FindScalar} [form (r/partial columns-relation-product hyperfiddle.ui/field) val ctx props])]))
+   [iframe-field-default val ctx props]])
 
 (def ^:dynamic markdown)                                    ; this should be hf-contrib or something
 

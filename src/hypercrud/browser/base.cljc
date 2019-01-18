@@ -86,19 +86,14 @@
     [r-fiddle request ctx]
     ; Blow mlet in case of (right _) -> (left _), but don't recompute if (right :a) -> (right :b).
     (mlet [reactive-attrs @(r/apply-inner-r (project/hydrate-attrs ctx))
+           ; result SHOULD be sorted out of jvm, though isn't yet
            r-result @(r/apply-inner-r (r/track nil-or-hydrate (:peer ctx) (:branch ctx) request))
            :let [#_#_sort-fn (hyperfiddle.ui.sort/sort-fn % sort-col)
                  r-schemas (r/track context/summon-schemas-grouped-by-dbname ctx)
+                 ctx (hypercrud.browser.context/fiddle ctx r-fiddle r-schemas r-result)
                  ctx (assoc ctx
                        :hypercrud.browser/attr-renderers reactive-attrs
-                       :hypercrud.browser/schemas r-schemas
-                       :hypercrud.browser/result r-result ; this one SHOULD be sorted out of jvm, though isn't yet
-                       ;:hypercrud.browser/datascript (contrib.datomic/datascript-from-result @reactive-result @r-schemas)
-                       :hypercrud.browser/fiddle r-fiddle
-                       :hypercrud.browser/link-index (r/fmap hypercrud.browser.context/-indexed-links-at r-fiddle)
-                       :hypercrud.browser/pull-path []
-                       :hypercrud.browser/eav (r/track identity nil) ; must lift into reaction so downstream can r/apply
-                       )]]
+                       #_#_:hypercrud.browser/datascript (contrib.datomic/datascript-from-result @r-result @r-schemas))]]
       (return ctx))))
 
 (defn data-from-route "either ctx, ctx-from-route" [route ctx]                           ; todo rename

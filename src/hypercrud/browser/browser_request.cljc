@@ -49,11 +49,11 @@
   (->> @(data/select-many-here ctx #{:hf/iframe})
        (mapcat #(request-from-link % ctx))
        (concat
-         (for [ctx (hyperfiddle.api/spread-pull ctx)]
-           (requests-for-pull-iframes ctx)))))                             ; recur
+         (for [[_ ctx] (hypercrud.browser.context/spread-attributes ctx)]
+           (requests-for-pull-iframes ctx)))))              ; recur
 
 (defn with-result [ctx]
-  (for [[_ ctx] (hypercrud.browser.context/spread-fiddle ctx)]
+  (for [[_ ctx] (hypercrud.browser.context/spread-result ctx)]
     (concat
       (->> @(data/select-many-here ctx #{:hf/iframe})
            (mapcat #(request-from-link % ctx)))
@@ -61,10 +61,10 @@
             ; tuple level iframes - how would we address them?
             [_ ctx] (hypercrud.browser.context/spread-elements ctx)]
         ; element level iframes could be addressed by element index or name
-        (condp = (type (:hypercrud.browser/element ctx))    ; (let [{{db :symbol} :source {pull-pattern :value} :pattern} element])
+        (condp = (type @(:hypercrud.browser/element ctx))    ; (let [{{db :symbol} :source {pull-pattern :value} :pattern} element])
           Variable []
           Aggregate []
-          Pull (for [ctx (hyperfiddle.api/spread-pull ctx)]
+          Pull (for [[_ ctx] (hypercrud.browser.context/spread-attributes ctx)]
                  (requests-for-pull-iframes ctx)))))))
 
 (defn requests [ctx]

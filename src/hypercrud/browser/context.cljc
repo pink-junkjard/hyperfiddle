@@ -205,36 +205,48 @@
 ;  (a [this])
 ;  (v [this]))
 
-(defn ^:export fiddle "Fiddle level ctx adds the result to scope"
-  [ctx]
-  {:post [(s/assert :hypercrud/context %)
-          (contains? % :hypercrud.browser/qfind)            ; but it can be nil for :type :blank
-          (:hypercrud.browser/link-index %)]}
-  ; Deep inspect the elements to compute the enclosing pull shape for each element
-  ; Don't infer any further scopes, it is down-scope's job to infer anything it needs (which might be legacy compat at this point)
+(defn link-identifiers [fiddle-ident link]
+  (let [idents (-> (set (:link/class link))
+                   (conj (some-> link :link/fiddle :fiddle/ident))
+                   ; fiddle-ident is named in the link/path (e.g. to name a FindScalar)
+                   (conj (some-> link :link/path hyperfiddle.fiddle/read-path)) ; nil is semantically valid and well-defined
+                   (conj (some-> link :link/tx-fn (subs 1) keyword)))]
+    [idents link]))
+
+(defn -indexed-links-at [fiddle]
+  (->> (:fiddle/links fiddle)
+       (map (partial link-identifiers (:fiddle/ident fiddle)))))
+
+(defn fiddle "Runtime sets this up, not public."
+  [ctx r-fiddle r-schemas r-result]
+  {:pre [r-fiddle r-result]
+   :post [#_(do (println (:hypercrud.browser/qfind %) (:hypercrud.browser/result-enclosure %)) true)]}
   (as-> ctx ctx
-        (assoc ctx :hypercrud.browser/qfind (r/fmap-> (:hypercrud.browser/fiddle ctx) hyperfiddle.fiddle/parse-fiddle-data-shape :qfind))
-        (assoc ctx :hypercrud.browser/result-enclosure (if @(:hypercrud.browser/qfind ctx)
-                                                         (r/ctxf contrib.datomic/result-enclosure ctx
-                                                                 :hypercrud.browser/schemas
-                                                                 :hypercrud.browser/qfind
-                                                                 :hypercrud.browser/result)))
-        ; flag for nested
+        (assoc ctx :hypercrud.browser/fiddle r-fiddle)
+        (assoc ctx :hypercrud.browser/result r-result)      ; can be nil if no qfind
+        (if-let [qfind (r/fmap-> r-fiddle hyperfiddle.fiddle/parse-fiddle-data-shape :qfind)] ; i think check raw value
+          (if @qfind
+            (as-> ctx ctx
+                  (assoc ctx :hypercrud.browser/qfind qfind)
+                  (assoc ctx :hypercrud.browser/schemas r-schemas)
+                  (assoc ctx :hypercrud.browser/result-enclosure
+                             (r/ctxf contrib.datomic/result-enclosure ctx
+                                     :hypercrud.browser/schemas
+                                     :hypercrud.browser/qfind
+                                     :hypercrud.browser/result)))
+            ctx)
+          ctx)
+        (assoc ctx :hypercrud.browser/link-index (r/fmap -indexed-links-at r-fiddle))
         (assoc ctx :hypercrud.browser/validation-hints (contrib.validation/validate
-                                                         (s/get-spec @(r/fmap :fiddle/ident (:hypercrud.browser/fiddle ctx)))
+                                                         (s/get-spec @(r/fmap :fiddle/ident r-fiddle))
                                                          @(:hypercrud.browser/result ctx)
                                                          (partial row-keyfn ctx)))
         (assoc ctx :hypercrud.browser/eav (r/apply stable-eav-av
-                                                   [(:hypercrud.browser/eav ctx)
-                                                    (r/fmap :fiddle/ident (:hypercrud.browser/fiddle ctx))
-                                                    ; What about head vs body? We're in body now!
-                                                    (r/track identity nil) #_(:hypercrud.browser/result ctx)]))))
-
-(defn -infer-implicit-fiddle [ctx]
-  (or
-    (if-not (:hypercrud.browser/qfind ctx)
-      (fiddle ctx))
-    ctx))
+                                                   [(r/track identity nil)
+                                                    (r/fmap :fiddle/ident r-fiddle)
+                                                    (r/track identity nil)]))
+        ; push this down, it should be nil now
+        (assoc ctx :hypercrud.browser/pull-path [])))
 
 (defn stable-element-schema [schemas element]
   (let [{{db :symbol} :source} element]
@@ -266,21 +278,12 @@
       (smart-entity-identifier ctx @(data ctx)))))
 
 (defn element [ctx i]                                       ; [nil :seattle/neighborhoods 1234345]
-  ; eav is ea, data is a tree and can request from resultpath
-  ; If EAV is set here, A becomes set to i. That gives us a unique address of aggregates and variables.
-  {:pre [#_(s/assert r/reactive? (:hypercrud.browser/qfind ctx)) ; can be inferred
-         #_(s/assert nil? (:hypercrud.browser/element ctx))
-         #_(do (println "element: " i) true)
-         #_(do (println "... data pre: " (pr-str (some-> (:hypercrud.browser/data ctx) deref))) true)]
-   :post [(s/assert r/reactive? (:hypercrud.browser/qfind %))
-          (s/assert r/reactive? (:hypercrud.browser/schema %))
-          #_(s/assert :hypercrud/context %)
-          #_(do (some->> % :hypercrud.browser/data deref pr-str (println "... data post: ")) true)
-          #_(every? some? @(:hypercrud.browser/data %))]}   ; bad in header, good in body
+  {:pre []
+   :post [(s/assert r/reactive? (:hypercrud.browser/qfind %)) ; qfind set in base if it is available
+          (s/assert r/reactive? (:hypercrud.browser/schema %))]}
 
   (let [r-element (r/fmap-> (:hypercrud.browser/qfind ctx) datascript.parser/find-elements (get i))]
     (as-> ctx ctx
-          (-infer-implicit-fiddle ctx)
           (assoc ctx :hypercrud.browser/element r-element)
 
           (assoc ctx :hypercrud.browser/schema (r/ctxf stable-element-schema ctx
@@ -328,7 +331,6 @@
                 :hypercrud.browser/qfind]} ctx]
     (as->
       ctx ctx
-      (-infer-implicit-fiddle ctx)                          ; ensure result-enclosure
       (-infer-implicit-element ctx)                         ; ensure pull-enclosure
       (-validate-qfind-element ctx)
       (set-parent ctx)
@@ -375,12 +377,13 @@
       (update ctx :hypercrud.browser/validation-hints #(for [[[p & ps] hint] % :when (= k p)]
                                                      [ps hint]))))
 
-(defn ^:export spread-fiddle "Use in a for comprehension to automatically guard :fiddle/type :blank.
-  Returns [k ctx] for uniformity with other spreads. You should probably use the key."
-  [{:keys [:hypercrud.browser/fiddle] :as ctx}]
-  (condp some [(:fiddle/type @fiddle)]
-    #{:blank} []                                            ; don't we want the eav?
-    #{:query :entity} [(:fiddle/ident @fiddle) (fiddle ctx)]))
+(defn ^:export spread-result "Guards :fiddle/type :blank to guarantee a qfind.
+  Use this with `for` which means reagent needs the key."
+  [ctx]
+  (let [r-fiddle (:hypercrud.browser/fiddle ctx)]
+    (condp some [(:fiddle/type @r-fiddle)]                  ; could also dispatch on qfind. Is fiddle/type unnecessary now?
+      #{:blank} []
+      #{:query :entity} [[(:fiddle/ident @r-fiddle) ctx]])))
 
 (defn ^:export spread-rows "spread across resultset row-or-rows; returns [k ctx] for your react key.
   Automatically accounts for query dimension - no-op in the case of FindTuple and FindScalar."
@@ -440,8 +443,8 @@
   [{:keys [:hypercrud.browser/element] :as ctx}]
   {:pre [element]}
   (condp = (type @element)
-    Variable [ctx]
-    Aggregate [ctx]
+    Variable [[nil ctx]]
+    Aggregate [[nil ctx]]
     Pull (for [k (contrib.datomic/pull-level @(:hypercrud.browser/pull-enclosure ctx))]
            [k (hypercrud.browser.context/attribute ctx k)])))
 
@@ -453,20 +456,8 @@
 ; lift out of current context in this case?
 ; Make sure to optimize the single-fe case to use the identity/value which will be unique
 
-(defn link-identifiers [fiddle-ident link]
-  (let [idents (-> (set (:link/class link))
-                   (conj (some-> link :link/fiddle :fiddle/ident))
-                   ; fiddle-ident is named in the link/path (e.g. to name a FindScalar)
-                   (conj (some-> link :link/path hyperfiddle.fiddle/read-path)) ; nil is semantically valid and well-defined
-                   (conj (some-> link :link/tx-fn (subs 1) keyword)))]
-    [idents link]))
-
 (defn link-criteria-match? [?corcs [index-key v]]
   (clojure.set/superset? index-key (contrib.data/xorxs ?corcs #{})))
-
-(defn -indexed-links-at [fiddle]
-  (->> (:fiddle/links fiddle)
-       (map (partial link-identifiers (:fiddle/ident fiddle)))))
 
 (defn links-at "where criterias is some of #{ident txfn class class2}.
   Links include all links reachable by navigating :ref :one. (Change this by specifying an :ident)
@@ -503,6 +494,9 @@
 
 (defn depth [ctx]
   (count (:hypercrud.browser/result-path ctx)))
+
+(defn pull-depth [ctx]
+  (count (:hypercrud.browser/pull-path ctx)))
 
 (defn unwind [ctx n]
   ((apply comp (repeat n :hypercrud.browser/parent)) ctx))
@@ -570,19 +564,37 @@
   {:post [(vector? %) #_"route args are associative by position"]} ; can be []
   (vec (contrib.data/xorxs ?porps)))
 
+(defn tag-v-with-color' [ctx v]
+  (->ThinEntity (or (dbname ctx) "$")                       ; busted element level
+                (smart-entity-identifier ctx v)))
+
 (defn tag-v-with-color "Tag dbids with color, at the last moment before they render into URLs"
   [ctx v]
-  (let [[_ a _] @(:hypercrud.browser/eav ctx)
-        valueType (if a
-                    @(hydrate-attribute ctx a :db/valueType :db/ident)
-                    :db.type/ref)]                          ; if there is no a in scope, we must be a new entity
+  (let [[_ a _] @(:hypercrud.browser/eav ctx)               ; this v might be a tuple, above v is one item in tuple?
+        is-element-level (= (pull-depth ctx) 0)]
     (cond
-      (instance? ThinEntity v) v                            ; backwards compat with old hfhf formulas which return #entity
-      (= valueType :db.type/ref) (->ThinEntity (or (dbname ctx) "$") ; in the tuple case, each element may be a different color, so we need to refocus the ctx here (with find element index) to infer this
-                                               (smart-entity-identifier ctx v))
+      (instance? ThinEntity v) v                            ; legacy compat with IDE legacy formulas which return #entity
 
-      ; In edge cases, this could be a colorless opaque value (composite or scalar)
-      :a-not-ref v)))
+      is-element-level                                      ; includes hf/new
+      (do
+        (assert (:hypercrud.browser/qfind ctx) ":blank fiddle (no qfind) with hf/new is illegal now. You must specify a qfind.")
+        (let [qfind @(:hypercrud.browser/qfind ctx)]        ; crashing on blank
+          (condp some [(type qfind)]
+            ; At fiddle(element)-level, we don't know which element to check if it is a Pull.
+            ; If there is only one element, we can infer it
+            #{FindColl FindScalar} (let [element (first
+                                                   (datascript.parser/find-elements qfind))]
+                                     (condp some [(type element)]
+                                       #{Pull} (tag-v-with-color' ctx v) ; FIXME: refocus the element ctx to get the color right
+                                       #{Aggregate Variable} v))
+
+            ; If element tuple, we don't have enough info to know which element.
+            ; For now just assume it's a scalar.
+            ; We can fix it i think by pushing (mapv args) down to this level and correlating with elements.
+            #{FindRel FindTuple} v)))
+
+      (contrib.datomic/ref? @(:hypercrud.browser/schema ctx) a) (tag-v-with-color' ctx v)
+      :scalar v)))
 
 (let [eval-string!+ (memoize eval/eval-expr-str!+)]
   (defn build-args+ "Params are EAV-typed (uncolored)"
@@ -591,7 +603,7 @@
                                  (eval-string!+ (str "(fn [ctx] \n" formula-str "\n)"))
                                  (either/right (constantly (constantly nil))))
            formula-fn (try-either (formula-ctx-closure ctx))
-           :let [[_ _ v] @(:hypercrud.browser/eav ctx)]
+           :let [[_ _ v] @(:hypercrud.browser/eav ctx)]     ; in tuple case is this a tuple?
            args (try-either (formula-fn v))]                ; Documented behavior is v in, tuple out, no colors.
       (return (normalize-args args)))))
 
@@ -604,7 +616,7 @@
                        (right (:fiddle/ident fiddle))
                        (left {:message ":link/fiddle required" :data {:link link}}))
            ; Why must we reverse into tempids? For the URL, of course.
-           :let [colored-args (mapv (partial tag-v-with-color ctx) args)]
+           :let [colored-args (mapv (partial tag-v-with-color ctx) args)] ; this ctx is refocused to some eav
            route (id->tempid+ (hyperfiddle.route/canonicalize fiddle-id colored-args) ctx)
            route (hyperfiddle.route/validate-route+ route)]
       (return route))))

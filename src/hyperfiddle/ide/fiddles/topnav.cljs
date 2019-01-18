@@ -67,8 +67,7 @@
                                                                                    [(:fiddle/ident popover-data)])}))
       [tooltip {:label "Environment administration"} (ui/link :domain ctx "env")]
       (if @(runtime/state (:peer ctx) [::runtime/user-id])
-        (if-let [{:keys [:hypercrud.browser/result]} (-> (hyperfiddle.data/browse ctx :account)
-                                                         (hypercrud.browser.context/fiddle))]
+        (if-let [{:keys [:hypercrud.browser/result]} (hyperfiddle.data/browse ctx :account)]
           (let [props {:tooltip [nil @(r/fmap :user/email result)]
                        :iframe-as-popover true}]
             [ui/link :account ctx @(r/fmap :user/name result) props]))
@@ -82,8 +81,7 @@
     [loading-spinner ctx]]])
 
 (defn renderer [val ctx props]
-  (let [ctx (hypercrud.browser.context/fiddle ctx)
-        #_#_ctx (hypercrud.browser.context/element ctx)               ; its blank
+  (let [#_#_ctx (hypercrud.browser.context/element ctx)               ; its blank
         f (if (and (= :hyperfiddle.ide/please-login (first (context/target-route ctx)))
                    (not= [:domain/ident foundation/source-domain-ident] (:domain-eid (runtime/host-env (:peer ctx)))))
             hack-login-renderer

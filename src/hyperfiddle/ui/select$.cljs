@@ -75,17 +75,16 @@
   [:span msg])
 
 (defn select-view-validated [select-view props option-props val ctx props2]
-  (let [ctx (hypercrud.browser.context/fiddle ctx)]
-    (case @(r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/type])
-      :entity [select-error-cmp "Only fiddle type `query` is supported for select options"]
-      :blank [select-error-cmp "Only fiddle type `query` is supported for select options"]
-      :query (let [qfind @(:hypercrud.browser/qfind ctx)]
-               (condp some [(type qfind)]
-                 #{FindRel FindColl} (let [props (into props (select-keys props2 [:on-click]))]
-                                       [select-view props option-props ctx])
-                 #{FindScalar FindTuple} [select-error-cmp "Tuples and scalars are unsupported for select options. Please change your options query to return a relation or collection"]))
-      ; default
-      [select-error-cmp "Only fiddle type `query` is supported for select options"])))
+  (case @(r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/type])
+    :entity [select-error-cmp "Only fiddle type `query` is supported for select options"]
+    :blank [select-error-cmp "Only fiddle type `query` is supported for select options"]
+    :query (let [qfind @(:hypercrud.browser/qfind ctx)]
+             (condp some [(type qfind)]
+               #{FindRel FindColl} (let [props (into props (select-keys props2 [:on-click]))]
+                                     [select-view props option-props ctx])
+               #{FindScalar FindTuple} [select-error-cmp "Tuples and scalars are unsupported for select options. Please change your options query to return a relation or collection"]))
+    ; default
+    [select-error-cmp "Only fiddle type `query` is supported for select options"]))
 
 (defn compute-disabled [ctx props]
   (let [entity (hypercrud.browser.context/data ctx)]        ; how can this be loading??

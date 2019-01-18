@@ -40,7 +40,7 @@
   (isComponent [this a])                                   ; follows Datomic naming case conventions
   (valueType [this a])
   (valueType? [this a k])
-  (ref? [this attr])
+  (ref? [this a])
   (unique [this a]))
 
 (defn attr-unreverse [a]
