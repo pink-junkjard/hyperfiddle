@@ -69,9 +69,9 @@
 
 (defn requests [ctx]
   ; at this point we only care about inline links and popovers are hydrated on their on hydrate-route calls
+  ; On the request side, we walk the whole resultset and load each iframe from exactly the right place
+  ; without any refocusing. Only on the view side do we care about drawing things in some other place.
   (concat
-    ; Top level iframes have no dependency at all, no qfind or element at all
-    ; Is the topfiddle-ident in scope though?
     (->> @(data/select-many-here ctx #{:hf/iframe})
          (mapcat #(request-from-link % ctx)))
     (with-result ctx)
