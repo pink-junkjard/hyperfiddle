@@ -297,3 +297,16 @@
     (is (= (contrib.datomic/reachable-attrs fixtures.hfhf/schema pull-fiddle [:fiddle/links])
            '(nil :link/fiddle)))
     ))
+
+(deftest query-parsing
+  []
+  (def qfind (:qfind (datascript.parser/parse-query '[:find ?e :where [?e]])))
+  ;(count (datascript.parser/find-elements qfind))
+  ;(= FindScalar (type qfind))
+  ;(condp = (type qfind) FindScalar "yo")
+  ;(hyperfiddle.fiddle/qfind-canonical qfind)
+  (testing ""
+    (is (= (contrib.datomic/qfind-collapse-findrel-1 '[:find ?e :where [?e]])
+           (contrib.datomic/qfind-collapse-findrel-1 '[:find [?e ...] :where [?e]])))
+    )
+  )

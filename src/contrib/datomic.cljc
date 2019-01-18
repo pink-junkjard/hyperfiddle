@@ -283,3 +283,14 @@
                      (let [schema (get schemas (str (get-in e [:source :symbol])))]
                        (f schema e coll-normalized)))
                    schemas qfind data))
+
+(defn qfind-collapse-findrel-1 "Collapse FindRel-1 to FindColl, which simplifies hyperfiddle link biz rules"
+  [qfind]
+  (let [[e :as es] (datascript.parser/find-elements qfind)]
+    (if (= 1 (count es))
+      (condp = (type qfind)
+        FindRel (datascript.parser/->FindColl e)
+        FindTuple (datascript.parser/->FindScalar e)
+        FindColl qfind
+        FindScalar qfind)
+      qfind)))

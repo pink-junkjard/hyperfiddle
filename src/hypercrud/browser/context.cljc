@@ -224,7 +224,7 @@
   (as-> ctx ctx
         (assoc ctx :hypercrud.browser/fiddle r-fiddle)
         (assoc ctx :hypercrud.browser/result r-result)      ; can be nil if no qfind
-        (if-let [qfind (r/fmap-> r-fiddle hyperfiddle.fiddle/parse-fiddle-data-shape :qfind)] ; i think check raw value
+        (if-let [qfind (r/fmap-> r-fiddle hyperfiddle.fiddle/parse-fiddle-query)] ; i think check raw value
           (if @qfind
             (as-> ctx ctx
                   (assoc ctx :hypercrud.browser/qfind qfind)
@@ -578,20 +578,21 @@
       is-element-level                                      ; includes hf/new
       (do
         (assert (:hypercrud.browser/qfind ctx) ":blank fiddle (no qfind) with hf/new is illegal now. You must specify a qfind.")
-        (let [qfind @(:hypercrud.browser/qfind ctx)]        ; crashing on blank
-          (condp some [(type qfind)]
+        (let [qfind @(:hypercrud.browser/qfind ctx)         ; crashing on blank
+              element-type (type (contrib.datomic/qfind-collapse-findrel-1 qfind))]
+          (condp some [element-type]
             ; At fiddle(element)-level, we don't know which element to check if it is a Pull.
-            ; If there is only one element, we can infer it
+            ; However in the qfind scalar case, we can infer it.
             #{FindColl FindScalar} (let [element (first
                                                    (datascript.parser/find-elements qfind))]
                                      (condp some [(type element)]
                                        #{Pull} (tag-v-with-color' ctx v) ; FIXME: refocus the element ctx to get the color right
                                        #{Aggregate Variable} v))
 
-            ; If element tuple, we don't have enough info to know which element.
-            ; For now just assume it's a scalar.
+            ; In the qfind tuple case, we don't have enough info to know which element.
+            ; We could assume scalar, but I opted to make this an error case.
             ; We can fix it i think by pushing (mapv args) down to this level and correlating with elements.
-            #{FindRel FindTuple} v)))
+            #{FindRel FindTuple} (do (timbre/warn "element-level links aren't well defined for tupled qfind: " qfind) nil))))
 
       (contrib.datomic/ref? @(:hypercrud.browser/schema ctx) a) (tag-v-with-color' ctx v)
       :scalar v)))
