@@ -94,12 +94,11 @@
           [_ a _] @(:hypercrud.browser/eav ctx)]
       (cond
         (and a (contrib.datomic/cardinality? @(:hypercrud.browser/schema ctx) a :db.cardinality/many)) ; :one is handled by the body
-        [(if-let [link (data/select-here+ ctx :hf/new)]
+        [(if-let [link (->> (data/select-here+ ctx :hf/new) (contrib.ct/unwrap #(taoensso.timbre/warn %)))]
            [hyperfiddle.ui/ui-from-link link ctx props "new"])]
 
         (#{FindColl} (type (:hypercrud.browser/element ctx))) ; Prob is mistake to exclude FindRel
-        [(if-let [link (some-> ctx (data/select-here+ :hf/new)
-                               (->> (contrib.ct/unwrap #(taoensso.timbre/warn %))))]
+        [(if-let [link (->> (data/select-here+ ctx :hf/new) (contrib.ct/unwrap #(taoensso.timbre/warn %)))]
            [hyperfiddle.ui/ui-from-link link ctx props "new"])]))))
 
 (defn id-prompt [ctx val]
@@ -122,9 +121,9 @@
     (:options props) [select val ctx props]
     :else [:div
            [:div.input (interpose " " (cons (id-prompt ctx val) (related-links val ctx props)))]
-           (if-let [link (contrib.ct/unwrap #(taoensso.timbre/warn %) (data/select-here+ ctx :hf/new))]
+           (if-let [link (contrib.ct/unwrap #(taoensso.timbre/warn %) (data/select-here+ ctx :hf/new))] ; todo many
              [hyperfiddle.ui/ui-from-link link ctx props])
-           (if-let [link (contrib.ct/unwrap #(taoensso.timbre/warn %) (data/select-here+ ctx :hf/remove))]
+           (if-let [link (contrib.ct/unwrap #(taoensso.timbre/warn %) (data/select-here+ ctx :hf/remove))] ; todo many
              (if val
                [hyperfiddle.ui/ui-from-link link ctx props]))]))
 
@@ -143,10 +142,12 @@
      [:div.input (interpose " " (cons (id-prompt ctx val) (related-links val ctx props)))]
      (if (let [[_ a _] @(:hypercrud.browser/eav ctx)]
            (= :db.cardinality/one (contrib.datomic/cardinality-loose @(:hypercrud.browser/schema ctx) a)))
-       (if-let [link (data/select-many-here ctx :hf/new)]
+       (if-let [link (->> (data/select-here+ ctx :hf/new)
+                          (contrib.ct/unwrap #(taoensso.timbre/warn %)))] ; todo more than one? this is many
          [hyperfiddle.ui/ui-from-link link ctx props]))
      (if-not (context/underlying-tempid ctx val)
-       (if-let [link (data/select-many-here ctx :hf/remove)]
+       (if-let [link (->> (data/select-here+ ctx :hf/remove)
+                          (contrib.ct/unwrap #(taoensso.timbre/warn %)))] ; todo more than one? this is many
          [hyperfiddle.ui/ui-from-link link ctx props]))]
     [:div [:div.input (pr-str val)]]))
 

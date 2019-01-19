@@ -35,18 +35,18 @@
 (s/def :hypercrud/context
   (s/keys :opt [:hypercrud.browser/route
                 :hypercrud.browser/schemas
-                :hypercrud.browser/schema
                 :hypercrud.browser/link-index
-                :hypercrud.browser/result                   ; i think this is compat only. @(data) should infer
-                :hypercrud.browser/data-index
+                :hypercrud.browser/result
+                :hypercrud.browser/result-enclosure
+                :hypercrud.browser/result-path
                 :hypercrud.browser/fiddle
                 :hypercrud.browser/qfind
-                :hypercrud.browser/result-enclosure
+                :hypercrud.browser/eav                      ; V is scalar or identity, and is often nil. (int? a) addresses a find-element
                 :hypercrud.browser/validation-hints
                 :hypercrud.browser/element
+                :hypercrud.browser/schema
                 :hypercrud.browser/pull-enclosure
                 :hypercrud.browser/pull-path                     ; used only by refocus and links-in-dimension
-                :hypercrud.browser/eav                      ; V is scalar or identity, and is often nil. (int? a) addresses a find-element
                 :hyperfiddle.runtime/branch-aux
                 :hyperfiddle.ui.iframe/on-click
                 :hypercrud.ui/display-mode
@@ -54,8 +54,8 @@
                 :hyperfiddle.ui.sort/sort-col]))
 
 (s/def :hypercrud.browser/eav r/reactive?)
-(s/def :hypercrud.browser/data r/reactive?)
-(s/def :hypercrud.browser/data-index r/reactive?)
+(s/def :hypercrud.browser/result r/reactive?)
+(s/def :hypercrud.browser/result-path (s/coll-of (s/or :row int? :attr keyword?) :kind vector?))
 (s/def :hypercrud.browser/element r/reactive?)
 (s/def :hypercrud.browser/element-index int?)
 (s/def :hypercrud.browser/pull-path (s/coll-of keyword?))
@@ -64,19 +64,20 @@
   (dissoc ctx
           :hypercrud.ui/error
           :hyperfiddle.ui/layout
-
           :hypercrud.browser/attr-renderers
           :hypercrud.browser/schemas
-          :hypercrud.browser/result
-          :hypercrud.browser/data-index
-          :hypercrud.browser/link-index
           :hypercrud.browser/fiddle
           :hypercrud.browser/qfind
+          :hypercrud.browser/result
+          :hypercrud.browser/result-enclosure
+          :hypercrud.browser/result-path
+          :hypercrud.browser/link-index
+          :hypercrud.browser/eav
           :hypercrud.browser/element
           :hypercrud.browser/schema
-          :hypercrud.browser/eav
-          :hypercrud.browser/parent
+          :hypercrud.browser/pull-enclosure
           :hypercrud.browser/pull-path
+          :hypercrud.browser/parent
           :hypercrud.browser/route
           :hypercrud.browser/validation-hints))
 
@@ -110,6 +111,7 @@
 (defn target-route [ctx] @(runtime/state (:peer ctx) [::runtime/partitions nil :route]))
 
 (defn dbname [ctx]
+  ; Can we get this from a qfind in the one-element case?
   (some-> (:hypercrud.browser/element ctx) deref :source :symbol str))
 
 (defn uri                                                   ; equivalent to element or schema, i think?
@@ -162,7 +164,7 @@
   (runtime/state (:peer ctx) (concat [::runtime/partitions (:branch ctx) :schemas (uri ctx)] (cons ident ?more-path))))
 
 (defn- set-parent [ctx]
-  (assoc ctx :hypercrud.browser/parent (dissoc ctx :hypercrud.browser/result)))
+  (assoc ctx :hypercrud.browser/parent ctx))
 
 (defn stable-entity-key "Like smart-entity-identifier but reverses top layer of tempids to stabilize view keys in branches.
   You must pull db/id to trigger tempid detection! Don't use this in labels."
@@ -291,15 +293,15 @@
    :post [(s/assert r/reactive? (:hypercrud.browser/qfind %)) ; qfind set in base if it is available
           (s/assert r/reactive? (:hypercrud.browser/schema %))]}
 
-  (let [r-element (r/fmap-> (:hypercrud.browser/qfind ctx) datascript.parser/find-elements (get i))]
+  (let [r-element (r/fmap-> (:hypercrud.browser/qfind ctx) datascript.parser/find-elements (get i))
+        r-pull-enclosure (r/fmap-> (:hypercrud.browser/result-enclosure ctx) (get i))]
     (as-> ctx ctx
           (assoc ctx :hypercrud.browser/element r-element)
-
           (assoc ctx :hypercrud.browser/schema (r/ctxf stable-element-schema ctx
                                                        :hypercrud.browser/schemas
                                                        :hypercrud.browser/element))
-          (assoc ctx :hypercrud.browser/pull-enclosure (r/fmap-> (:hypercrud.browser/result-enclosure ctx)
-                                                                 (get i)))
+          (assoc ctx :hypercrud.browser/root-pull-enclosure r-pull-enclosure) ; for refocus
+          (assoc ctx :hypercrud.browser/pull-enclosure r-pull-enclosure)
           (condp some [(type @(:hypercrud.browser/qfind ctx))]
             #{FindRel FindTuple} (as-> ctx ctx
                                        (update ctx :hypercrud.browser/result-path (fnil conj []) i)
@@ -345,24 +347,40 @@
       (set-parent ctx)
       (update ctx :hypercrud.browser/pull-path conj a')
       (if (:hypercrud.browser/head-sentinel ctx)
-        ctx
-        (as-> ctx ctx
-              (update ctx :hypercrud.browser/result-path (fnil conj []) a') ; no result-path in head
-              (update ctx :hypercrud.browser/validation-hints #(for [[[p & ps] hint] % :when (= p a')]
-                                                                 [ps hint]))))
-      (assoc ctx :hypercrud.browser/pull-enclosure (r/fmap-> (:hypercrud.browser/pull-enclosure ctx)
-                                                             (contrib.datomic/pullshape-get a')))
+        ctx                                                 ; no result-path in head
+        (update ctx :hypercrud.browser/result-path (fnil conj []) a'))
       ; V is for formulas, E is for security and on-change. V becomes E. E is nil if we don't know identity.
       (assoc ctx :hypercrud.browser/eav                     ; insufficent stability on r-?v? fixme
                  (case (contrib.datomic/cardinality-loose @(:hypercrud.browser/schema ctx) a')
                    :db.cardinality/many (r/fmap-> (:hypercrud.browser/eav ctx) (stable-eav-a a')) ; dont have v yet
                    :db.cardinality/one (r/fmap-> (:hypercrud.browser/eav ctx) (stable-eav-av a' (v! ctx))))))))
 
+(defn validation-hints-here [ctx]
+  (for [[path hint] (:hypercrud.browser/validation-hints ctx)
+        :when (= path (:hypercrud.browser/result-path ctx))
+        :let [a (last path)]]
+    [a hint]))
+
+(defn tree-invalid? "For popover buttons (fiddle level)" [ctx]
+  (->> (validation-hints-here ctx)
+       seq boolean))
+
+(defn leaf-invalid? "The thing that styles red" [ctx]
+  (->> (validation-hints-here ctx)
+       (filter (comp nil? first))
+       seq boolean))
+
+(defn pull-enclosure-here [ctx]
+  (contrib.datomic/pullshape-get-in
+    @(:hypercrud.browser/pull-enclosure ctx)
+    (:hypercrud.browser/pull-path ctx)))
+
 (defn focus "Unwind or go deeper, to where we need to be, within same dimension.
     Throws if you focus a higher dimension.
     This is about navigation through pulledtrees which is why it is path-oriented."
   [ctx relative-path]
-  {:pre [(s/assert :hypercrud/context ctx)]
+  {:pre [(s/assert :hypercrud/context ctx)
+         (:hypercrud.browser/result ctx)]
    :post [(s/assert :hypercrud/context %)
           #_(do (println "Field relpath: " relative-path " eav: " (pr-str @(:hypercrud.browser/eav %))) true)]}
   ; Is this legacy compat?
@@ -382,9 +400,7 @@
   (as-> ctx ctx
       (set-parent ctx)
       (update ctx :hypercrud.browser/result-path (fnil conj []) k)
-      (assoc ctx :hypercrud.browser/eav (r/fmap-> (:hypercrud.browser/eav ctx) (stable-eav-v (v! ctx))))
-      (update ctx :hypercrud.browser/validation-hints #(for [[[p & ps] hint] % :when (= k p)]
-                                                     [ps hint]))))
+      (assoc ctx :hypercrud.browser/eav (r/fmap-> (:hypercrud.browser/eav ctx) (stable-eav-v (v! ctx))))))
 
 (defn ^:export spread-result "Guards :fiddle/type :blank to guarantee a qfind.
   Use this with `for` which means reagent needs the key."
@@ -454,8 +470,8 @@
   (condp = (type @element)
     Variable [[nil ctx]]
     Aggregate [[nil ctx]]
-    Pull (for [k (contrib.datomic/pull-level @(:hypercrud.browser/pull-enclosure ctx))]
-           [k (hypercrud.browser.context/attribute ctx k)])))
+    Pull (for [k (contrib.datomic/pull-level (pull-enclosure-here ctx))]
+           [k (attribute ctx k)])))
 
 ; var first, then can always use db/id on row. No not true – collisions! It is the [?e ?f] product which is unique
 
@@ -510,47 +526,49 @@
 (defn unwind [ctx n]
   ((apply comp (repeat n :hypercrud.browser/parent)) ctx))
 
-(defn refocus "todo unify with refocus'
-  From view, !link(:new-intent-naive :hf/remove) - find the closest ctx with all dependencies satisfied. Accounts for cardinality.
-  Caller asserts that the deps are satisfied (right stuff is in scope).
-  Logic is relative to where we are now, so find-element is implicit.
-  If there is more than one path, is this an error?"
-  ; fiddle means eav starts at fiddle level
+(defn refocus-in-element
+  [ctx target-a]
+  {:pre [(:hypercrud.browser/element ctx)]}
+  (let [current-path (:hypercrud.browser/pull-path ctx)
+        ; find a reachable path that contains the target-attr in the fewest hops
+        ;   me->mother ; me->sister->mother ; closest ctx is selected
+        ; What if there is more than one?  me->sister->mother; me->father->mother
+        ; Ambiguous, how did we even select this link? Probably need full datascript query language.
+        path-solutions (->> (contrib.datomic/reachable-pullpaths
+                              @(:hypercrud.browser/schema ctx)
+                              @(:hypercrud.browser/root-pull-enclosure ctx)
+                              current-path)
+                            ; xs is like '([] [:dustingetz.reg/gender] [:dustingetz.reg/shirt-size])
+                            (filter #(some (partial = target-a) %)))]
+    ; In tuple cases (off happy path) there might not be a solution. Can be fixed by tupling all the way up.
+    (if (seq path-solutions)                                ; found at least one solution
+      ; Warn if more than one solution? Diamonds are fine, but some are parallel solns
+      (let [chosen-path (->> path-solutions
+                             (map (partial take-while (partial not= target-a)))
+                             (sort-by count)                ; choose the shortest path, if ambiguous could be a problem
+                             first)                         ; nil/empty means unwind to nop
+            common-ancestor-path (ancestry-common current-path chosen-path)
+            unwind-offset (- (count current-path) (count common-ancestor-path)) ; 1 > 0 is fine
+            common-ancestor-ctx (unwind ctx unwind-offset)]
+        (focus common-ancestor-ctx (ancestry-divergence (conj chosen-path target-a) current-path))))))
+
+(defn refocus "From view, find the closest satisfactory ctx accounting for cardinality. e.g. as in
+  !link(:new-intent-naive :hf/remove). Caller believes that the deps are satisfied (right stuff is in scope).
+  todo unify with refocus'"
   [ctx target-attr]
-  {:pre [#_(:hypercrud.browser/element ctx)                   ; even FindScalar has an element, :blank does not need to refocus
-         ; Fiddle-attr targets now do not have element.
-         ctx]
-   ; If you don't have this stuff why do we need to focus?
-   :post [#_(->> (keys %) (clojure.set/superset? #{#_:hypercrud.browser/eav ; in the server, there isn't an eav in scope at fiddle level which hits htis now
-                                                 #_:hypercrud.browser/element ; fiddle-attr doesn't have
-                                                 #_:hypercrud.browser/qfind ; fiddle-attr doesn't have
-                                                 }))]}
+  {:pre [ctx target-attr]
+   :post [%]}
+  (cond
+    (= target-attr (@(:hypercrud.browser/fiddle ctx) :fiddle/ident))
+    ; if no element, we already there (depth = 0)
+    (unwind ctx (depth ctx))
 
-  (if (= target-attr (@(:hypercrud.browser/fiddle ctx) :fiddle/ident))
-    (unwind ctx (depth ctx))                                ; if no element, we already there (depth = 0)
+    (:hypercrud.browser/element ctx)
+    (refocus-in-element ctx target-attr)
 
-    ; are we focusing from blank? Impossible, there's no result to focus
-    ; Are we refocusing to blank? That would mean whacking the ctx entirely?
-    ; if target-attr = last path, we're already here! How did that happen? Should be harmless, will noop
-    (let [{{db :symbol} :source {pull-pattern :value} :pattern} @(:hypercrud.browser/element ctx)
-          root-pull (contrib.datomic/pull-shape pull-pattern)
-          current-path (:hypercrud.browser/pull-path ctx)
-          schema (get (summon-schemas-grouped-by-dbname ctx) (str db))
-
-          ; find a reachable path that contains the target-attr in the fewest hops
-          ;   me->mother ; me->sister->mother ; closest ctx is selected
-          ; What if there is more than one?  me->sister->mother; me->father->mother
-          ; Ambiguous, how did we even select this link? Probably need full datascript query language.
-          target-path (->> (contrib.datomic/reachable-pullpaths schema root-pull current-path)
-                           (filter #(some target-attr %))
-                           (map (partial take-while (partial not= target-attr)))
-                           (sort-by count)
-                           first)
-
-          common-ancestor-path (ancestry-common current-path target-path)
-          unwind-offset (- (count current-path) (count common-ancestor-path))
-          common-ancestor-ctx (unwind ctx unwind-offset)]
-      (focus common-ancestor-ctx (ancestry-divergence target-path current-path)))))
+    :else
+    ; Assuming 0 works in happy path without tupling links all the way up.
+    (refocus-in-element (element ctx 0) target-attr)))
 
 (defn id->tempid+ [route ctx]
   (let [invert-id (fn [id uri]
@@ -608,17 +626,26 @@
 
 (let [eval-string!+ (memoize eval/eval-expr-str!+)]
   (defn build-args+ "Params are EAV-typed (uncolored)"
-    [ctx {:keys [:link/fiddle :link/tx-fn] :as link}]
+    [ctx                                                    ;There is a ctx per argument if we are element-level tuple.
+     {:keys [:link/fiddle :link/tx-fn] :as link}]
+
+    ; if at element level, zip with the find-elements, so do this N times.
+    ; That assumes the target query is a query of one arg. If it takes N args, we can apply as tuple. If they misalign thats an error.
+    ; Return the tuple of args.
+
     (mlet [formula-ctx-closure (if-let [formula-str (contrib.string/blank->nil (:link/formula link))]
                                  (eval-string!+ (str "(fn [ctx] \n" formula-str "\n)"))
                                  (either/right (constantly (constantly nil))))
            formula-fn (try-either (formula-ctx-closure ctx))
-           :let [[_ _ v] @(:hypercrud.browser/eav ctx)]     ; in tuple case is this a tuple?
+           :let [[_ _ v] @(:hypercrud.browser/eav ctx)]     ; Legacy is tuple, it should be scalar by here (tuple the ctx, not the v)
            args (try-either (formula-fn v))]                ; Documented behavior is v in, tuple out, no colors.
-      (return (normalize-args args)))))
+      (return
+        ; No need to normalize once tupling works
+        (normalize-args args)))))
 
 (defn ^:export build-route' "There may not be a route! Fiddle is sometimes optional" ; build-route+
   [+args ctx {:keys [:link/fiddle :link/tx-fn] :as link}]
+  {:pre [ctx]}
   (if (and (not fiddle) tx-fn)
     (mlet [args +args] (return nil))                        ; :hf/remove doesn't have one by default, :hf/new does, both can be customized
     (mlet [args +args                                       ; part of error chain
@@ -632,6 +659,7 @@
       (return route))))
 
 (defn refocus' "focus a link ctx, accounting for link/formula which occludes the natural eav"
+  ; Can return tuple-ctx
   [ctx link-ref]
   {:pre [(s/assert :hypercrud/context ctx)
          (s/assert r/reactive? link-ref)]
@@ -639,24 +667,19 @@
   (let [[_ a _] @(:hypercrud.browser/eav ctx)
         target-a @(r/fmap (r/comp hyperfiddle.fiddle/read-path :link/path) link-ref)
         ctx (if (and target-a (not= target-a a))            ; backwards compat
-              (refocus ctx target-a)
+              (refocus ctx target-a)                        ; returns tuple
               ctx)
-        +args @(r/fmap->> link-ref (build-args+ ctx))
+        +args @(r/fmap->> link-ref (build-args+ ctx))       ; tuple
         [v' & vs] (->> +args (contrib.ct/unwrap (constantly nil))) ; EAV sugar is not interested in tuple case, that txfn is way off happy path
         ctx (assoc ctx :hypercrud.browser/eav (r/apply stable-eav-v
                                                        [(:hypercrud.browser/eav ctx)
                                                         (r/track identity v')]))
+        ; Route gets to choose how to interpret the tuple-ctx.
+        ; If the target-fiddle has one input, build N routes (tuple-ctx dimension).
+        ; If the target-fiddle dimension matches tuple dimension, build one route.
+        ; Otherwise, error.
         r+?route (r/fmap->> link-ref (build-route' +args ctx))]
     [ctx r+?route]))
-
-(defn tree-invalid? "For popover buttons (fiddle level)" [ctx]
-  (->> (:hypercrud.browser/validation-hints ctx)
-       seq boolean))
-
-(defn leaf-invalid? "The thing that styles red" [ctx]
-  (->> (:hypercrud.browser/validation-hints ctx)
-       (filter (comp nil? first))
-       seq boolean))
 
 (defn tempid! "unstable"
   ([ctx]

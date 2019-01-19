@@ -106,9 +106,9 @@
       (field [:fiddle/uuid] ctx hyper-control (assoc props :disabled true))
       (field [:fiddle/hydrate-result-as-fiddle] ctx hyper-control props)
       [:div.p "Additional attributes"]
-      (for [k (->> (contrib.datomic/pull-level @(:hypercrud.browser/pull-enclosure ctx))
-                   (remove (comp (partial = "fiddle") namespace))
-                   (remove (partial = :db/id)))]
+      (for [[k _] (hypercrud.browser.context/spread-attributes ctx)
+            :when (and (not= :db/id k)
+                       (not= "fiddle" (namespace k)))]
         ^{:key (str k)}
         [field [k] ctx])
       (field [] ctx (fn [val ctx props]
@@ -125,7 +125,7 @@
          {:read-only true
           :value (with-out-str
                    (clojure.pprint/pprint
-                     (:hypercrud.browser/validation-hints ctx)))}]])})
+                     (hypercrud.browser.context/validation-hints-here ctx)))}]])})
 
 (defn fiddle-src-renderer [_ ctx props]
   (let [tab-state (r/atom (if (contains? tabs (:initial-tab props)) (:initial-tab props) :hf.src/query))]

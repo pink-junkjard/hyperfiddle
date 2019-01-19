@@ -16,7 +16,8 @@
             [hypercrud.types.QueryRequest :refer [->QueryRequest]]
             [hyperfiddle.domain :as domain]
             [hyperfiddle.fiddle :as fiddle]
-            [hyperfiddle.ui.sort])
+            [hyperfiddle.ui.sort]
+            [taoensso.timbre])
   #?(:clj (:import (datascript.parser FindRel FindColl FindTuple FindScalar Variable Aggregate Pull))))
 
 
@@ -109,16 +110,25 @@
   (unwrap (constantly nil) (data-from-route route ctx)))
 
 (defn from-link [link ctx with-route]                       ; ctx is for formula and routing (tempids and domain)
-  #_{:pre [(:hypercrud.browser/element ctx)]}               ; top-level iframes dont have an element
-  (let [+args (if-let [target-attr (hyperfiddle.fiddle/read-path (:link/path link))] ; set fiddle-ident as attr if you need the dependency
-                (context/build-args+ (context/refocus ctx target-attr) link)
+  {:post [%]}
+  (let [+args (if-let [target-a (hyperfiddle.fiddle/read-path (:link/path link))]
+                (context/build-args+
+                  ; In the element level this returns tuple, e.g. [nil ctx]
+                  (context/refocus ctx target-a)            ; can return tuple if tupled elements.
+                  ; In this case the args are also tupled.
+                                     link)
                 (right []))]                                ; top iframes without dependency don't need a formula
     ; If we're refocusing to :blank, do we need to whack the ctx?
-    (mlet [route (context/build-route' +args ctx link)]
+    (assert ctx)
+    (mlet [route (context/build-route' +args ctx link)]     ; what if two routes?
+      ; (mapcat #(with-route % ctx) routes)
+      (assert ctx)
       (with-route route ctx))))
 
 (defn data-from-link [link ctx]                             ; todo rename
+  {:pre [link ctx]}
   (from-link link ctx data-from-route))
 
-(defn data-from-link! [link ctx]
-  (unwrap (constantly nil) (data-from-link link ctx)))
+(defn data-from-link! [link ctx]                            ; mapcat, this can return tuple
+  (unwrap #(taoensso.timbre/warn %) #_(constantly nil)
+          (data-from-link link ctx)))

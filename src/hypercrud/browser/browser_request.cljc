@@ -42,6 +42,7 @@
                            (-quiet-unwrap))))))))))
 
 (defn request-from-link [link ctx]
+  ; can return two links worth of requests, but the mapcat will work
   (-quiet-unwrap (base/from-link link ctx (fn [route ctx]
                                             (either/right (request-from-route route ctx))))))
 

@@ -17,7 +17,7 @@
 
     {@(:hypercrud.browser/route ctx) (ctx->data ctx)}
 
-    (->> @(hyperfiddle.data/select-many-here ctx #{:hf/iframe}) ; this omits dependent iframes fixme
+    (->> @(hyperfiddle.data/select-many ctx #{:hf/iframe}) ; this omits dependent iframes fixme
          (map (partial r/flip base/data-from-link! ctx))
          (map (juxt :hypercrud.browser/route ctx->data)))
 

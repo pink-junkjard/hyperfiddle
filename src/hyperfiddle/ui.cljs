@@ -62,16 +62,16 @@
 (declare fiddle-api)
 (declare fiddle-xray)
 
-#_(defn entity-links-iframe [val ctx & [props]]
+(defn entity-links-iframe [val ctx & [props]]
   ; Find the iframe links that we can get to downwards, but not upwards
   ; (select searches upwards)
   ; Only ask this question from a place at the top
-  (->> (r/fmap->> (data/select-all-r ctx :hf/iframe)
-                  (remove (r/comp (r/partial context/deps-over-satisfied? ctx) context/read-path :link/path)))
+  (->> (r/fmap->> (hyperfiddle.data/select-many ctx :hf/iframe)
+                  #_(remove (r/comp (r/partial context/deps-over-satisfied? ctx) context/read-path :link/path)))
        (r/unsequence (r/partial context/stable-relation-key ctx))
        (map (fn [[rv k]]
               ^{:key k}
-              [ui-from-link rv ctx props]))
+              [ui-from-link rv ctx props]))                 ; mapcat, this is tupled
        (into [:<>])))
 
 (defn iframe-field-default [val ctx props]
@@ -105,7 +105,7 @@
   {:post [%]}
   (or (attr-renderer-control val ctx props)
       (let [[_ a _] @(:hypercrud.browser/eav ctx)
-            children (contrib.datomic/pull-level @(:hypercrud.browser/pull-enclosure ctx))]
+            children (contrib.datomic/pull-level (hypercrud.browser.context/pull-enclosure-here ctx))]
         (cond                                               ; Duplicate options test to avoid circular dependency in controls/ref
           (:options props) [(control val ctx props) val ctx props]
           (contains? #{:db/id :db/ident} a) [controls/id-or-ident val ctx props]
@@ -213,6 +213,7 @@ User renderers should not be exposed to the reaction."
     {:pre [link-ref (r/reactive? link-ref)]}
     (let [visual-ctx ctx
           [ctx r+?route] (context/refocus' ctx link-ref)    ; route reaction isn't even real
+          ; This can be tuple-ctx and tuple-route.
           style {:color nil #_(connection-color ctx (cond (hyperfiddle.ide.console-links/system-link?
                                                             (:db/id @link-ref)) 60 :else 40))}
           props (update props :style #(or % style))
@@ -320,22 +321,17 @@ User renderers should not be exposed to the reaction."
 
 (defn columns [relpath ui-field ctx & [props]]
   (concat
-    ; questionable enclosing-pull-shape here
-    (for [[k] (map vector (contrib.datomic/pull-level @(:hypercrud.browser/pull-enclosure ctx))
-                   #_(hyperfiddle.api/spread-pull ctx))]
+    (for [[k _] (hypercrud.browser.context/spread-attributes ctx)]
       ^{:key (str k)}
       [ui-field (conj relpath k) ctx nil props])
-    [[ui-field relpath ctx nil props]]))                    ; fiddle segment (top)
+    ; Disable due to infinite recursion in nested form case
+    #_[[ui-field relpath ctx nil props]]))                    ; fiddle segment (top)
 
 (defn columns-relation-product [ui-field ctx & [props]]
   {:pre [ctx]}
-  (->> (for [[element [i ctx-e]] (map vector (datascript.parser/find-elements @(:hypercrud.browser/qfind ctx))
-                                      (hypercrud.browser.context/spread-elements ctx))]
-         (condp some [(type element)]
-           #{Variable Aggregate} [[ui-field [i] ctx props]]
-           #{Pull} (for [[a] (map vector (contrib.datomic/pull-level @(:hypercrud.browser/pull-enclosure ctx-e)))]
-                     [ui-field [i a] ctx props])))
-       (mapcat identity)))
+  (for [[i ctx-e] (hypercrud.browser.context/spread-elements ctx)
+        [?a ctx-a] (hypercrud.browser.context/spread-attributes ctx-e)]
+    [ui-field (remove nil? [i ?a]) ctx props]))
 
 (defn ^:export table "Semantic table; columns driven externally" ; this is just a widget
   [columns ctx & [props]]
