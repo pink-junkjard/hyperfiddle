@@ -46,6 +46,10 @@
   (-quiet-unwrap (base/from-link link ctx (fn [route ctx]
                                             (either/right (request-from-route route ctx))))))
 
+(defn requests-here [ctx]
+  (->> @(data/select-many-here ctx #{:hf/iframe})
+       (mapcat #(request-from-link % ctx))))
+
 (defn requests-for-pull-iframes [ctx]
   (->> @(data/select-many-here ctx #{:hf/iframe})
        (mapcat #(request-from-link % ctx))
@@ -53,32 +57,44 @@
          (for [[_ ctx] (hypercrud.browser.context/spread-attributes ctx)]
            (requests-for-pull-iframes ctx)))))              ; recur
 
-(defn with-result [ctx]
-  (for [[_ ctx] (hypercrud.browser.context/spread-result ctx)]
-    (concat
-      (->> @(data/select-many-here ctx #{:hf/iframe})
-           (mapcat #(request-from-link % ctx)))
-      (for [[_ ctx] (hypercrud.browser.context/spread-rows ctx)
-            ; tuple level iframes - how would we address them?
-            [_ ctx] (hypercrud.browser.context/spread-elements ctx)]
-        ; element level iframes could be addressed by element index or name
-        (condp = (type @(:hypercrud.browser/element ctx))    ; (let [{{db :symbol} :source {pull-pattern :value} :pattern} element])
-          Variable []
-          Aggregate []
-          Pull (for [[_ ctx] (hypercrud.browser.context/spread-attributes ctx)]
-                 (requests-for-pull-iframes ctx)))))))
+; at this point we only care about inline links and popovers are hydrated on their on hydrate-route calls
+; On the request side, we walk the whole resultset and load each iframe from exactly the right place
+; without any refocusing. Only on the view side do we care about drawing things in some other place.
+
+(defn cross-streams [ctx]
+  ; This does not get to look at the fiddlescope, though seems reasonable if it wanted to
+  (if @(r/fmap :fiddle/hydrate-result-as-fiddle (:hypercrud.browser/fiddle ctx))
+    ; This only makes sense on :fiddle/type :query because it has arbitrary arguments
+    ; EntityRequest args are too structured.
+    (let [[_ [inner-fiddle & inner-args]] @(:hypercrud.browser/route ctx)]
+      (request-from-route [inner-fiddle (vec inner-args)] ctx))))
 
 (defn requests [ctx]
-  ; at this point we only care about inline links and popovers are hydrated on their on hydrate-route calls
-  ; On the request side, we walk the whole resultset and load each iframe from exactly the right place
-  ; without any refocusing. Only on the view side do we care about drawing things in some other place.
   (concat
     (->> @(data/select-many-here ctx #{:hf/iframe})
          (mapcat #(request-from-link % ctx)))
-    (with-result ctx)
-    ; This does not get to look at the fiddlescope, though seems reasonable if it wanted to
-    (if @(r/fmap :fiddle/hydrate-result-as-fiddle (:hypercrud.browser/fiddle ctx))
-      ; This only makes sense on :fiddle/type :query because it has arbitrary arguments
-      ; EntityRequest args are too structured.
-      (let [[_ [inner-fiddle & inner-args]] @(:hypercrud.browser/route ctx)]
-        (request-from-route [inner-fiddle (vec inner-args)] ctx)))))
+    (for [[_ ctx] (hypercrud.browser.context/spread-result ctx)]
+      (concat
+        (->> @(data/select-many-here ctx #{:hf/iframe})
+             (mapcat #(request-from-link % ctx)))
+        (for [[_ ctx] (hypercrud.browser.context/spread-rows ctx)
+              [_ ctx] (hypercrud.browser.context/spread-elements ctx)]
+          (condp = (type @(:hypercrud.browser/element ctx))
+            Variable []
+            Aggregate []
+            Pull (for [[_ ctx] (hypercrud.browser.context/spread-attributes ctx)]
+                   (requests-for-pull-iframes ctx))))))
+    (cross-streams ctx)))
+
+#_(defn requests [ctx]
+    (flatten
+      [(requests-here ctx)
+       (for [[_ ctx] (hypercrud.browser.context/spread-result ctx)]
+         [(requests-here ctx)
+          (for [[_ ctx] (hypercrud.browser.context/spread-rows ctx)]
+            [(requests-here ctx)
+             (for [[i ctx] (hypercrud.browser.context/spread-elements ctx)]
+               [(requests-here ctx)
+                #_(for [[a ctx] (hypercrud.browser.context/spread-attributes ctx)] ; TODO loop recur
+                    (requests-here ctx))])])])
+       (cross-streams ctx)]))
