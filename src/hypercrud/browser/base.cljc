@@ -92,9 +92,7 @@
            :let [#_#_sort-fn (hyperfiddle.ui.sort/sort-fn % sort-col)
                  r-schemas (r/track context/summon-schemas-grouped-by-dbname ctx)
                  ctx (hypercrud.browser.context/fiddle ctx r-fiddle r-schemas r-result)
-                 ctx (assoc ctx
-                       :hypercrud.browser/attr-renderers reactive-attrs
-                       #_#_:hypercrud.browser/datascript (contrib.datomic/datascript-from-result @r-result @r-schemas))]]
+                 ctx (assoc ctx :hypercrud.browser/attr-renderers reactive-attrs)]]
       (return ctx))))
 
 (defn data-from-route "either ctx, ctx-from-route" [route ctx]                           ; todo rename
