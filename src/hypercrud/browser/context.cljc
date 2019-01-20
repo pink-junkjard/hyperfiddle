@@ -424,16 +424,14 @@
         sort-fn (or sort-fn identity)
         depth (count (:hypercrud.browser/result-path ctx))]
     (cond                                                   ; fiddle | nested attr (otherwise already spread)
-
       (= depth 0)                                           ; fiddle level
       (let [{r-qfind :hypercrud.browser/qfind} ctx
+            keyfn (partial row-keyfn ctx)
             r-ordered-result (:hypercrud.browser/result ctx)] ; don't have a result-path, thus use raw result
         (condp some [(type @r-qfind)]
           ; sorting doesn't index keyfn lookup by design
           #{FindRel FindColl}
-          (let [keyfn (partial row-keyfn ctx)
-                ; Downstack from here, result is indexed, userland must never look at it, they will be confused.
-                ctx (assoc ctx :hypercrud.browser/result
+          (let [ctx (assoc ctx :hypercrud.browser/result
                                (r/fmap->> r-ordered-result (contrib.data/group-by-unique keyfn)))]
             (assert (:hypercrud.browser/result ctx))
             ; Rows are ordered, but the result value is indexed for lookup (not order)
@@ -443,7 +441,7 @@
               [k (row ctx k)]))
 
           #{FindTuple FindScalar}
-          [ctx]))
+          [[(keyfn @r-ordered-result) ctx]]))
 
       (> depth 0)                                           ; nested attr
       (let [keyfn (partial stable-entity-key ctx)           ; Group again by keyfn, we have seq and need lookup
