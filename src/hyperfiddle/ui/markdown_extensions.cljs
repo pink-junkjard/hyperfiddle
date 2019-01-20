@@ -144,8 +144,8 @@
 
 (defmethod md-ext :list [_ content argument props ctx]
   [:ul props
-   (for [[k ctx] (hypercrud.browser.context/spread-rows ctx)]
-     ^{:key k}
+   (for [[ix ctx] (hypercrud.browser.context/spread-rows ctx)]
+     ^{:key ix}
      [:li [markdown content ctx]])])
 
 (def ^:export markdown (remark/remark! (methods md-ext)))
