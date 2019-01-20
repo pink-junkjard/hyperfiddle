@@ -109,8 +109,7 @@
       (for [[k _] (hypercrud.browser.context/spread-attributes ctx)
             :when (and (not= :db/id k)
                        (not= "fiddle" (namespace k)))]
-        ^{:key (str k)}
-        [field [k] ctx])
+        (field [k] ctx))
       (field [] ctx (fn [val ctx props]
                       [:div (link #{:hyperfiddle/ide :hf/remove} ctx "Remove fiddle" {:class "btn-outline-danger"})]))
       #_[:div.p "Spec debugging"]
