@@ -149,6 +149,7 @@
 
 (defn pull-enclosure "Union the requested pull-pattern-shape with the actual result shape"
   [schema shape coll]
+  {:pre [schema]}
   (apply pull-union shape (map (partial tree-derivative schema) coll)))
 
 (defn pull-traverse "Manufacture superset of possible link paths
