@@ -76,14 +76,15 @@
 
 (defn iframe-field-default [val ctx props]
   (let [props (-> props (dissoc :class) (assoc :label-fn (r/constantly nil) #_[:div "nested pull iframes"]))]
-    [:pre "iframe-field-default"]
-    #_[field [] ctx entity-links-iframe props]))
+    #_[:pre "iframe-field-default"]
+    [field [] ctx entity-links-iframe props]))
 
 (let [Pull Pull
       Variable Variable
       Aggregate Aggregate]
   (defn control "this is a function, which returns component"
     [val ctx & [props]]                                     ; returns Func[(ref, props, ctx) => DOM]
+    {:pre [ctx]}
     (let [element @(:hypercrud.browser/element ctx)
           [_ a _] @(:hypercrud.browser/eav ctx)
           value-type (some-> (:hypercrud.browser/schema ctx) deref (contrib.datomic/valueType a)) ; put protocol on ctx to remove guard
@@ -115,7 +116,7 @@
                                                         [W val ctx props]) ; flatten useless nesting
           (seq children) (let [ctx (dissoc ctx ::layout)]
                            [:div                            ; wrapper div: https://github.com/hyperfiddle/hyperfiddle/issues/541
-                            [pull hyperfiddle.ui/field val ctx props]
+                            [pull val ctx props]
                             [iframe-field-default val ctx props]])
           :else [(control val ctx props) val ctx props]))))
 
@@ -310,31 +311,28 @@ User renderers should not be exposed to the reaction."
 
 (defn ^:export field "Works in a form or table context. Draws label and/or value."
   [relative-path ctx & [?f props]]
+  {:pre [ctx]}
+  (println relative-path)
   (let [ctx (context/focus ctx relative-path) ; Handle element and attr
         Body (or ?f hyper-control)
         Head (or (:label-fn props) hyper-label)
         props (dissoc props :label-fn)
         props (update props :class css (semantic-css ctx))]
+
+
+    ; Make this go away. Since field isn't an abstraction, these don't need to share code anymore?
+    ; What about multimethod field overload?
     (case (:hyperfiddle.ui/layout ctx)                      ; check cardinality
-      :hyperfiddle.ui.layout/table [table-field ctx Body Head props]
+      :hyperfiddle.ui.layout/table
+      ^{:key (str relative-path)}
+      [table-field ctx Body Head props]
+
+      ^{:key (str relative-path)}                           ; could be a product, does eav as key work for that?
       [form-field ctx Body Head props])))
-
-(defn columns [relpath ui-field ctx & [props]]
-  (concat
-    (for [[k _] (hypercrud.browser.context/spread-attributes ctx)]
-      ^{:key (str k)}
-      [ui-field (conj relpath k) ctx nil props])
-    ; Disable due to infinite recursion in nested form case
-    #_[[ui-field relpath ctx nil props]]))                    ; fiddle segment (top)
-
-(defn columns-relation-product [ui-field ctx & [props]]
-  {:pre [ctx]}
-  (for [[i ctx-e] (hypercrud.browser.context/spread-elements ctx)
-        [?a ctx-a] (hypercrud.browser.context/spread-attributes ctx-e)]
-    [ui-field (remove nil? [i ?a]) ctx props]))
 
 (defn ^:export table "Semantic table; columns driven externally" ; this is just a widget
   [columns ctx & [props]]
+  ; Need backwards compat arity
   (let [sort-col (r/atom (::sort/initial-sort props))]
     (fn [columns ctx & [props]]
       (let [props (update props :class (fnil css "hyperfiddle") "unp") ; fnil case is iframe root (not a field :many)
@@ -344,11 +342,10 @@ User renderers should not be exposed to the reaction."
         [:table (select-keys props [:class :style])
          [:thead (into [:tr] (columns ctx))]
          ; filter? Group-by? You can't. This is data driven. Shape your data in the peer.
-         (into [:tbody] (for [[k ctx] (hypercrud.browser.context/spread-rows ctx #(sort/sort-fn % sort-col))]
-                          (let [cs (columns ctx)]
-                            (into
-                              [:tr {:key (str k)}]
-                              cs))))]))))
+         (into [:tbody] (for [[ix ctx] (hypercrud.browser.context/spread-rows ctx #(sort/sort-fn % sort-col))]
+                          ; columns keys should work out, field sets it on inside
+                          #_[:tr {:key (str ix)} (columns ctx)]
+                          (let [cs (columns ctx)] (into [:tr {:key (str ix)}] cs))))]))))
 
 (defn hint [val {:keys [hypercrud.browser/fiddle] :as ctx} props]
   (if (and (-> (:fiddle/type @fiddle) (= :entity))
@@ -357,17 +354,42 @@ User renderers should not be exposed to the reaction."
     the URL, click here: "
      [:a {:href "~entity('$','tempid')"} [:code "~entity('$','tempid')"]] "."]))
 
-(defn form "Not an abstraction." [fields val ctx & [props]]
-  (into [:<> {:key (str (context/row-keyfn ctx val))}]
-        (fields (assoc ctx ::layout :hyperfiddle.ui.layout/block))))
+(defn form "Not an abstraction." [columns val ctx & [props]]
+  (let [ctx (assoc ctx ::layout :hyperfiddle.ui.layout/block)] ; make this go away
+    (into
+      [:<> {:key (str (context/row-keyfn ctx val))}]
+      (columns ctx))))
+
+(defn columns [ctx & [props]]
+  {:pre [ctx]}
+  #_(cons (field relpath ctx nil props))
+  (doall (for [[k _] (hypercrud.browser.context/spread-attributes ctx)]
+           (field [k] ctx nil props))))
 
 (defn pull "handles any datomic result that isn't a relation, recursively"
-  [field val ctx & [props]]
+  [val ctx & [props]]
   (let [[_ a _] @(:hypercrud.browser/eav ctx)]
     ; detect top and do fiddle-level here, instead of in columns?
     (match* [(contrib.datomic/cardinality-loose @(:hypercrud.browser/schema ctx) a)] ; this is parent - not focused?
-      [:db.cardinality/one] [form (r/partial columns [] field) val ctx props]
-      [:db.cardinality/many] [table (r/partial columns [] field) ctx props])))
+      [:db.cardinality/one] [form columns val ctx props]
+      [:db.cardinality/many] [table columns ctx props]
+      [_] [:pre (pr-str a)])))
+
+(defn table-product [ctx props]
+  ; Don't flatten the hiccup
+  #_(cons (field [] ctx props))
+  (->> (for [[i ctx-e] (hypercrud.browser.context/spread-elements ctx)]
+         #_(cons (field [i] ctx props))
+         (for [[a ctx-a] (hypercrud.browser.context/spread-attributes ctx-e)]
+           (field [i a] ctx props)))
+       (mapcat identity)
+       doall))
+
+(defn form-product [ctx props]
+  (->> (for [[i ctx-e] (hypercrud.browser.context/spread-elements ctx)
+             [a ctx-a] (hypercrud.browser.context/spread-attributes ctx-e)]
+         (field [i a] ctx props))
+       doall))
 
 (defn ^:export result "Default result renderer. Invoked as fn, returns seq-hiccup, hiccup or
 nil. call site must wrap with a Reagent component"          ; is this just hyper-control ?
@@ -377,9 +399,13 @@ nil. call site must wrap with a Reagent component"          ; is this just hyper
      (for [[k ctx] (hypercrud.browser.context/spread-result ctx)]
        [:<> {:key k}
         (hint val ctx props)
-        (condp some [(type @(:hypercrud.browser/qfind ctx))]
-          #{FindRel FindColl} [table (r/partial columns-relation-product hyperfiddle.ui/field) ctx props]
-          #{FindTuple FindScalar} [form (r/partial columns-relation-product hyperfiddle.ui/field) val ctx props])]))
+        (condp some [(type @(:hypercrud.browser/qfind ctx))] ; spread-rows
+
+          #{FindRel FindColl}
+          [table table-product ctx props]
+
+          #{FindTuple FindScalar}
+          [form form-product val ctx props])]))
    [iframe-field-default val ctx props]])
 
 (def ^:dynamic markdown)                                    ; this should be hf-contrib or something
