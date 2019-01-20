@@ -373,10 +373,12 @@
        (filter (comp nil? first))
        seq boolean))
 
-(defn pull-enclosure-here [ctx]
-  (contrib.datomic/pullshape-get-in
-    @(:hypercrud.browser/pull-enclosure ctx)
-    (:hypercrud.browser/pull-path ctx)))
+(defn pull-enclosure-here "safe to be called anywhere"
+  [ctx]
+  (when (:hypercrud.browser/element ctx)
+    (contrib.datomic/pullshape-get-in
+      @(:hypercrud.browser/pull-enclosure ctx)
+      (:hypercrud.browser/pull-path ctx))))
 
 (defn focus "Unwind or go deeper, to where we need to be, within same dimension.
     Throws if you focus a higher dimension.
@@ -472,8 +474,8 @@
   [{:keys [:hypercrud.browser/element] :as ctx}]
   {:pre [element]}
   (condp = (type @element)
-    Variable [[nil ctx]]
-    Aggregate [[nil ctx]]
+    Variable []
+    Aggregate []
     Pull (for [k (contrib.datomic/pull-level (pull-enclosure-here ctx))]
            [k (attribute ctx k)])))
 
