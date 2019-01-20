@@ -50,13 +50,6 @@
   (->> @(data/select-many-here ctx #{:hf/iframe})
        (mapcat #(request-from-link % ctx))))
 
-(defn requests-for-pull-iframes [ctx]
-  (->> @(data/select-many-here ctx #{:hf/iframe})
-       (mapcat #(request-from-link % ctx))
-       (concat
-         (for [[_ ctx] (hypercrud.browser.context/spread-attributes ctx)]
-           (requests-for-pull-iframes ctx)))))              ; recur
-
 ; at this point we only care about inline links and popovers are hydrated on their on hydrate-route calls
 ; On the request side, we walk the whole resultset and load each iframe from exactly the right place
 ; without any refocusing. Only on the view side do we care about drawing things in some other place.
@@ -70,31 +63,14 @@
       (request-from-route [inner-fiddle (vec inner-args)] ctx))))
 
 (defn requests [ctx]
-  (concat
-    (->> @(data/select-many-here ctx #{:hf/iframe})
-         (mapcat #(request-from-link % ctx)))
-    (for [[_ ctx] (hypercrud.browser.context/spread-result ctx)]
-      (concat
-        (->> @(data/select-many-here ctx #{:hf/iframe})
-             (mapcat #(request-from-link % ctx)))
-        (for [[_ ctx] (hypercrud.browser.context/spread-rows ctx)
-              [_ ctx] (hypercrud.browser.context/spread-elements ctx)]
-          (condp = (type @(:hypercrud.browser/element ctx))
-            Variable []
-            Aggregate []
-            Pull (for [[_ ctx] (hypercrud.browser.context/spread-attributes ctx)]
-                   (requests-for-pull-iframes ctx))))))
-    (cross-streams ctx)))
-
-#_(defn requests [ctx]
-    (flatten
-      [(requests-here ctx)
-       (for [[_ ctx] (hypercrud.browser.context/spread-result ctx)]
-         [(requests-here ctx)
-          (for [[_ ctx] (hypercrud.browser.context/spread-rows ctx)]
-            [(requests-here ctx)
-             (for [[i ctx] (hypercrud.browser.context/spread-elements ctx)]
-               [(requests-here ctx)
-                #_(for [[a ctx] (hypercrud.browser.context/spread-attributes ctx)] ; TODO loop recur
-                    (requests-here ctx))])])])
-       (cross-streams ctx)]))
+  (flatten
+    [(requests-here ctx)
+     (for [[_ ctx] (hypercrud.browser.context/spread-result ctx)]
+       [(requests-here ctx)
+        (for [[_ ctx] (hypercrud.browser.context/spread-rows ctx)]
+          [(requests-here ctx)
+           (for [[i ctx] (hypercrud.browser.context/spread-elements ctx)]
+             [(requests-here ctx)
+              (for [[a ctx] (hypercrud.browser.context/spread-attributes ctx)] ; TODO loop recur
+                (requests-here ctx))])])])
+     (cross-streams ctx)]))
