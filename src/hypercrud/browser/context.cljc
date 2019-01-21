@@ -398,13 +398,14 @@
               :else (assert false (str "illegal focus: " p))))
           ctx relative-path))
 
-(defn row ""
+(defn row "Row does not set E. E is the parent, not the child, and row is analogous to :ref :many child."
   [ctx & [k]]
   {:pre [(s/assert :hypercrud/context ctx)]
    :post [(s/assert :hypercrud/context %)]}
   (as-> ctx ctx
         (set-parent ctx)
         (update ctx :hypercrud.browser/result-path (fnil conj []) k)
+        ; (I considered FindColl setting e here but that's not right)
         (assoc ctx :hypercrud.browser/eav (r/fmap-> (:hypercrud.browser/eav ctx) (stable-eav-v (v! ctx))))))
 
 (defn ^:export spread-result "Guards :fiddle/type :blank to guarantee a qfind.
