@@ -556,7 +556,10 @@
             common-ancestor-path (ancestry-common current-path chosen-path)
             unwind-offset (- (count current-path) (count common-ancestor-path)) ; 1 > 0 is fine
             common-ancestor-ctx (unwind ctx unwind-offset)]
-        (focus common-ancestor-ctx (ancestry-divergence (conj chosen-path target-a) current-path))))))
+        (focus common-ancestor-ctx (ancestry-divergence (conj chosen-path target-a) current-path))
+
+        ; Noop, already there. Guard above?
+        ctx))))
 
 (defn refocus "From view, find the closest satisfactory ctx accounting for cardinality. e.g. as in
   !link(:new-intent-naive :hf/remove). Caller believes that the deps are satisfied (right stuff is in scope).
