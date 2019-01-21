@@ -117,6 +117,9 @@
 
 (defn tee [g f!] (fn [v] (f! v) (g v)))
 
+;(defmacro tee2 [f! form]
+;  `((tee identity f!) ~@form))
+
 (defn kwargs
   "arg format is kwargs first; trailing non-kw args are nil key
       [:a 1 :b 2 'a 'b 'c] => {nil (a b c), :b 2, :a 1}"
