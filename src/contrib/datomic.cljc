@@ -1,6 +1,7 @@
 (ns contrib.datomic
   (:require
     [contrib.data :refer [group-by-pred]]
+    [clojure.spec.alpha :as s]
     [datascript.parser #?@(:cljs [:refer [FindRel FindColl FindTuple FindScalar Variable Aggregate Pull]])])
   #?(:clj (:import
             (datascript.parser FindRel FindColl FindTuple FindScalar Variable Aggregate Pull)
@@ -51,9 +52,12 @@
   SchemaIndexedNormalized
   (-repr-portable-hack [this] (str "#schema " (pr-str schema-pulledtree)))
   (-attr [this a k]
-    {:pre [(keyword? a) (keyword? k)]}
-    (smart-lookup-ref-no-tempids
-      (get-in schema-by-attr [a k])))
+    #_(s/assert keyword? a)                                 ; def real assert currenetly failing
+    #_(s/assert keyword? k)
+    (let [v (smart-lookup-ref-no-tempids
+              (get-in schema-by-attr [a k]))]
+      #_(s/assert keyword? v)
+      v))
   (valueType [this a] (-attr this a :db/valueType))
   (cardinality [this a] (-attr this a :db/cardinality))
   (isComponent [this a] (-attr this a :db/isComponent))
