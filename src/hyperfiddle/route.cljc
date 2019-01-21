@@ -71,26 +71,25 @@
 (defn url-encode [route home-route]
   {:pre [(s/valid? :hyperfiddle/route route) (s/valid? :hyperfiddle/route home-route)]
    :post [(str/starts-with? % "/")]}
-  (let [[fiddle datomic-args service-args frag] route
-        fiddle-args []]
+  (let [[fiddle datomic-args service-args frag] route]
     (if (compare-routes route home-route)
       (str "/" (some->> frag empty->nil (str "#")))
       (case fiddle
         :hyperfiddle.system.route/decoding-error (first datomic-args)
         (str "/"
-             (str/join ";" (->> (cons (ednish/encode-uri fiddle) (map ednish/encode-uri fiddle-args))))
+             (ednish/encode-uri fiddle)
              "/"
-             (str/join "/" (map ednish/encode-uri datomic-args)) ; datomic args as path params is sensible default for userland
-
+             (str/join "/" (map ednish/encode-uri datomic-args))
              ; hash and query aren't used today, todo i would prefer to encode as edn hashmap instead of k=v
              (if (seq service-args) (str "?" (str/join "&" (->> service-args (map (fn [[k v]] (ednish/encode-uri k "=" (ednish/encode-uri v))))))))
              (if (empty->nil frag) (str "#" (-> frag encode-ednish encode-rfc3986-pchar))))))))
 
-(def url-regex #"/([^;/?#]*)(?:;([^/?#]*))?(?:/([^?#]*))?(?:\?([^#]*))?(?:#(.*))?")
-;                /|________|   ;|_______|     /|______|      ?|_____|     #|__|
-;                     |             |             |              |          |
-;      url        seg[0]path    seg[0]matrix   seg[1 ...]     query        fragment
-;      hf-route   fiddle        fiddle-args    datomic-args   service-args fragment
+
+(def url-regex #"/([^/?#]*)(?:/([^?#]*))?(?:\?([^#]*))?(?:#(.*))?")
+;                /|________|  /|______|      ?|_____|     #|__|
+;                     |           |              |          |
+;      url        seg[0]path   seg[1 ...]     query        fragment
+;      hf-route   fiddle       datomic-args   service-args fragment
 
 (defn url-decode [s home-route]
   {:pre [(str/starts-with? s "/") (s/valid? :hyperfiddle/route home-route)]
@@ -99,7 +98,7 @@
     (if (= "/" path)
       (assoc-frag home-route frag)
       (-> (try-either
-            (let [[_ fiddle fiddle-args datomic-args query frag] (re-find url-regex s)]
+            (let [[_ fiddle datomic-args query frag] (re-find url-regex s)]
               (canonicalize
                 (ednish/decode-uri fiddle)
                 (if-let [as (->> (str/split datomic-args "/") ; careful: (str/split "" "/") => [""]
