@@ -121,6 +121,7 @@
       ; todo should just call foundation/bootstrap-data
       (-> (actions/refresh-domain rt (partial runtime/dispatch! rt) #(deref (runtime/state rt)))
           (p/then (fn [_] (actions/refresh-user rt (partial runtime/dispatch! rt) #(deref (runtime/state rt)))))
+          (p/then (fn [_] (actions/hydrate-partition-schema rt branch (partial runtime/dispatch! rt) #(deref (runtime/state rt)))))
           (p/then (fn [_] (runtime/hydrate-route rt branch)))
           (p/then (fn [data]
                     (let [cache-control (if (->> @(runtime/state rt [::runtime/partitions])
