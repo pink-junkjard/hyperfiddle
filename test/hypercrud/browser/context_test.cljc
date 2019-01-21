@@ -6,15 +6,15 @@
     [hypercrud.browser.context :as context]))
 
 
-
+(def ctx (context/fiddle
+           {:hypercrud.browser/route nil}
+           (r/pure fixtures.race/fiddle)
+           (r/pure fixtures.race/schemas)
+           (r/pure fixtures.race/result)))
 
 (deftest context
   []
-  (def ctx (context/fiddle
-             {:hypercrud.browser/route nil}
-             (r/pure fixtures.race/fiddle)
-             (r/pure fixtures.race/schemas)
-             (r/pure fixtures.race/result)))
+
   (testing "fiddle level context is set"
     (is (= @(r/fmap :fiddle/ident (:hypercrud.browser/fiddle ctx))
            :tutorial.race/submission))
@@ -95,8 +95,42 @@
            '([17592186046196 :dustingetz.reg/gender :dustingetz.gender/male]
               [17592186046763 :dustingetz.reg/gender :dustingetz.gender/male])))
     )
-  )
 
+  (testing "row"
+    ; Todo, index result at fiddle level so this works.
+    ; That means we need ::datomic-result for the raw thing, in case userland wants it?
+    (testing "row data by dbid"
+        #_(:hypercrud.browser/result-path (context/row ctx 17592186046196))
+        #_(:hypercrud.browser/result (context/row ctx 17592186046196))
+      (is (= @(context/data (context/row ctx 17592186046196))
+             {:db/id 17592186046196,
+              :dustingetz.reg/email "dustin@example.com",
+              :dustingetz.reg/name "Dustin Getz",
+              :dustingetz.reg/gender #:db{:ident :dustingetz.gender/male},
+              :dustingetz.reg/shirt-size #:db{:ident :dustingetz.shirt-size/mens-large}}))
+      )
+    (testing "FindColl keyfn is the entity identity"
+      (is (=
+
+             [nil :tutorial.race/submission nil]))
+      )
+    (testing "does not set e"
+      (is (= @(:hypercrud.browser/eav (context/row ctx 17592186046196))
+             [nil :tutorial.race/submission nil]))
+      )
+    (testing "refocus from root to gender"
+      (is (= (for [[_ ctx] (context/spread-rows ctx)
+                   [_ ctx] (context/spread-elements ctx)]
+               @(:hypercrud.browser/eav (context/refocus-in-element ctx :dustingetz.reg/gender)))
+             '([17592186046196 :dustingetz.reg/gender :dustingetz.gender/male]
+               [17592186046763 :dustingetz.reg/gender :dustingetz.gender/male])))
+      )
+
+    (testing "refocus from myself when already here but not at root")
+    )
+
+
+  )
 
 ; Connect to real tank
 
