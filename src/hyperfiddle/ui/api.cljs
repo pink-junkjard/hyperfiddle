@@ -7,7 +7,8 @@
 
 
 (defn ctx->data [ctx]
-  @(:hypercrud.browser/result ctx))
+  ; This should be asserted, but breaks if a request is somehow loading
+  (some-> (:hypercrud.browser/result ctx) deref))
 
 (defn api-data "{route data}
   At this point we only care about inline links
