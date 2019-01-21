@@ -84,7 +84,7 @@
                          (either/right nil)))]
   (defn process-results "Initialize ctx internals, but doesn't focus anything into scope.
     Not even the topfiddle"
-    [r-fiddle request ctx]
+    [r-fiddle request ctx]                                  ; This ctx is clean, it has ::route and userstuff only.
     ; Blow mlet in case of (right _) -> (left _), but don't recompute if (right :a) -> (right :b).
     (mlet [reactive-attrs @(r/apply-inner-r (project/hydrate-attrs ctx))
            ; result SHOULD be sorted out of jvm, though isn't yet

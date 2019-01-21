@@ -256,9 +256,9 @@
                                                          @(:hypercrud.browser/result ctx)
                                                          (partial row-keyfn ctx)))
         (assoc ctx :hypercrud.browser/eav (r/apply stable-eav-av
-                                                   [(r/track identity nil)
+                                                   [(r/pure nil)
                                                     (r/fmap :fiddle/ident r-fiddle)
-                                                    (r/track identity nil)]))
+                                                    (r/pure nil)]))
         ; push this down, it should be nil now
         (assoc ctx :hypercrud.browser/pull-path [])))
 
@@ -471,13 +471,13 @@
       [i (element ctx i)])))
 
 (defn spread-attributes "not recursive, just one entity level"
-  [{:keys [:hypercrud.browser/element] :as ctx}]
-  {:pre [element]}
-  (condp = (type @element)
-    Variable []
-    Aggregate []
-    Pull (for [k (contrib.datomic/pull-level (pull-enclosure-here ctx))]
-           [k (attribute ctx k)])))
+  [ctx]
+  (let [{:keys [:hypercrud.browser/element] :as ctx} (-infer-implicit-element ctx)]
+    (condp = (type @element)
+      Variable []
+      Aggregate []
+      Pull (for [k (contrib.datomic/pull-level (pull-enclosure-here ctx))]
+             [k (attribute ctx k)]))))
 
 ; var first, then can always use db/id on row. No not true – collisions! It is the [?e ?f] product which is unique
 

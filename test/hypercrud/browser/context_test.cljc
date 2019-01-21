@@ -1,8 +1,102 @@
 (ns hypercrud.browser.context-test
   (:require
-    [clojure.test :refer [deftest is]]
+    [clojure.test :refer [deftest is testing]]
     [contrib.reactive :as r]
-    [hypercrud.browser.context]))
+    [fixtures.race]
+    [hypercrud.browser.context :as context]))
+
+
+
+
+(deftest context
+  []
+  (def ctx (context/fiddle
+             {:hypercrud.browser/route nil}
+             (r/pure fixtures.race/fiddle)
+             (r/pure fixtures.race/schemas)
+             (r/pure fixtures.race/result)))
+  (testing "fiddle level context is set"
+    (is (= @(r/fmap :fiddle/ident (:hypercrud.browser/fiddle ctx))
+           :tutorial.race/submission))
+    (is (= @(:hypercrud.browser/eav ctx)
+           [nil :tutorial.race/submission nil]))
+    ; result-enclosure, schemas, qfind, link-index, validation
+
+    (is (= @(:hypercrud.browser/result-enclosure ctx)
+           [[:dustingetz.reg/email
+             :dustingetz.reg/name                           ; name is absent from second row
+             :db/id
+             #:dustingetz.reg{:gender [:db/ident],
+                              :shirt-size [:db/ident]}]])))
+
+  (testing "refocus to self is noop and doesn't crash"
+    (is (= (context/refocus ctx :tutorial.race/submission)
+           ctx)))
+
+  (testing "refocus to dependent didn't crash"
+    (is (= @(:hypercrud.browser/eav (context/refocus ctx :dustingetz.reg/gender))
+           [nil :dustingetz.reg/gender nil])))
+
+  (testing "simple spreads"
+    (is (= (count (for [[_ ctx] (context/spread-result ctx)
+                        [_ ctx] (context/spread-rows ctx)
+                        [i ctx] (context/spread-elements ctx)
+                        [a ctx] (context/spread-attributes ctx)]
+                    [i a])
+                  )
+           (* (count fixtures.race/result)
+              (count (keys (first fixtures.race/result)))))))
+
+  (testing "don't need rows to spread attrs"
+    (is (= (for [[_ ctx] (context/spread-result ctx)
+                 ; skip rows
+                 [i ctx] (context/spread-elements ctx)
+                 [a ctx] (context/spread-attributes ctx)]
+             [a])
+           '([:dustingetz.reg/email]
+              [:dustingetz.reg/name]
+              [:db/id]
+              [:dustingetz.reg/gender]
+              [:dustingetz.reg/shirt-size]))))
+
+  (testing "infer element when find-element dimension=1"
+    (is (= (for [[_ ctx] (context/spread-result ctx)
+                 ; skip rows
+                 ; skip elements
+                 [a ctx] (context/spread-attributes ctx)]
+             [a])
+           '([:dustingetz.reg/email] [:dustingetz.reg/name] [:db/id]
+              [:dustingetz.reg/gender] [:dustingetz.reg/shirt-size]))))
+
+
+  (testing "depth"
+    (is (= (for [[_ ctx] (context/spread-result ctx)
+                 [_ ctx] (context/spread-rows ctx)]
+             (context/depth ctx))
+           '(1 1))))
+
+  (testing "refocus"
+    (is (= (for [[_ ctx] (context/spread-result ctx)
+                 [_ ctx] (context/spread-rows ctx)]
+             @(:hypercrud.browser/eav (context/refocus ctx :tutorial.race/submission)))
+           (for [[_ ctx] (context/spread-result ctx)
+                 [_ ctx] (context/spread-rows ctx)
+                 [_ ctx] (context/spread-elements ctx)]
+             @(:hypercrud.browser/eav (context/refocus ctx :tutorial.race/submission)))
+           '([nil :tutorial.race/submission nil]
+              [nil :tutorial.race/submission nil])))
+
+    (is (= (for [[_ ctx] (context/spread-result ctx)
+                 [_ ctx] (context/spread-rows ctx)]
+             #_(-> (context/unwind ctx (context/depth ctx))
+                   :hypercrud.browser/eav deref)
+             @(:hypercrud.browser/eav
+                (context/refocus ctx :dustingetz.reg/gender)))
+           '([17592186046196 :dustingetz.reg/gender :dustingetz.gender/male]
+              [17592186046763 :dustingetz.reg/gender :dustingetz.gender/male])))
+    )
+  )
+
 
 ; Connect to real tank
 

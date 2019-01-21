@@ -223,3 +223,6 @@
   [stable-f ctx & ks]
   (let [rvs ((clojure.core/apply juxt ks) ctx)]
     (apply stable-f rvs)))
+
+(defn pure [v]
+  (track identity v))
