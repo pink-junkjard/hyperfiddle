@@ -312,7 +312,6 @@ User renderers should not be exposed to the reaction."
 (defn ^:export field "Works in a form or table context. Draws label and/or value."
   [relative-path ctx & [?f props]]
   {:pre [ctx]}
-  (println relative-path)
   (let [ctx (context/focus ctx relative-path) ; Handle element and attr
         Body (or ?f hyper-control)
         Head (or (:label-fn props) hyper-label)
