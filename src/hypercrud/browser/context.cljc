@@ -40,6 +40,7 @@
                 :hypercrud.browser/result-enclosure
                 :hypercrud.browser/result-path
                 :hypercrud.browser/fiddle
+                :hypercrud.browser/result-index             ; private, interpreted relative to result-path. never individually
                 :hypercrud.browser/qfind
                 :hypercrud.browser/eav                      ; V is scalar or nil. A is attr or fiddle-ident
                 :hypercrud.browser/validation-hints
@@ -58,7 +59,7 @@
 (s/def :hypercrud.browser/result-path (s/coll-of (s/or :row int? :attr keyword?) :kind vector?))
 (s/def :hypercrud.browser/element r/reactive?)
 (s/def :hypercrud.browser/element-index int?)
-(s/def :hypercrud.browser/pull-path (s/coll-of keyword?))
+(s/def :hypercrud.browser/pull-path (s/coll-of keyword? :kind vector?))
 
 (defn clean [ctx]
   (dissoc ctx
@@ -253,7 +254,7 @@
       (let [{r-qfind :hypercrud.browser/qfind} ctx
             r-ordered-result (:hypercrud.browser/result ctx)]
 
-        (println "index-result r-ordered-result: " @r-ordered-result)
+        ;(println "index-result r-ordered-result: " @r-ordered-result)
 
         (condp = (type @r-qfind)
           ; sorting doesn't index keyfn lookup by design
@@ -273,13 +274,24 @@
           ; Scalar has no index at all
           (assoc ctx :hypercrud.browser/result-index r-ordered-result)))
 
+
       (> (depth ctx) 0)                                     ; nested attr
-      (let [keyfn (partial stable-entity-key ctx)]          ; Group again by keyfn, we have seq and need lookup
-        ; Deep update result in-place, at result-path, to index it. Don't clobber it!
-        (assoc ctx :hypercrud.browser/result-index
-                   (r/fmap-> (:hypercrud.browser/result-index ctx)
-                             (update-in (:hypercrud.browser/result-path ctx) ; broken in double nested case?
-                                        (partial contrib.data/group-by-unique keyfn))))))))
+      (let [[_ a _] @(:hypercrud.browser/eav ctx)]
+        (case (contrib.datomic/cardinality-loose @(:hypercrud.browser/schema ctx) a)
+
+          :db.cardinality/one
+          ctx
+
+          :db.cardinality/many
+          (let [keyfn (partial stable-entity-key ctx)]      ; Group again by keyfn, we have seq and need lookup
+            ; Deep update result in-place, at result-path, to index it. Don't clobber it!
+            #_(println "depth>0 result-path: " (:hypercrud.browser/result-path ctx))
+            #_(println "depth>0 result-index: " @(:hypercrud.browser/result-index ctx))
+            (assoc ctx :hypercrud.browser/result-index
+                       (r/fmap-> (:hypercrud.browser/result-index ctx)
+                                 identity
+                                 (update-in (:hypercrud.browser/result-path ctx) ; broken in double nested case?
+                                            (partial contrib.data/group-by-unique keyfn))))))))))
 
 (defn data "Works in any context"                           ; todo provide data! ??
   [{:keys [:hypercrud.browser/qfind
@@ -290,11 +302,12 @@
   ; Result-index is precomputed to match the expected path,
   ; in some cases it is just the result (no indexing was done)
   (if qfind
+    #_(r/cursor result-index result-path)
     (if element
       (if result-path
         (r/cursor result-index result-path)
         result-index)
-      result-index)
+      (r/cursor result-index result-path))                  ; Returning an index makes no sense, that's never data.
     nil))
 
 (defn v! [ctx]                                              ; It's just easier to end the reaction earlier
@@ -335,9 +348,7 @@
           FindColl
           (for [k (->> (sort-fn @r-ordered-result)          ; client side sorting – should happen in backend
                        (map (partial stable-entity-key ctx)))]
-            (do (println "FindCol: " @r-ordered-result)
-                (println "k: " k)
-                [k (row ctx k)]))
+            [k (row ctx k)])
 
           FindRel
           (for [k (->> (sort-fn @r-ordered-result)          ; client side sorting – should happen in backend
@@ -455,11 +466,11 @@
       (-infer-implicit-element ctx)                         ; ensure pull-enclosure
       (-validate-qfind-element ctx)
       (set-parent ctx)
-      (update ctx :hypercrud.browser/pull-path conj a')
+      (update ctx :hypercrud.browser/pull-path (fnil conj []) a')
       (if (:hypercrud.browser/head-sentinel ctx)
         ctx                                                 ; no result-path in head
         (update ctx :hypercrud.browser/result-path (fnil conj []) a'))
-      (if (> (depth ctx) 0)
+      #_(if (> (depth ctx) 0)                               ; this breaks eav in pull :one case
         (index-result ctx)                                  ; nested :many
         ctx)
       ; V is for formulas, E is for security and on-change. V becomes E. E is nil if we don't know identity.
@@ -585,9 +596,9 @@
   ((apply comp (repeat n :hypercrud.browser/parent)) ctx))
 
 (defn refocus-in-element
-  [ctx target-a]
+  [ctx a]
   {:pre [(:hypercrud.browser/element ctx)]
-   :post [#_(let [[_ a _] @(:hypercrud.browser/eav %)] (= a target-a))]}
+   :post [#_(let [[_ aa _] @(:hypercrud.browser/eav %)] (= a aa))]}
   (let [current-path (:hypercrud.browser/pull-path ctx)
         ; find a reachable path that contains the target-attr in the fewest hops
         ;   me->mother ; me->sister->mother ; closest ctx is selected
@@ -598,18 +609,18 @@
                               @(:hypercrud.browser/root-pull-enclosure ctx)
                               current-path)
                             ; xs is like '([] [:dustingetz.reg/gender] [:dustingetz.reg/shirt-size])
-                            (filter #(some (partial = target-a) %)))]
+                            (filter #(some (partial = a) %)))]
     ; In tuple cases (off happy path) there might not be a solution. Can be fixed by tupling all the way up.
     (if (seq path-solutions)                                ; found at least one solution
       ; Warn if more than one solution? Diamonds are fine, but some are parallel solns
       (let [chosen-path (->> path-solutions
-                             (map (partial take-while (partial not= target-a)))
+                             (map (partial take-while (partial not= a)))
                              (sort-by count)                ; choose the shortest path, if ambiguous could be a problem
                              first)                         ; nil/empty means unwind to nop
             common-ancestor-path (ancestry-common current-path chosen-path)
             unwind-offset (- (count current-path) (count common-ancestor-path)) ; 1 > 0 is fine
             common-ancestor-ctx (unwind ctx unwind-offset)]
-        (focus common-ancestor-ctx (ancestry-divergence (conj (vec chosen-path) target-a) current-path)))
+        (focus common-ancestor-ctx (ancestry-divergence (conj (vec chosen-path) a) current-path)))
 
       ; Noop, already there. Guard above?
       ctx)))
@@ -617,20 +628,20 @@
 (defn refocus "From view, find the closest satisfactory ctx accounting for cardinality. e.g. as in
   !link(:new-intent-naive :hf/remove). Caller believes that the deps are satisfied (right stuff is in scope).
   todo unify with refocus'"
-  [ctx target-attr]
-  {:pre [ctx target-attr]
+  [ctx a]
+  {:pre [ctx a]
    :post [%]}
   (cond
-    (= target-attr (@(:hypercrud.browser/fiddle ctx) :fiddle/ident))
+    (= a (@(:hypercrud.browser/fiddle ctx) :fiddle/ident))
     ; if no element, we already there (depth = 0)
     (unwind ctx (depth ctx))
 
     (:hypercrud.browser/element ctx)
-    (refocus-in-element ctx target-attr)
+    (refocus-in-element ctx a)
 
     :else
     ; Assuming 0 works in happy path without tupling links all the way up.
-    (refocus-in-element (element ctx 0) target-attr)))
+    (refocus-in-element (element ctx 0) a)))
 
 (defn id->tempid+ [route ctx]
   (let [invert-id (fn [id uri]

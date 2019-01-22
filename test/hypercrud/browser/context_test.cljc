@@ -122,35 +122,135 @@
 
     (testing "does not set e"
       (is (= @(:hypercrud.browser/eav (context/row ctx 17592186046196))
-             [nil :tutorial.race/submission nil]))
+             [nil :tutorial.race/submission nil])))
 
+    (testing "spread rows"
+      (testing "target isolated row"
+        (is (= (for [ctx [(context/row ctx 17592186046196)]]
+                 ; infers element
+                 @(context/data ctx))
+               (for [ctx [(context/row ctx 17592186046196)]
+                     [_ ctx] (context/spread-elements ctx)]
+                 @(context/data ctx))
+               [{:db/id 17592186046196,
+                 :dustingetz.reg/email "dustin@example.com",
+                 :dustingetz.reg/name "Dustin Getz",
+                 :dustingetz.reg/gender #:db{:ident :dustingetz.gender/male},
+                 :dustingetz.reg/shirt-size #:db{:ident :dustingetz.shirt-size/mens-large}}])))
+
+      (testing "target all rows"
+        (is (= (for [[_ ctx] (context/spread-rows ctx)]
+                 @(context/data ctx))
+               (for [[_ ctx] (context/spread-rows ctx)
+                     [_ ctx] (context/spread-elements ctx)]
+                 @(context/data ctx))
+               [{:db/id 17592186046196,
+                 :dustingetz.reg/email "dustin@example.com",
+                 :dustingetz.reg/name "Dustin Getz",
+                 :dustingetz.reg/gender #:db{:ident :dustingetz.gender/male},
+                 :dustingetz.reg/shirt-size #:db{:ident :dustingetz.shirt-size/mens-large}}
+                {:db/id 17592186046763,
+                 :dustingetz.reg/email "bob@example.com",
+                 :dustingetz.reg/gender #:db{:ident :dustingetz.gender/male},
+                 :dustingetz.reg/shirt-size #:db{:ident :dustingetz.shirt-size/mens-large}}])))
+
+      (testing "focus attribute isolated"
+        (is (= (let [ctx (context/row ctx 17592186046196)
+                     ctx (context/element ctx 0)
+                     ctx (context/attribute ctx :dustingetz.reg/gender)]
+                 @(context/data ctx))
+               #:db{:ident :dustingetz.gender/male})))
+
+      (testing "refocus"
+
+        (testing "to :ref :one from row"
+          (is (= (let [ctx (context/row ctx 17592186046196)
+                       ctx (context/element ctx 0)
+                       ctx (context/refocus ctx :dustingetz.reg/gender)]
+                   @(context/data ctx))
+                 #:db{:ident :dustingetz.gender/male}))
+
+          (is (= (for [[_ ctx] (context/spread-rows ctx)
+                       [_ ctx] (context/spread-elements ctx)]
+                   (let [ctx (context/refocus ctx :dustingetz.reg/gender)]
+                     @(context/data ctx)))
+                 [#:db{:ident :dustingetz.gender/male}
+                  #:db{:ident :dustingetz.gender/male}]))
+
+          (is (= (let [ctx (context/row ctx 17592186046196)
+                       ctx (context/element ctx 0)
+                       ctx (context/refocus ctx :dustingetz.reg/gender)]
+                   @(:hypercrud.browser/eav ctx))
+                 [17592186046196 :dustingetz.reg/gender :dustingetz.gender/male]))
+
+          (is (= (for [[_ ctx] (context/spread-rows ctx)
+                       [_ ctx] (context/spread-elements ctx)]
+                   (let [ctx (context/refocus ctx :dustingetz.reg/gender)]
+                     @(:hypercrud.browser/eav ctx)))
+                 '([17592186046196 :dustingetz.reg/gender :dustingetz.gender/male]
+                    [17592186046763 :dustingetz.reg/gender :dustingetz.gender/male]))))
+
+        #_(testing "to :ref :one from top"
+          (is (= (let [ctx (context/refocus ctx :dustingetz.reg/gender)]
+                   @(context/data ctx))
+                 #:db{:ident :dustingetz.gender/male}))
+
+          (is (= (for [[_ ctx] (context/spread-rows ctx)
+                       [_ ctx] (context/spread-elements ctx)]
+                   (let [ctx (context/refocus ctx :dustingetz.reg/gender)]
+                     @(context/data ctx)))
+                 [#:db{:ident :dustingetz.gender/male}
+                  #:db{:ident :dustingetz.gender/male}]))
+
+          (is (= (let [ctx (context/row ctx 17592186046196)
+                       ctx (context/element ctx 0)
+                       ctx (context/refocus ctx :dustingetz.reg/gender)]
+                   @(:hypercrud.browser/eav ctx))
+                 [17592186046196 :dustingetz.reg/gender :dustingetz.gender/male]))
+
+          (is (= (for [[_ ctx] (context/spread-rows ctx)
+                       [_ ctx] (context/spread-elements ctx)]
+                   (let [ctx (context/refocus ctx :dustingetz.reg/gender)]
+                     @(:hypercrud.browser/eav ctx)))
+                 '([17592186046196 :dustingetz.reg/gender :dustingetz.gender/male]
+                    [17592186046763 :dustingetz.reg/gender :dustingetz.gender/male]))))
+        )
+
+      #_(testing "refocus from root to gender"
+        (is (= (for [[_ ctx] (context/spread-rows ctx)
+                     #_#_[_ ctx] (context/spread-elements ctx)]
+                 #_@(:hypercrud.browser/result-index ctx)
+                 @(:hypercrud.browser/result ctx)
+                 #_@(:hypercrud.browser/result-index (context/refocus ctx :dustingetz.reg/gender))
+                 )
+               '({17592186046196 {:db/id 17592186046196,
+                                  :dustingetz.reg/email "dustin@example.com",
+                                  :dustingetz.reg/name "Dustin Getz",
+                                  :dustingetz.reg/gender #:db{:ident :dustingetz.gender/male},
+                                  :dustingetz.reg/shirt-size #:db{:ident :dustingetz.shirt-size/mens-large}},
+                  17592186046763 {:db/id 17592186046763,
+                                  :dustingetz.reg/email "bob@example.com",
+                                  :dustingetz.reg/gender #:db{:ident :dustingetz.gender/male},
+                                  :dustingetz.reg/shirt-size #:db{:ident :dustingetz.shirt-size/mens-large}}}
+                  {17592186046196 {:db/id 17592186046196,
+                                   :dustingetz.reg/email "dustin@example.com",
+                                   :dustingetz.reg/name "Dustin Getz",
+                                   :dustingetz.reg/gender #:db{:ident :dustingetz.gender/male},
+                                   :dustingetz.reg/shirt-size #:db{:ident :dustingetz.shirt-size/mens-large}},
+                   17592186046763 {:db/id 17592186046763,
+                                   :dustingetz.reg/email "bob@example.com",
+                                   :dustingetz.reg/gender #:db{:ident :dustingetz.gender/male},
+                                   :dustingetz.reg/shirt-size #:db{:ident :dustingetz.shirt-size/mens-large}}})))
+
+        (is (= (for [[_ ctx] (context/spread-rows ctx)
+                     [_ ctx] (context/spread-elements ctx)]
+                 @(:hypercrud.browser/eav (context/refocus ctx :dustingetz.reg/gender)))
+               '([17592186046196 :dustingetz.reg/gender :dustingetz.gender/male]
+                  [17592186046763 :dustingetz.reg/gender :dustingetz.gender/male])))
+        )
+
+      (testing "refocus from myself when already here but not at root")
       )
-    (testing "refocus from root to gender"
-      (is (= (for [[_ ctx] (context/spread-rows ctx)
-                   [_ ctx] (context/spread-elements ctx)]
-               #_@(:hypercrud.browser/result-index ctx)
-               #_@(:hypercrud.browser/result ctx)
-               @(:hypercrud.browser/result-index (context/refocus-in-element ctx :dustingetz.reg/gender))
-               )
-             {17592186046196 {:db/id 17592186046196,
-                              :dustingetz.reg/email "dustin@example.com",
-                              :dustingetz.reg/name "Dustin Getz",
-                              :dustingetz.reg/gender #:db{:ident :dustingetz.gender/male},
-                              :dustingetz.reg/shirt-size #:db{:ident :dustingetz.shirt-size/mens-large}},
-              17592186046763 {:db/id 17592186046763,
-                              :dustingetz.reg/email "bob@example.com",
-                              :dustingetz.reg/gender #:db{:ident :dustingetz.gender/male},
-                              :dustingetz.reg/shirt-size #:db{:ident :dustingetz.shirt-size/mens-large}}}))
-
-      (is (= (for [[_ ctx] (context/spread-rows ctx)
-                   [_ ctx] (context/spread-elements ctx)]
-               @(:hypercrud.browser/eav (context/refocus-in-element ctx :dustingetz.reg/gender)))
-             '([17592186046196 :dustingetz.reg/gender :dustingetz.gender/male]
-               [17592186046763 :dustingetz.reg/gender :dustingetz.gender/male])))
-      )
-
-    (testing "refocus from myself when already here but not at root")
-
     )
   )
 
