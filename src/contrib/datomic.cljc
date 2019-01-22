@@ -65,6 +65,7 @@
   (valueType? [this a k] (= k (valueType this a)))
   (cardinality? [this a k] (= k (cardinality this a)))
   (cardinality-loose [this a]
+    (s/assert keyword? a)
     (let [is-reverse-nav (-> (name a) (subs 0 1) (= "_"))]
       (cond
         (= a :db/id) :db.cardinality/one                    ; :db/id is currently addressable (e.g. user wants to render that column)

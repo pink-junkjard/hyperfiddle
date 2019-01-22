@@ -294,23 +294,23 @@
                                  (update-in (:hypercrud.browser/result-path ctx) ; broken in double nested case?
                                             (partial contrib.data/group-by-unique keyfn))))))))))
 
-(defn data "Works in any context"                           ; todo provide data! ??
-  ; I think this should deref already
-  [{:keys [:hypercrud.browser/qfind
-           :hypercrud.browser/element
-           :hypercrud.browser/result-index
-           :hypercrud.browser/result-path]}]
-  ; Potentially this could infer.
-  ; Result-index is precomputed to match the expected path,
-  ; in some cases it is just the result (no indexing was done)
-  (if qfind
-    #_(r/cursor result-index result-path)
-    (if element
-      (if result-path
+(declare -infer-implicit-element)
+
+(defn data "Works in any context and infers the right stuff" ; todo just deref it
+  [ctx]
+  (let [{:keys [:hypercrud.browser/qfind
+                :hypercrud.browser/element
+                :hypercrud.browser/result
+                :hypercrud.browser/result-index
+                :hypercrud.browser/result-path]} (-infer-implicit-element ctx)]
+    ; Result-index is precomputed to match the expected path,
+    ; in some cases it is just the result (no indexing was done)
+    ; Returning an index makes no sense, that's never data.
+    (if qfind
+      (if result-path                                       ; hax, still tangled. Can be exact without guesswork
         (r/cursor result-index result-path)
-        result-index)
-      (r/cursor result-index result-path))                  ; Returning an index makes no sense, that's never data.
-    nil))
+        result)
+      nil)))
 
 (defn v! [ctx]                                              ; It's just easier to end the reaction earlier
   {:post [(not (coll? %))]}                                 ; V is identity | nil
@@ -322,7 +322,6 @@
       ; Sparse resultset, v can still be nil
       (smart-entity-identifier ctx @(data ctx)))))
 
-(declare -infer-implicit-element)
 (defn eav "Not reactive." [ctx]
   ; Should you use this or ::eav? Userland renderers call this.
   ; Context internals use ::eav. I think.

@@ -6,10 +6,13 @@
     [hypercrud.browser.context :as context]))
 
 
-(def ctx (apply context/fiddle
-                {:hypercrud.browser/route nil}
-                (r/pure fixtures.tank/schemas)
-                (map r/pure (-> fixtures.tank/fiddles :tutorial.race/submission))))
+(defn mock-fiddle! [ident]
+  (apply context/fiddle
+         {:hypercrud.browser/route nil}
+         (r/pure fixtures.tank/schemas)
+         (map r/pure (-> fixtures.tank/fiddles ident))))
+
+(def ctx (mock-fiddle! :tutorial.race/submission))
 
 (deftest primitives
   []
@@ -235,6 +238,64 @@
                      ctx (context/attribute ctx :dustingetz.reg/gender)]
                  @(context/data ctx))
                #:db{:ident :dustingetz.gender/male})))
+
+      (testing "FindColl Pull nested"
+        (testing "eav"
+          (is (= (let [ctx (mock-fiddle! :tutorial.race/shirt-sizes)
+                       ctx (context/row ctx :dustingetz.shirt-size/womens-medium)]
+                   (context/eav ctx))
+                 [nil :tutorial.race/shirt-sizes :dustingetz.shirt-size/womens-medium]))
+
+          (is (= (let [ctx (mock-fiddle! :tutorial.race/shirt-sizes)
+                       ctx (context/row ctx :dustingetz.shirt-size/womens-medium)
+                       ctx (context/attribute ctx :dustingetz.reg/gender)]
+                   (context/eav ctx))
+                 [:dustingetz.shirt-size/womens-medium :dustingetz.reg/gender :dustingetz.gender/female]))
+
+          (is (= (let [ctx (mock-fiddle! :tutorial.race/shirt-sizes)
+                       ctx (context/row ctx :dustingetz.shirt-size/womens-medium)
+                       ctx (context/attribute ctx :db/ident)]
+                   (context/eav ctx))
+                 [:dustingetz.shirt-size/womens-medium :db/ident :dustingetz.shirt-size/womens-medium])))
+
+        (testing "data"
+          (is (= (let [ctx (mock-fiddle! :tutorial.race/shirt-sizes)
+                       ctx (context/row ctx :dustingetz.shirt-size/womens-medium)
+                       ctx (context/attribute ctx :dustingetz.reg/gender)]
+                   @(context/data ctx))
+                 #:db{:ident :dustingetz.gender/female}))
+
+          (is (= (let [ctx (mock-fiddle! :tutorial.race/shirt-sizes)
+                       ctx (context/row ctx :dustingetz.shirt-size/womens-medium)
+                       ctx (context/attribute ctx :db/ident)]
+                   @(context/data ctx))
+                 :dustingetz.shirt-size/womens-medium))
+
+          (is (= (let [ctx (mock-fiddle! :tutorial.race/shirt-sizes)
+                       ctx (context/row ctx :dustingetz.shirt-size/womens-medium)]
+                   @(context/data ctx))
+                 {:db/ident :dustingetz.shirt-size/womens-medium,
+                  :dustingetz.reg/gender #:db{:ident :dustingetz.gender/female}}))
+
+          (is (= (let [ctx (mock-fiddle! :tutorial.race/shirt-sizes)]
+                   @(context/data ctx))
+                 [{:db/ident :dustingetz.shirt-size/womens-medium, :dustingetz.reg/gender #:db{:ident :dustingetz.gender/female}}
+                  {:db/ident :dustingetz.shirt-size/womens-small, :dustingetz.reg/gender #:db{:ident :dustingetz.gender/female}}
+                  {:db/ident :dustingetz.shirt-size/womens-large, :dustingetz.reg/gender #:db{:ident :dustingetz.gender/female}}]))
+          )
+        (testing "element inference"
+          (is (= (let [ctx (mock-fiddle! :tutorial.race/shirt-sizes)
+                       ctx (context/row ctx :dustingetz.shirt-size/womens-medium)
+                       ctx (context/attribute ctx :db/ident)]
+                   @(context/data ctx))
+                 :dustingetz.shirt-size/womens-medium))
+
+          (is (= (let [ctx (mock-fiddle! :tutorial.race/shirt-sizes)
+                       ctx (context/row ctx :dustingetz.shirt-size/womens-medium)]
+                   ; infer element
+                   @(context/data ctx))
+                 {:db/ident :dustingetz.shirt-size/womens-medium, :dustingetz.reg/gender #:db{:ident :dustingetz.gender/female}})))
+        )
 
       (testing "refocus"
 
