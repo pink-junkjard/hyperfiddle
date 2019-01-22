@@ -15,6 +15,19 @@
 (deftest context
   []
 
+  (testing "result indexing"
+    (testing "FindColl rows are indexed by db/id"
+      (is (= @(:hypercrud.browser/result-index ctx)
+             {17592186046196 {:db/id 17592186046196,
+                              :dustingetz.reg/email "dustin@example.com",
+                              :dustingetz.reg/name "Dustin Getz",
+                              :dustingetz.reg/gender #:db{:ident :dustingetz.gender/male},
+                              :dustingetz.reg/shirt-size #:db{:ident :dustingetz.shirt-size/mens-large}},
+              17592186046763 {:db/id 17592186046763,
+                              :dustingetz.reg/email "bob@example.com",
+                              :dustingetz.reg/gender #:db{:ident :dustingetz.gender/male},
+                              :dustingetz.reg/shirt-size #:db{:ident :dustingetz.shirt-size/mens-large}}}))))
+
   (testing "fiddle level context is set"
     (is (= @(r/fmap :fiddle/ident (:hypercrud.browser/fiddle ctx))
            :tutorial.race/submission))
@@ -88,8 +101,6 @@
 
     (is (= (for [[_ ctx] (context/spread-result ctx)
                  [_ ctx] (context/spread-rows ctx)]
-             #_(-> (context/unwind ctx (context/depth ctx))
-                   :hypercrud.browser/eav deref)
              @(:hypercrud.browser/eav
                 (context/refocus ctx :dustingetz.reg/gender)))
            '([17592186046196 :dustingetz.reg/gender :dustingetz.gender/male]
@@ -97,28 +108,40 @@
     )
 
   (testing "row"
-    ; Todo, index result at fiddle level so this works.
-    ; That means we need ::datomic-result for the raw thing, in case userland wants it?
     (testing "row data by dbid"
-        #_(:hypercrud.browser/result-path (context/row ctx 17592186046196))
-        #_(:hypercrud.browser/result (context/row ctx 17592186046196))
-      (is (= @(context/data (context/row ctx 17592186046196))
+      #_(:hypercrud.browser/result-path (context/row ctx 17592186046196))
+      #_(:hypercrud.browser/result (context/row ctx 17592186046196))
+      ; not sure if element can be inferred in data. Row does not infer.
+      (is (= @(context/data (-> ctx (context/element 0) (context/row 17592186046196)))
              {:db/id 17592186046196,
               :dustingetz.reg/email "dustin@example.com",
               :dustingetz.reg/name "Dustin Getz",
               :dustingetz.reg/gender #:db{:ident :dustingetz.gender/male},
               :dustingetz.reg/shirt-size #:db{:ident :dustingetz.shirt-size/mens-large}}))
       )
-    (testing "FindColl keyfn is the entity identity"
-      (is (=
 
-             [nil :tutorial.race/submission nil]))
-      )
     (testing "does not set e"
       (is (= @(:hypercrud.browser/eav (context/row ctx 17592186046196))
              [nil :tutorial.race/submission nil]))
+
       )
     (testing "refocus from root to gender"
+      (is (= (for [[_ ctx] (context/spread-rows ctx)
+                   [_ ctx] (context/spread-elements ctx)]
+               #_@(:hypercrud.browser/result-index ctx)
+               #_@(:hypercrud.browser/result ctx)
+               @(:hypercrud.browser/result-index (context/refocus-in-element ctx :dustingetz.reg/gender))
+               )
+             {17592186046196 {:db/id 17592186046196,
+                              :dustingetz.reg/email "dustin@example.com",
+                              :dustingetz.reg/name "Dustin Getz",
+                              :dustingetz.reg/gender #:db{:ident :dustingetz.gender/male},
+                              :dustingetz.reg/shirt-size #:db{:ident :dustingetz.shirt-size/mens-large}},
+              17592186046763 {:db/id 17592186046763,
+                              :dustingetz.reg/email "bob@example.com",
+                              :dustingetz.reg/gender #:db{:ident :dustingetz.gender/male},
+                              :dustingetz.reg/shirt-size #:db{:ident :dustingetz.shirt-size/mens-large}}}))
+
       (is (= (for [[_ ctx] (context/spread-rows ctx)
                    [_ ctx] (context/spread-elements ctx)]
                @(:hypercrud.browser/eav (context/refocus-in-element ctx :dustingetz.reg/gender)))
@@ -127,16 +150,9 @@
       )
 
     (testing "refocus from myself when already here but not at root")
+
     )
-
-
   )
-
-; Connect to real tank
-
-; [nil 1 99]
-
-; This interface needs ctx now so the tests are hard
 
 #_(deftest deps-satisfied-1
   []

@@ -69,6 +69,7 @@
           :hypercrud.browser/fiddle
           :hypercrud.browser/qfind
           :hypercrud.browser/result
+          :hypercrud.browser/result-index
           :hypercrud.browser/result-enclosure
           :hypercrud.browser/result-path
           :hypercrud.browser/link-index
@@ -177,7 +178,7 @@
   ; https://github.com/hyperfiddle/hyperfiddle/issues/345 - Form jank when tempid entity transitions to real entity
   (or (underlying-tempid ctx id)                            ; Note we use the tempid as the key, not the dbid
       (smart-entity-identifier ctx v)                       ; this also checks tempid but uses the dbid
-      (hash v)                                              ; fallback to hash if they didn't pull identity
+      (pr-str v)                                              ; fallback to hash if they didn't pull identity
       ))
 
 (defn stable-relation-key "Stable key that works on scalars too. ctx is for tempid-reversing"
@@ -231,13 +232,141 @@
   (->> (:fiddle/links fiddle)
        (map link-identifiers)))
 
-(defn fiddle "Runtime sets this up, not public."
+(defn depth [ctx]
+  (count (:hypercrud.browser/result-path ctx)))
+
+(defn pull-depth [ctx]
+  (count (:hypercrud.browser/pull-path ctx)))
+
+(defn index-result "Builds the result index based on qfind. Result index is orthogonal to sorting or order.
+  All paths get a result-index, though if there is no collection, then this is just the result as no indexing is needed.
+  (data ctx) is no good until after this is done.
+  Works at fiddle and attribute level. Currently we do not index at element level (rather it is already indexed by vec index)"
+  [ctx]
+  (let [qfind (:hypercrud.browser/qfind ctx)]
+    (cond                                                   ; fiddle | nested attr (otherwise already spread)
+
+      (not qfind)
+      (assoc ctx :hypercrud.browser/result-index (:hypercrud.browser/result ctx))
+
+      (= (depth ctx) 0)                                     ; fiddle level
+      (let [{r-qfind :hypercrud.browser/qfind} ctx
+            r-ordered-result (:hypercrud.browser/result ctx)]
+
+        (println "index-result r-ordered-result: " @r-ordered-result)
+
+        (condp = (type @r-qfind)
+          ; sorting doesn't index keyfn lookup by design
+          FindRel
+          (assoc ctx :hypercrud.browser/result-index
+                     (r/fmap->> r-ordered-result (contrib.data/group-by-unique (partial row-keyfn ctx))))
+
+          FindColl
+          (assoc ctx :hypercrud.browser/result-index
+                     (r/fmap->> r-ordered-result (contrib.data/group-by-unique (partial stable-entity-key ctx))))
+
+          FindTuple
+          ; Vectors are already indexed
+          (assoc ctx :hypercrud.browser/result-index r-ordered-result)
+
+          FindScalar
+          ; Scalar has no index at all
+          (assoc ctx :hypercrud.browser/result-index r-ordered-result)))
+
+      (> (depth ctx) 0)                                     ; nested attr
+      (let [keyfn (partial stable-entity-key ctx)]          ; Group again by keyfn, we have seq and need lookup
+        ; Deep update result in-place, at result-path, to index it. Don't clobber it!
+        (assoc ctx :hypercrud.browser/result-index
+                   (r/fmap-> (:hypercrud.browser/result-index ctx)
+                             (update-in (:hypercrud.browser/result-path ctx) ; broken in double nested case?
+                                        (partial contrib.data/group-by-unique keyfn))))))))
+
+(defn data "Works in any context"                           ; todo provide data! ??
+  [{:keys [:hypercrud.browser/qfind
+           :hypercrud.browser/element
+           :hypercrud.browser/result-index
+           :hypercrud.browser/result-path]}]
+  ; Potentially this could infer.
+  ; Result-index is precomputed to match the expected path,
+  ; in some cases it is just the result (no indexing was done)
+  (if qfind
+    (if element
+      (if result-path
+        (r/cursor result-index result-path)
+        result-index)
+      result-index)
+    nil))
+
+(defn v! [ctx]                                              ; It's just easier to end the reaction earlier
+  {:post [(not (coll? %))]}                                 ; V is identity | nil
+  ; Don't pass whole results or tuples to smart-entity-identifier, that's dumb
+  ; Do we have an element but not a pull?
+  ; If no element at all, (just a fiddle), not much to do. Always need an element at least.
+  (if-not (:hypercrud.browser/head-sentinel ctx)
+    (if (:hypercrud.browser/element ctx)
+      ; Sparse resultset, v can still be nil
+      (smart-entity-identifier ctx @(data ctx)))))
+
+(defn row "Row does not set E. E is the parent, not the child, and row is analogous to :ref :many child."
+  [ctx & [k]]
+  {:pre [(s/assert :hypercrud/context ctx)
+         #_(not (coll? k))]
+   :post [(s/assert :hypercrud/context %)]}
+  (as-> ctx ctx
+        (set-parent ctx)
+        (update ctx :hypercrud.browser/result-path (fnil conj []) k)
+        ; Not pullpath, that is irrespective of the actual data
+        (assoc ctx :hypercrud.browser/eav (r/fmap-> (:hypercrud.browser/eav ctx) (stable-eav-v (v! ctx))))))
+
+(defn ^:export spread-rows "spread across resultset row-or-rows; returns [k ctx] for your react key.
+  Automatically accounts for query dimension - no-op in the case of FindTuple and FindScalar.
+  Can be skipped in head case, or can address a row directly if you know the keyfn.
+  Accounts for row order and handles client sorting."
+  [ctx & [sort-fn]]
+  {:pre [(:hypercrud.browser/qfind ctx)]}
+  (let [ctx (assoc ctx :hypercrud.browser/head-sentinel false) ; hack
+        sort-fn (or sort-fn identity)]
+    (cond                                                   ; fiddle | nested attr (otherwise already spread)
+      (= (depth ctx) 0)                                     ; fiddle level
+      (let [{r-qfind :hypercrud.browser/qfind} ctx
+            ; NOT result-indexed, use the raw one. It's been indexed already, can't use that, order is lost.
+            r-ordered-result (:hypercrud.browser/result ctx)]
+        (condp = (type @r-qfind)
+          FindColl
+          (for [k (->> (sort-fn @r-ordered-result)          ; client side sorting – should happen in backend
+                       (map (partial stable-entity-key ctx)))]
+            (do (println "FindCol: " @r-ordered-result)
+                (println "k: " k)
+                [k (row ctx k)]))
+
+          FindRel
+          (for [k (->> (sort-fn @r-ordered-result)          ; client side sorting – should happen in backend
+                       (map (partial row-keyfn ctx)))]
+            [k (row ctx k)])
+
+          FindTuple                                         ; no index
+          (let [k (row-keyfn ctx @r-ordered-result)]
+            [[k ctx]])
+
+          FindScalar                                        ; no index
+          (let [k (stable-entity-key ctx @r-ordered-result)]
+            [[k ctx]])))
+
+      (> (depth ctx) 0)                                     ; nested attr
+      (let [r-ordered-result (data ctx)]                    ; remember row order; this is broken check order
+        (for [k (->> (sort-fn @r-ordered-result)
+                     (map (partial stable-entity-key ctx)))]
+          [k (row ctx k)])))))
+
+(defn fiddle "Runtime sets this up, not public.
+  Careful this is highly sensitive to order of initalization."
   [ctx r-fiddle r-schemas r-result]
   {:pre [r-fiddle r-result]
    :post [#_(do (println (:hypercrud.browser/qfind %) (:hypercrud.browser/result-enclosure %)) true)]}
   (as-> ctx ctx
         (assoc ctx :hypercrud.browser/fiddle r-fiddle)
         (assoc ctx :hypercrud.browser/result r-result)      ; can be nil if no qfind
+
         (if-let [qfind (r/fmap-> r-fiddle hyperfiddle.fiddle/parse-fiddle-query)] ; i think check raw value
           (if @qfind
             (as-> ctx ctx
@@ -259,6 +388,8 @@
                                                    [(r/pure nil)
                                                     (r/fmap :fiddle/ident r-fiddle)
                                                     (r/pure nil)]))
+        ; needs qfind, etc
+        (index-result ctx)                                  ; in row case, now indexed, but path is not aligned yet
         ; push this down, it should be nil now
         (assoc ctx :hypercrud.browser/pull-path [])))
 
@@ -266,30 +397,6 @@
   (let [{{db :symbol} :source} element]
     (if db
       (get schemas (str db)))))
-
-(defn data "Works in any context"                           ; todo provide data! ??
-  [{:keys [:hypercrud.browser/qfind
-           :hypercrud.browser/element
-           :hypercrud.browser/result
-           :hypercrud.browser/result-path]}]
-  ; Potentially this could infer.
-  (if qfind
-    (if element
-      (if result-path
-        (r/cursor result result-path)
-        result)
-      result)
-    nil))
-
-(defn v! [ctx]                                              ; It's just easier to end the reaction earlier
-  {:post [(not (coll? %))]}                                 ; V is identity | nil
-  ; Don't pass whole results or tuples to smart-entity-identifier, that's dumb
-  ; Do we have an element but not a pull?
-  ; If no element at all, (just a fiddle), not much to do. Always need an element at least.
-  (if-not (:hypercrud.browser/head-sentinel ctx)
-    (if (:hypercrud.browser/element ctx)
-      ; Sparse resultset, v can still be nil
-      (smart-entity-identifier ctx @(data ctx)))))
 
 (defn element [ctx i]                                       ; [nil :seattle/neighborhoods 1234345]
   {:pre []
@@ -352,6 +459,9 @@
       (if (:hypercrud.browser/head-sentinel ctx)
         ctx                                                 ; no result-path in head
         (update ctx :hypercrud.browser/result-path (fnil conj []) a'))
+      (if (> (depth ctx) 0)
+        (index-result ctx)                                  ; nested :many
+        ctx)
       ; V is for formulas, E is for security and on-change. V becomes E. E is nil if we don't know identity.
       (assoc ctx :hypercrud.browser/eav                     ; insufficent stability on r-?v? fixme
                  (case (contrib.datomic/cardinality-loose @(:hypercrud.browser/schema ctx) a')
@@ -398,16 +508,6 @@
               :else (assert false (str "illegal focus: " p))))
           ctx relative-path))
 
-(defn row "Row does not set E. E is the parent, not the child, and row is analogous to :ref :many child."
-  [ctx & [k]]
-  {:pre [(s/assert :hypercrud/context ctx)]
-   :post [(s/assert :hypercrud/context %)]}
-  (as-> ctx ctx
-        (set-parent ctx)
-        (update ctx :hypercrud.browser/result-path (fnil conj []) k)
-        ; (I considered FindColl setting e here but that's not right)
-        (assoc ctx :hypercrud.browser/eav (r/fmap-> (:hypercrud.browser/eav ctx) (stable-eav-v (v! ctx))))))
-
 (defn ^:export spread-result "Guards :fiddle/type :blank to guarantee a qfind.
   Use this with `for` which means reagent needs the key."
   [ctx]
@@ -416,49 +516,6 @@
     (condp some [(:fiddle/type @r-fiddle)]
       #{:blank} []
       #{:query :entity} [[(:fiddle/ident @r-fiddle) ctx]])))
-
-(defn ^:export spread-rows "spread across resultset row-or-rows; returns [k ctx] for your react key.
-  Automatically accounts for query dimension - no-op in the case of FindTuple and FindScalar."
-  [ctx & [sort-fn]]
-  {:pre [(:hypercrud.browser/qfind ctx)
-         (s/assert :hypercrud/context ctx)
-         #_(not (:hypercrud.browser/element ctx))]}         ; not yet, except in recursive case
-  (let [ctx (assoc ctx :hypercrud.browser/head-sentinel false) ; hack
-        sort-fn (or sort-fn identity)
-        depth (count (:hypercrud.browser/result-path ctx))]
-    (cond                                                   ; fiddle | nested attr (otherwise already spread)
-      (= depth 0)                                           ; fiddle level
-      (let [{r-qfind :hypercrud.browser/qfind} ctx
-            keyfn (partial row-keyfn ctx)
-            r-ordered-result (:hypercrud.browser/result ctx)] ; don't have a result-path, thus use raw result
-        (condp some [(type @r-qfind)]
-          ; sorting doesn't index keyfn lookup by design
-          #{FindRel FindColl}
-          (let [ctx (assoc ctx :hypercrud.browser/result
-                               (r/fmap->> r-ordered-result (contrib.data/group-by-unique keyfn)))]
-            (assert (:hypercrud.browser/result ctx))
-            ; Rows are ordered, but the result value is indexed for lookup (not order)
-            ; So drive index-key by row order
-            (for [k (->> (sort-fn @r-ordered-result)        ; client side sorting – should happen in backend
-                         (map keyfn))]
-              [k (row ctx k)]))
-
-          #{FindTuple FindScalar}
-          [[(keyfn @r-ordered-result) ctx]]))
-
-      (> depth 0)                                           ; nested attr
-      (let [keyfn (partial stable-entity-key ctx)           ; Group again by keyfn, we have seq and need lookup
-            ;r-ordered-result (data ctx)                    ; remember row order
-            r-ordered-result (r/cursor (:hypercrud.browser/result ctx) (:hypercrud.browser/result-path ctx))
-            ; Deep update result in-place, at result-path, to index it. Don't clobber it!
-            ctx (assoc ctx :hypercrud.browser/result
-                           (r/fmap-> (:hypercrud.browser/result ctx)
-                                     (update-in (:hypercrud.browser/result-path ctx)
-                                                ; not r/partial
-                                                (partial contrib.data/group-by-unique keyfn))))]
-        (for [k (->> (sort-fn @r-ordered-result)
-                     (map keyfn))]
-          [k (row ctx k)])))))
 
 (defn ^:export spread-elements "yields [i ctx] foreach element.
   All query dimensions have at least one element."
@@ -524,18 +581,13 @@
 (defn links-in-dimension [ctx criterias]
   (r/track links-in-dimension' ctx criterias))
 
-(defn depth [ctx]
-  (count (:hypercrud.browser/result-path ctx)))
-
-(defn pull-depth [ctx]
-  (count (:hypercrud.browser/pull-path ctx)))
-
 (defn unwind [ctx n]
   ((apply comp (repeat n :hypercrud.browser/parent)) ctx))
 
 (defn refocus-in-element
   [ctx target-a]
-  {:pre [(:hypercrud.browser/element ctx)]}
+  {:pre [(:hypercrud.browser/element ctx)]
+   :post [#_(let [[_ a _] @(:hypercrud.browser/eav %)] (= a target-a))]}
   (let [current-path (:hypercrud.browser/pull-path ctx)
         ; find a reachable path that contains the target-attr in the fewest hops
         ;   me->mother ; me->sister->mother ; closest ctx is selected
@@ -557,10 +609,10 @@
             common-ancestor-path (ancestry-common current-path chosen-path)
             unwind-offset (- (count current-path) (count common-ancestor-path)) ; 1 > 0 is fine
             common-ancestor-ctx (unwind ctx unwind-offset)]
-        (focus common-ancestor-ctx (ancestry-divergence (conj chosen-path target-a) current-path))
+        (focus common-ancestor-ctx (ancestry-divergence (conj (vec chosen-path) target-a) current-path)))
 
-        ; Noop, already there. Guard above?
-        ctx))))
+      ; Noop, already there. Guard above?
+      ctx)))
 
 (defn refocus "From view, find the closest satisfactory ctx accounting for cardinality. e.g. as in
   !link(:new-intent-naive :hf/remove). Caller believes that the deps are satisfied (right stuff is in scope).
