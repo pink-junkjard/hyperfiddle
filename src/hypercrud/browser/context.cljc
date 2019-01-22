@@ -84,6 +84,8 @@
           :hypercrud.browser/route
           :hypercrud.browser/validation-hints))
 
+(declare -infer-implicit-element)
+
 (defn source-mode [ctx]
   (-> ctx
       (assoc :hyperfiddle.ui.iframe/on-click (r/constantly nil) ; disable alt-click
@@ -114,8 +116,9 @@
 (defn target-route [ctx] @(runtime/state (:peer ctx) [::runtime/partitions nil :route]))
 
 (defn dbname [ctx]
-  ; Can we get this from a qfind in the one-element case?
-  (some-> (:hypercrud.browser/element ctx) deref :source :symbol str))
+  (some-> (-infer-implicit-element ctx)
+          :hypercrud.browser/element deref
+          :source :symbol str))
 
 (defn uri                                                   ; equivalent to element or schema, i think?
   ([ctx] (uri (dbname ctx) ctx))
@@ -294,8 +297,6 @@
                                  (update-in (:hypercrud.browser/result-path ctx) ; broken in double nested case?
                                             (partial contrib.data/group-by-unique keyfn))))))))))
 
-(declare -infer-implicit-element)
-
 (defn data "Works in any context and infers the right stuff" ; todo just deref it
   [ctx]
   (let [{:keys [:hypercrud.browser/qfind
@@ -325,9 +326,8 @@
 (defn eav "Not reactive." [ctx]
   ; Should you use this or ::eav? Userland renderers call this.
   ; Context internals use ::eav. I think.
-  (-> (-infer-implicit-element ctx)
-      :hypercrud.browser/eav
-      deref))
+  (let [ctx (-infer-implicit-element ctx)]
+    @(:hypercrud.browser/eav ctx)))
 
 (defn row "Row does not set E. E is the parent, not the child, and row is analogous to :ref :many child."
   [ctx & [k]]
@@ -780,8 +780,8 @@
 
 (defn tempid! "unstable"
   ([ctx]
-   (let [dbname (or (dbname ctx) "$")]                      ; (assert dbname "no dbname in ctx")
-     ; If you don't like $, specify a :fiddle/pull-database or :fiddle/query
+    ; :blank can assume $; otherwise user should specify a qfind
+   (let [dbname (or (dbname ctx) "$")]
      (tempid! dbname ctx)))
   ([dbname ctx]                                             ; deprecated arity, i think
    @(r/fmap->> (runtime/state (:peer ctx) [::runtime/partitions])
@@ -838,7 +838,7 @@
 (defn tempid "stable" [ctx]
   ; recurse all the way up the path? just data + parent-data is relative not fully qualified, which is not unique
   ; is this just eav?
-  (->> (map pr-str @(:hypercrud.browser/eav ctx))
+  (->> (map pr-str (eav ctx))
        (cons "tempid")
        (clojure.string/join "-"))
   #_(-> (str (:hypercrud.browser/pull-path ctx) "."
