@@ -174,6 +174,10 @@
                        [_ ctx] (context/spread-elements ctx)]
                    (let [ctx (context/refocus ctx :dustingetz.reg/gender)]
                      @(context/data ctx)))
+                 (for [[_ ctx] (context/spread-rows ctx)]
+                   ; infer element
+                   (let [ctx (context/refocus ctx :dustingetz.reg/gender)]
+                     @(context/data ctx)))
                  [#:db{:ident :dustingetz.gender/male}
                   #:db{:ident :dustingetz.gender/male}]))
 
@@ -181,10 +185,18 @@
                        ctx (context/element ctx 0)
                        ctx (context/refocus ctx :dustingetz.reg/gender)]
                    @(:hypercrud.browser/eav ctx))
+                 (let [ctx (context/row ctx 17592186046196)
+                       ; infer element
+                       ctx (context/refocus ctx :dustingetz.reg/gender)]
+                   @(:hypercrud.browser/eav ctx))
                  [17592186046196 :dustingetz.reg/gender :dustingetz.gender/male]))
 
           (is (= (for [[_ ctx] (context/spread-rows ctx)
                        [_ ctx] (context/spread-elements ctx)]
+                   (let [ctx (context/refocus ctx :dustingetz.reg/gender)]
+                     @(:hypercrud.browser/eav ctx)))
+                 (for [[_ ctx] (context/spread-rows ctx)]
+                   ; infer elements
                    (let [ctx (context/refocus ctx :dustingetz.reg/gender)]
                      @(:hypercrud.browser/eav ctx)))
                  '([17592186046196 :dustingetz.reg/gender :dustingetz.gender/male]
