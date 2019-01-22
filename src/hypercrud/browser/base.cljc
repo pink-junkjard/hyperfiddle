@@ -91,7 +91,7 @@
            r-result @(r/apply-inner-r (r/track nil-or-hydrate (:peer ctx) (:branch ctx) request))
            :let [#_#_sort-fn (hyperfiddle.ui.sort/sort-fn % sort-col)
                  r-schemas (r/track context/summon-schemas-grouped-by-dbname ctx)
-                 ctx (hypercrud.browser.context/fiddle ctx r-fiddle r-schemas r-result)
+                 ctx (hypercrud.browser.context/fiddle ctx r-schemas r-fiddle r-result)
                  ctx (assoc ctx :hypercrud.browser/attr-renderers reactive-attrs)]]
       (return ctx))))
 

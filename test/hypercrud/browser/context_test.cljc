@@ -2,15 +2,23 @@
   (:require
     [clojure.test :refer [deftest is testing]]
     [contrib.reactive :as r]
-    [fixtures.race]
+    [fixtures.tank]
     [hypercrud.browser.context :as context]))
 
 
-(def ctx (context/fiddle
-           {:hypercrud.browser/route nil}
-           (r/pure fixtures.race/fiddle)
-           (r/pure fixtures.race/schemas)
-           (r/pure fixtures.race/result)))
+(def ctx (apply context/fiddle
+                {:hypercrud.browser/route nil}
+                (r/pure fixtures.tank/schemas)
+                (map r/pure (-> fixtures.tank/fiddles :tutorial.race/submission))))
+
+(deftest setup
+  []
+
+  ;(testing "row keyfn"
+  ;  (row-keyfn ctx (first @(:hypercrud.browser/result ctx)))
+  ;  )
+
+  )
 
 (deftest context
   []
@@ -57,8 +65,9 @@
                         [a ctx] (context/spread-attributes ctx)]
                     [i a])
                   )
-           (* (count fixtures.race/result)
-              (count (keys (first fixtures.race/result)))))))
+           (let [[fiddle result] (-> fixtures.tank/fiddles :tutorial.race/submission)]
+             (* (count result)
+                (count (keys (first result))))))))
 
   (testing "don't need rows to spread attrs"
     (is (= (for [[_ ctx] (context/spread-result ctx)
