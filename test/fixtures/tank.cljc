@@ -2,6 +2,9 @@
   (:require
     [contrib.reader]))
 
+
+; These can be copy pasted from hyperfiddle gui
+
 (def fiddles
    {:tutorial.race/submission
     [{:fiddle/ident :tutorial.race/submission
@@ -11,8 +14,6 @@
          '[:find
            [(pull ?e [:dustingetz.reg/email
                       :dustingetz.reg/name
-                      ; :dustingetz.reg/age
-                      ; :dustingetz.reg/birthdate
                       {:dustingetz.reg/gender [:db/ident]}
                       {:dustingetz.reg/shirt-size [:db/ident]}
                       :db/id])

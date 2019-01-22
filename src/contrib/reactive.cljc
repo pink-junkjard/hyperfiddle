@@ -211,8 +211,8 @@
   ; This keyfn is very tricky, read https://github.com/hyperfiddle/hyperfiddle/issues/341
   (-> (if (or (vector? row) (seq? row))                     ; todo should probably inspect fields instead of seq
         (map f row)
-        (f row))
-      hash))
+        [(f row)])
+      (->> (clojure.string/join "`"))))
 
 (defn apply [f rvs]
   (fmap (partial clojure.core/apply f) (sequence rvs))

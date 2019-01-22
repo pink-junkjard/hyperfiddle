@@ -56,7 +56,8 @@
 
 (s/def :hypercrud.browser/eav r/reactive?)
 (s/def :hypercrud.browser/result r/reactive?)
-(s/def :hypercrud.browser/result-path (s/coll-of (s/or :row int? :attr keyword?) :kind vector?))
+(s/def ::result-path-segment (s/or :element int? :attribute keyword? :relation string?))
+(s/def :hypercrud.browser/result-path (s/coll-of ::result-path-segment :kind vector?))
 (s/def :hypercrud.browser/element r/reactive?)
 (s/def :hypercrud.browser/element-index int?)
 (s/def :hypercrud.browser/pull-path (s/coll-of keyword? :kind vector?))
@@ -332,6 +333,7 @@
 (defn row "Row does not set E. E is the parent, not the child, and row is analogous to :ref :many child."
   [ctx & [k]]
   {:pre [(s/assert :hypercrud/context ctx)
+         (s/assert ::result-path-segment k)
          #_(not (coll? k))]
    :post [(s/assert :hypercrud/context %)]}
   (as-> ctx ctx
@@ -380,7 +382,7 @@
 
 (defn fiddle "Runtime sets this up, not public.
   Careful this is highly sensitive to order of initalization."
-  [ctx r-fiddle r-schemas r-result]
+  [ctx r-schemas r-fiddle r-result]
   {:pre [r-fiddle r-result]
    :post [#_(do (println (:hypercrud.browser/qfind %) (:hypercrud.browser/result-enclosure %)) true)]}
   (as-> ctx ctx

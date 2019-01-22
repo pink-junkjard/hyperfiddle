@@ -11,13 +11,14 @@
                 (r/pure fixtures.tank/schemas)
                 (map r/pure (-> fixtures.tank/fiddles :tutorial.race/submission))))
 
-(deftest setup
+(deftest primitives
   []
 
-  ;(testing "row keyfn"
-  ;  (row-keyfn ctx (first @(:hypercrud.browser/result ctx)))
-  ;  )
-
+  (def result (-> fixtures.tank/fiddles :hfnet.tank/index second))
+  (testing "row keyfn on relation maps the smart identity"
+    (is (= (context/row-keyfn ctx (first result))
+           "17592186045419`13194139534712`true"))
+    )
   )
 
 (deftest context
@@ -140,6 +141,8 @@
               [nil :tutorial.race/submission 17592186046763])))
 
     )
+
+
 
   (testing "a is fiddle-ident if no element set"
     (is (= (for [[_ ctx] (context/spread-result ctx)
