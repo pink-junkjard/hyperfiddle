@@ -88,16 +88,79 @@
              (context/depth ctx))
            '(1 1))))
 
+  (testing "eav"
+    (testing "fiddle level a is fiddle-ident"
+      (is (= @(:hypercrud.browser/eav ctx)
+             [nil :tutorial.race/submission nil])))
+
+    (testing "spread-result does not touch eav"
+      (is (= (for [[_ ctx] (context/spread-result ctx)]
+               @(:hypercrud.browser/eav ctx))
+             '([nil :tutorial.race/submission nil]))))
+
+    (testing "fiddle-level v is the element"
+      (is (= (for [[_ ctx] (context/spread-result ctx)
+                   [_ ctx] (context/spread-rows ctx)
+                   [_ ctx] (context/spread-elements ctx)]
+               @(:hypercrud.browser/eav ctx))
+             (for [[_ ctx] (context/spread-result ctx)
+                   [_ ctx] (context/spread-rows ctx)
+                   [_ ctx] (context/spread-elements ctx)]
+               (context/eav ctx))
+             '([nil :tutorial.race/submission 17592186046196]
+                [nil :tutorial.race/submission 17592186046763]))))
+
+    (testing "spread-row doesnt prefill v, but it can be inferred"
+      (is (= (for [[_ ctx] (context/spread-result ctx)
+                   [_ ctx] (context/spread-rows ctx)]
+               @(:hypercrud.browser/eav ctx))
+             '([nil :tutorial.race/submission nil]
+                [nil :tutorial.race/submission nil])))
+
+      (is (= (for [[_ ctx] (context/spread-result ctx)
+                   [_ ctx] (context/spread-rows ctx)]
+               (context/eav ctx))
+             '([nil :tutorial.race/submission 17592186046196]
+                [nil :tutorial.race/submission 17592186046763]))))
+
+    (is (= (for [[_ ctx] (context/spread-result ctx)
+                 [_ ctx] (context/spread-rows ctx)
+                 [_ ctx] (context/spread-elements ctx)]
+             @(:hypercrud.browser/eav ctx))
+           '([nil :tutorial.race/submission 17592186046196]
+              [nil :tutorial.race/submission 17592186046763])))
+
+    )
+
+  (testing "a is fiddle-ident if no element set"
+    (is (= (for [[_ ctx] (context/spread-result ctx)
+                 [_ ctx] (context/spread-rows ctx)]
+             ; Element got inferred here
+             @(context/data ctx))
+           [{:db/id 17592186046196,
+             :dustingetz.reg/email "dustin@example.com",
+             :dustingetz.reg/name "Dustin Getz",
+             :dustingetz.reg/gender #:db{:ident :dustingetz.gender/male},
+             :dustingetz.reg/shirt-size #:db{:ident :dustingetz.shirt-size/mens-large}}
+            {:db/id 17592186046763,
+             :dustingetz.reg/email "bob@example.com",
+             :dustingetz.reg/gender #:db{:ident :dustingetz.gender/male},
+             :dustingetz.reg/shirt-size #:db{:ident :dustingetz.shirt-size/mens-large}}])))
+
   (testing "refocus"
     (is (= (for [[_ ctx] (context/spread-result ctx)
                  [_ ctx] (context/spread-rows ctx)]
              @(:hypercrud.browser/eav (context/refocus ctx :tutorial.race/submission)))
-           (for [[_ ctx] (context/spread-result ctx)
-                 [_ ctx] (context/spread-rows ctx)
-                 [_ ctx] (context/spread-elements ctx)]
-             @(:hypercrud.browser/eav (context/refocus ctx :tutorial.race/submission)))
            '([nil :tutorial.race/submission nil]
               [nil :tutorial.race/submission nil])))
+
+    (is (= (for [[_ ctx] (context/spread-result ctx)
+                 [_ ctx] (context/spread-rows ctx)
+                 [_ ctx] (context/spread-elements ctx)]
+             ; Focusing the element
+             @(:hypercrud.browser/eav ctx #_(context/refocus ctx :tutorial.race/submission)))
+           '([nil :tutorial.race/submission 17592186046196]
+              [nil :tutorial.race/submission 17592186046763])))
 
     (is (= (for [[_ ctx] (context/spread-result ctx)
                  [_ ctx] (context/spread-rows ctx)]
@@ -202,10 +265,13 @@
                  '([17592186046196 :dustingetz.reg/gender :dustingetz.gender/male]
                     [17592186046763 :dustingetz.reg/gender :dustingetz.gender/male]))))
 
-        #_(testing "to :ref :one from top"
+        (testing "to :ref :many from row")
+
+        (testing "to :ref :one from top"
           (is (= (let [ctx (context/refocus ctx :dustingetz.reg/gender)]
+                   ; Can't do it. Should this throw?
                    @(context/data ctx))
-                 #:db{:ident :dustingetz.gender/male}))
+                 nil))
 
           (is (= (for [[_ ctx] (context/spread-rows ctx)
                        [_ ctx] (context/spread-elements ctx)]

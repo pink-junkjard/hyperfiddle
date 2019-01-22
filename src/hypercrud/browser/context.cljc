@@ -294,6 +294,7 @@
                                             (partial contrib.data/group-by-unique keyfn))))))))))
 
 (defn data "Works in any context"                           ; todo provide data! ??
+  ; I think this should deref already
   [{:keys [:hypercrud.browser/qfind
            :hypercrud.browser/element
            :hypercrud.browser/result-index
@@ -319,6 +320,14 @@
     (if (:hypercrud.browser/element ctx)
       ; Sparse resultset, v can still be nil
       (smart-entity-identifier ctx @(data ctx)))))
+
+(declare -infer-implicit-element)
+(defn eav "Not reactive." [ctx]
+  ; Should you use this or ::eav? Userland renderers call this.
+  ; Context internals use ::eav. I think.
+  (-> (-infer-implicit-element ctx)
+      :hypercrud.browser/eav
+      deref))
 
 (defn row "Row does not set E. E is the parent, not the child, and row is analogous to :ref :many child."
   [ctx & [k]]
@@ -622,26 +631,29 @@
             common-ancestor-ctx (unwind ctx unwind-offset)]
         (focus common-ancestor-ctx (ancestry-divergence (conj (vec chosen-path) a) current-path)))
 
-      ; Noop, already there. Guard above?
-      ctx)))
+      ; No solution found. This is a constraint failure and asserts upstack.
+      nil)))
 
 (defn refocus "From view, find the closest satisfactory ctx accounting for cardinality. e.g. as in
   !link(:new-intent-naive :hf/remove). Caller believes that the deps are satisfied (right stuff is in scope).
   todo unify with refocus'"
-  [ctx a]
-  {:pre [ctx a]
+  [ctx a']
+  {:pre [ctx a']
    :post [%]}
   (cond
-    (= a (@(:hypercrud.browser/fiddle ctx) :fiddle/ident))
+    (let [[_ a _] @(:hypercrud.browser/eav ctx)] (= a' a))
+    ctx
+
+    (= a' (@(:hypercrud.browser/fiddle ctx) :fiddle/ident))
     ; if no element, we already there (depth = 0)
     (unwind ctx (depth ctx))
 
     (:hypercrud.browser/element ctx)
-    (refocus-in-element ctx a)
+    (refocus-in-element ctx a')
 
     :else
     ; Assuming 0 works in happy path without tupling links all the way up.
-    (refocus-in-element (element ctx 0) a)))
+    (refocus-in-element (element ctx 0) a')))
 
 (defn id->tempid+ [route ctx]
   (let [invert-id (fn [id uri]
