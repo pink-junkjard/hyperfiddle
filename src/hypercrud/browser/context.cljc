@@ -116,9 +116,14 @@
 (defn target-route [ctx] @(runtime/state (:peer ctx) [::runtime/partitions nil :route]))
 
 (defn dbname [ctx]
-  (some-> (-infer-implicit-element ctx)
-          :hypercrud.browser/element deref
-          :source :symbol str))
+  (some->
+    ; Guard the implicit-element logic because this is called in tempid paths with an unbuilt context
+    ; that i don't understand, this guard preserves old behavior
+    (if (:hypercrud.browser/qfind ctx)
+      (-infer-implicit-element ctx)
+      ctx)
+    :hypercrud.browser/element deref
+    :source :symbol str))
 
 (defn uri                                                   ; equivalent to element or schema, i think?
   ([ctx] (uri (dbname ctx) ctx))
