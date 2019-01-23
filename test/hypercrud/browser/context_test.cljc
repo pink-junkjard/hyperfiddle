@@ -334,6 +334,21 @@
                  {:db/ident :dustingetz.shirt-size/womens-medium, :dustingetz.reg/gender #:db{:ident :dustingetz.gender/female}})))
         )
 
+      (testing "head-sentinel sanity checks, head-sentinel needs to go"
+        (let [ctx (mock-fiddle! :seattle/neighborhoods)]
+          (is (= (context/eav ctx) [nil :seattle/neighborhoods nil]))
+          (is (= (count @(context/data ctx)) 6))
+          (let [ctx (context/attribute ctx :neighborhood/district)]
+            (is (= (context/eav ctx) [nil :neighborhood/district nil])))
+          (let [ctx (context/row ctx 17592186045522)
+                ctx (context/attribute ctx :neighborhood/district)]
+            (is (= (context/eav ctx) [17592186045522 :neighborhood/district 17592186045521])))
+          (testing "if head-sentinel, no v"
+            (let [ctx (assoc ctx :hypercrud.browser/head-sentinel true)
+                  ctx (context/row ctx 17592186045522)
+                  ctx (context/attribute ctx :neighborhood/district)]
+              (is (= (context/eav ctx) [nil :neighborhood/district nil]))))))
+
       (testing "refocus"
 
         (testing "to :ref :one from row"

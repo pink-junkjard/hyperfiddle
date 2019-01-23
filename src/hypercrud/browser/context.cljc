@@ -282,6 +282,7 @@
        )))
   ([ctx a] ; eav order of init issues, ::eav depends on this in :many
    {:pre [(> (depth ctx) 0)]}
+   (assert (not (:hypercrud.browser/head-sentinel ctx)) "this whole flag is trouble, not sure if this assert is strictly necessary")
    (case (contrib.datomic/cardinality-loose @(:hypercrud.browser/schema ctx) a)
 
      :db.cardinality/one
@@ -498,9 +499,11 @@
       (set-parent ctx)
       (update ctx :hypercrud.browser/pull-path (fnil conj []) a') ; what is the cardinality? are we awaiting a row?
       (if (:hypercrud.browser/head-sentinel ctx)
-        ctx                                                 ; no result-path in head
-        (update ctx :hypercrud.browser/result-path (fnil conj []) a'))
-      (index-result ctx a')                                 ; Guaranteed depth >= 1 due to stmt ordering
+        ctx                                                 ; no result-path in head, or result
+        (as-> ctx ctx
+              (update ctx :hypercrud.browser/result-path (fnil conj []) a')
+              ; Guaranteed depth >= 1 due to stmt ordering
+              (index-result ctx a')))
       ; V is for formulas, E is for security and on-change. V becomes E. E is nil if we don't know identity.
       (assoc ctx :hypercrud.browser/eav                     ; insufficent stability on r-?v? fixme
                  (case (contrib.datomic/cardinality-loose @(:hypercrud.browser/schema ctx) a')

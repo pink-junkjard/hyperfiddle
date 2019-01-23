@@ -164,6 +164,66 @@
       :fiddle/ident :hyperfiddle/ide,
       :hyperfiddle/starred true}
      ]
+
+    :seattle/neighborhoods
+    [{:db/id 17592186045743,
+      :fiddle/ident :seattle/neighborhoods,
+      :fiddle/links
+      [{:db/id 17592186045747,
+        :link/class [:hf/iframe],
+        :link/fiddle
+        {:db/id 17592186045750,
+         :fiddle/ident :seattle/districts,
+         :fiddle/query
+         "[:find \n [(pull ?e [:district/name :db/id]) ...]\n :where \n [?e :district/name]]",
+         :fiddle/type :query},
+        :link/rel :hf/iframe}
+       {:db/id 17592186045752,
+        :link/class [:hf/new],
+        :link/fiddle
+        {:db/id 17592186045754,
+         :fiddle/ident :seattle/neighborhood-new,
+         :fiddle/type :entity},
+        :link/rel :hf/new}
+       {:db/id 17592186045756,
+        :link/fiddle
+        {:db/id 17592186045758,
+         :fiddle/ident :seattle/neighborhood-edit,
+         :fiddle/type :entity},
+        :link/rel :hf/self}
+       {:db/id 17592186045760,
+        :link/fiddle
+        {:db/id 17592186045762,
+         :fiddle/ident :seattle/district,
+         :fiddle/type :entity},
+        :link/path
+        ":neighborhood/district :district/region",
+        :link/rel :hf/self}],
+      :fiddle/query
+      "[:find \n [(pull ?e [:neighborhood/name \n            {:neighborhood/district \n             [:db/id \n              :district/name\n              {:district/region \n               [:db/ident]}]}\n            :db/id\n            :hyperfiddle/owners]) ...]\n :where \n [?e :neighborhood/name ?name]\n [(< ?name \"C\")]]",
+      :fiddle/renderer
+      "(let [{:keys [:hypercrud.browser/fiddle]} ctx]\n  [:div.container-fluid props\n   [hyperfiddle.ui/markdown (:fiddle/markdown @fiddle) ctx]\n   [hyperfiddle.ui/table\n    (fn [ctx] \n      [[hyperfiddle.ui/field [:neighborhood/name] ctx]\n       [hyperfiddle.ui/field [:neighborhood/district] ctx nil\n        {:options :seattle/districts :option-label :district/name}]\n       [hyperfiddle.ui/field [:neighborhood/district :district/region] ctx]\n       [hyperfiddle.ui/field [:db/id] ctx]])\n    ctx\n    {:hyperfiddle.ui.sort/initial-sort [[:neighborhood/name] :asc]}]])",
+      :fiddle/type :query,
+      :hyperfiddle/owners
+      [#uuid "acd054a8-4e36-4d6c-a9ec-95bdc47f0d39"]}
+     [{:db/id 17592186045522,
+       :neighborhood/name "Admiral (West Seattle)",
+       :neighborhood/district {:db/id 17592186045521, :district/name "Southwest", :district/region {:db/ident :region/sw}}}
+      {:db/id 17592186045524,
+       :neighborhood/name "Alki",
+       :neighborhood/district {:db/id 17592186045521, :district/name "Southwest", :district/region {:db/ident :region/sw}}}
+      {:db/id 17592186045528,
+       :neighborhood/name "Belltown",
+       :neighborhood/district {:db/id 17592186045527, :district/name "Downtown", :district/region {:db/ident :region/w}}}
+      {:db/id 17592186045564,
+       :neighborhood/name "Broadview",
+       :neighborhood/district {:db/id 17592186045563, :district/name "Northwest", :district/region {:db/ident :region/sw}}}
+      {:db/id 17592186045551,
+       :neighborhood/name "Beacon Hill",
+       :neighborhood/district {:db/id 17592186045530, :district/name "Greater Duwamish", :district/region {:db/ident :region/s}}}
+      {:db/id 17592186045536,
+       :neighborhood/name "Ballard",
+       :neighborhood/district {:db/id 17592186045535, :district/name "Ballard", :district/region {:db/ident :region/nw}}}]]
     }
    )
 

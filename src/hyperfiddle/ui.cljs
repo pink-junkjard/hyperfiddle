@@ -336,7 +336,7 @@ User renderers should not be exposed to the reaction."
     (fn [columns ctx & [props]]
       (let [props (update props :class (fnil css "hyperfiddle") "unp") ; fnil case is iframe root (not a field :many)
             ctx (assoc ctx ::sort/sort-col sort-col
-                           :hypercrud.browser/head-sentinel true
+                           :hypercrud.browser/head-sentinel true ; hacks - this is coordination with the context, how to fix?
                            ::layout :hyperfiddle.ui.layout/table)]
         [:table (select-keys props [:class :style])
          [:thead (into [:tr] (columns ctx))]
