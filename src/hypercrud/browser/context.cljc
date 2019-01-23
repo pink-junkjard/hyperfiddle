@@ -66,6 +66,7 @@
   (dissoc ctx
           :hypercrud.ui/error
           :hyperfiddle.ui/layout
+          :hypercrud.browser/head-sentinel
           :hypercrud.browser/attr-renderers
           :hypercrud.browser/schemas
           :hypercrud.browser/fiddle
@@ -296,15 +297,12 @@
      :db.cardinality/many
      (let [keyfn (partial stable-entity-key ctx)]           ; Group again by keyfn, we have seq and need lookup
        ; Deep update result in-place, at result-path, to index it. Don't clobber it!
-       #_(println "depth>0 result-path: " (:hypercrud.browser/result-path ctx))
-       #_(println "depth>0 result-index: " @(:hypercrud.browser/result-index ctx))
        ; hang onto the set as we index for a future rowkey
        (let [set-ungrouped (r/cursor (:hypercrud.browser/result-index ctx) (:hypercrud.browser/result-path ctx))]
          (assoc ctx :hypercrud.browser/result set-ungrouped
                     :hypercrud.browser/result-index
                     (r/fmap-> (:hypercrud.browser/result-index ctx)
-
-                              (update-in (:hypercrud.browser/result-path ctx) ; broken in double nested case?
+                              (update-in (:hypercrud.browser/result-path ctx)
                                          (partial contrib.data/group-by-unique keyfn)))))))))
 
 (defn data "Works in any context and infers the right stuff" ; todo just deref it
@@ -325,7 +323,7 @@
         ; Count the dimension of the pullpath and compare to the count of the resultpath?
         ; Or inspect resultpath - if the last thing is an attr and it's :many, then we are awaiting a rowkey
         k (last result-path)
-        is-awaiting-rowkey (and (keyword k)
+        is-awaiting-rowkey (and (keyword? k)
                                 (= :db.cardinality/many (contrib.datomic/cardinality-loose
                                                           @(:hypercrud.browser/schema ctx) k)))]
     (if qfind
@@ -339,12 +337,10 @@
 (defn v! [ctx]                                              ; It's just easier to end the reaction earlier
   {:post [(not (coll? %))]}                                 ; V is identity | nil
   ; Don't pass whole results or tuples to smart-entity-identifier, that's dumb
-  ; Do we have an element but not a pull?
-  ; If no element at all, (just a fiddle), not much to do. Always need an element at least.
   (if-not (:hypercrud.browser/head-sentinel ctx)
-    (if (:hypercrud.browser/element ctx)
-      ; Sparse resultset, v can still be nil
-      (smart-entity-identifier ctx @(data ctx)))))
+    ; Sparse resultset, v can still be nil
+    (some-> (data ctx) deref                                ; data infers element
+            (->> (smart-entity-identifier ctx)))))
 
 (defn eav "Not reactive." [ctx]
   {:pre [(s/assert :hypercrud/context ctx)]}

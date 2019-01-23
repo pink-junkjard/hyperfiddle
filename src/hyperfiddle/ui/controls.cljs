@@ -93,7 +93,8 @@
     (let [ctx (:hypercrud.browser/parent ctx)
           [_ a _] @(:hypercrud.browser/eav ctx)]
       (cond
-        (and a (contrib.datomic/cardinality? @(:hypercrud.browser/schema ctx) a :db.cardinality/many)) ; :one is handled by the body
+        (and a (or (= (context/depth ctx) 0)
+                   (contrib.datomic/cardinality? @(:hypercrud.browser/schema ctx) a :db.cardinality/many))) ; :one is handled by the body
         [(if-let [link (->> (data/select-here+ ctx :hf/new) (contrib.ct/unwrap #(taoensso.timbre/warn %)))]
            [hyperfiddle.ui/ui-from-link link ctx props "new"])]
 
