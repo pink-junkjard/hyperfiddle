@@ -51,7 +51,7 @@
 (deftype Schema [schema-pulledtree schema-by-attr]
   SchemaIndexedNormalized
   (-repr-portable-hack [this] (str "#schema " (pr-str schema-pulledtree)))
-  (-attr [this a k]
+  (-attr [this a k]                                         ; Todo assert attribute is found.
     #_(s/assert keyword? a)                                 ; def real assert currenetly failing
     #_(s/assert keyword? k)
     (let [v (smart-lookup-ref-no-tempids
