@@ -82,125 +82,88 @@
       [#uuid "acd054a8-4e36-4d6c-a9ec-95bdc47f0d39"]}
      [[{:db/id 17592186045419, :fiddle/ident :karl.hardenstine/fiddles} 13194139534712 true]
       [{:db/id 17592186045426, :fiddle/ident :khardenstine/fiddles} 13194139534711 true]
-      [{:db/id 17592186045455, :fiddle/ident :dustingetz/quick-element} 13194139534359 true]
-      [{:db/id 17592186045473, :fiddle/ident :dustingetz/html5-video} 13194139535967 true]
-      [{:db/id 17592186045481, :fiddle/ident :dustingetz/reagent-react-fragments} 13194139536287 true]
-      [{:db/id 17592186045487, :fiddle/ident :khardenstine/neighborhoods} 13194139534711 true]
-      [{:db/id 17592186045489, :fiddle/ident :tank.util/empty} 13194139535218 true]
-      [{:db/id 17592186045500, :fiddle/ident :dustingetz/resultset-sorting} 13194139534412 true]
-      [{:db/id 17592186045743, :fiddle/ident :seattle/neighborhoods} 13194139536407 true]
-      [{:db/id 17592186045750, :fiddle/ident :seattle/districts} 13194139534662 true]
-      [{:db/id 17592186045754, :fiddle/ident :seattle/neighborhood-new} 13194139534991 false]
-      [{:db/id 17592186045758, :fiddle/ident :seattle/neighborhood-edit} 13194139534709 false]
-      [{:db/id 17592186045762, :fiddle/ident :seattle/district} 13194139534667 false]
-      [{:db/id 17592186045818, :fiddle/ident :dustingetz/reagent-svg-demo} 13194139534717 true]
-      [{:db/id 17592186045823, :fiddle/ident :dustingetz/clojure-tree-seq} 13194139534735 true]
-      [{:db/id 17592186045830, :fiddle/ident :hfnet.tank/index} 13194139536342 true]
-      [{:db/id 17592186045848, :fiddle/ident :didier/helloworld} 13194139535447 false]
-      [{:db/id 17592186046189, :fiddle/ident :didier/comments} 13194139535208 true]
-      [{:db/id 17592186046195, :fiddle/ident :dustingetz/gender-shirtsize} 13194139536348 true]
-      [{:db/id 17592186046198, :fiddle/ident :tutorial.race/submission} 13194139536346 false]
-      [{:db/id 17592186046200, :fiddle/ident :tutorial.race/genders} 13194139535963 true]
-      [{:db/id 17592186046202, :fiddle/ident :tutorial.race/shirt-sizes} 13194139535964 false]
-      [{:db/id 17592186046215, :fiddle/ident :tank.util/schema} 13194139535458 true]
-      [{:db/id 17592186046221, :fiddle/ident :tutorial.blog} 13194139536349 true]
-      [{:db/id 17592186046223, :fiddle/ident :tutorial.blog/index-new-post} 13194139536264 false]
-      [{:db/id 17592186046230, :fiddle/ident :tutorial.blog/post-edit} 13194139535127 false]
-      [{:db/id 17592186046233, :fiddle/ident :tutorial.blog/post-view} 13194139535965 false]
-      [{:db/id 17592186046327, :fiddle/ident :dustingetz/slack-storm} 13194139536337 true]
-      [{:db/id 17592186046579, :fiddle/ident :dustingetz/image-gallery-css-only} 13194139535486 true]
-      [{:db/id 17592186046596, :fiddle/ident :tacosundae/ctx} 13194139535493 true]
-      [{:db/id 17592186046599, :fiddle/ident :dustingetz.forum/index} 13194139535585 true]
-      [{:db/id 17592186046603, :fiddle/ident :dustingetz.boards/nav} 13194139535496 true]
-      [{:db/id 17592186046606, :fiddle/ident :clojurians} 13194139536353 true]
-      [{:db/id 17592186046609, :fiddle/ident :clojurians/channel} 13194139536357 false]
-      [{:db/id 17592186046611, :fiddle/ident :clojurians/channel-days} 13194139536313 false]
-      [{:db/id 17592186046617, :fiddle/ident :clojurians/channel-messages} 13194139535886 false]
-      [{:db/id 17592186046633, :fiddle/ident :clojurians/user-messages} 13194139536293 false]
-      [{:db/id 17592186046640, :fiddle/ident :clojurians/user-profile} 13194139536314 false]
-      [{:db/id 17592186046649, :fiddle/ident :clojurians/users} 13194139536352 true]
-      [{:db/id 17592186046661, :fiddle/ident :clojurians/max-channel-message-count} 13194139535559 true]
-      [{:db/id 17592186046679, :fiddle/ident :mbrainz} 13194139535580 true]
-      [{:db/id 17592186046693, :fiddle/ident :dustingetz/www.hyperfiddle-consulting.com} 13194139536409 true]
-      [{:db/id 17592186046699, :fiddle/ident :dustingetz/social-icons-svg-bootstrap} 13194139535599 true]
-      [{:db/id 17592186046706, :fiddle/ident :dustingetz/html5-video-m3u8} 13194139535617 true]
-      [{:db/id 17592186046717, :fiddle/ident :dustingetz/merge-with-into} 13194139535616 true]
-      [{:db/id 17592186046724, :fiddle/ident :cookbook/data-api} 13194139535619 true]
-      [{:db/id 17592186046728, :fiddle/ident :cookbook/form-fields} 13194139535623 true]
-      [{:db/id 17592186046729, :fiddle/ident :cookbook/form-recursion} 13194139535623 true]
-      [{:db/id 17592186046730, :fiddle/ident :cookbook/form-value-renderers} 13194139535623 true]
-      [{:db/id 17592186046731, :fiddle/ident :cookbook/form-value-renderers-markdown} 13194139535623 true]
-      [{:db/id 17592186046733, :fiddle/ident :cookbook/nested-table} 13194139535892 true]
-      [{:db/id 17592186046734, :fiddle/ident :cookbook/markdown-lists} 13194139535623 true]
-      [{:db/id 17592186046736, :fiddle/ident :cookbook/table-with-boostrap-renderer} 13194139535623 true]
-      [{:db/id 17592186046739, :fiddle/ident :cookbook/fiddle-renderer} 13194139535634 true]
-      [{:db/id 17592186046741, :fiddle/ident :cookbook/markdown-table} 13194139535639 true]
-      [{:db/id 17592186046747, :fiddle/ident :cookbook/markdown-form-body-renderers} 13194139535639 true]
-      [{:db/id 17592186046749, :fiddle/ident :cookbook/markdown-list-value-renderers} 13194139535926 true]
-      [{:db/id 17592186046750, :fiddle/ident :cookbook/markdown-basics} 13194139535654 true]
-      [{:db/id 17592186046752, :fiddle/ident :cookbook/markdown-figure} 13194139535647 true]
-      [{:db/id 17592186046753, :fiddle/ident :cookbook/markdown-functions} 13194139535647 true]
-      [{:db/id 17592186046754, :fiddle/ident :cookbook/reagent-bootstrap-table} 13194139535882 true]
-      [{:db/id 17592186046755, :fiddle/ident :cookbook/codemirror-integrations} 13194139535647 true]
-      [{:db/id 17592186046757, :fiddle/ident :cookbook/markdown-table-of-contents} 13194139535652 true]
-      [{:db/id 17592186046767, :fiddle/ident :karatatar/demo} 13194139535664 true]
-      [{:db/id 17592186046770, :fiddle/ident :karatatar/note-title} 13194139535665 true]
-      [{:db/id 17592186046774, :fiddle/ident :dustingetz/java-magazine-clojure-growth-2018} 13194139535689 true]
-      [{:db/id 17592186046797, :fiddle/ident :dustingetz/niko-gobel-differential-dataflow} 13194139536399 true]
-      [{:db/id 17592186046811, :fiddle/ident :dustingetz/youtube-embed} 13194139535748 true]
-      [{:db/id 17592186046826, :fiddle/ident :dustingetz/slack-datomic-cloud-testing} 13194139535721 true]
-      [{:db/id 17592186046828, :fiddle/ident :alexandrkozyrev/seattle} 13194139536255 true]
-      [{:db/id 17592186046834, :fiddle/ident :alexandrkozyrev/neighborhood} 13194139535729 true]
-      [{:db/id 17592186046836, :fiddle/ident :alexandrkozyrev.seattle/neighborhood} 13194139535733 false]
-      [{:db/id 17592186046839, :fiddle/ident :alexandrkozyrev.seattle/region} 13194139535736 false]
-      [{:db/id 17592186046842, :fiddle/ident :alexandrkozyrev.seattle/districts} 13194139535744 true]
-      [{:db/id 17592186046873, :fiddle/ident :dustingetz/foreign-http-request} 13194139535783 true]
-      [{:db/id 17592186046889, :fiddle/ident :dustingetz/counter} 13194139536563 true]
-      [{:db/id 17592186046992, :fiddle/ident :dustingetz/notepad} 13194139536277 true]
-      [{:db/id 17592186046998, :fiddle/ident :paulrd:seattle} 13194139535893 true]
-      [{:db/id 17592186047002, :fiddle/ident :dustingetz.storm/view} 13194139536557 false]
-      [{:db/id 17592186047020, :fiddle/ident :dustingetz/markdown-extensions} 13194139536055 true]
-      [{:db/id 17592186047073, :fiddle/ident :dustingetz/vega} 13194139535979 true]
-      [{:db/id 17592186047089, :fiddle/ident :dustingetz.storm/new-storm} 13194139536555 false]
-      [{:db/id 17592186047152, :fiddle/ident :dustingetz/datalog-grounded-value} 13194139536047 true]
-      [{:db/id 17592186047158, :fiddle/ident :dustingetz/markdown-pipeline} 13194139536096 true]
-      [{:db/id 17592186047169, :fiddle/ident :dustingetz/markdown-codemirror} 13194139536092 true]
-      [{:db/id 17592186047204, :fiddle/ident :dustingetz/streaker} 13194139536549 true]
-      [{:db/id 17592186047207, :fiddle/ident :dustingetz.streaker/entry} 13194139536452 false]
-      [{:db/id 17592186047224, :fiddle/ident :dustingetz.streaker/moods} 13194139536128 true]
-      [{:db/id 17592186047290, :fiddle/ident :dustingetz/dagre-d3} 13194139536201 true]
-      [{:db/id 17592186047293, :fiddle/ident :dustingetz/jointjs} 13194139536202 true]
-      [{:db/id 17592186047308, :fiddle/ident :dustingetz/loader} 13194139536300 true]
-      [{:db/id 17592186047314, :fiddle/ident :viebel/defrecord} 13194139536209 true]
-      [{:db/id 17592186047315, :fiddle/ident :viebel/clojure-defrecord} 13194139536209 true]
-      [{:db/id 17592186047327, :fiddle/ident :didier/clojure-conj} 13194139536232 true]
-      [{:db/id 17592186047329, :fiddle/ident :didier/new-team} 13194139536232 false]
-      [{:db/id 17592186047332, :fiddle/ident :dustingetz/conj-talk} 13194139536249 true]
-      [{:db/id 17592186047348, :fiddle/ident :dustingetz/seattle1} 13194139536243 true]
-      [{:db/id 17592186047369, :fiddle/ident :dustingetz.tutorial/blog} 13194139536338 true]
-      [{:db/id 17592186047371, :fiddle/ident :dustingetz.tutorial/view-post} 13194139536264 false]
-      [{:db/id 17592186047373, :fiddle/ident :dustingetz.tutorial.blog/new-post} 13194139536264 false]
-      [{:db/id 17592186047392, :fiddle/ident :dustingetz/naked-codemirror} 13194139536289 true]
-      [{:db/id 17592186047395, :fiddle/ident :dustingetz/cljs-eval} 13194139536299 true]
-      [{:db/id 17592186047426, :fiddle/ident :dustingetz/clojure-autoformat} 13194139536326 false]
-      [{:db/id 17592186047455, :fiddle/ident :d4hines/helloworld} 13194139536463 true]
-      [{:db/id 17592186047467, :fiddle/ident :astrocaribe.tutorial/blog} 13194139536369 true]
-      [{:db/id 17592186047502, :fiddle/ident :dustingetz/rubber-ducky} 13194139536397 true]
-      [{:db/id 17592186047515, :fiddle/ident :dustingetz/sql-join} 13194139536424 true]
-      [{:db/id 17592186047518, :fiddle/ident :dustingetz/person-new} 13194139536412 false]
-      [{:db/id 17592186047530, :fiddle/ident :dustingetz/parents} 13194139536424 false]
-      [{:db/id 17592186047541, :fiddle/ident :dustingetz.datomic-vs-sql/recursion} 13194139536438 true]
-      [{:db/id 17592186047544, :fiddle/ident :dustingetz.datomic-vs-sql/cartesian} 13194139536441 true]
-      [{:db/id 17592186047548, :fiddle/ident :dustingetz/fiddle-set-arg} 13194139536443 false]
-      [{:db/id 17592186047565, :fiddle/ident :d4hines/helloworld.view-post} 13194139536489 false]
-      [{:db/id 17592186047570, :fiddle/ident :putterson/todone} 13194139536479 true]
-      [{:db/id 17592186047573, :fiddle/ident :putterson/view-todone} 13194139536487 false]
-      [{:db/id 17592186047585, :fiddle/ident :putterson/new-todone} 13194139536480 false]
-      [{:db/id 17592186047602, :fiddle/ident :bdevel/blog} 13194139536502 true]
       [{:db/id 17592186047604, :fiddle/ident :bdevel/post-show} 13194139536499 false]
       [{:db/id 17592186047615, :fiddle/ident :dustingetz/datomic-pull-tx} 13194139536512 true]
       [{:db/id 17592186047618, :fiddle/ident :fsbl0/app} 13194139536533 true]
       [{:db/id 17592186047663, :fiddle/ident :dustingetz/datomic-find-specs} 13194139536562 true]]]
+
+    :hyperfiddle/ide
+    [{:db/id 17592186061847,
+      :fiddle/renderer
+      "hyperfiddle.ide.fiddles.fiddle-src/fiddle-src-renderer",
+      :fiddle/links
+      [{:db/id 17592186061848,
+        :link/class [:hf/remove],
+        :link/rel :hf/remove}
+       {:db/id 17592186061849,
+        :link/class [:hf/remove],
+        :link/path ":fiddle/links",
+        :link/rel :hf/remove}
+       {:db/id 17592186061850,
+        :link/class [:hf/iframe],
+        :link/fiddle
+        {:db/id 17592186045605,
+         :fiddle/ident
+         :hyperfiddle.ide/fiddle-options,
+         :fiddle/query
+         "[:find (pull ?link [:db/id :fiddle/ident])\n :where (or [?link :fiddle/ident] [?link :fiddle/type])]",
+         :fiddle/type :query},
+        :link/rel :hf/iframe}
+       {:db/id 17592186061851,
+        :link/class [:hf/new],
+        :link/fiddle
+        {:db/id 17592186056398,
+         :fiddle/ident :hyperfiddle.ide/new-fiddle,
+         :fiddle/type :entity},
+        :link/path ":link/fiddle",
+        :link/rel :hf/affix}
+       {:db/id 17592186061852,
+        :link/class [:hf/new],
+        :link/fiddle
+        {:db/id 17592186058175,
+         :fiddle/ident :hyperfiddle.ide/new-link,
+         :fiddle/type :entity},
+        :link/path ":fiddle/links",
+        :link/rel :hf/affix}],
+      :fiddle/type :entity,
+      :fiddle/pull
+      "; synchronized with hyperfiddle.fiddle/browser-pull\n[:db/id\n :fiddle/css\n :fiddle/ident\n {:fiddle/links [:db/id\n                 :link/class\n                 {:link/fiddle [:db/id\n                                :fiddle/ident               ; routing\n                                :fiddle/query               ; validation\n                                :fiddle/type                ; validation\n                                ]}\n                 :link/formula\n                 :link/path\n                 :link/rel\n                 :link/tx-fn]}\n :fiddle/markdown\n :fiddle/pull\n :fiddle/pull-database\n :fiddle/query\n :fiddle/cljs-ns\n :fiddle/renderer\n :fiddle/type\n :fiddle/hydrate-result-as-fiddle\n *                                                          ; For hyperblog, so we can access :hyperblog.post/title etc from the fiddle renderer\n ]",
+      :fiddle/css
+      "table.hyperfiddle.-fiddle-links { table-layout: fixed; }\ntable.-fiddle-links th.-hypercrud-browser-path--fiddle-links { width: 60px; }\n\ntable.-fiddle-links td.-hypercrud-browser-path--fiddle-links--link-fiddle { display: flex; }\ntable.hyperfiddle.-fiddle-links td.field.-link-fiddle > select { flex: 0 1 80% !important; } /* line up :new */\n",
+      :fiddle/ident :hyperfiddle/ide,
+      :hyperfiddle/starred true}
+
+     {:db/id 17592186061847,
+      :fiddle/renderer "hyperfiddle.ide.fiddles.fiddle-src/fiddle-src-renderer",
+      :fiddle/links
+      [{:db/id 17592186061848, :link/class [:hf/remove], :link/rel :hf/remove}
+       {:db/id 17592186061849, :link/class [:hf/remove], :link/path ":fiddle/links", :link/rel :hf/remove}
+       {:db/id 17592186061850,
+        :link/class [:hf/iframe],
+        :link/fiddle
+        {:db/id 17592186045605,
+         :fiddle/ident :hyperfiddle.ide/fiddle-options,
+         :fiddle/query "[:find (pull ?link [:db/id :fiddle/ident])\n :where (or [?link :fiddle/ident] [?link :fiddle/type])]",
+         :fiddle/type :query},
+        :link/rel :hf/iframe}
+       {:db/id 17592186061851,
+        :link/class [:hf/new],
+        :link/fiddle {:db/id 17592186056398, :fiddle/ident :hyperfiddle.ide/new-fiddle, :fiddle/type :entity},
+        :link/path ":link/fiddle",
+        :link/rel :hf/affix}
+       {:db/id 17592186061852,
+        :link/class [:hf/new],
+        :link/fiddle {:db/id 17592186058175, :fiddle/ident :hyperfiddle.ide/new-link, :fiddle/type :entity},
+        :link/path ":fiddle/links",
+        :link/rel :hf/affix}],
+      :fiddle/type :entity,
+      :fiddle/pull
+      "; synchronized with hyperfiddle.fiddle/browser-pull\n[:db/id\n :fiddle/css\n :fiddle/ident\n {:fiddle/links [:db/id\n                 :link/class\n                 {:link/fiddle [:db/id\n                                :fiddle/ident               ; routing\n                                :fiddle/query               ; validation\n                                :fiddle/type                ; validation\n                                ]}\n                 :link/formula\n                 :link/path\n                 :link/rel\n                 :link/tx-fn]}\n :fiddle/markdown\n :fiddle/pull\n :fiddle/pull-database\n :fiddle/query\n :fiddle/cljs-ns\n :fiddle/renderer\n :fiddle/type\n :fiddle/hydrate-result-as-fiddle\n *                                                          ; For hyperblog, so we can access :hyperblog.post/title etc from the fiddle renderer\n ]",
+      :fiddle/css
+      "table.hyperfiddle.-fiddle-links { table-layout: fixed; }\ntable.-fiddle-links th.-hypercrud-browser-path--fiddle-links { width: 60px; }\n\ntable.-fiddle-links td.-hypercrud-browser-path--fiddle-links--link-fiddle { display: flex; }\ntable.hyperfiddle.-fiddle-links td.field.-link-fiddle > select { flex: 0 1 80% !important; } /* line up :new */\n",
+      :fiddle/ident :hyperfiddle/ide,
+      :hyperfiddle/starred true}
+     ]
     }
    )
 

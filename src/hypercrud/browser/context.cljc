@@ -247,55 +247,54 @@
   All paths get a result-index, though if there is no collection, then this is just the result as no indexing is needed.
   (data ctx) is no good until after this is done.
   Works at fiddle and attribute level. Currently we do not index at element level (rather it is already indexed by vec index)"
-  [ctx]
-  (let [qfind (:hypercrud.browser/qfind ctx)]
-    (cond                                                   ; fiddle | nested attr (otherwise already spread)
+  ([ctx]
+   (let [qfind (:hypercrud.browser/qfind ctx)]
+     (cond                                                  ; fiddle | nested attr (otherwise already spread)
 
-      (not qfind)
-      (assoc ctx :hypercrud.browser/result-index (:hypercrud.browser/result ctx))
+       (not qfind)
+       (assoc ctx :hypercrud.browser/result-index (:hypercrud.browser/result ctx))
 
-      (= (depth ctx) 0)                                     ; fiddle level
-      (let [{r-qfind :hypercrud.browser/qfind} ctx
-            r-ordered-result (:hypercrud.browser/result ctx)]
+       (= (depth ctx) 0)                                    ; fiddle level
+       (let [{r-qfind :hypercrud.browser/qfind} ctx
+             r-ordered-result (:hypercrud.browser/result ctx)]
 
-        ;(println "index-result r-ordered-result: " @r-ordered-result)
+         ;(println "index-result r-ordered-result: " @r-ordered-result)
 
-        (condp = (type @r-qfind)
-          ; sorting doesn't index keyfn lookup by design
-          FindRel
-          (assoc ctx :hypercrud.browser/result-index
-                     (r/fmap->> r-ordered-result (contrib.data/group-by-unique (partial row-keyfn ctx))))
+         (condp = (type @r-qfind)
+           ; sorting doesn't index keyfn lookup by design
+           FindRel
+           (assoc ctx :hypercrud.browser/result-index
+                      (r/fmap->> r-ordered-result (contrib.data/group-by-unique (partial row-keyfn ctx))))
 
-          FindColl
-          (assoc ctx :hypercrud.browser/result-index
-                     (r/fmap->> r-ordered-result (contrib.data/group-by-unique (partial stable-entity-key ctx))))
+           FindColl
+           (assoc ctx :hypercrud.browser/result-index
+                      (r/fmap->> r-ordered-result (contrib.data/group-by-unique (partial stable-entity-key ctx))))
 
-          FindTuple
-          ; Vectors are already indexed
-          (assoc ctx :hypercrud.browser/result-index r-ordered-result)
+           FindTuple
+           ; Vectors are already indexed
+           (assoc ctx :hypercrud.browser/result-index r-ordered-result)
 
-          FindScalar
-          ; Scalar has no index at all
-          (assoc ctx :hypercrud.browser/result-index r-ordered-result)))
+           FindScalar
+           ; Scalar has no index at all
+           (assoc ctx :hypercrud.browser/result-index r-ordered-result)))
+       )))
+  ([ctx a]                                                 ; eav order of init issues, ::eav depends on this in :many
+   (assert (> (depth ctx) 0) "this is nested attr")
+   (case (contrib.datomic/cardinality-loose @(:hypercrud.browser/schema ctx) a)
 
+     :db.cardinality/one
+     ctx
 
-      (> (depth ctx) 0)                                     ; nested attr
-      (let [[_ a _] @(:hypercrud.browser/eav ctx)]
-        (case (contrib.datomic/cardinality-loose @(:hypercrud.browser/schema ctx) a)
-
-          :db.cardinality/one
-          ctx
-
-          :db.cardinality/many
-          (let [keyfn (partial stable-entity-key ctx)]      ; Group again by keyfn, we have seq and need lookup
-            ; Deep update result in-place, at result-path, to index it. Don't clobber it!
-            #_(println "depth>0 result-path: " (:hypercrud.browser/result-path ctx))
-            #_(println "depth>0 result-index: " @(:hypercrud.browser/result-index ctx))
-            (assoc ctx :hypercrud.browser/result-index
-                       (r/fmap-> (:hypercrud.browser/result-index ctx)
-                                 identity
-                                 (update-in (:hypercrud.browser/result-path ctx) ; broken in double nested case?
-                                            (partial contrib.data/group-by-unique keyfn))))))))))
+     :db.cardinality/many
+     (let [keyfn (partial stable-entity-key ctx)]           ; Group again by keyfn, we have seq and need lookup
+       ; Deep update result in-place, at result-path, to index it. Don't clobber it!
+       #_(println "depth>0 result-path: " (:hypercrud.browser/result-path ctx))
+       #_(println "depth>0 result-index: " @(:hypercrud.browser/result-index ctx))
+       (assoc ctx :hypercrud.browser/result-index
+                  (r/fmap-> (:hypercrud.browser/result-index ctx)
+                            identity
+                            (update-in (:hypercrud.browser/result-path ctx) ; broken in double nested case?
+                                       (partial contrib.data/group-by-unique keyfn))))))))
 
 (defn data "Works in any context and infers the right stuff" ; todo just deref it
   [ctx]
@@ -324,6 +323,7 @@
       (smart-entity-identifier ctx @(data ctx)))))
 
 (defn eav "Not reactive." [ctx]
+  {:pre [(s/assert :hypercrud/context ctx)]}
   ; Should you use this or ::eav? Userland renderers call this.
   ; Context internals use ::eav. I think.
   (let [ctx (-infer-implicit-element ctx)]
@@ -480,8 +480,8 @@
       (if (:hypercrud.browser/head-sentinel ctx)
         ctx                                                 ; no result-path in head
         (update ctx :hypercrud.browser/result-path (fnil conj []) a'))
-      #_(if (> (depth ctx) 0)                               ; this breaks eav in pull :one case
-        (index-result ctx)                                  ; nested :many
+      (if (> (depth ctx) 0)                                 ; this breaks eav in pull :one case
+        (index-result ctx a')                               ; nested :many
         ctx)
       ; V is for formulas, E is for security and on-change. V becomes E. E is nil if we don't know identity.
       (assoc ctx :hypercrud.browser/eav                     ; insufficent stability on r-?v? fixme

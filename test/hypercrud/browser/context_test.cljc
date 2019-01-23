@@ -3,14 +3,17 @@
     [clojure.test :refer [deftest is testing]]
     [contrib.reactive :as r]
     [fixtures.tank]
+    [hyperfiddle.fiddle]
     [hypercrud.browser.context :as context]))
 
 
 (defn mock-fiddle! [ident]
-  (apply context/fiddle
-         {:hypercrud.browser/route nil}
-         (r/pure fixtures.tank/schemas)
-         (map r/pure (-> fixtures.tank/fiddles ident))))
+  (let [[fiddle result] (-> fixtures.tank/fiddles ident)]
+    (context/fiddle
+      {:hypercrud.browser/route nil}
+      (r/pure fixtures.tank/schemas)
+      (r/pure (hyperfiddle.fiddle/apply-defaults fiddle))
+      (r/pure result))))
 
 (def ctx (mock-fiddle! :tutorial.race/submission))
 
@@ -107,12 +110,16 @@
              [nil :tutorial.race/submission nil])))
 
     (testing "spread-result does not touch eav"
-      (is (= (for [[_ ctx] (context/spread-result ctx)]
+      (is (= [@(:hypercrud.browser/eav ctx)]
+             (for [[_ ctx] (context/spread-result ctx)]
                @(:hypercrud.browser/eav ctx))
              '([nil :tutorial.race/submission nil]))))
 
     (testing "fiddle-level v is the element"
-      (is (= (for [[_ ctx] (context/spread-result ctx)
+      (is (= (for [[_ ctx] (context/spread-rows ctx)
+                   [_ ctx] (context/spread-elements ctx)]
+               @(:hypercrud.browser/eav ctx))
+             (for [[_ ctx] (context/spread-result ctx)
                    [_ ctx] (context/spread-rows ctx)
                    [_ ctx] (context/spread-elements ctx)]
                @(:hypercrud.browser/eav ctx))
@@ -124,14 +131,12 @@
                 [nil :tutorial.race/submission 17592186046763]))))
 
     (testing "spread-row doesnt prefill v, but it can be inferred"
-      (is (= (for [[_ ctx] (context/spread-result ctx)
-                   [_ ctx] (context/spread-rows ctx)]
+      (is (= (for [[_ ctx] (context/spread-rows ctx)]
                @(:hypercrud.browser/eav ctx))
              '([nil :tutorial.race/submission nil]
                 [nil :tutorial.race/submission nil])))
 
-      (is (= (for [[_ ctx] (context/spread-result ctx)
-                   [_ ctx] (context/spread-rows ctx)]
+      (is (= (for [[_ ctx] (context/spread-rows ctx)]
                (context/eav ctx))
              '([nil :tutorial.race/submission 17592186046196]
                 [nil :tutorial.race/submission 17592186046763]))))
@@ -144,6 +149,39 @@
               [nil :tutorial.race/submission 17592186046763])))
 
     )
+
+  (testing "fiddle/type :pull"
+    (testing "row and element are inferred"
+      (is (= (for [ctx [(mock-fiddle! :hyperfiddle/ide)]
+                   [_ ctx] (context/spread-rows ctx)
+                   [_ ctx] (context/spread-elements ctx)]
+               (context/eav ctx))
+             (for [ctx [(mock-fiddle! :hyperfiddle/ide)]]
+               (context/eav ctx))
+             [[nil :hyperfiddle/ide 17592186061847]]
+             ))
+
+      (is (= (let [ctx (mock-fiddle! :hyperfiddle/ide)
+                   ctx (context/attribute ctx :fiddle/renderer)]
+               (context/eav ctx))
+             [17592186061847 :fiddle/renderer "hyperfiddle.ide.fiddles.fiddle-src/fiddle-src-renderer"])))
+    )
+
+  (testing "nested pulls"
+    (let [ctx (mock-fiddle! :hyperfiddle/ide)]
+      (is (= (context/eav ctx) [nil :hyperfiddle/ide 17592186061847]))
+      (let [ctx (context/attribute ctx :fiddle/links)]
+        (is (= (context/eav ctx) [17592186061847 :fiddle/links nil]))
+        (is (= (first @(context/data ctx)) {:db/id 17592186061848, :link/class [:hf/remove], :link/rel :hf/remove}))
+        (let [ctx (context/row ctx 17592186061848)]
+          ;(println (:hypercrud.browser/result-path ctx))
+          ;(println @(:hypercrud.browser/result-index ctx))
+          (is (= (context/eav ctx) [17592186061847 :fiddle/links 17592186061848]))
+          (is (= @(context/data ctx) {:db/id 17592186061848, :link/class [:hf/remove], :link/rel :hf/remove})))))
+
+    )
+
+
 
 
 
