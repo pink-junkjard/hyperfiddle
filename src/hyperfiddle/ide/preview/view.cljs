@@ -1,51 +1,140 @@
 (ns hyperfiddle.ide.preview.view
   (:require
     [cats.monad.either :as either]
+    [contrib.cljs-platform :refer [code-for-browser]]
+    [contrib.css :refer [css]]
     [contrib.reactive :as r]
+    [contrib.ui]
     [hypercrud.browser.base :as base]
+    [hypercrud.util.branch :as branch]
+    [hyperfiddle.actions :as actions]
     [hyperfiddle.domain :as domain]
     [hyperfiddle.domains.ednish :as ednish]
     [hyperfiddle.foundation :as foundation]
     [hyperfiddle.ide.preview.io :refer [->IOImpl]]
     [hyperfiddle.ide.preview.runtime :refer [->Runtime]]
+    [hyperfiddle.ide.preview.state :refer [->FAtom]]
     [hyperfiddle.reducers :as reducers]
     [hyperfiddle.runtime :as runtime]
-    [hyperfiddle.ui.iframe :refer [iframe-cmp]]))
+    [hyperfiddle.ui.iframe :refer [iframe-cmp]]
+    [hyperfiddle.ui.loading :refer [loading-page]]
+    [reagent.core :as reagent]
+    [promesa.core :as p]))
 
 
-#_(foundation/bootstrap-data rt foundation/LEVEL-NONE load-level path)
+(defn build-user-branch [ide-branch] (branch/encode-branch-child ide-branch "user"))
+
+(def keypress (code-for-browser (js/keypress.Listener. js/document.body)))
+
+(defn frame-on-click [rt route event]
+  (when (and route (.-altKey event))                        ; under what circumstances is route nil?
+    (let [native-event (.-nativeEvent event)
+          anchor (-> (.composedPath native-event) (aget 0) (.matches "a"))
+          anchor-descendant (-> (.composedPath native-event) (aget 0) (.matches "a *"))]
+      (when-not (or anchor anchor-descendant)
+        (.stopPropagation event)
+        (js/window.open (domain/url-encode (runtime/domain rt) route) "_blank")))))
+
+(defn with-rt [& args]
+  (let [initial-render (r/atom true)
+        is-refreshing (r/atom true)
+        alt-key (r/atom false)
+        display-mode (r/atom :hypercrud.browser.browser-ui/user)
+        refresh! (fn [rt user-branch]
+                   (reset! is-refreshing true)
+                   (-> (actions/hydrate-partition rt user-branch (partial runtime/dispatch! rt) (fn [] @(runtime/state rt)))
+                       (p/finally (fn [] (reset! is-refreshing false)))))]
+    (reagent/create-class
+      {:reagent-render
+       (fn [rt route user-branch]
+         [:div.result.col-sm
+          [:div.url-toolbar
+           ; todo animation
+           [:button {:class "refresh" :on-click #(refresh! rt user-branch) :disabled @is-refreshing} "↻"]
+           [contrib.ui/text
+            {:value (domain/url-encode (runtime/domain rt) route)
+             :disabled true
+             :class "url"
+             :on-change (fn [s] (println s))}]
+           (into [:span]
+                 (->> [{:label "edn" :tooltip "What the API client sees" :value :hypercrud.browser.browser-ui/api}
+                       {:label "data" :tooltip "Ignore :fiddle/renderer" :value :hypercrud.browser.browser-ui/xray}
+                       {:label "view" :tooltip "Use :fiddle/renderer" :value :hypercrud.browser.browser-ui/user}]
+                      (map (fn [props]
+                             [contrib.ui/radio-with-label
+                              (assoc props
+                                :checked (= (:value props) @display-mode)
+                                :on-change (r/partial reset! display-mode))]))))]
+          (if @initial-render
+            [loading-page]
+            (let [ctx {:peer rt
+                       :branch user-branch
+                       :hyperfiddle.ui/debug-tooltips true
+                       :hypercrud.ui/display-mode display-mode
+                       :hyperfiddle.ui.iframe/on-click (r/partial frame-on-click rt)}]
+              [iframe-cmp ctx
+               {:route route
+                :class (css "hyperfiddle-user"
+                            "hyperfiddle-ide"
+                            "hf-live"
+                            (when @alt-key "alt")
+                            (some-> @display-mode name (->> (str "display-mode-"))))}]))])
+
+       :component-did-mount
+       (fn [this]
+         (let [[_ rt route user-branch] (reagent/argv this)]
+           (.simple-combo keypress "ctrl `" (fn []
+                                              (swap! display-mode #(if (not= :hypercrud.browser.browser-ui/user %)
+                                                                     :hypercrud.browser.browser-ui/user
+                                                                     :hypercrud.browser.browser-ui/xray))))
+
+           (.register-combo keypress #js {"keys" "alt"
+                                          "prevent_repeat" true
+                                          "on_keydown" #(reset! alt-key true)
+                                          "on_keyup" #(reset! alt-key false)})
+
+           (-> (foundation/bootstrap-data2 rt foundation/LEVEL-NONE foundation/LEVEL-HYDRATE-PAGE route user-branch nil)
+               (p/finally (fn []
+                            (reset! initial-render false)
+                            (reset! is-refreshing false))))))
+
+       :component-did-update
+       (fn [this [_ _ prev-route _]]
+         (let [[_ rt next-route user-branch] (reagent/argv this)]
+           (when-not (= prev-route next-route)
+             (reset! is-refreshing true)
+             (-> (foundation/bootstrap-data2 rt foundation/LEVEL-GLOBAL-BASIS foundation/LEVEL-HYDRATE-PAGE next-route user-branch nil)
+                 (p/finally (fn [] (reset! is-refreshing false)))))))
+
+       :component-will-unmount
+       (fn [this]
+         (.reset keypress))
+       })))
+
+(defn- to [parent-state user-state]
+  (let [user-state (-> (update user-state ::runtime/partitions dissoc nil)
+                       (reducers/root-reducer nil))]
+    (assoc parent-state ::runtime/user-state user-state)))
+
+(defn- from [ide-branch parent-state]
+  (let [nil-partition {:stage {'hyperfiddle.domain/fiddle-database (get-in parent-state [::runtime/partitions ide-branch :stage "$"])}}]
+    (-> (::runtime/user-state parent-state)
+        (assoc-in [::runtime/partitions nil] nil-partition)
+        (reducers/root-reducer nil))))
 
 (defn view-cmp [user-domain-record ctx props]
   (let []
     (fn [user-domain-record ctx props]
       (either/branch
         (ednish/build+ user-domain-record)
-        (fn [e] [:h2 "user-domain misconfigured :("])                                 ; todo
+        (fn [e] [:h2 "user-domain misconfigured :("])       ; todo
         (fn [user-domain]
-          (let [user-route (let [[_ [fiddle-lookup-ref] user-args encoded-fragment] @(runtime/state (:peer ctx) [::runtime/partitions nil :route])]
+          (let [ide-branch (:branch ctx)
+                user-route (let [[_ [fiddle-lookup-ref] user-args encoded-fragment] @(runtime/state (:peer ctx) [::runtime/partitions ide-branch :route])]
                              (into [(base/legacy-lookup-ref->fiddle-ident fiddle-lookup-ref)] user-args))
-                user-state (-> {}
-                               (reducers/root-reducer nil)
-                               r/atom)
-                user-io (let [ide-io (runtime/io (:peer ctx))
-                              ; this is hacky
-                              service-uri (.-service-uri ide-io)
-                              build (.-build ide-io)]
+                user-state (->FAtom (runtime/state (:peer ctx)) to (r/partial from ide-branch))
+                user-io (let [build (.-build (runtime/io (:peer ctx))) ; getting the build this way is hacky
+                              service-uri (:hyperfiddle.ide/app-fqdn (runtime/domain (:peer ctx)))]
                           (->IOImpl user-domain service-uri build))
-                user-runtime (->Runtime user-domain user-io user-state reducers/root-reducer)
-                user-ctx {:peer user-runtime}]
-            [:div.result.col-sm
-             [:div.url-toolbar
-              [:button {:class "refresh"} "↻"]
-              [:input.url {:type "text" :value (domain/url-encode user-domain user-route)}]
-              (into [:span]
-                    (->> [{:label "edn" :tooltip "What the API client sees" :value :hypercrud.browser.browser-ui/api}
-                          {:label "data" :tooltip "Ignore :fiddle/renderer" :value :hypercrud.browser.browser-ui/xray}
-                          {:label "view" :tooltip "Use :fiddle/renderer" :value :hypercrud.browser.browser-ui/user}]
-                         (map (fn [props]
-                                [contrib.ui/radio-with-label
-                                 (assoc props
-                                   :checked (= (:value props) @(runtime/state user-runtime [:display-mode]))
-                                   :on-change (r/comp (r/partial hyperfiddle.runtime/dispatch! user-runtime) hyperfiddle.actions/set-display-mode))]))))]
-             [iframe-cmp user-ctx {:route user-route}]])))
-      )))
+                user-runtime (->Runtime user-domain user-io user-state reducers/root-reducer)]
+            [with-rt user-runtime user-route (build-user-branch ide-branch)]))))))

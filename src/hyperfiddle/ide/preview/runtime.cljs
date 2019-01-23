@@ -7,7 +7,6 @@
     [hyperfiddle.state :as state]))
 
 
-; todo equality
 (deftype Runtime [domain io state-atom root-reducer]
   runtime/State
   (dispatch! [rt action-or-func] (state/dispatch! state-atom root-reducer action-or-func))
@@ -21,5 +20,13 @@
   hc/Peer
   (hydrate [this branch request] (peer/hydrate state-atom branch request))
 
+  IEquiv
+  (-equiv [o other]
+    (and (instance? Runtime other)
+         (= (.-domain o) (.-domain other))
+         (= (.-io o) (.-io other))
+         (= (.-state-atom o) (.-state-atom other))
+         (= (.-root-reducer o) (.-root-reducer other))))
+
   IHash
-  (-hash [this] (goog/getUid this)))
+  (-hash [this] (hash [domain io state-atom root-reducer])))

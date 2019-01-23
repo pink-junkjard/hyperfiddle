@@ -94,5 +94,10 @@
                     (if (= "www" app-domain-ident)          ; todo this check is NOT ide
                       (multi-datomic/hydrate-app-domain io local-basis [:domain/ident "www"])
                       (-> (hydrate-ide-domain io local-basis app-domain-ident)
-                          (p/then #(assoc % :fqdn fqdn :ide-domain ide-domain :app-domain-ident app-domain-ident))))
+                          (p/then #(assoc %
+                                     ; todo canonical app-host
+                                     :hyperfiddle.ide/app-fqdn (str "http://" app-domain-ident "." (first app-domains))
+                                     :hyperfiddle.ide/fqdn fqdn
+                                     :ide-domain ide-domain
+                                     :app-domain-ident app-domain-ident))))
                     (multi-datomic/hydrate-app-domain io local-basis [:domain/aliases fqdn])))))))

@@ -17,7 +17,6 @@
       (object/set js/window "location" (domain/url-encode domain [:hyperfiddle.system/unauthorized])))
     (throw e)))
 
-; todo equality
 (deftype IOImpl [domain service-uri build]
   io/IO
   (global-basis [io]
@@ -41,4 +40,14 @@
 
   (transact! [io tx-groups]
     (-> (http-client/transact! service-uri build tx-groups)
-        (p/catch (partial handle-401 domain)))))
+        (p/catch (partial handle-401 domain))))
+
+  IEquiv
+  (-equiv [o other]
+    (and (instance? IOImpl other)
+         (= (.-domain o) (.-domain other))
+         (= (.-service-uri o) (.-service-uri other))
+         (= (.-build o) (.-build other))))
+
+  IHash
+  (-hash [this] (hash [domain service-uri build])))
