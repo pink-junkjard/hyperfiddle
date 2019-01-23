@@ -506,6 +506,13 @@
               ctx (context/attribute ctx :neighborhood/district)]
           (is (= (context/eav ctx) [nil :neighborhood/district nil])))))
 
+  (testing "counter button at scalar"
+    (def ctx (mock-fiddle! :dustingetz/counter))
+    (def ctx (context/refocus ctx :dustingetz.reg/age))
+    (= (context/eav ctx) [17592186046196 :dustingetz.reg/age 102])
+
+    )
+
   )
 
 #_(deftest deps-satisfied-1

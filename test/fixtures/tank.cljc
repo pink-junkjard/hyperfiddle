@@ -301,6 +301,28 @@
       {:db/id 17592186045594, :district/name "Lake Union"}
       {:db/id 17592186045563, :district/name "Northwest"}
       {:db/id 17592186045535, :district/name "Ballard"}]]
+
+    :dustingetz/counter
+    [{:fiddle/cljs-ns
+      "(defmethod hyperfiddle.api/txfn :user/inc [_ e a v ctx]\n  [[:db.fn/cas e a v (inc v)]])",
+      :fiddle/ident :dustingetz/counter,
+      :fiddle/renderer
+      "(let [{:keys [:hypercrud.browser/fiddle]} ctx]\n  [:div.container-fluid props\n   [hyperfiddle.ui/markdown (:fiddle/markdown @fiddle) ctx]\n   [hyperfiddle.ui/result val ctx {}]\n   [:hr]\n   [:label \"Age: \" (:dustingetz.reg/age val)]\n   [:p]\n\n   ; Right way to transact, needs some work\n   [hyperfiddle.ui/link :user/inc ctx \"inc\"]\n\n   ; Wrong way to transact\n   #_[:button\n      {:on-click\n       #(->> (let [n (:dustingetz.reg/age val)\n                   e [:dustingetz.reg/email \"dustin@example.com\"]]\n               [[:db.fn/cas e :dustingetz.reg/age n (inc n)]])\n             (hyperfiddle.ui.util/with-tx! ctx \"$\"))}\n      \"Inc!\"]])",
+      :hyperfiddle/owners
+      [#uuid "acd054a8-4e36-4d6c-a9ec-95bdc47f0d39"],
+      :db/id 17592186046889,
+      :fiddle/type :query,
+      :fiddle/links
+      [{:db/id 17592186047243,
+        :link/path ":dustingetz.reg/age",
+        :link/rel :hf/rel,
+        :link/tx-fn ":user/inc"}],
+      :fiddle/markdown
+      "### :dustingetz/counter\n\nExample of incrementing a value in Datomic (Make sure auto-transact is on!)\n",
+      :fiddle/query
+      "[:find\n (pull ?e [:db/id \n           :dustingetz.reg/email \n           :dustingetz.reg/age]) \n .\n :where\n [?e :dustingetz.reg/email \"dustin@example.com\"]]"}
+
+     {:db/id 17592186046196, :dustingetz.reg/email "dustin@example.com", :dustingetz.reg/age 102}]
     }
    )
 

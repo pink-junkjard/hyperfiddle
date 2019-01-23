@@ -222,9 +222,11 @@
 (defn reachable-pullpaths [schema root-pullshape pullpath]
   ; Include the one we are at now? There is an off by one in here
   {:pre [schema #_(satisfies? SchemaIndexedNormalized schema)]}
-  (let [ancestor-path (pullpath-unwind-while (ref-one? schema) pullpath)
+  ; txfn can be on scalar and it is harmless to allow this.
+  (let [pred #(cardinality? schema % :db.cardinality/one) #_(ref-one? schema)
+        ancestor-path (pullpath-unwind-while pred pullpath)
         ancestor-pull (pullshape-get-in root-pullshape ancestor-path)]
-    (pull-traverse ancestor-pull (ref-one? schema))))
+    (pull-traverse ancestor-pull pred)))
 
 (defn reachable-attrs [schema root-pullshape pullpath]
   {:pre [#_(satisfies? SchemaIndexedNormalized schema)]}
