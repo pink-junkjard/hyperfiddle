@@ -121,7 +121,8 @@
                   (let [subject @(runtime/state rt [::runtime/user-id])]
                     (->> (domain/databases (runtime/domain rt))
                          (data/map-values (fn [hf-db]
-                                            (either/branch
+                                            false
+                                            #_(either/branch
                                               (security/subject-can-transact? hf-db subject)
                                               (constantly false)
                                               identity)))
