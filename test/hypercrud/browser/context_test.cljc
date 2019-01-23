@@ -172,10 +172,9 @@
       (is (= (context/eav ctx) [nil :hyperfiddle/ide 17592186061847]))
       (let [ctx (context/attribute ctx :fiddle/links)]
         (is (= (context/eav ctx) [17592186061847 :fiddle/links nil]))
+        (is (= (count @(context/data ctx)) 5))
         (is (= (first @(context/data ctx)) {:db/id 17592186061848, :link/class [:hf/remove], :link/rel :hf/remove}))
         (let [ctx (context/row ctx 17592186061848)]
-          ;(println (:hypercrud.browser/result-path ctx))
-          ;(println @(:hypercrud.browser/result-index ctx))
           (is (= (context/eav ctx) [17592186061847 :fiddle/links 17592186061848]))
           (is (= @(context/data ctx) {:db/id 17592186061848, :link/class [:hf/remove], :link/rel :hf/remove})))))
 

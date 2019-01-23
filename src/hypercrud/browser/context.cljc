@@ -243,11 +243,14 @@
 (defn pull-depth [ctx]
   (count (:hypercrud.browser/pull-path ctx)))
 
+(declare data)
+
 (defn index-result "Builds the result index based on qfind. Result index is orthogonal to sorting or order.
   All paths get a result-index, though if there is no collection, then this is just the result as no indexing is needed.
   (data ctx) is no good until after this is done.
   Works at fiddle and attribute level. Currently we do not index at element level (rather it is already indexed by vec index)"
   ([ctx]
+   {:pre [(= (depth ctx) 0)]}
    (let [qfind (:hypercrud.browser/qfind ctx)]
      (cond                                                  ; fiddle | nested attr (otherwise already spread)
 
@@ -257,8 +260,6 @@
        (= (depth ctx) 0)                                    ; fiddle level
        (let [{r-qfind :hypercrud.browser/qfind} ctx
              r-ordered-result (:hypercrud.browser/result ctx)]
-
-         ;(println "index-result r-ordered-result: " @r-ordered-result)
 
          (condp = (type @r-qfind)
            ; sorting doesn't index keyfn lookup by design
@@ -277,9 +278,10 @@
            FindScalar
            ; Scalar has no index at all
            (assoc ctx :hypercrud.browser/result-index r-ordered-result)))
+       :else (assert false)
        )))
-  ([ctx a]                                                 ; eav order of init issues, ::eav depends on this in :many
-   (assert (> (depth ctx) 0) "this is nested attr")
+  ([ctx a] ; eav order of init issues, ::eav depends on this in :many
+   {:pre [(> (depth ctx) 0)]}
    (case (contrib.datomic/cardinality-loose @(:hypercrud.browser/schema ctx) a)
 
      :db.cardinality/one
@@ -290,25 +292,41 @@
        ; Deep update result in-place, at result-path, to index it. Don't clobber it!
        #_(println "depth>0 result-path: " (:hypercrud.browser/result-path ctx))
        #_(println "depth>0 result-index: " @(:hypercrud.browser/result-index ctx))
-       (assoc ctx :hypercrud.browser/result-index
-                  (r/fmap-> (:hypercrud.browser/result-index ctx)
-                            identity
-                            (update-in (:hypercrud.browser/result-path ctx) ; broken in double nested case?
-                                       (partial contrib.data/group-by-unique keyfn))))))))
+       ; hang onto the set as we index for a future rowkey
+       (let [set-ungrouped (r/cursor (:hypercrud.browser/result-index ctx) (:hypercrud.browser/result-path ctx))]
+         (assoc ctx :hypercrud.browser/result set-ungrouped
+                    :hypercrud.browser/result-index
+                    (r/fmap-> (:hypercrud.browser/result-index ctx)
+
+                              (update-in (:hypercrud.browser/result-path ctx) ; broken in double nested case?
+                                         (partial contrib.data/group-by-unique keyfn)))))))))
 
 (defn data "Works in any context and infers the right stuff" ; todo just deref it
   [ctx]
-  (let [{:keys [:hypercrud.browser/qfind
+  (let [ctx (-infer-implicit-element ctx)
+
+        ; Result-index is precomputed to match the expected path,
+        ; in some cases it is just the result (no indexing was done)
+        ; Returning an index makes no sense, that's never data.
+        {:keys [:hypercrud.browser/qfind
                 :hypercrud.browser/element
                 :hypercrud.browser/result
                 :hypercrud.browser/result-index
-                :hypercrud.browser/result-path]} (-infer-implicit-element ctx)]
-    ; Result-index is precomputed to match the expected path,
-    ; in some cases it is just the result (no indexing was done)
-    ; Returning an index makes no sense, that's never data.
+                :hypercrud.browser/result-path]} ctx
+
+        ; Compare pullpath to resultpath? How do we know to do an index lookup vs return the table?
+        ; if pullpath has an a but resultpath doesn't have a corresponding row, return the set.
+        ; Count the dimension of the pullpath and compare to the count of the resultpath?
+        ; Or inspect resultpath - if the last thing is an attr and it's :many, then we are awaiting a rowkey
+        k (last result-path)
+        is-awaiting-rowkey (and (keyword k)
+                                (= :db.cardinality/many (contrib.datomic/cardinality-loose
+                                                          @(:hypercrud.browser/schema ctx) k)))]
     (if qfind
       (if result-path                                       ; hax, still tangled. Can be exact without guesswork
-        (r/cursor result-index result-path)
+        (if is-awaiting-rowkey
+          result                                            ; We hang on to sets as we descend
+          (r/cursor result-index result-path))
         result)
       nil)))
 
@@ -409,7 +427,9 @@
                                                    [(r/pure nil)
                                                     (r/fmap :fiddle/ident r-fiddle)
                                                     (r/pure nil)]))
-        ; needs qfind, etc
+
+        ; index-result implicitly depends on eav in the tempid reversal stable entity code.
+        ; Conceptually, it should be after qfind and before EAV.
         (index-result ctx)                                  ; in row case, now indexed, but path is not aligned yet
         ; push this down, it should be nil now
         (assoc ctx :hypercrud.browser/pull-path [])))
@@ -476,13 +496,11 @@
       (-infer-implicit-element ctx)                         ; ensure pull-enclosure
       (-validate-qfind-element ctx)
       (set-parent ctx)
-      (update ctx :hypercrud.browser/pull-path (fnil conj []) a')
+      (update ctx :hypercrud.browser/pull-path (fnil conj []) a') ; what is the cardinality? are we awaiting a row?
       (if (:hypercrud.browser/head-sentinel ctx)
         ctx                                                 ; no result-path in head
         (update ctx :hypercrud.browser/result-path (fnil conj []) a'))
-      (if (> (depth ctx) 0)                                 ; this breaks eav in pull :one case
-        (index-result ctx a')                               ; nested :many
-        ctx)
+      (index-result ctx a')                                 ; Guaranteed depth >= 1 due to stmt ordering
       ; V is for formulas, E is for security and on-change. V becomes E. E is nil if we don't know identity.
       (assoc ctx :hypercrud.browser/eav                     ; insufficent stability on r-?v? fixme
                  (case (contrib.datomic/cardinality-loose @(:hypercrud.browser/schema ctx) a')
