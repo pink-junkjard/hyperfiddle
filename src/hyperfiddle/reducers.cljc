@@ -22,9 +22,6 @@
     :set-error (serializable-error (first args))
     error))
 
-(defn pressed-keys-reducer [v action & args]
-  (or v #{}))
-
 (defn global-basis-reducer [global-basis action & args]
   (case action
     :hydrate!-route-success (let [[branch ptm tempid-lookups new-local-basis] args]
@@ -40,14 +37,6 @@
                                 global-basis))
     :set-global-basis (first args)
     global-basis))
-
-(defn display-mode-reducer [display-mode action & args]
-  (case action
-    :toggle-display-mode (case display-mode
-                           :hypercrud.browser.browser-ui/xray :hypercrud.browser.browser-ui/user
-                           :hypercrud.browser.browser-ui/user :hypercrud.browser.browser-ui/xray)
-    :set-display-mode (first args)
-    (or display-mode :hypercrud.browser.browser-ui/user)))
 
 (defn partitions-reducer [partitions action & args]
   (let [with (fn [partition dbname tx]
@@ -185,8 +174,6 @@
                   :hyperfiddle.runtime/user-id user-id-reducer
 
                   ; user
-                  :display-mode display-mode-reducer
-                  :pressed-keys pressed-keys-reducer
                   :staging/selected-uri selected-uri-reducer})
 
 (def root-reducer (state/combine-reducers reducer-map))

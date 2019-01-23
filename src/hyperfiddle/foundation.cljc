@@ -57,7 +57,7 @@
           [error-cmp e]
           [staging ctx]]
          ; Necessary wrapper div, this is returned from react-render
-         [:div {:class (apply css @(runtime/state (:peer ctx) [:pressed-keys]))}
+         [:div
           [:style {:dangerouslySetInnerHTML {:__html (:domain/css @project+)}}]
           (either/branch
             (project/eval-domain-code!+ (:domain/code @project+))
@@ -76,18 +76,21 @@
 ; it makes no sense for clients to forward domains along requests (same as global-basis),
 ; so we need to inject into the domain level and then continue on at the appropriate level.
 ; could also handle dirty staging areas for browser
-(defn bootstrap-data [rt init-level load-level encoded-route initial-global-basis & [dirty-stage?]] ;branch and aux as parameter?
+(defn bootstrap-data2 [rt init-level load-level route branch initial-global-basis & [dirty-stage?]]
   (if (>= init-level load-level)
     (p/resolved nil)
     (-> (condp = (inc init-level)
           LEVEL-GLOBAL-BASIS (actions/refresh-global-basis rt nil (partial runtime/dispatch! rt) #(deref (runtime/state rt)))
-          LEVEL-ROUTE (let [route (domain/url-decode (runtime/domain rt) encoded-route)]
-                        (runtime/dispatch! rt [:add-partition nil route])
-                        (p/resolved nil))
-          LEVEL-LOCAL-BASIS (-> (actions/refresh-partition-basis rt nil (partial runtime/dispatch! rt) #(deref (runtime/state rt)))
-                                (p/then #(runtime/dispatch! rt [:hydrate!-start nil])))
-          LEVEL-SCHEMA (actions/hydrate-partition-schema rt nil (partial runtime/dispatch! rt) #(deref (runtime/state rt)))
+          LEVEL-ROUTE (p/do* (runtime/dispatch! rt [:add-partition branch route]))
+          LEVEL-LOCAL-BASIS (-> (actions/refresh-partition-basis rt branch (partial runtime/dispatch! rt) #(deref (runtime/state rt)))
+                                (p/then #(runtime/dispatch! rt [:hydrate!-start branch])))
+          LEVEL-SCHEMA (actions/hydrate-partition-schema rt branch (partial runtime/dispatch! rt) #(deref (runtime/state rt)))
           LEVEL-HYDRATE-PAGE (if (or (not= initial-global-basis @(runtime/state rt [::runtime/global-basis])) dirty-stage?)
-                               (actions/hydrate-partition rt nil (partial runtime/dispatch! rt) #(deref (runtime/state rt)))
-                               (p/resolved (runtime/dispatch! rt [:hydrate!-shorted nil]))))
-        (p/then #(bootstrap-data rt (inc init-level) load-level encoded-route initial-global-basis dirty-stage?)))))
+                               (actions/hydrate-partition rt branch (partial runtime/dispatch! rt) #(deref (runtime/state rt)))
+                               (p/resolved (runtime/dispatch! rt [:hydrate!-shorted branch]))))
+        (p/then #(bootstrap-data2 rt (inc init-level) load-level route branch initial-global-basis dirty-stage?)))))
+
+(defn bootstrap-data [rt init-level load-level encoded-route initial-global-basis & [dirty-stage?]]
+  (-> (p/do* (domain/url-decode (runtime/domain rt) encoded-route))
+      (p/then (fn [route]
+                (bootstrap-data2 rt init-level load-level route nil initial-global-basis dirty-stage?)))))

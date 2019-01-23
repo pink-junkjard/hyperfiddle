@@ -107,7 +107,6 @@
            (reify runtime/State
              (runtime/state [_] state)
              (runtime/state [_ path] (r/cursor state path)))),
-   :hyperfiddle.ui.iframe/on-click nil,
    :hypercrud.browser/route (r/track identity [:demo/hyper-control nil]),
    :hypercrud.ui/display-mode (r/track identity :hypercrud.browser.browser-ui/xray),
    :hypercrud.browser/fiddle

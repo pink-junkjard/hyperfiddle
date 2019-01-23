@@ -67,8 +67,7 @@
 (defn- fiddle-css-renderer [s] [:style {:dangerouslySetInnerHTML {:__html @s}}])
 
 (defn iframe-cmp [ctx {:keys [route] :as props}]            ; :: [route ctx & [?f props]]
-  (let [click-fn (or (::on-click ctx) (constantly nil))     ; parent ctx receives click event, not child frame
-        either-v (or (some-> @(runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :error]) either/left)
+  (let [either-v (or (some-> @(runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :error]) either/left)
                      (base/data-from-route route ctx))
         error-comp (ui-error/error-comp ctx)
         props (dissoc props :route)]
@@ -82,9 +81,7 @@
              (.withScope js/Sentry (fn [scope]
                                      (.setExtra scope "ex-data" (clj->js (ex-data e)))
                                      (.setExtra scope "route" (pr-str route))
-                                     (.setExtra scope "global-basis" (->> @(runtime/state (:peer ctx) [::runtime/global-basis])
-                                                                          (map-values #(map-keys str %))
-                                                                          (clj->js)))
+                                     (.setExtra scope "global-basis" (clj->js @(runtime/state (:peer ctx) [::runtime/global-basis])))
                                      (.setExtra scope "branch-ident" (clj->js (:branch ctx)))
                                      (.setExtra scope "branch-state" (-> @(runtime/state (:peer ctx) [::runtime/partitions (:branch ctx)])
                                                                          (select-keys [:route :local-basis :ptm])
@@ -95,17 +92,17 @@
                                                                        (map? e) (:message e)
                                                                        (string? e) e
                                                                        :else (ex-message e)))))))))
-       [error-comp e {:class (css "hyperfiddle-error" (:class props) "ui")
-                      :on-click (r/partial click-fn route)}])
+       [error-comp e (cond-> {:class (css "hyperfiddle-error" (:class props) "ui")}
+                       (::on-click ctx) (assoc :on-click (r/partial (::on-click ctx) route)))])
      (fn [ctx]                                              ; fresh clean ctx
        [:<>
-        [ui-comp ctx (-> (update props :class css "ui")
-                         ; @route here is a broken reaction, see routing/route+ returns a severed reaciton
-                         (assoc :on-click (r/partial click-fn @(:hypercrud.browser/route ctx))))]
+        [ui-comp ctx (cond-> (update props :class css "ui")
+                       ; @route here is a broken reaction, see routing/route+ returns a severed reaciton
+                       (::on-click ctx) (assoc :on-click (r/partial (::on-click ctx) @(:hypercrud.browser/route ctx))))]
         [fiddle-css-renderer (r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/css])]])
      (fn [ctx]
        [:<>
-        [ui-comp ctx (-> (update props :class css "hyperfiddle-loading" "ui")
-                         ; use the stale ctx's route, otherwise alt clicking while loading could take you to the new route, which is jarring
-                         (assoc :on-click (r/partial click-fn @(:hypercrud.browser/route ctx))))]
+        [ui-comp ctx (cond-> (update props :class css "hyperfiddle-loading" "ui")
+                       ; use the stale ctx's route, otherwise alt clicking while loading could take you to the new route, which is jarring
+                       (::on-click ctx) (assoc :on-click (r/partial (::on-click ctx) @(:hypercrud.browser/route ctx))))]
         [fiddle-css-renderer (r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/css])]])]))

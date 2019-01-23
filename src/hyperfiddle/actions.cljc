@@ -16,9 +16,6 @@
     [taoensso.timbre :as timbre]))
 
 
-(defn set-display-mode [display-mode]
-  [:set-display-mode display-mode])
-
 ; batch doesn't make sense with thunks (can be sync or async dispatches in a thunk),
 ; user beware
 (defn batch [& action-list] (cons :batch action-list))
