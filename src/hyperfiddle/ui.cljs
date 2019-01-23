@@ -63,16 +63,18 @@
 (declare fiddle-xray)
 
 (defn entity-links-iframe [val ctx & [props]]
-  ; Find the iframe links that we can get to downwards, but not upwards
-  ; (select searches upwards)
-  ; Only ask this question from a place at the top
-  (->> (r/fmap->> (hyperfiddle.data/select-many ctx :hf/iframe)
-                  #_(remove (r/comp (r/partial context/deps-over-satisfied? ctx) context/read-path :link/path)))
-       (r/unsequence (r/partial context/stable-relation-key ctx))
-       (map (fn [[rv k]]
-              ^{:key k}
-              [ui-from-link rv ctx props]))                 ; mapcat, this is tupled
-       (into [:<>])))
+  ; Remove links that are also available at our ancestors. A clever way to
+  ; word this is: Are we cardinality one? Then it was available above us.
+  (if (or (= (context/depth ctx) 0)
+          (and (> (context/depth ctx) 0)
+               (let [[_ a _] (context/eav ctx)]
+                 (not (contrib.datomic/ref-one? @(:hypercrud.browser/schema ctx) a)))))
+    (->> (hyperfiddle.data/select-many ctx :hf/iframe)
+         (r/unsequence (r/partial context/stable-relation-key ctx))
+         (map (fn [[rv k]]
+                ^{:key k}
+                [ui-from-link rv ctx props]))               ; mapcat, this is tupled
+         (into [:<>]))))
 
 (defn iframe-field-default [val ctx props]
   (let [props (-> props (dissoc :class) (assoc :label-fn (r/constantly nil) #_[:div "nested pull iframes"]))]
