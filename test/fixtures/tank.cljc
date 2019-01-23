@@ -229,6 +229,7 @@
          :fiddle/query
          "[:find \n [(pull ?e [:district/name :db/id]) ...]\n :where \n [?e :district/name]]",
          :fiddle/type :query},
+        :link/path ":seattle/neighborhoods",
         :link/rel :hf/iframe}
        {:db/id 17592186045752,
         :link/class [:hf/new],
@@ -236,28 +237,30 @@
         {:db/id 17592186045754,
          :fiddle/ident :seattle/neighborhood-new,
          :fiddle/type :entity},
+        :link/path ":seattle/neighborhoods",
         :link/rel :hf/new}
        {:db/id 17592186045756,
         :link/fiddle
         {:db/id 17592186045758,
          :fiddle/ident :seattle/neighborhood-edit,
          :fiddle/type :entity},
+        :link/path ":seattle/neighborhoods",
         :link/rel :hf/self}
        {:db/id 17592186045760,
         :link/fiddle
         {:db/id 17592186045762,
          :fiddle/ident :seattle/district,
          :fiddle/type :entity},
-        :link/path
-        ":neighborhood/district :district/region",
+        :link/path ":district/region",
         :link/rel :hf/self}],
       :fiddle/query
       "[:find \n [(pull ?e [:neighborhood/name \n            {:neighborhood/district \n             [:db/id \n              :district/name\n              {:district/region \n               [:db/ident]}]}\n            :db/id\n            :hyperfiddle/owners]) ...]\n :where \n [?e :neighborhood/name ?name]\n [(< ?name \"C\")]]",
       :fiddle/renderer
-      "(let [{:keys [:hypercrud.browser/fiddle]} ctx]\n  [:div.container-fluid props\n   [hyperfiddle.ui/markdown (:fiddle/markdown @fiddle) ctx]\n   [hyperfiddle.ui/table\n    (fn [ctx] \n      [[hyperfiddle.ui/field [:neighborhood/name] ctx]\n       [hyperfiddle.ui/field [:neighborhood/district] ctx nil\n        {:options :seattle/districts :option-label :district/name}]\n       [hyperfiddle.ui/field [:neighborhood/district :district/region] ctx]\n       [hyperfiddle.ui/field [:db/id] ctx]])\n    ctx\n    {:hyperfiddle.ui.sort/initial-sort [[:neighborhood/name] :asc]}]])",
+      "(let [{:keys [:hypercrud.browser/fiddle]} ctx]\n  [:div.container-fluid props\n   [hyperfiddle.ui/markdown (:fiddle/markdown @fiddle) ctx]\n   [hyperfiddle.ui/table\n    (fn [ctx] \n      [(hyperfiddle.ui/field [:neighborhood/name] ctx hyperfiddle.ui/hyper-control)\n       (hyperfiddle.ui/field [:neighborhood/district] ctx hyperfiddle.ui/hyper-control\n                             {:options :seattle/districts\n                              :option-label :district/name})\n       (hyperfiddle.ui/field [:neighborhood/district :district/region] ctx \n                             hyperfiddle.ui/hyper-control)\n       (hyperfiddle.ui/field [:db/id] ctx hyperfiddle.ui/hyper-control)])\n    ctx]])",
       :fiddle/type :query,
       :hyperfiddle/owners
       [#uuid "acd054a8-4e36-4d6c-a9ec-95bdc47f0d39"]}
+
      [{:db/id 17592186045522,
        :neighborhood/name "Admiral (West Seattle)",
        :neighborhood/district {:db/id 17592186045521, :district/name "Southwest", :district/region {:db/ident :region/sw}}}

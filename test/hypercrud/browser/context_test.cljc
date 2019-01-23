@@ -3,6 +3,7 @@
     [clojure.test :refer [deftest is testing]]
     [contrib.reactive :as r]
     [fixtures.tank]
+    [hyperfiddle.data]
     [hyperfiddle.fiddle]
     [hypercrud.browser.context :as context]))
 
@@ -17,7 +18,7 @@
 
 (deftest primitives
   []
-
+  (def ctx (mock-fiddle! :dustingetz/gender-shirtsize))
   (def result (-> fixtures.tank/fiddles :hfnet.tank/index second))
   (testing "row keyfn on relation maps the smart identity"
     (is (= (context/row-keyfn ctx (first result))
@@ -26,18 +27,19 @@
   )
 
 (deftest basics
-  (testing "result indexing"
-    (testing "FindColl rows are indexed by db/id"
-      (is (= @(:hypercrud.browser/result-index ctx)
-             {17592186046196 {:db/id 17592186046196,
-                              :dustingetz.reg/email "dustin@example.com",
-                              :dustingetz.reg/name "Dustin Getz",
-                              :dustingetz.reg/gender #:db{:ident :dustingetz.gender/male},
-                              :dustingetz.reg/shirt-size #:db{:ident :dustingetz.shirt-size/mens-large}},
-              17592186046763 {:db/id 17592186046763,
-                              :dustingetz.reg/email "bob@example.com",
-                              :dustingetz.reg/gender #:db{:ident :dustingetz.gender/male},
-                              :dustingetz.reg/shirt-size #:db{:ident :dustingetz.shirt-size/mens-large}}}))))
+  (def ctx (mock-fiddle! :dustingetz/gender-shirtsize))
+
+  (testing "FindColl rows are indexed by db/id"
+    (is (= @(:hypercrud.browser/result-index ctx)
+           {17592186046196 {:db/id 17592186046196,
+                            :dustingetz.reg/email "dustin@example.com",
+                            :dustingetz.reg/name "Dustin Getz",
+                            :dustingetz.reg/gender #:db{:ident :dustingetz.gender/male},
+                            :dustingetz.reg/shirt-size #:db{:ident :dustingetz.shirt-size/mens-large}},
+            17592186046763 {:db/id 17592186046763,
+                            :dustingetz.reg/email "bob@example.com",
+                            :dustingetz.reg/gender #:db{:ident :dustingetz.gender/male},
+                            :dustingetz.reg/shirt-size #:db{:ident :dustingetz.shirt-size/mens-large}}})))
 
   (testing "fiddle level context is set"
     (is (= @(r/fmap :fiddle/ident (:hypercrud.browser/fiddle ctx))
@@ -477,25 +479,32 @@
 (deftest links
   []
 
+
   (testing "race"
-    (let [ctx (mock-fiddle! :tutorial.race/submission)]
-      @(:hypercrud.browser/link-index ctx)
-      #_@(hyperfiddle.data/select-many-here ctx :tutorial.race/submission)
-      )
+    (def ctx (mock-fiddle! :tutorial.race/submission))
+    (is (-> @(hyperfiddle.data/select-many ctx :dustingetz.reg/gender)
+            first :link/fiddle :fiddle/ident (= :tutorial.race/shirt-sizes)))
+    ;(println @(hyperfiddle.data/select-many ctx :tutorial.race/submission))
+    @(hyperfiddle.data/select-many ctx :hf/iframe)
+
+
+    @(:hypercrud.browser/link-index ctx)
+
     )
 
   (testing "seattle iframes"
-    (let [ctx (mock-fiddle! :seattle/neighborhoods)]
-      @(hyperfiddle.data/select-many-here ctx :seattle/districts)
+    (def ctx (mock-fiddle! :seattle/neighborhoods))
+    (-> @(hyperfiddle.data/select-many-here ctx :seattle/districts)
+        first :link/fiddle :fiddle/ident (= :seattle/districts))
 
 
 
 
-      #_(testing "if head-sentinel, no v"
+    #_(testing "if head-sentinel, no v"
         (let [ctx (assoc ctx :hypercrud.browser/head-sentinel true)
               ctx (context/row ctx 17592186045522)
               ctx (context/attribute ctx :neighborhood/district)]
-          (is (= (context/eav ctx) [nil :neighborhood/district nil]))))))
+          (is (= (context/eav ctx) [nil :neighborhood/district nil])))))
 
   )
 
