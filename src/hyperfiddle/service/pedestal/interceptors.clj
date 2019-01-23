@@ -1,7 +1,6 @@
 (ns hyperfiddle.service.pedestal.interceptors
   (:require
     [bidi.bidi :as bidi]
-    [cats.monad.either :as either]
     [clojure.core.async :refer [chan >!!]]
     [clojure.string :as string]
     [cognitect.transit :as transit]

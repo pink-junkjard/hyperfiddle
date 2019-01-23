@@ -20,7 +20,6 @@
     [hyperfiddle.runtime :as runtime]
     [hyperfiddle.security.client :as security]
     [hyperfiddle.state :as state]
-    [hyperfiddle.ui.loading :refer [loading-page]]
     [promesa.core :as p]
     [reagent.dom.server :as reagent-server]
     [reagent.impl.template :as tmpl]
