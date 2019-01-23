@@ -24,7 +24,7 @@
 
 (defn global-basis-reducer [global-basis action & args]
   (case action
-    :hydrate!-route-success (let [[branch ptm tempid-lookups new-local-basis] args]
+    :hydrate!-route-success (let [[branch ptm schemas tempid-lookups new-local-basis] args]
                               (if (nil? branch)
                                 (map-values (fn [sub-basis]
                                               (reduce-kv (fn [sub-basis uri t]
@@ -62,15 +62,12 @@
            :partition-basis (let [[branch local-basis] args]
                               (assoc-in partitions [branch :local-basis] local-basis))
 
-           :partition-schema (let [[branch schemas] args]
-                               (assoc-in partitions [branch :schemas] schemas))
-
            :partition-route (let [[branch route] args]
                               (if (= route (get-in partitions [branch :route]))
                                 partitions
                                 (-> partitions
                                     (assoc-in [branch :route] route)
-                                    #_(dissoc :error :ptm :tempid-lookups))))
+                                    #_(dissoc :error :ptm :schemas :tempid-lookups))))
 
            :with (let [[branch dbname tx] args]
                    (update partitions branch with dbname tx))
@@ -101,13 +98,14 @@
            :hydrate!-shorted (let [[branch] args]
                                (update partitions branch dissoc :hydrate-id))
 
-           :hydrate!-route-success (let [[branch ptm tempid-lookups new-basis] args]
+           :hydrate!-route-success (let [[branch ptm schemas tempid-lookups new-basis] args]
                                      (update partitions branch
                                              (fn [partition]
                                                (-> partition
                                                    (dissoc :error :hydrate-id)
                                                    (assoc :local-basis new-basis
                                                           :ptm ptm
+                                                          :schemas schemas
                                                           :tempid-lookups tempid-lookups)))))
 
            :partition-error (let [[branch error] args]
@@ -134,7 +132,6 @@
                        ; apply defaults
                        (->> {:hydrate-id identity
                              :popovers #(or % #{})
-                             :schemas identity
 
                              ; data needed to hydrate a partition
                              :route identity
@@ -147,6 +144,7 @@
                              ; response data of hydrating a partition
                              :error identity
                              :ptm identity
+                             :schemas identity
                              :tempid-lookups identity}
                             (reduce (fn [v [k f]] (update v k f)) partition)))))))
 

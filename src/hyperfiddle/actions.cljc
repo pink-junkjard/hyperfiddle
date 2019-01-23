@@ -11,7 +11,6 @@
     [hyperfiddle.io.core :as io]
     [hyperfiddle.route :as route]
     [hyperfiddle.runtime :as runtime]
-    [hyperfiddle.schema :as schema]
     [promesa.core :as p]
     [taoensso.timbre :as timbre]))
 
@@ -24,9 +23,9 @@
   (let [{:keys [hydrate-id local-basis route]} (get-in (get-state) [::runtime/partitions branch])
         stage (data/map-values :stage @(runtime/state rt [::runtime/partitions]))]
     (-> (io/hydrate-route (runtime/io rt) local-basis route branch stage)
-        (p/then (fn [{:keys [local-basis ptm tempid-lookups]}]
+        (p/then (fn [{:keys [local-basis ptm schemas tempid-lookups]}]
                   (if (= hydrate-id (get-in (get-state) [::runtime/partitions branch :hydrate-id]))
-                    (dispatch! [:hydrate!-route-success branch ptm tempid-lookups local-basis]) ; todo domain & user are now potentially out of sync
+                    (dispatch! [:hydrate!-route-success branch ptm schemas tempid-lookups local-basis]) ; todo domain & user are now potentially out of sync
                     (timbre/info (str "Ignoring response for " hydrate-id)))))
         (p/catch (fn [error]
                    (if (= hydrate-id (get-in (get-state) [::runtime/partitions branch :hydrate-id]))
@@ -52,21 +51,12 @@
                    (dispatch! [:partition-error branch error])
                    (throw error))))))
 
-(defn hydrate-partition-schema [rt branch dispatch! get-state]
-  (-> (schema/hydrate-schemas rt branch)
-      (p/then (fn [schema]
-                (dispatch! [:partition-schema branch schema])))
-      (p/catch (fn [error]
-                 (dispatch! [:partition-error branch error])
-                 (throw error)))))
-
 (defn add-partition [rt route branch & on-start]
   {:pre [(s/valid? :hyperfiddle/route route)]}
   (fn [dispatch! get-state]
     (dispatch! (apply batch (conj (vec on-start) [:add-partition branch route])))
     (-> (refresh-partition-basis rt branch dispatch! get-state)
         (p/then #(dispatch! [:hydrate!-start branch]))
-        (p/then #(hydrate-partition-schema rt branch dispatch! get-state))
         (p/then #(hydrate-partition rt branch dispatch! get-state)))))
 
 (defn discard-partition [branch]
@@ -96,7 +86,6 @@
         ; should just call foundation/bootstrap-data
         (-> (refresh-partition-basis rt branch dispatch! get-state)
             (p/then #(dispatch! [:hydrate!-start branch]))
-            (p/then #(hydrate-partition-schema rt branch dispatch! get-state))
             (p/then #(hydrate-partition rt branch dispatch! get-state)))))))
 
 (defn update-to-tempids [get-state branch dbname tx]

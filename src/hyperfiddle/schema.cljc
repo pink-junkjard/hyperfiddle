@@ -5,7 +5,6 @@
     [hypercrud.types.QueryRequest :refer [->QueryRequest]]
     [hyperfiddle.domain :as domain]
     [hyperfiddle.io.core :as io]
-    [hyperfiddle.runtime :as runtime]
     [promesa.core :as p]))
 
 
@@ -17,15 +16,12 @@
                     :where [:db.part/db :db.install/attribute ?attr]]
                   [dbval]))
 
-(defn hydrate-schemas [rt branch]
-  (let [local-basis @(runtime/state rt [::runtime/partitions branch :local-basis])
-        staged-branches nil
-        dbnames (-> (runtime/domain rt)
-                    domain/databases
+(defn hydrate-schemas [io domain local-basis branch staged-branches]
+  (let [dbnames (-> (domain/databases domain)
                     keys
                     vec)
         requests (mapv (fn [dbname] (request (->DbRef dbname branch))) dbnames)]
-    (-> (io/hydrate-all-or-nothing! (runtime/io rt) local-basis staged-branches requests)
+    (-> (io/hydrate-all-or-nothing! io local-basis staged-branches requests)
         (p/then (fn [schemas]
                   (->> (map #(data/group-by-unique :db/ident %) schemas)
                        (zipmap dbnames)))))))

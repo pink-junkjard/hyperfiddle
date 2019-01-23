@@ -4,11 +4,14 @@
     [contrib.reactive :as r]
     [hypercrud.browser.browser-request :as browser-request]
     [hypercrud.client.core :as hc]
+    [hyperfiddle.io.core :as io]
     [hyperfiddle.io.datomic.hydrate-requests :as hydrate-requests]
     [hyperfiddle.io.legacy :refer [process-result stage->staged-branches]]
     [hyperfiddle.reducers :as reducers]
     [hyperfiddle.runtime :as runtime]
     [hyperfiddle.state :as state]
+    [hyperfiddle.schema :as schema]
+    [promesa.core :as p]
     [taoensso.timbre :as timbre]))
 
 
@@ -35,27 +38,34 @@
           (r/atom)))))
 
 (defn hydrate-route [domain local-basis route branch stage ?subject]
-  (let [db-with-lookup (atom {})
-        get-secure-db-with+ (hydrate-requests/build-get-secure-db-with+ domain (stage->staged-branches stage) db-with-lookup local-basis)
-        initial-state (reduce (fn [state [branch v]]
-                                (assoc-in state [::runtime/partitions branch :stage] v))
-                              {::runtime/user-id ?subject
-                               ; should this be constructed with reducers?
-                               ; why dont we need to preheat the tempid lookups here for parent branches?
-                               ::runtime/partitions {branch {:local-basis local-basis
-                                                             :route route}}}
-                              stage)
-        state-atom (r/atom (reducers/root-reducer initial-state nil))
-        rt (->RT domain db-with-lookup get-secure-db-with+ state-atom ?subject)]
-    (perf/time (fn [get-total-time] (timbre/debug "Hydrate-route::d/with" "total time: " (get-total-time)))
-               ; must d/with at the beginning otherwise tempid reversal breaks
-               (doseq [[branch-ident branch-content] stage
-                       [dbname _] branch-content]
-                 (get-secure-db-with+ dbname branch-ident)))
-    (perf/time (fn [get-total-time] (timbre/debug "Hydrate-route::request-fn" "total time: " (get-total-time)))
-               #_(->> (project/project-request ctx)
-                      (hc/hydrate (:peer ctx) (:branch ctx))
-                      deref
-                      (-quiet-unwrap))
-               (doall (browser-request/request-from-route route {:branch branch :peer rt})))
-    (select-keys @(runtime/state rt [::runtime/partitions branch]) [:local-basis :ptm :tempid-lookups])))
+  (let [staged-branches (stage->staged-branches stage)]
+    (-> (let [schemas-io (reify io/IO
+                           (hydrate-requests [io local-basis staged-branches requests]
+                             (p/do* (hydrate-requests/hydrate-requests domain local-basis requests staged-branches ?subject))))]
+          (schema/hydrate-schemas schemas-io domain local-basis branch staged-branches))
+        (p/then (fn [schemas]
+                  (let [db-with-lookup (atom {})
+                        get-secure-db-with+ (hydrate-requests/build-get-secure-db-with+ domain staged-branches db-with-lookup local-basis)
+                        initial-state (reduce (fn [state [branch v]]
+                                                (assoc-in state [::runtime/partitions branch :stage] v))
+                                              {::runtime/user-id ?subject
+                                               ; should this be constructed with reducers?
+                                               ; why dont we need to preheat the tempid lookups here for parent branches?
+                                               ::runtime/partitions {branch {:local-basis local-basis
+                                                                             :route route
+                                                                             :schemas schemas}}}
+                                              stage)
+                        state-atom (r/atom (reducers/root-reducer initial-state nil))
+                        rt (->RT domain db-with-lookup get-secure-db-with+ state-atom ?subject)]
+                    (perf/time (fn [get-total-time] (timbre/debug "Hydrate-route::d/with" "total time: " (get-total-time)))
+                               ; must d/with at the beginning otherwise tempid reversal breaks
+                               (doseq [[branch-ident branch-content] stage
+                                       [dbname _] branch-content]
+                                 (get-secure-db-with+ dbname branch-ident)))
+                    (perf/time (fn [get-total-time] (timbre/debug "Hydrate-route::request-fn" "total time: " (get-total-time)))
+                               #_(->> (project/project-request ctx)
+                                      (hc/hydrate (:peer ctx) (:branch ctx))
+                                      deref
+                                      (-quiet-unwrap))
+                               (doall (browser-request/request-from-route route {:branch branch :peer rt})))
+                    (select-keys @(runtime/state rt [::runtime/partitions branch]) [:local-basis :ptm :schemas :tempid-lookups])))))))

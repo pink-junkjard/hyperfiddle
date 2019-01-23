@@ -68,8 +68,7 @@
 (def LEVEL-GLOBAL-BASIS 1)
 (def LEVEL-ROUTE 2)
 (def LEVEL-LOCAL-BASIS 3)
-(def LEVEL-SCHEMA 4)
-(def LEVEL-HYDRATE-PAGE 5)
+(def LEVEL-HYDRATE-PAGE 4)
 
 ; this needs to be a bit smarter; this should be invoked by everyone (all service endpoints, ssr, browser)
 ; e.g. for service/hydrate-route, we have route, and local-basis, just need to fetch domain & hydrate
@@ -84,7 +83,6 @@
           LEVEL-ROUTE (p/do* (runtime/dispatch! rt [:add-partition branch route]))
           LEVEL-LOCAL-BASIS (-> (actions/refresh-partition-basis rt branch (partial runtime/dispatch! rt) #(deref (runtime/state rt)))
                                 (p/then #(runtime/dispatch! rt [:hydrate!-start branch])))
-          LEVEL-SCHEMA (actions/hydrate-partition-schema rt branch (partial runtime/dispatch! rt) #(deref (runtime/state rt)))
           LEVEL-HYDRATE-PAGE (if (or (not= initial-global-basis @(runtime/state rt [::runtime/global-basis])) dirty-stage?)
                                (actions/hydrate-partition rt branch (partial runtime/dispatch! rt) #(deref (runtime/state rt)))
                                (p/resolved (runtime/dispatch! rt [:hydrate!-shorted branch]))))
