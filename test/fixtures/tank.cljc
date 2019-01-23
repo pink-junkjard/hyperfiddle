@@ -7,8 +7,8 @@
 ; Don't forget the fiddle ontology
 
 (def fiddles
-   {:tutorial.race/submission
-    [{:fiddle/ident :tutorial.race/submission
+   {:dustingetz/gender-shirtsize
+    [{:fiddle/ident :dustingetz/gender-shirtsize
       :fiddle/type :query
       :fiddle/query
       (pr-str
@@ -40,6 +40,58 @@
          :dustingetz.reg/email "elizabeth@example.com",
          :dustingetz.reg/gender {:db/ident :dustingetz.gender/female},
          :dustingetz.reg/shirt-size {:db/ident :dustingetz.shirt-size/womens-medium}}]]
+
+    :tutorial.race/submission
+    [{:fiddle/css
+      ".display-mode-user div.field.attribute {\n  display: flex;\n}\n\n.display-mode-user div.field.attribute > :first-child {\n  flex: 0 1 8em !important;\n  display: inline;\n  padding-right: 1em;\n  text-align: right;\n}\n\n.display-mode-user div.field.attribute > :not(:first-child) {\n  flex: 1 1;\n}",
+      :fiddle/pull
+      "[:db/id \n :dustingetz.reg/email\n :dustingetz.reg/name\n :dustingetz.reg/age\n :dustingetz.reg/birthdate\n {:dustingetz.reg/gender [:db/ident]}\n {:dustingetz.reg/shirt-size [:db/ident]}]",
+      :fiddle/ident :tutorial.race/submission,
+      :fiddle/renderer
+      "(let [{:keys [:hypercrud.browser/fiddle]} ctx]\n  [:div.container-fluid props\n   [hyperfiddle.ui/markdown (:fiddle/markdown @fiddle) ctx]])",
+      :hyperfiddle/owners
+      [#uuid "acd054a8-4e36-4d6c-a9ec-95bdc47f0d39"],
+      :db/id 17592186046198,
+      :fiddle/type :entity,
+      :fiddle/links
+      [{:db/id 17592186046199,
+        :link/class [:hf/iframe],
+        :link/fiddle
+        {:db/id 17592186046200,
+         :fiddle/ident :tutorial.race/genders,
+         :fiddle/query
+         "[:find\n [(pull ?e [:db/ident]) ...]\n :where\n [?e :db/ident ?i]\n [(namespace ?i) ?ns]\n [(ground \"dustingetz.gender\") ?ns]]",
+         :fiddle/type :query},
+        :link/rel :hf/iframe}
+       {:db/id 17592186046201,
+        :link/class [:hf/iframe],
+        :link/fiddle
+        {:db/id 17592186046202,
+         :fiddle/ident :tutorial.race/shirt-sizes,
+         :fiddle/query
+         "[:find\n [(pull ?e [:db/ident {:dustingetz.reg/gender [:db/ident]}]) ...]\n :in $ ?gender\n :where\n [?e :db/ident ?i]\n [?e :dustingetz.reg/gender ?gender]\n [(namespace ?i) ?ns]\n [(ground \"dustingetz.shirt-size\") ?ns]]",
+         :fiddle/type :query},
+        :link/path ":dustingetz.reg/gender",
+        :link/rel :hf/iframe}],
+      :fiddle/markdown
+      "### Registrant's submission\n\n!field[](:dustingetz.reg/email)\n!field[](:dustingetz.reg/name)\n!field[](:dustingetz.reg/age)\n!field[](:dustingetz.reg/birthdate)\n!field[](:dustingetz.reg/gender){options=\"tutorial.race/genders\" option-label=\":db/ident\"}\n\nWould you like a tee-shirt with that?\n\n!field[](:dustingetz.reg/shirt-size){options=\"tutorial.race/shirt-sizes\" option-label=\":db/ident\"}\n\n!block[Shirt-size options react to gender ☝️]{.alert .alert-info}"}
+     {:db/id 17592186046196,
+      :dustingetz.reg/email "dustin@example.com",
+      :dustingetz.reg/name "Dustin Getz",
+      :dustingetz.reg/age 102,
+      :dustingetz.reg/birthdate #inst "2018-09-13T00:00:00.000-00:00",
+      :dustingetz.reg/gender {:db/ident :dustingetz.gender/male},
+      :dustingetz.reg/shirt-size {:db/ident :dustingetz.shirt-size/mens-large}}]
+
+    :tutorial.race/genders
+    [[{:db/ident :dustingetz.gender/male} {:db/ident :dustingetz.gender/female}]
+     {:db/id 17592186046200,
+      :fiddle/ident :tutorial.race/genders,
+      :fiddle/query
+      "[:find\n [(pull ?e [:db/ident]) ...]\n :where\n [?e :db/ident ?i]\n [(namespace ?i) ?ns]\n [(ground \"dustingetz.gender\") ?ns]]",
+      :fiddle/type :query,
+      :hyperfiddle/owners
+      [#uuid "acd054a8-4e36-4d6c-a9ec-95bdc47f0d39"]}]
 
     :tutorial.race/shirt-sizes
     [{:db/id 17592186046202,
@@ -224,6 +276,28 @@
       {:db/id 17592186045536,
        :neighborhood/name "Ballard",
        :neighborhood/district {:db/id 17592186045535, :district/name "Ballard", :district/region {:db/ident :region/nw}}}]]
+
+    :seattle/districts
+    [{:db/id 17592186045750,
+      :fiddle/ident :seattle/districts,
+      :fiddle/query
+      "[:find \n [(pull ?e [:district/name :db/id]) ...]\n :where \n [?e :district/name]]",
+      :fiddle/type :query,
+      :hyperfiddle/owners
+      [#uuid "acd054a8-4e36-4d6c-a9ec-95bdc47f0d39"]}
+     [{:db/id 17592186045538, :district/name "Northeast"}
+      {:db/id 17592186045570, :district/name "Central"}
+      {:db/id 17592186045643, :district/name "North"}
+      {:db/id 17592186045518, :district/name "East"}
+      {:db/id 17592186045521, :district/name "Southwest"}
+      {:db/id 17592186045586, :district/name "Delridge"}
+      {:db/id 17592186045620, :district/name "Magnolia/Queen Anne"}
+      {:db/id 17592186045557, :district/name "Southeast"}
+      {:db/id 17592186045527, :district/name "Downtown"}
+      {:db/id 17592186045530, :district/name "Greater Duwamish"}
+      {:db/id 17592186045594, :district/name "Lake Union"}
+      {:db/id 17592186045563, :district/name "Northwest"}
+      {:db/id 17592186045535, :district/name "Ballard"}]]
     }
    )
 

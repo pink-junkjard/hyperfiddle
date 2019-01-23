@@ -15,8 +15,6 @@
       (r/pure (hyperfiddle.fiddle/apply-defaults fiddle))
       (r/pure result))))
 
-(def ctx (mock-fiddle! :tutorial.race/submission))
-
 (deftest primitives
   []
 
@@ -27,9 +25,7 @@
     )
   )
 
-(deftest context
-  []
-
+(deftest basics
   (testing "result indexing"
     (testing "FindColl rows are indexed by db/id"
       (is (= @(:hypercrud.browser/result-index ctx)
@@ -45,9 +41,9 @@
 
   (testing "fiddle level context is set"
     (is (= @(r/fmap :fiddle/ident (:hypercrud.browser/fiddle ctx))
-           :tutorial.race/submission))
+           :dustingetz/gender-shirtsize))
     (is (= @(:hypercrud.browser/eav ctx)
-           [nil :tutorial.race/submission nil]))
+           [nil :dustingetz/gender-shirtsize nil]))
     ; result-enclosure, schemas, qfind, link-index, validation
 
     (is (= @(:hypercrud.browser/result-enclosure ctx)
@@ -56,14 +52,35 @@
              :db/id
              #:dustingetz.reg{:gender [:db/ident],
                               :shirt-size [:db/ident]}]])))
+  )
+
+
+
+(deftest context
+  []
+
+  (def ctx (mock-fiddle! :dustingetz/gender-shirtsize))
+
+  (testing "FindColl rows are indexed by db/id"
+    (is (= @(:hypercrud.browser/result-index ctx)
+           {17592186046196 {:db/id 17592186046196,
+                            :dustingetz.reg/email "dustin@example.com",
+                            :dustingetz.reg/name "Dustin Getz",
+                            :dustingetz.reg/gender #:db{:ident :dustingetz.gender/male},
+                            :dustingetz.reg/shirt-size #:db{:ident :dustingetz.shirt-size/mens-large}},
+            17592186046763 {:db/id 17592186046763,
+                            :dustingetz.reg/email "bob@example.com",
+                            :dustingetz.reg/gender #:db{:ident :dustingetz.gender/male},
+                            :dustingetz.reg/shirt-size #:db{:ident :dustingetz.shirt-size/mens-large}}})))
 
   (testing "refocus to self is noop and doesn't crash"
-    (is (= (context/refocus ctx :tutorial.race/submission)
+    (is (= (context/refocus ctx :dustingetz/gender-shirtsize)
            ctx)))
 
   (testing "refocus to dependent didn't crash"
     (is (= @(:hypercrud.browser/eav (context/refocus ctx :dustingetz.reg/gender))
            [nil :dustingetz.reg/gender nil])))
+
 
   (testing "simple spreads"
     (is (= (count (for [[_ ctx] (context/spread-result ctx)
@@ -72,7 +89,7 @@
                         [a ctx] (context/spread-attributes ctx)]
                     [i a])
                   )
-           (let [[fiddle result] (-> fixtures.tank/fiddles :tutorial.race/submission)]
+           (let [[fiddle result] (-> fixtures.tank/fiddles :dustingetz/gender-shirtsize)]
              (* (count result)
                 (count (keys (first result))))))))
 
@@ -107,13 +124,13 @@
   (testing "eav"
     (testing "fiddle level a is fiddle-ident"
       (is (= @(:hypercrud.browser/eav ctx)
-             [nil :tutorial.race/submission nil])))
+             [nil :dustingetz/gender-shirtsize nil])))
 
     (testing "spread-result does not touch eav"
       (is (= [@(:hypercrud.browser/eav ctx)]
              (for [[_ ctx] (context/spread-result ctx)]
                @(:hypercrud.browser/eav ctx))
-             '([nil :tutorial.race/submission nil]))))
+             '([nil :dustingetz/gender-shirtsize nil]))))
 
     (testing "fiddle-level v is the element"
       (is (= (for [[_ ctx] (context/spread-rows ctx)
@@ -127,26 +144,26 @@
                    [_ ctx] (context/spread-rows ctx)
                    [_ ctx] (context/spread-elements ctx)]
                (context/eav ctx))
-             '([nil :tutorial.race/submission 17592186046196]
-                [nil :tutorial.race/submission 17592186046763]))))
+             '([nil :dustingetz/gender-shirtsize 17592186046196]
+                [nil :dustingetz/gender-shirtsize 17592186046763]))))
 
     (testing "spread-row doesnt prefill v, but it can be inferred"
       (is (= (for [[_ ctx] (context/spread-rows ctx)]
                @(:hypercrud.browser/eav ctx))
-             '([nil :tutorial.race/submission nil]
-                [nil :tutorial.race/submission nil])))
+             '([nil :dustingetz/gender-shirtsize nil]
+                [nil :dustingetz/gender-shirtsize nil])))
 
       (is (= (for [[_ ctx] (context/spread-rows ctx)]
                (context/eav ctx))
-             '([nil :tutorial.race/submission 17592186046196]
-                [nil :tutorial.race/submission 17592186046763]))))
+             '([nil :dustingetz/gender-shirtsize 17592186046196]
+                [nil :dustingetz/gender-shirtsize 17592186046763]))))
 
     (is (= (for [[_ ctx] (context/spread-result ctx)
                  [_ ctx] (context/spread-rows ctx)
                  [_ ctx] (context/spread-elements ctx)]
              @(:hypercrud.browser/eav ctx))
-           '([nil :tutorial.race/submission 17592186046196]
-              [nil :tutorial.race/submission 17592186046763])))
+           '([nil :dustingetz/gender-shirtsize 17592186046196]
+              [nil :dustingetz/gender-shirtsize 17592186046763])))
 
     )
 
@@ -202,17 +219,17 @@
   (testing "refocus"
     (is (= (for [[_ ctx] (context/spread-result ctx)
                  [_ ctx] (context/spread-rows ctx)]
-             @(:hypercrud.browser/eav (context/refocus ctx :tutorial.race/submission)))
-           '([nil :tutorial.race/submission nil]
-              [nil :tutorial.race/submission nil])))
+             @(:hypercrud.browser/eav (context/refocus ctx :dustingetz/gender-shirtsize)))
+           '([nil :dustingetz/gender-shirtsize nil]
+              [nil :dustingetz/gender-shirtsize nil])))
 
     (is (= (for [[_ ctx] (context/spread-result ctx)
                  [_ ctx] (context/spread-rows ctx)
                  [_ ctx] (context/spread-elements ctx)]
              ; Focusing the element
-             @(:hypercrud.browser/eav ctx #_(context/refocus ctx :tutorial.race/submission)))
-           '([nil :tutorial.race/submission 17592186046196]
-              [nil :tutorial.race/submission 17592186046763])))
+             @(:hypercrud.browser/eav ctx #_(context/refocus ctx :dustingetz/gender-shirtsize)))
+           '([nil :dustingetz/gender-shirtsize 17592186046196]
+              [nil :dustingetz/gender-shirtsize 17592186046763])))
 
     (is (= (for [[_ ctx] (context/spread-result ctx)
                  [_ ctx] (context/spread-rows ctx)]
@@ -237,7 +254,7 @@
 
     (testing "does not set e"
       (is (= @(:hypercrud.browser/eav (context/row ctx 17592186046196))
-             [nil :tutorial.race/submission nil])))
+             [nil :dustingetz/gender-shirtsize nil])))
 
     (testing "spread rows"
       (testing "target isolated row"
@@ -455,6 +472,31 @@
       (testing "refocus from myself when already here but not at root")
       )
     )
+  )
+
+(deftest links
+  []
+
+  (testing "race"
+    (let [ctx (mock-fiddle! :tutorial.race/submission)]
+      @(:hypercrud.browser/link-index ctx)
+      #_@(hyperfiddle.data/select-many-here ctx :tutorial.race/submission)
+      )
+    )
+
+  (testing "seattle iframes"
+    (let [ctx (mock-fiddle! :seattle/neighborhoods)]
+      @(hyperfiddle.data/select-many-here ctx :seattle/districts)
+
+
+
+
+      #_(testing "if head-sentinel, no v"
+        (let [ctx (assoc ctx :hypercrud.browser/head-sentinel true)
+              ctx (context/row ctx 17592186045522)
+              ctx (context/attribute ctx :neighborhood/district)]
+          (is (= (context/eav ctx) [nil :neighborhood/district nil]))))))
+
   )
 
 #_(deftest deps-satisfied-1
