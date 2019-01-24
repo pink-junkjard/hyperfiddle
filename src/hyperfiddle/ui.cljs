@@ -88,7 +88,7 @@
     [val ctx & [props]]                                     ; returns Func[(ref, props, ctx) => DOM]
     {:pre [ctx]}
     (let [element @(:hypercrud.browser/element ctx)
-          [_ a _] @(:hypercrud.browser/eav ctx)
+          [_ a _] @(:hypercrud.browser/eav ctx)             ; what about fiddle-level
           value-type (some-> (:hypercrud.browser/schema ctx) deref (contrib.datomic/valueType a)) ; put protocol on ctx to remove guard
           cardinality (some-> (:hypercrud.browser/schema ctx) deref (contrib.datomic/cardinality-loose a))]
       (match* [(type element) value-type cardinality]
