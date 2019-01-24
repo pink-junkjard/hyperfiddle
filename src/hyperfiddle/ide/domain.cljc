@@ -89,6 +89,7 @@
 ; fqdn = "foo.hyperfiddle.net" or "foo.hyperfiddle.com" or "myfancyfoo.com"
 ; todo app-domains and ide-domains can just be a regex with one capture group
 (defn domain-for-fqdn [io app-domains ide-domains fqdn]
+  (assert (first app-domains) "Ide service must have app-domains configured")
   (-> (io/sync io #{"$domains"})
       (p/then (fn [local-basis]
                 (if-let [app-domain-ident (some #(second (re-find (re-pattern (str "^(.*)\\." % "$")) fqdn)) app-domains)]
