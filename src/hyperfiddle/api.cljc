@@ -30,10 +30,13 @@
   [])                                                       ; hack to draw as popover
 
 (defmethod txfn :db/add [_ e a v ctx]
+  {:pre [e a v]}
   [[:db/add e a v]])
 
 (defmethod txfn :db/retract [_ e a v ctx]
+  {:pre [e a v]}
   [[:db/retract e a v]])
 
 (defmethod txfn :db.fn/retractEntity [_ _ _ v ctx]
+  {:pre [v]}
   [[:db.fn/retractEntity v]])
