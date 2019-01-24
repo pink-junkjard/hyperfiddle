@@ -48,8 +48,9 @@
                              (fn [f] (into [f] args))))]
   (defn attr-renderer-control [val ctx & [props]]
     ; The only way to stabilize this is for this type signature to become a react class.
-    (when-let [user-f (-> @(r/cursor (:hypercrud.browser/attr-renderers ctx) [(last (:hypercrud.browser/path ctx))])
-                          blank->nil)]
+    (when-let [user-f (->> (last (:hypercrud.browser/path ctx))
+                           (runtime/attribute-renderer (:peer ctx) (:branch ctx))
+                           blank->nil)]
       [user-portal (ui-error/error-comp ctx) nil
        ; ?user-f is stable due to memoizing eval (and only due to this)
        [eval-renderer-comp user-f val ctx props]])))

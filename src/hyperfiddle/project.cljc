@@ -1,29 +1,25 @@
 (ns hyperfiddle.project
   (:require
-    [cats.core :as cats]
     #?(:cljs [contrib.eval-cljs :as eval-cljs])
-    [contrib.reactive :as r]
     [contrib.try$ :refer [try-either]]
-    [hypercrud.client.core :as hc]
     [hyperfiddle.domain :as domain]
+    [hyperfiddle.io.core :as io]
     [hyperfiddle.runtime :as runtime]
     [hypercrud.types.DbRef :refer [->DbRef]]
     [hypercrud.types.EntityRequest :refer [->EntityRequest]]
-    [hypercrud.types.QueryRequest :refer [->QueryRequest]]))
+    [hypercrud.types.QueryRequest :refer [->QueryRequest]]
+    [promesa.core :as p]))
 
 
-(defn attrs-request [ctx]
-  (->QueryRequest '[:find [(pull ?attr [:attribute/ident :attribute/renderer]) ...]
-                    :where [?attr :attribute/ident]]
-                  [(->DbRef 'hyperfiddle.domain/fiddle-database (:branch ctx))]))
+(defn attrs-request [branch]
+  (->QueryRequest '[:find ?i ?r :where
+                    [?attr :attribute/ident ?i]
+                    [?attr :attribute/renderer ?r]]
+                  [(->DbRef 'hyperfiddle.domain/fiddle-database branch)]))
 
-(let [f (fn [attrs]
-          (->> attrs
-               (map (juxt :attribute/ident :attribute/renderer))
-               (into {})))]
-  (defn hydrate-attrs [ctx]
-    (r/fmap->> (hc/hydrate (:peer ctx) (:branch ctx) (attrs-request ctx))
-               (cats/fmap f))))
+(defn hydrate-attr-renderers [io local-basis branch staged-branches]
+  (-> (io/hydrate-one! io local-basis staged-branches (attrs-request branch))
+      (p/then #(into {} %))))
 
 (defn project-request [ctx]
   (->EntityRequest

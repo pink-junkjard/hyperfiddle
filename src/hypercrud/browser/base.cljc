@@ -13,7 +13,6 @@
             [hypercrud.browser.routing :as routing]
             [hyperfiddle.ide.system-fiddle :as system-fiddle]
             [hypercrud.client.core :as hc]
-            [hyperfiddle.project :as project]
             [hypercrud.types.DbRef :refer [->DbRef]]
             [hypercrud.types.EntityRequest :refer [->EntityRequest]]
             [hypercrud.types.QueryRequest :refer [->QueryRequest]]
@@ -90,11 +89,9 @@
                          @(hc/hydrate peer branch ?request)
                          (either/right nil)))]
   (defn process-results "either ctx" [fiddle request ctx]   ; todo rename to (context/result)
-    (mlet [reactive-attrs @(r/apply-inner-r (project/hydrate-attrs ctx))
-           reactive-result @(r/apply-inner-r (r/track nil-or-hydrate (:peer ctx) (:branch ctx) request))
+    (mlet [reactive-result @(r/apply-inner-r (r/track nil-or-hydrate (:peer ctx) (:branch ctx) request))
            :let [fiddle-parsed (hyperfiddle.ide.console-links/parse-fiddle-data-shape @fiddle)
                  ctx (assoc ctx
-                       :hypercrud.browser/attr-renderers reactive-attrs
                        :hypercrud.browser/data reactive-result
                        :hypercrud.browser/eav (r/fmap (fn [data]
                                                         (if (= FindScalar (type (:qfind fiddle-parsed))) ; Probably also tuples here too.

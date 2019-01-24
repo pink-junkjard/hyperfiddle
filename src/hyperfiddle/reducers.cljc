@@ -24,7 +24,7 @@
 
 (defn global-basis-reducer [global-basis action & args]
   (case action
-    :hydrate!-route-success (let [[branch ptm schemas tempid-lookups new-local-basis] args]
+    :hydrate!-route-success (let [[branch attr-renderers ptm schemas tempid-lookups new-local-basis] args]
                               (if (nil? branch)
                                 (map-values (fn [sub-basis]
                                               (reduce-kv (fn [sub-basis uri t]
@@ -67,7 +67,7 @@
                                 partitions
                                 (-> partitions
                                     (assoc-in [branch :route] route)
-                                    #_(dissoc :error :ptm :schemas :tempid-lookups))))
+                                    #_(dissoc :error :attr-renderers :ptm :schemas :tempid-lookups))))
 
            :with (let [[branch dbname tx] args]
                    (update partitions branch with dbname tx))
@@ -98,15 +98,17 @@
            :hydrate!-shorted (let [[branch] args]
                                (update partitions branch dissoc :hydrate-id))
 
-           :hydrate!-route-success (let [[branch ptm schemas tempid-lookups new-basis] args]
+           :hydrate!-route-success (let [[branch attr-renderers ptm schemas tempid-lookups new-basis] args]
                                      (update partitions branch
                                              (fn [partition]
                                                (-> partition
                                                    (dissoc :error :hydrate-id)
-                                                   (assoc :local-basis new-basis
-                                                          :ptm ptm
-                                                          :schemas schemas
-                                                          :tempid-lookups tempid-lookups)))))
+                                                   (assoc
+                                                     :attr-renderers attr-renderers
+                                                     :local-basis new-basis
+                                                     :ptm ptm
+                                                     :schemas schemas
+                                                     :tempid-lookups tempid-lookups)))))
 
            :partition-error (let [[branch error] args]
                               (update partitions branch
@@ -125,7 +127,7 @@
                                  (assoc-in partitions [branch :stage] v))
 
            :reset-stage-db (let [[branch dbname tx] args]
-                              (assoc-in partitions [branch :stage dbname] tx))
+                             (assoc-in partitions [branch :stage dbname] tx))
 
            (or partitions {}))
          (map-values (fn [partition]
@@ -142,6 +144,7 @@
                              :local-basis identity
 
                              ; response data of hydrating a partition
+                             :attr-renderers identity
                              :error identity
                              :ptm identity
                              :schemas identity

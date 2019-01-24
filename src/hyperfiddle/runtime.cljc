@@ -8,3 +8,5 @@
 (defprotocol State                                          ; internal
   (dispatch! [rt action-or-func])
   (state [rt] [rt path]))
+
+(defn attribute-renderer [rt branch ident] @(state rt [::partitions branch :attr-renderers ident]))

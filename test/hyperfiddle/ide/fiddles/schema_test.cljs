@@ -12,7 +12,6 @@
     [hyperfiddle.core]
     [hyperfiddle.domain :as domain]
     [hyperfiddle.ide.fiddles.schema :as schema-fiddle]
-    [hyperfiddle.project :as project]
     [hyperfiddle.route :as route]
     [hyperfiddle.runtime :as runtime]
     [hyperfiddle.ui.iframe :refer [iframe-cmp]]
@@ -47,8 +46,7 @@
   (let [ctx {:branch nil
              :peer (->TestRuntime (r/atom nil))
              :hypercrud.ui/display-mode (r/atom :hypercrud.browser.browser-ui/user)}
-        ptm {req res
-             (project/attrs-request ctx) []}
+        ptm {req res}
         ctx (assoc ctx :peer (->TestRuntime (r/atom {::runtime/partitions {nil {:ptm ptm}}})))]
     (render [iframe-cmp ctx {:route route}])))
 
