@@ -135,10 +135,28 @@
   #?(:clj  (delay (clojure.core/apply f args))
      :cljs (clojure.core/apply reagent/track f args)))
 
-(defn fmap [f rv]
-  {:pre [f]}
-  (assert (reactive? rv) (str "fmap rv: " rv " did you pass nil instead of (r/atom nil)?"))
-  (track (comp f deref) rv))
+(defn sequence "see cats.core/sequence" [rvs]
+  (track (partial map deref) rvs)
+  #_(reduce (fn [acc rv]
+              (fmap (partial cons acc) rv))
+            (atom ())
+            rvs))
+
+(declare apply)
+
+(defn fmap
+  ([f rv]
+   {:pre [f]}
+   (assert (reactive? rv) (str "fmap rv: " rv " did you pass nil instead of (r/atom nil)?"))
+   (track (comp f deref) rv))
+  ([f rv & rvs]
+    ; java.lang.RuntimeException: Can't have fixed arity function with more params than variadic function
+   (apply f (concat [rv] rvs))))
+
+(defn apply
+  ([f rvs]
+   (fmap (partial clojure.core/apply f) (sequence rvs)))
+  #_(fmap->> (sequence rvs) (clojure.core/apply f)))        ; seems broken macro in cljs only `WARNING: Wrong number of args (1) passed to cljs.core/apply at line 219 reactive.cljc`
 
 (defn >>= [fr rv]
   (track (comp deref fr deref) rv))
@@ -180,13 +198,6 @@
      :post [(s/assert reactive? %)]}
     (track f rmv)))
 
-(defn sequence "see cats.core/sequence" [rvs]
-  (track (partial map deref) rvs)
-  #_(reduce (fn [acc rv]
-              (fmap (partial cons acc) rv))
-            (atom ())
-            rvs))
-
 (defn unsequence                                            ; legacy, soon dead.
   "Expand a reference of a list into a list of references while maintaining order.
 
@@ -213,10 +224,6 @@
         (map f row)
         [(f row)])
       (->> (clojure.string/join "`"))))
-
-(defn apply [f rvs]
-  (fmap (partial clojure.core/apply f) (sequence rvs))
-  #_(fmap->> (sequence rvs) (clojure.core/apply f)))        ; seems broken macro in cljs only `WARNING: Wrong number of args (1) passed to cljs.core/apply at line 219 reactive.cljc`
 
 (defn ctxf "reactive apply f to sequenced rvs extracted from map
   ks can be fns, but must be stable refs"

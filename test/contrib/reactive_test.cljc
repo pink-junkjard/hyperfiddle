@@ -17,11 +17,26 @@
   (is (not= (r/comp inc inc) nil))
   (is (= 3 ((r/comp inc inc) 1))))
 
-(deftest test-fmap []
-  (let [a (r/atom 1)]
-    #?(:cljs                                                ; clj implementation not yet implemented
-       (is (= (r/fmap inc a) (r/fmap inc a))))
-    (is (= 2 @(r/fmap inc a)))))
+(deftest pure
+  []
+  (is (= @(r/pure 1) 1))
+  #?(:cljs (is (= (r/pure 1) (r/pure 1)))))
+
+(deftest test-fmap
+  []
+  (testing "regular arity"
+    (let [a (r/atom 1)]
+      #?(:cljs                                              ; clj implementation not yet implemented
+         (is (= (r/fmap inc a) (r/fmap inc a))))
+      (is (= 2 @(r/fmap inc a)))))
+
+  (testing "variable arity"
+    (let [a (r/atom 1)]
+      (is (= @(r/fmap + a a) 2))
+      (is (= @(r/fmap + (r/pure 1) (r/pure 1)) 2))
+      (is (= @(r/fmap + (r/pure 1) (r/atom 1)) 2))
+      ;#?(:cljs (is (= (r/fmap + a a) (r/pure 2))))          ; false ! gotcha
+      #?(:cljs (is (= (r/fmap + a a) (r/fmap + a a)))))))
 
 (deftest test-fmap-> []
   (let [a (r/atom 1)]
