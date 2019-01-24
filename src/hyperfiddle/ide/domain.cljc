@@ -39,6 +39,13 @@
       (route/url-encode route home-route)))
   )
 
+(defn with-serializer [ide-domain]
+  (->> (let [rep-fn #(-> (into {} %) (dissoc :hack-transit-serializer))]
+         #(transit/encode % :opts {:handlers (assoc transit/write-handlers IdeDomain (t/write-handler (constantly "IdeDomain") rep-fn))}))
+       (assoc ide-domain :hack-transit-serializer)))
+
+(defn from-rep [rep] (-> (map->IdeDomain rep) with-serializer))
+
 (defn build+ [datomic-record]
   (mlet [environment (reader/read-edn-string+ (:domain/environment datomic-record))
          :let [environment (assoc environment :domain/disable-javascript (:domain/disable-javascript datomic-record))]
@@ -47,10 +54,9 @@
          :let [databases (->> (:domain/databases datomic-record)
                               (map (juxt :domain.database/name :domain.database/record))
                               (into {}))
-               domain (->IdeDomain (:domain/ident datomic-record) (:domain/fiddle-database datomic-record) databases environment home-route)
-               serializer (let [rep-fn #(-> (into {} %) (dissoc :hack-transit-serializer))]
-                            #(transit/encode % :opts {:handlers (assoc transit/write-handlers IdeDomain (t/write-handler (constantly "IdeDomain") rep-fn))}))]]
-    (return (assoc domain :hack-transit-serializer serializer))))
+               domain (-> (->IdeDomain (:domain/ident datomic-record) (:domain/fiddle-database datomic-record) databases environment home-route)
+                          with-serializer)]]
+    (return domain)))
 
 (defn hydrate-ide-domain [io local-basis app-domain-ident]
   (let [requests [(->EntityRequest [:domain/ident "hyperfiddle"] (->DbRef "$domains" nil) multi-datomic/domain-pull)
