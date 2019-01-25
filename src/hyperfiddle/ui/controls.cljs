@@ -39,10 +39,16 @@
       :db.type/uuid uuid?)))
 
 (defn ^:export keyword [val ctx & [props]]
-  (let [props (-> (assoc props
-                    :value val
-                    :on-change (with-entity-change! ctx)))]
-    [debounced props contrib.ui/keyword]))
+  [:<>
+   (let [props (-> (assoc props
+                     :value val
+                     :on-change (with-entity-change! ctx)))]
+     [debounced props contrib.ui/keyword])
+   (doall
+     (for [[k r-link] (data/spread-links-here ctx)]
+       ; if val - no, it can be drawn invalid
+       ^{:key (str k)}
+       [hyperfiddle.ui/ui-from-link r-link ctx props]))])
 
 (defn ^:export string [val ctx & [props]]
   (let [props (-> (assoc props

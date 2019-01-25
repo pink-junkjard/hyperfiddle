@@ -19,8 +19,9 @@
          (s/assert :hypercrud/context ctx)
          #_(:hypercrud.browser/eav ctx)] ; it can be Reaction of [nil nil nil]
    :post [(r/reactive? %)]}                                 ; its also a vector, associative by index
-  (context/links-in-dimension
-    ctx (contrib.data/xorxs ?corcs #{})))
+  (->> (context/links-in-dimension-r
+         ctx (contrib.data/xorxs ?corcs #{}))
+       #_(map second)))
 
 (defn validate-one+r [corcs r-links]                        ; Right[Reaction] or Left[Error] - broken, error should react too
   (let [n @(r/fmap count r-links)]
@@ -69,3 +70,9 @@
 (defn ^:export browse [ctx & [?corcs]]                      ; returns a ctx, not reactive, has reactive keys
   {:pre [(s/assert :hypercrud/context ctx)]}
   (->> (browse+ ctx ?corcs) (unwrap (constantly nil))))
+
+(defn spread-links-here [ctx & [?corcs]]
+  (->> (select-many-here ctx ?corcs)
+       (r/unsequence :db/id)
+       (map (fn [[rv k]]
+              [k rv]))))
