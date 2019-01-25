@@ -135,7 +135,9 @@
                       {:dustingetz.reg/gender [:db/ident]}
                       {:dustingetz.reg/shirt-size [:db/ident]}
                       :db/id])
-         [:dustingetz.reg/email :dustingetz.reg/name :db/id #:dustingetz.reg{:gender [:db/ident]} #:dustingetz.reg{:shirt-size [:db/ident]}]))
+         [:dustingetz.reg/email :dustingetz.reg/name :db/id
+          #:dustingetz.reg{:gender [:db/ident]}
+          #:dustingetz.reg{:shirt-size [:db/ident]}]))
 
   (is (= (apply pull-union
                 [:reg/email :reg/age #:reg{:gender [:db/ident], :shirt-size [:db/ident]} :db/id]
@@ -216,13 +218,32 @@
                                 :reg/shirt-size [:db/ident]}]) ; self at gender level
                      ...]
               :where [?e :reg/email]]
-   FindRel '[:find (sum ?age) (pull ?g [:db/ident])]
-   FindTuple '[:find [(pull ?e [:db/id :fiddle/ident]) (max ?tx) ?entrypoint]]
-   FindScalar nil})
+   FindRel '[:find (sum ?age) (pull ?g [:db/ident]) :where [?g :age ?age]]
+   FindTuple '[:find [(pull ?e [:db/id :fiddle/ident]) (max ?tx) ?entrypoint] :where [?e :a ?entrypoint ?tx]]
+   FindScalar '[:find (sum ?age) . :where [:age ?age]]})
 
-(defn parse-query [q] (->> (contrib.try$/try-either (datascript.parser/parse-query q)) (contrib.ct/unwrap (constantly nil))))
+(defn parse-query [q] (->> (contrib.try$/try-either (datascript.parser/parse-query q))
+                           (contrib.ct/unwrap (constantly nil))))
 
 (def qparsed (into {} (map (juxt key (comp parse-query val)) queries)))
+
+(deftest datalog-parsers
+  (testing "parse FindColl"
+    (let [{:keys [qfind]} (get qparsed FindColl)]
+      (is (= (type qfind) FindColl))))
+
+  (testing "parse FindRel"
+    (let [{:keys [qfind]} (get qparsed FindRel)]
+      (is (= (type qfind) FindRel))))
+
+  (testing "parse FindTuple"
+    (let [{:keys [qfind]} (get qparsed FindTuple)]
+      (is (= (type qfind) FindTuple))))
+
+  (testing "parse FindScalar"
+    (let [{:keys [qfind]} (get qparsed FindScalar)]
+      (is (= (type qfind) FindScalar))))
+  )
 
 (def results
   {FindColl [{:reg/email "alice"} {:reg/email "bob"}]
@@ -230,7 +251,7 @@
    FindTuple [{:db/id 136, :fiddle/ident :dustingetz/games} 13194139536334 true]
    FindScalar nil})
 
-(deftest normalize-result-
+(deftest result-normalization
   []
   (is (= (normalize-result (:qfind (qparsed FindColl)) (results FindColl))
          [[{:reg/email "alice"}] [{:reg/email "bob"}]]))
@@ -243,7 +264,6 @@
   )
 
 (deftest pull-strata-
-  []
   (def pull [:dustingetz.reg/email
              :dustingetz.reg/name
              ; :dustingetz.reg/age
@@ -279,7 +299,6 @@
 (def pull-fiddle [:db/id :fiddle/css :fiddle/ident #:fiddle{:links pull-link}])
 
 (deftest pull
-  []
   (testing "pull navigation"
     #_(is (= (contrib.datomic/downtree-pullpaths fixtures.hfhf/schema pull-link)
            '([] [:link/fiddle])))
@@ -299,14 +318,13 @@
     ))
 
 (deftest query-parsing
-  []
-  (def qfind (:qfind (datascript.parser/parse-query '[:find ?e :where [?e]])))
+  (def qfind )
   ;(count (datascript.parser/find-elements qfind))
   ;(= FindScalar (type qfind))
   ;(condp = (type qfind) FindScalar "yo")
   ;(hyperfiddle.fiddle/qfind-canonical qfind)
   (testing ""
-    (is (= (contrib.datomic/qfind-collapse-findrel-1 '[:find ?e :where [?e]])
-           (contrib.datomic/qfind-collapse-findrel-1 '[:find [?e ...] :where [?e]])))
+    (is (= (contrib.datomic/qfind-collapse-findrel-1 (:qfind (datascript.parser/parse-query '[:find ?e :where [?e]])))
+           (contrib.datomic/qfind-collapse-findrel-1 (:qfind (datascript.parser/parse-query '[:find [?e ...] :where [?e]])))))
     )
   )
