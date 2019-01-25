@@ -166,7 +166,6 @@
              @(:hypercrud.browser/eav ctx))
            '([nil :dustingetz/gender-shirtsize 17592186046196]
               [nil :dustingetz/gender-shirtsize 17592186046763])))
-
     )
 
   (testing "fiddle/type :pull"
@@ -195,13 +194,7 @@
         (is (= (first @(context/data ctx)) {:db/id 17592186061848, :link/class [:hf/remove], :link/rel :hf/remove}))
         (let [ctx (context/row ctx 17592186061848)]
           (is (= (context/eav ctx) [17592186061847 :fiddle/links 17592186061848]))
-          (is (= @(context/data ctx) {:db/id 17592186061848, :link/class [:hf/remove], :link/rel :hf/remove})))))
-
-    )
-
-
-
-
+          (is (= @(context/data ctx) {:db/id 17592186061848, :link/class [:hf/remove], :link/rel :hf/remove}))))))
 
   (testing "a is fiddle-ident if no element set"
     (is (= (for [[_ ctx] (context/spread-result ctx)
@@ -241,245 +234,235 @@
               [17592186046763 :dustingetz.reg/gender :dustingetz.gender/male])))
     )
 
-  (testing "row"
-    (testing "row data by dbid"
-      #_(:hypercrud.browser/result-path (context/row ctx 17592186046196))
-      #_(:hypercrud.browser/result (context/row ctx 17592186046196))
-      ; not sure if element can be inferred in data. Row does not infer.
-      (is (= @(context/data (-> ctx (context/element 0) (context/row 17592186046196)))
-             {:db/id 17592186046196,
-              :dustingetz.reg/email "dustin@example.com",
-              :dustingetz.reg/name "Dustin Getz",
-              :dustingetz.reg/gender #:db{:ident :dustingetz.gender/male},
-              :dustingetz.reg/shirt-size #:db{:ident :dustingetz.shirt-size/mens-large}}))
-      )
-
-    (testing "row does not set e"
-      (is (= @(:hypercrud.browser/eav (context/row ctx 17592186046196))
-             [nil :dustingetz/gender-shirtsize 17592186046196])))
-
-    (testing "spread rows"
-      (testing "target isolated row"
-        (is (= (for [ctx [(context/row ctx 17592186046196)]]
-                 ; infers element
-                 @(context/data ctx))
-               (for [ctx [(context/row ctx 17592186046196)]
-                     [_ ctx] (context/spread-elements ctx)]
-                 @(context/data ctx))
-               [{:db/id 17592186046196,
-                 :dustingetz.reg/email "dustin@example.com",
-                 :dustingetz.reg/name "Dustin Getz",
-                 :dustingetz.reg/gender #:db{:ident :dustingetz.gender/male},
-                 :dustingetz.reg/shirt-size #:db{:ident :dustingetz.shirt-size/mens-large}}])))
-
-      (testing "target all rows"
-        (is (= (for [[_ ctx] (context/spread-rows ctx)]
-                 @(context/data ctx))
-               (for [[_ ctx] (context/spread-rows ctx)
-                     [_ ctx] (context/spread-elements ctx)]
-                 @(context/data ctx))
-               [{:db/id 17592186046196,
-                 :dustingetz.reg/email "dustin@example.com",
-                 :dustingetz.reg/name "Dustin Getz",
-                 :dustingetz.reg/gender #:db{:ident :dustingetz.gender/male},
-                 :dustingetz.reg/shirt-size #:db{:ident :dustingetz.shirt-size/mens-large}}
-                {:db/id 17592186046763,
-                 :dustingetz.reg/email "bob@example.com",
-                 :dustingetz.reg/gender #:db{:ident :dustingetz.gender/male},
-                 :dustingetz.reg/shirt-size #:db{:ident :dustingetz.shirt-size/mens-large}}])))
-
-      (testing "focus attribute isolated"
-        (is (= (let [ctx (context/row ctx 17592186046196)
-                     ctx (context/element ctx 0)
-                     ctx (context/attribute ctx :dustingetz.reg/gender)]
-                 @(context/data ctx))
-               #:db{:ident :dustingetz.gender/male})))
-
-      (testing "FindColl Pull nested"
-        (testing "eav"
-          (is (= (let [ctx (mock-fiddle! :tutorial.race/shirt-sizes)
-                       ctx (context/row ctx :dustingetz.shirt-size/womens-medium)]
-                   (context/eav ctx))
-                 [nil :tutorial.race/shirt-sizes :dustingetz.shirt-size/womens-medium]))
-
-          (is (= (let [ctx (mock-fiddle! :tutorial.race/shirt-sizes)
-                       ctx (context/row ctx :dustingetz.shirt-size/womens-medium)
-                       ctx (context/attribute ctx :dustingetz.reg/gender)]
-                   (context/eav ctx))
-                 [:dustingetz.shirt-size/womens-medium :dustingetz.reg/gender :dustingetz.gender/female]))
-
-          (is (= (let [ctx (mock-fiddle! :tutorial.race/shirt-sizes)
-                       ctx (context/row ctx :dustingetz.shirt-size/womens-medium)
-                       ctx (context/attribute ctx :db/ident)]
-                   (context/eav ctx))
-                 [:dustingetz.shirt-size/womens-medium :db/ident :dustingetz.shirt-size/womens-medium])))
-
-        (testing "data"
-          (is (= (let [ctx (mock-fiddle! :tutorial.race/shirt-sizes)
-                       ctx (context/row ctx :dustingetz.shirt-size/womens-medium)
-                       ctx (context/attribute ctx :dustingetz.reg/gender)]
-                   @(context/data ctx))
-                 #:db{:ident :dustingetz.gender/female}))
-
-          (is (= (let [ctx (mock-fiddle! :tutorial.race/shirt-sizes)
-                       ctx (context/row ctx :dustingetz.shirt-size/womens-medium)
-                       ctx (context/attribute ctx :db/ident)]
-                   @(context/data ctx))
-                 :dustingetz.shirt-size/womens-medium))
-
-          (is (= (let [ctx (mock-fiddle! :tutorial.race/shirt-sizes)
-                       ctx (context/row ctx :dustingetz.shirt-size/womens-medium)]
-                   @(context/data ctx))
-                 {:db/ident :dustingetz.shirt-size/womens-medium,
-                  :dustingetz.reg/gender #:db{:ident :dustingetz.gender/female}}))
-
-          (is (= (let [ctx (mock-fiddle! :tutorial.race/shirt-sizes)]
-                   @(context/data ctx))
-                 [{:db/ident :dustingetz.shirt-size/womens-medium, :dustingetz.reg/gender #:db{:ident :dustingetz.gender/female}}
-                  {:db/ident :dustingetz.shirt-size/womens-small, :dustingetz.reg/gender #:db{:ident :dustingetz.gender/female}}
-                  {:db/ident :dustingetz.shirt-size/womens-large, :dustingetz.reg/gender #:db{:ident :dustingetz.gender/female}}]))
-          )
-        (testing "element inference"
-          (is (= (let [ctx (mock-fiddle! :tutorial.race/shirt-sizes)
-                       ctx (context/row ctx :dustingetz.shirt-size/womens-medium)
-                       ctx (context/attribute ctx :db/ident)]
-                   @(context/data ctx))
-                 :dustingetz.shirt-size/womens-medium))
-
-          (is (= (let [ctx (mock-fiddle! :tutorial.race/shirt-sizes)
-                       ctx (context/row ctx :dustingetz.shirt-size/womens-medium)]
-                   ; infer element
-                   @(context/data ctx))
-                 {:db/ident :dustingetz.shirt-size/womens-medium, :dustingetz.reg/gender #:db{:ident :dustingetz.gender/female}})))
-        )
-
-      (testing "head-sentinel sanity checks, head-sentinel needs to go"
-        (let [ctx (mock-fiddle! :seattle/neighborhoods)]
-          (is (= (context/eav ctx) [nil :seattle/neighborhoods nil]))
-          (is (= (count @(context/data ctx)) 6))
-          (let [ctx (context/attribute ctx :neighborhood/district)]
-            (is (= (context/eav ctx) [nil :neighborhood/district nil])))
-          (let [ctx (context/row ctx 17592186045522)
-                ctx (context/attribute ctx :neighborhood/district)]
-            (is (= (context/eav ctx) [17592186045522 :neighborhood/district 17592186045521])))
-          (testing "if head-sentinel, no v"
-            (let [ctx (assoc ctx :hypercrud.browser/head-sentinel true)
-                  ctx (context/row ctx 17592186045522)
-                  ctx (context/attribute ctx :neighborhood/district)]
-              (is (= (context/eav ctx) [nil :neighborhood/district nil]))))))
-
-      (testing "refocus"
-
-        (testing "to :ref :one from row"
-          (is (= (let [ctx (context/row ctx 17592186046196)
-                       ctx (context/element ctx 0)
-                       ctx (context/refocus ctx :dustingetz.reg/gender)]
-                   @(context/data ctx))
-                 #:db{:ident :dustingetz.gender/male}))
-
-          (is (= (for [[_ ctx] (context/spread-rows ctx)
-                       [_ ctx] (context/spread-elements ctx)]
-                   (let [ctx (context/refocus ctx :dustingetz.reg/gender)]
-                     @(context/data ctx)))
-                 (for [[_ ctx] (context/spread-rows ctx)]
-                   ; infer element
-                   (let [ctx (context/refocus ctx :dustingetz.reg/gender)]
-                     @(context/data ctx)))
-                 [#:db{:ident :dustingetz.gender/male}
-                  #:db{:ident :dustingetz.gender/male}]))
-
-          (is (= (let [ctx (context/row ctx 17592186046196)
-                       ctx (context/element ctx 0)
-                       ctx (context/refocus ctx :dustingetz.reg/gender)]
-                   @(:hypercrud.browser/eav ctx))
-                 (let [ctx (context/row ctx 17592186046196)
-                       ; infer element
-                       ctx (context/refocus ctx :dustingetz.reg/gender)]
-                   @(:hypercrud.browser/eav ctx))
-                 [17592186046196 :dustingetz.reg/gender :dustingetz.gender/male]))
-
-          (is (= (for [[_ ctx] (context/spread-rows ctx)
-                       [_ ctx] (context/spread-elements ctx)]
-                   (let [ctx (context/refocus ctx :dustingetz.reg/gender)]
-                     @(:hypercrud.browser/eav ctx)))
-                 (for [[_ ctx] (context/spread-rows ctx)]
-                   ; infer elements
-                   (let [ctx (context/refocus ctx :dustingetz.reg/gender)]
-                     @(:hypercrud.browser/eav ctx)))
-                 '([17592186046196 :dustingetz.reg/gender :dustingetz.gender/male]
-                    [17592186046763 :dustingetz.reg/gender :dustingetz.gender/male]))))
-
-        (testing "to :ref :many from row")
-
-        (testing "to :ref :one from top"
-          (is (= (let [ctx (context/refocus ctx :dustingetz.reg/gender)]
-                   ; Can't do it. Should this throw?
-                   @(context/data ctx))
-                 nil))
-
-          (is (= (for [[_ ctx] (context/spread-rows ctx)
-                       [_ ctx] (context/spread-elements ctx)]
-                   (let [ctx (context/refocus ctx :dustingetz.reg/gender)]
-                     @(context/data ctx)))
-                 [#:db{:ident :dustingetz.gender/male}
-                  #:db{:ident :dustingetz.gender/male}]))
-
-          (is (= (let [ctx (context/row ctx 17592186046196)
-                       ctx (context/element ctx 0)
-                       ctx (context/refocus ctx :dustingetz.reg/gender)]
-                   @(:hypercrud.browser/eav ctx))
-                 [17592186046196 :dustingetz.reg/gender :dustingetz.gender/male]))
-
-          (is (= (for [[_ ctx] (context/spread-rows ctx)
-                       [_ ctx] (context/spread-elements ctx)]
-                   (let [ctx (context/refocus ctx :dustingetz.reg/gender)]
-                     @(:hypercrud.browser/eav ctx)))
-                 '([17592186046196 :dustingetz.reg/gender :dustingetz.gender/male]
-                    [17592186046763 :dustingetz.reg/gender :dustingetz.gender/male]))))
-        )
-
-      #_(testing "refocus from root to gender"
-        (is (= (for [[_ ctx] (context/spread-rows ctx)
-                     #_#_[_ ctx] (context/spread-elements ctx)]
-                 #_@(:hypercrud.browser/result-index ctx)
-                 @(:hypercrud.browser/result ctx)
-                 #_@(:hypercrud.browser/result-index (context/refocus ctx :dustingetz.reg/gender))
-                 )
-               '({17592186046196 {:db/id 17592186046196,
-                                  :dustingetz.reg/email "dustin@example.com",
-                                  :dustingetz.reg/name "Dustin Getz",
-                                  :dustingetz.reg/gender #:db{:ident :dustingetz.gender/male},
-                                  :dustingetz.reg/shirt-size #:db{:ident :dustingetz.shirt-size/mens-large}},
-                  17592186046763 {:db/id 17592186046763,
-                                  :dustingetz.reg/email "bob@example.com",
-                                  :dustingetz.reg/gender #:db{:ident :dustingetz.gender/male},
-                                  :dustingetz.reg/shirt-size #:db{:ident :dustingetz.shirt-size/mens-large}}}
-                  {17592186046196 {:db/id 17592186046196,
-                                   :dustingetz.reg/email "dustin@example.com",
-                                   :dustingetz.reg/name "Dustin Getz",
-                                   :dustingetz.reg/gender #:db{:ident :dustingetz.gender/male},
-                                   :dustingetz.reg/shirt-size #:db{:ident :dustingetz.shirt-size/mens-large}},
-                   17592186046763 {:db/id 17592186046763,
-                                   :dustingetz.reg/email "bob@example.com",
-                                   :dustingetz.reg/gender #:db{:ident :dustingetz.gender/male},
-                                   :dustingetz.reg/shirt-size #:db{:ident :dustingetz.shirt-size/mens-large}}})))
-
-        (is (= (for [[_ ctx] (context/spread-rows ctx)
-                     [_ ctx] (context/spread-elements ctx)]
-                 @(:hypercrud.browser/eav (context/refocus ctx :dustingetz.reg/gender)))
-               '([17592186046196 :dustingetz.reg/gender :dustingetz.gender/male]
-                  [17592186046763 :dustingetz.reg/gender :dustingetz.gender/male])))
-        )
-
-      (testing "refocus from myself when already here but not at root")
-      )
+  (testing "row data by dbid"
+    #_(:hypercrud.browser/result-path (context/row ctx 17592186046196))
+    #_(:hypercrud.browser/result (context/row ctx 17592186046196))
+    ; not sure if element can be inferred in data. Row does not infer.
+    (is (= @(context/data (-> ctx (context/element 0) (context/row 17592186046196)))
+           {:db/id 17592186046196,
+            :dustingetz.reg/email "dustin@example.com",
+            :dustingetz.reg/name "Dustin Getz",
+            :dustingetz.reg/gender #:db{:ident :dustingetz.gender/male},
+            :dustingetz.reg/shirt-size #:db{:ident :dustingetz.shirt-size/mens-large}}))
     )
+
+  (testing "row does not set e"
+    (is (= @(:hypercrud.browser/eav (context/row ctx 17592186046196))
+           [nil :dustingetz/gender-shirtsize 17592186046196])))
+  (testing "target isolated row"
+    (is (= (for [ctx [(context/row ctx 17592186046196)]]
+             ; infers element
+             @(context/data ctx))
+           (for [ctx [(context/row ctx 17592186046196)]
+                 [_ ctx] (context/spread-elements ctx)]
+             @(context/data ctx))
+           [{:db/id 17592186046196,
+             :dustingetz.reg/email "dustin@example.com",
+             :dustingetz.reg/name "Dustin Getz",
+             :dustingetz.reg/gender #:db{:ident :dustingetz.gender/male},
+             :dustingetz.reg/shirt-size #:db{:ident :dustingetz.shirt-size/mens-large}}])))
+
+  (testing "target all rows"
+    (is (= (for [[_ ctx] (context/spread-rows ctx)]
+             @(context/data ctx))
+           (for [[_ ctx] (context/spread-rows ctx)
+                 [_ ctx] (context/spread-elements ctx)]
+             @(context/data ctx))
+           [{:db/id 17592186046196,
+             :dustingetz.reg/email "dustin@example.com",
+             :dustingetz.reg/name "Dustin Getz",
+             :dustingetz.reg/gender #:db{:ident :dustingetz.gender/male},
+             :dustingetz.reg/shirt-size #:db{:ident :dustingetz.shirt-size/mens-large}}
+            {:db/id 17592186046763,
+             :dustingetz.reg/email "bob@example.com",
+             :dustingetz.reg/gender #:db{:ident :dustingetz.gender/male},
+             :dustingetz.reg/shirt-size #:db{:ident :dustingetz.shirt-size/mens-large}}])))
+
+  (testing "focus attribute isolated"
+    (is (= (let [ctx (context/row ctx 17592186046196)
+                 ctx (context/element ctx 0)
+                 ctx (context/attribute ctx :dustingetz.reg/gender)]
+             @(context/data ctx))
+           #:db{:ident :dustingetz.gender/male})))
+
+  (testing "FindColl Pull nested"
+    (testing "eav"
+      (is (= (let [ctx (mock-fiddle! :tutorial.race/shirt-sizes)
+                   ctx (context/row ctx :dustingetz.shirt-size/womens-medium)]
+               (context/eav ctx))
+             [nil :tutorial.race/shirt-sizes :dustingetz.shirt-size/womens-medium]))
+
+      (is (= (let [ctx (mock-fiddle! :tutorial.race/shirt-sizes)
+                   ctx (context/row ctx :dustingetz.shirt-size/womens-medium)
+                   ctx (context/attribute ctx :dustingetz.reg/gender)]
+               (context/eav ctx))
+             [:dustingetz.shirt-size/womens-medium :dustingetz.reg/gender :dustingetz.gender/female]))
+
+      (is (= (let [ctx (mock-fiddle! :tutorial.race/shirt-sizes)
+                   ctx (context/row ctx :dustingetz.shirt-size/womens-medium)
+                   ctx (context/attribute ctx :db/ident)]
+               (context/eav ctx))
+             [:dustingetz.shirt-size/womens-medium :db/ident :dustingetz.shirt-size/womens-medium]))))
+
+  (testing "data"
+    (is (= (let [ctx (mock-fiddle! :tutorial.race/shirt-sizes)
+                 ctx (context/row ctx :dustingetz.shirt-size/womens-medium)
+                 ctx (context/attribute ctx :dustingetz.reg/gender)]
+             @(context/data ctx))
+           #:db{:ident :dustingetz.gender/female}))
+
+    (is (= (let [ctx (mock-fiddle! :tutorial.race/shirt-sizes)
+                 ctx (context/row ctx :dustingetz.shirt-size/womens-medium)
+                 ctx (context/attribute ctx :db/ident)]
+             @(context/data ctx))
+           :dustingetz.shirt-size/womens-medium))
+
+    (is (= (let [ctx (mock-fiddle! :tutorial.race/shirt-sizes)
+                 ctx (context/row ctx :dustingetz.shirt-size/womens-medium)]
+             @(context/data ctx))
+           {:db/ident :dustingetz.shirt-size/womens-medium,
+            :dustingetz.reg/gender #:db{:ident :dustingetz.gender/female}}))
+
+    (is (= (let [ctx (mock-fiddle! :tutorial.race/shirt-sizes)]
+             @(context/data ctx))
+           [{:db/ident :dustingetz.shirt-size/womens-medium, :dustingetz.reg/gender #:db{:ident :dustingetz.gender/female}}
+            {:db/ident :dustingetz.shirt-size/womens-small, :dustingetz.reg/gender #:db{:ident :dustingetz.gender/female}}
+            {:db/ident :dustingetz.shirt-size/womens-large, :dustingetz.reg/gender #:db{:ident :dustingetz.gender/female}}]))
+    )
+  (testing "element inference"
+    (is (= (let [ctx (mock-fiddle! :tutorial.race/shirt-sizes)
+                 ctx (context/row ctx :dustingetz.shirt-size/womens-medium)
+                 ctx (context/attribute ctx :db/ident)]
+             @(context/data ctx))
+           :dustingetz.shirt-size/womens-medium))
+
+    (is (= (let [ctx (mock-fiddle! :tutorial.race/shirt-sizes)
+                 ctx (context/row ctx :dustingetz.shirt-size/womens-medium)]
+             ; infer element
+             @(context/data ctx))
+           {:db/ident :dustingetz.shirt-size/womens-medium, :dustingetz.reg/gender #:db{:ident :dustingetz.gender/female}})))
+
+  (testing "head-sentinel sanity checks, head-sentinel needs to go"
+    (let [ctx (mock-fiddle! :seattle/neighborhoods)]
+      (is (= (context/eav ctx) [nil :seattle/neighborhoods nil]))
+      (is (= (count @(context/data ctx)) 6))
+      (let [ctx (context/attribute ctx :neighborhood/district)]
+        (is (= (context/eav ctx) [nil :neighborhood/district nil])))
+      (let [ctx (context/row ctx 17592186045522)
+            ctx (context/attribute ctx :neighborhood/district)]
+        (is (= (context/eav ctx) [17592186045522 :neighborhood/district 17592186045521])))
+      (testing "if head-sentinel, no v"
+        (let [ctx (assoc ctx :hypercrud.browser/head-sentinel true)
+              ctx (context/row ctx 17592186045522)
+              ctx (context/attribute ctx :neighborhood/district)]
+          (is (= (context/eav ctx) [nil :neighborhood/district nil]))))))
+
+  (testing "refocus to :ref :one from row"
+    (is (= (let [ctx (context/row ctx 17592186046196)
+                 ctx (context/element ctx 0)
+                 ctx (context/refocus ctx :dustingetz.reg/gender)]
+             @(context/data ctx))
+           #:db{:ident :dustingetz.gender/male}))
+
+    (is (= (for [[_ ctx] (context/spread-rows ctx)
+                 [_ ctx] (context/spread-elements ctx)]
+             (let [ctx (context/refocus ctx :dustingetz.reg/gender)]
+               @(context/data ctx)))
+           (for [[_ ctx] (context/spread-rows ctx)]
+             ; infer element
+             (let [ctx (context/refocus ctx :dustingetz.reg/gender)]
+               @(context/data ctx)))
+           [#:db{:ident :dustingetz.gender/male}
+            #:db{:ident :dustingetz.gender/male}]))
+
+    (is (= (let [ctx (context/row ctx 17592186046196)
+                 ctx (context/element ctx 0)
+                 ctx (context/refocus ctx :dustingetz.reg/gender)]
+             @(:hypercrud.browser/eav ctx))
+           (let [ctx (context/row ctx 17592186046196)
+                 ; infer element
+                 ctx (context/refocus ctx :dustingetz.reg/gender)]
+             @(:hypercrud.browser/eav ctx))
+           [17592186046196 :dustingetz.reg/gender :dustingetz.gender/male]))
+
+    (is (= (for [[_ ctx] (context/spread-rows ctx)
+                 [_ ctx] (context/spread-elements ctx)]
+             (let [ctx (context/refocus ctx :dustingetz.reg/gender)]
+               @(:hypercrud.browser/eav ctx)))
+           (for [[_ ctx] (context/spread-rows ctx)]
+             ; infer elements
+             (let [ctx (context/refocus ctx :dustingetz.reg/gender)]
+               @(:hypercrud.browser/eav ctx)))
+           '([17592186046196 :dustingetz.reg/gender :dustingetz.gender/male]
+              [17592186046763 :dustingetz.reg/gender :dustingetz.gender/male]))))
+
+  (testing "refocus to :ref :many from row")
+
+  (testing "refocus to :ref :one from top"
+    (is (= (let [ctx (context/refocus ctx :dustingetz.reg/gender)]
+             ; Can't do it. Should this throw?
+             @(context/data ctx))
+           nil))
+
+    (is (= (for [[_ ctx] (context/spread-rows ctx)
+                 [_ ctx] (context/spread-elements ctx)]
+             (let [ctx (context/refocus ctx :dustingetz.reg/gender)]
+               @(context/data ctx)))
+           [#:db{:ident :dustingetz.gender/male}
+            #:db{:ident :dustingetz.gender/male}]))
+
+    (is (= (let [ctx (context/row ctx 17592186046196)
+                 ctx (context/element ctx 0)
+                 ctx (context/refocus ctx :dustingetz.reg/gender)]
+             @(:hypercrud.browser/eav ctx))
+           [17592186046196 :dustingetz.reg/gender :dustingetz.gender/male]))
+
+    (is (= (for [[_ ctx] (context/spread-rows ctx)
+                 [_ ctx] (context/spread-elements ctx)]
+             (let [ctx (context/refocus ctx :dustingetz.reg/gender)]
+               @(:hypercrud.browser/eav ctx)))
+           '([17592186046196 :dustingetz.reg/gender :dustingetz.gender/male]
+              [17592186046763 :dustingetz.reg/gender :dustingetz.gender/male]))))
+
+  #_(testing "refocus from root to gender"
+      (is (= (for [[_ ctx] (context/spread-rows ctx)
+                   #_#_[_ ctx] (context/spread-elements ctx)]
+               #_@(:hypercrud.browser/result-index ctx)
+               @(:hypercrud.browser/result ctx)
+               #_@(:hypercrud.browser/result-index (context/refocus ctx :dustingetz.reg/gender))
+               )
+             '({17592186046196 {:db/id 17592186046196,
+                                :dustingetz.reg/email "dustin@example.com",
+                                :dustingetz.reg/name "Dustin Getz",
+                                :dustingetz.reg/gender #:db{:ident :dustingetz.gender/male},
+                                :dustingetz.reg/shirt-size #:db{:ident :dustingetz.shirt-size/mens-large}},
+                17592186046763 {:db/id 17592186046763,
+                                :dustingetz.reg/email "bob@example.com",
+                                :dustingetz.reg/gender #:db{:ident :dustingetz.gender/male},
+                                :dustingetz.reg/shirt-size #:db{:ident :dustingetz.shirt-size/mens-large}}}
+                {17592186046196 {:db/id 17592186046196,
+                                 :dustingetz.reg/email "dustin@example.com",
+                                 :dustingetz.reg/name "Dustin Getz",
+                                 :dustingetz.reg/gender #:db{:ident :dustingetz.gender/male},
+                                 :dustingetz.reg/shirt-size #:db{:ident :dustingetz.shirt-size/mens-large}},
+                 17592186046763 {:db/id 17592186046763,
+                                 :dustingetz.reg/email "bob@example.com",
+                                 :dustingetz.reg/gender #:db{:ident :dustingetz.gender/male},
+                                 :dustingetz.reg/shirt-size #:db{:ident :dustingetz.shirt-size/mens-large}}})))
+
+      (is (= (for [[_ ctx] (context/spread-rows ctx)
+                   [_ ctx] (context/spread-elements ctx)]
+               @(:hypercrud.browser/eav (context/refocus ctx :dustingetz.reg/gender)))
+             '([17592186046196 :dustingetz.reg/gender :dustingetz.gender/male]
+                [17592186046763 :dustingetz.reg/gender :dustingetz.gender/male])))
+      )
+
+  (testing "refocus from myself when already here but not at root")
+
   )
 
 (deftest links
   []
-
-
   (testing "race shirt-sizes"
     (def ctx (mock-fiddle! :tutorial.race/submission))
     (is (-> @(hyperfiddle.data/select-many ctx :dustingetz.reg/gender)
