@@ -304,3 +304,12 @@
         FindColl qfind
         FindScalar qfind)
       qfind)))
+
+(defn find-identity-attr "Search an entity map for a :db.unique/identity attribute, or nil if not found.
+  Does not traverse :db.type/ref nor :db/isComponent."
+  [schema e-map]
+  {:pre [schema]}
+  (->> (keys e-map)
+       (map (juxt identity #(contrib.datomic/unique? schema % :db.unique/identity)))
+       (filter second)
+       (some first)))

@@ -291,6 +291,10 @@
     (is (contrib.datomic/cardinality? fixtures.hfhf/schema :link/fiddle :db.cardinality/one))
     (is (contrib.datomic/ref-one? fixtures.hfhf/schema :link/fiddle))
     (is (contrib.datomic/unique? fixtures.hfhf/schema :db/ident :db.unique/identity))
+    (is (contrib.datomic/unique? fixtures.hfhf/schema :fiddle/ident :db.unique/identity))
+    (is (= (contrib.datomic/find-identity-attr fixtures.hfhf/schema {:a 1 :fiddle/ident :yo}) :fiddle/ident))
+    (is (= (contrib.datomic/find-identity-attr fixtures.hfhf/schema {:a 1}) nil))
+    (is (= (contrib.datomic/find-identity-attr fixtures.hfhf/schema nil) nil))
     )
   )
 
@@ -319,11 +323,6 @@
     ))
 
 (deftest query-parsing
-  (def qfind )
-  ;(count (datascript.parser/find-elements qfind))
-  ;(= FindScalar (type qfind))
-  ;(condp = (type qfind) FindScalar "yo")
-  ;(hyperfiddle.fiddle/qfind-canonical qfind)
   (testing ""
     (is (= (contrib.datomic/qfind-collapse-findrel-1 (:qfind (datascript.parser/parse-query '[:find ?e :where [?e]])))
            (contrib.datomic/qfind-collapse-findrel-1 (:qfind (datascript.parser/parse-query '[:find [?e ...] :where [?e]])))))
