@@ -75,7 +75,7 @@
     (try
       (reagent-server/render-to-static-markup [foundation/view ctx])
       (catch :default e
-        (reagent-server/render-to-string [:div
+        (reagent-server/render-to-string [:<>
                                           [:h1 "Javascript mounting..."]
                                           [:h2 "SSR failed on:"]
                                           [error/error-block e]])))))
