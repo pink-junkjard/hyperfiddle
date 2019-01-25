@@ -48,11 +48,10 @@
    (defn view [ctx]
      (if-let [e (or @(runtime/state (:peer ctx) [::runtime/fatal-error])
                     (some-> @(runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :error])))]
-       [:div                                                ; necessary wrapper div, it is the react root
+       [:<>
         [error-cmp e]
         [staging ctx]]
-       ; Necessary wrapper div, this is returned from react-render
-       [:div
+       [:<>
         [:style {:dangerouslySetInnerHTML {:__html @(runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :project :project/css])}}]
         (either/branch
           (project/eval-domain-code!+ @(runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :project :project/code]))
