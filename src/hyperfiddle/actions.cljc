@@ -23,9 +23,9 @@
   (let [{:keys [hydrate-id local-basis route]} (get-in (get-state) [::runtime/partitions branch])
         stage (data/map-values :stage @(runtime/state rt [::runtime/partitions]))]
     (-> (io/hydrate-route (runtime/io rt) local-basis route branch stage)
-        (p/then (fn [{:keys [local-basis attr-renderers ptm schemas tempid-lookups]}]
+        (p/then (fn [{:keys [local-basis attr-renderers project ptm schemas tempid-lookups]}]
                   (if (= hydrate-id (get-in (get-state) [::runtime/partitions branch :hydrate-id]))
-                    (dispatch! [:hydrate!-route-success branch attr-renderers ptm schemas tempid-lookups local-basis])
+                    (dispatch! [:hydrate!-route-success branch attr-renderers project ptm schemas tempid-lookups local-basis])
                     (timbre/info (str "Ignoring response for " hydrate-id)))))
         (p/catch (fn [error]
                    (if (= hydrate-id (get-in (get-state) [::runtime/partitions branch :hydrate-id]))

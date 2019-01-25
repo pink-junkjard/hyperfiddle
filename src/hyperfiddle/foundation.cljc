@@ -46,23 +46,18 @@
 
 #?(:cljs
    (defn view [ctx]
-     (let [project+ (either/right nil)
-           #_(->> (project/project-request ctx)
-                  (hc/hydrate (:peer ctx) (:branch ctx))
-                  deref)]
-       (if-let [e (or @(runtime/state (:peer ctx) [::runtime/fatal-error])
-                      (some-> @(runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :error]))
-                      (when (either/left? project+) @project+))]
-         [:div                                              ; necessary wrapper div, it is the react root
-          [error-cmp e]
-          [staging ctx]]
-         ; Necessary wrapper div, this is returned from react-render
-         [:div
-          [:style {:dangerouslySetInnerHTML {:__html (:domain/css @project+)}}]
-          (either/branch
-            (project/eval-domain-code!+ (:domain/code @project+))
-            (fn [e] [:div [:h2 {:style {:margin-top "10%" :text-align "center"}} "Misconfigured domain"]])
-            (fn [_] [iframe-cmp ctx {:route @(runtime/state (:peer ctx) [::runtime/partitions nil :route])}]))]))))
+     (if-let [e (or @(runtime/state (:peer ctx) [::runtime/fatal-error])
+                    (some-> @(runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :error])))]
+       [:div                                                ; necessary wrapper div, it is the react root
+        [error-cmp e]
+        [staging ctx]]
+       ; Necessary wrapper div, this is returned from react-render
+       [:div
+        [:style {:dangerouslySetInnerHTML {:__html @(runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :project :project/css])}}]
+        (either/branch
+          (project/eval-domain-code!+ @(runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :project :project/code]))
+          (fn [e] [:div [:h2 {:style {:margin-top "10%" :text-align "center"}} "Misconfigured domain"]])
+          (fn [_] [iframe-cmp ctx {:route @(runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :route])}]))])))
 
 (def LEVEL-NONE 0)
 (def LEVEL-GLOBAL-BASIS 1)

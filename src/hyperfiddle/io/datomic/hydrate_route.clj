@@ -46,7 +46,8 @@
                  (hydrate-requests [io local-basis staged-branches requests]
                    (p/do* (hydrate-requests/hydrate-requests domain local-basis requests staged-branches ?subject))))]
     (alet [schemas (schema/hydrate-schemas aux-io domain local-basis branch staged-branches)
-           attr-renderers (project/hydrate-attr-renderers aux-io local-basis branch staged-branches)]
+           attr-renderers (project/hydrate-attr-renderers aux-io local-basis branch staged-branches)
+           project (project/hydrate-project-record aux-io local-basis branch staged-branches)]
       (let [db-with-lookup (atom {})
             get-secure-db-with+ (hydrate-requests/build-get-secure-db-with+ domain staged-branches db-with-lookup local-basis)
             initial-state (reduce (fn [state [branch v]]
@@ -56,6 +57,7 @@
                                    ; why dont we need to preheat the tempid lookups here for parent branches?
                                    ::runtime/partitions {branch {:attr-renderers attr-renderers
                                                                  :local-basis local-basis
+                                                                 :project project ; todo this is needed once total, not once per partition
                                                                  :route route
                                                                  :schemas schemas}}}
                                   stage)
@@ -67,9 +69,5 @@
                            [dbname _] branch-content]
                      (get-secure-db-with+ dbname branch-ident)))
         (perf/time (fn [get-total-time] (timbre/debug "Hydrate-route::request-fn" "total time: " (get-total-time)))
-                   #_(->> (project/project-request ctx)
-                          (hc/hydrate (:peer ctx) (:branch ctx))
-                          deref
-                          (-quiet-unwrap))
                    (doall (browser-request/request-from-route route {:branch branch :peer rt})))
-        (select-keys @(runtime/state rt [::runtime/partitions branch]) [:local-basis :attr-renderers :ptm :schemas :tempid-lookups])))))
+        (select-keys @(runtime/state rt [::runtime/partitions branch]) [:local-basis :attr-renderers :project :ptm :schemas :tempid-lookups])))))

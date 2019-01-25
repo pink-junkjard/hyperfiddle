@@ -54,10 +54,6 @@
    {:db/ident :domain/disable-javascript :db/valueType :db.type/boolean :db/cardinality :db.cardinality/one :db/doc "Elide Hyperfiddle javascript in production domains so client doesn't have to parse/eval it, this will decrease time-to-interaction on static sites like blogs. Counter-intuitively this will probably make your app overall slower because without javascript you can't take advantage of `Cache-control: Immutable` on api responses which get the entire static site in browser cache."}
    {:db/ident :domain/home-route :db/valueType :db.type/string :db/cardinality :db.cardinality/one :db/doc "Index route for this domain, it can have parameters"}
    {:db/ident :domain/router :db/valueType :db.type/string :db/cardinality :db.cardinality/one :db/doc "Experimental and undocumented userland router definition"}
-
-   ; todo project
-   {:db/ident :domain/code :db/valueType :db.type/string :db/cardinality :db.cardinality/one :db/doc "a ClojureScript form for storing view functions, evaluated on page load"}
-   {:db/ident :domain/css :db/valueType :db.type/string :db/cardinality :db.cardinality/one}
    ])
 
 (defn provision-domains-db! [uri owners]

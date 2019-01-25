@@ -2,9 +2,7 @@
   (:require
     #?(:cljs [contrib.eval-cljs :as eval-cljs])
     [contrib.try$ :refer [try-either]]
-    [hyperfiddle.domain :as domain]
     [hyperfiddle.io.core :as io]
-    [hyperfiddle.runtime :as runtime]
     [hypercrud.types.DbRef :refer [->DbRef]]
     [hypercrud.types.EntityRequest :refer [->EntityRequest]]
     [hypercrud.types.QueryRequest :refer [->QueryRequest]]
@@ -21,13 +19,15 @@
   (-> (io/hydrate-one! io local-basis staged-branches (attrs-request branch))
       (p/then #(into {} %))))
 
-(defn project-request [ctx]
+(defn project-request [branch]
   (->EntityRequest
-    [:domain/ident (domain/ident (runtime/domain (:peer ctx)))]
-    (->DbRef 'hyperfiddle.domain/fiddle-database (:branch ctx))
-    [:db/id
-     :project/code
+    :hyperfiddle/project
+    (->DbRef 'hyperfiddle.domain/fiddle-database branch)
+    [:project/code
      :project/css]))
+
+(defn hydrate-project-record [io local-basis branch staged-branches]
+  (io/hydrate-one! io local-basis staged-branches (project-request branch)))
 
 #?(:cljs
    (defn eval-domain-code!+ [code-str]

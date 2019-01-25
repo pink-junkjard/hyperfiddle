@@ -24,7 +24,7 @@
 
 (defn global-basis-reducer [global-basis action & args]
   (case action
-    :hydrate!-route-success (let [[branch attr-renderers ptm schemas tempid-lookups new-local-basis] args]
+    :hydrate!-route-success (let [[branch attr-renderers project ptm schemas tempid-lookups new-local-basis] args]
                               (if (nil? branch)
                                 (map-values (fn [sub-basis]
                                               (reduce-kv (fn [sub-basis uri t]
@@ -67,7 +67,7 @@
                                 partitions
                                 (-> partitions
                                     (assoc-in [branch :route] route)
-                                    #_(dissoc :error :attr-renderers :ptm :schemas :tempid-lookups))))
+                                    #_(dissoc :error :attr-renderers :project :ptm :schemas :tempid-lookups))))
 
            :with (let [[branch dbname tx] args]
                    (update partitions branch with dbname tx))
@@ -98,7 +98,7 @@
            :hydrate!-shorted (let [[branch] args]
                                (update partitions branch dissoc :hydrate-id))
 
-           :hydrate!-route-success (let [[branch attr-renderers ptm schemas tempid-lookups new-basis] args]
+           :hydrate!-route-success (let [[branch attr-renderers project ptm schemas tempid-lookups new-basis] args]
                                      (update partitions branch
                                              (fn [partition]
                                                (-> partition
@@ -106,6 +106,7 @@
                                                    (assoc
                                                      :attr-renderers attr-renderers
                                                      :local-basis new-basis
+                                                     :project project
                                                      :ptm ptm
                                                      :schemas schemas
                                                      :tempid-lookups tempid-lookups)))))
@@ -146,6 +147,7 @@
                              ; response data of hydrating a partition
                              :attr-renderers identity
                              :error identity
+                             :project identity
                              :ptm identity
                              :schemas identity
                              :tempid-lookups identity}
