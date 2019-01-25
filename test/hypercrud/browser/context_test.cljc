@@ -10,11 +10,10 @@
 
 (defn mock-fiddle! [ident]
   (let [[fiddle result] (-> fixtures.tank/fiddles ident)]
-    (context/fiddle
-      {:hypercrud.browser/route nil}
-      (r/pure fixtures.tank/schemas)
-      (r/pure (hyperfiddle.fiddle/apply-defaults fiddle))
-      (r/pure result))))
+    (-> {:hypercrud.browser/route nil}
+        (context/schemas (r/pure fixtures.tank/schemas))
+        (context/fiddle (r/pure fiddle))
+        (context/result (r/pure result)))))
 
 (deftest primitives
   []
@@ -56,7 +55,7 @@
                               :shirt-size [:db/ident]}]])))
   )
 
-
+(def ctx (mock-fiddle! :dustingetz/gender-shirtsize))
 
 (deftest context
   []
@@ -151,9 +150,10 @@
 
     (testing "spread-row doesnt prefill v, but it can be inferred"
       (is (= (for [[_ ctx] (context/spread-rows ctx)]
+               #_@(context/data ctx)
                @(:hypercrud.browser/eav ctx))
-             '([nil :dustingetz/gender-shirtsize nil]
-                [nil :dustingetz/gender-shirtsize nil])))
+             [[nil :dustingetz/gender-shirtsize 17592186046196]
+              [nil :dustingetz/gender-shirtsize 17592186046763]]))
 
       (is (= (for [[_ ctx] (context/spread-rows ctx)]
                (context/eav ctx))
@@ -222,8 +222,8 @@
     (is (= (for [[_ ctx] (context/spread-result ctx)
                  [_ ctx] (context/spread-rows ctx)]
              @(:hypercrud.browser/eav (context/refocus ctx :dustingetz/gender-shirtsize)))
-           '([nil :dustingetz/gender-shirtsize nil]
-              [nil :dustingetz/gender-shirtsize nil])))
+           '([nil :dustingetz/gender-shirtsize 17592186046196]
+              [nil :dustingetz/gender-shirtsize 17592186046763])))
 
     (is (= (for [[_ ctx] (context/spread-result ctx)
                  [_ ctx] (context/spread-rows ctx)
@@ -254,9 +254,9 @@
               :dustingetz.reg/shirt-size #:db{:ident :dustingetz.shirt-size/mens-large}}))
       )
 
-    (testing "does not set e"
+    (testing "row does not set e"
       (is (= @(:hypercrud.browser/eav (context/row ctx 17592186046196))
-             [nil :dustingetz/gender-shirtsize nil])))
+             [nil :dustingetz/gender-shirtsize 17592186046196])))
 
     (testing "spread rows"
       (testing "target isolated row"
@@ -480,31 +480,28 @@
   []
 
 
-  (testing "race"
+  (testing "race shirt-sizes"
     (def ctx (mock-fiddle! :tutorial.race/submission))
     (is (-> @(hyperfiddle.data/select-many ctx :dustingetz.reg/gender)
             first :link/fiddle :fiddle/ident (= :tutorial.race/shirt-sizes)))
     ;(println @(hyperfiddle.data/select-many ctx :tutorial.race/submission))
     @(hyperfiddle.data/select-many ctx :hf/iframe)
-
-
-    @(:hypercrud.browser/link-index ctx)
-
     )
 
-  (testing "seattle iframes"
+  (testing "seattle neighborhood districts"
     (def ctx (mock-fiddle! :seattle/neighborhoods))
     (-> @(hyperfiddle.data/select-many-here ctx :seattle/districts)
         first :link/fiddle :fiddle/ident (= :seattle/districts))
-
-
-
 
     #_(testing "if head-sentinel, no v"
         (let [ctx (assoc ctx :hypercrud.browser/head-sentinel true)
               ctx (context/row ctx 17592186045522)
               ctx (context/attribute ctx :neighborhood/district)]
           (is (= (context/eav ctx) [nil :neighborhood/district nil])))))
+  )
+
+(deftest txfn
+  []
 
   (testing "counter button at scalar"
     (def ctx (mock-fiddle! :dustingetz/counter))
@@ -512,6 +509,11 @@
     (= (context/eav ctx) [17592186046196 :dustingetz.reg/age 102])
 
     )
+
+  ; hf/new at fiddle level
+  ; How does it pick the color and set the right eav for [:db/add e a v]
+  ; v is formula. What is e?
+  ; There isn't, this adds parent-child rel whichj we don't have! Why are we here.
 
   )
 

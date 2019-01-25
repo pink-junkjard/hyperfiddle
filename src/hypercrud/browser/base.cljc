@@ -53,10 +53,10 @@
                   (system-fiddle/hydrate-system-fiddle arg1)
                   (mlet [fiddle @(hc/hydrate (:peer ctx) (:branch ctx) @meta-fiddle-request)]
                     (validate-fiddle fiddle)))]
-    (return
-      (fiddle/apply-defaults fiddle))))
+    (return fiddle)))
 
-(defn request-for-fiddle [fiddle ctx]                       ; depends on route
+(defn request-for-fiddle [{fiddle :hypercrud.browser/fiddle :as ctx}]                       ; depends on route
+  ; it's a fiddle-ctx now, which has the defaults applied
   (case @(r/cursor fiddle [:fiddle/type])
     :query (mlet [q (reader/memoized-read-string+ @(r/cursor fiddle [:fiddle/query]))
                   args (context/validate-query-params+ q @(r/fmap second (:hypercrud.browser/route ctx)) ctx)]
@@ -84,25 +84,27 @@
                          (either/right nil)))]
   (defn process-results "Initialize ctx internals, but doesn't focus anything into scope.
     Not even the topfiddle"
-    [r-fiddle request ctx]                                  ; This ctx is clean, it has ::route and userstuff only.
+    [request ctx]
     ; Blow mlet in case of (right _) -> (left _), but don't recompute if (right :a) -> (right :b).
     (mlet [reactive-attrs @(r/apply-inner-r (project/hydrate-attrs ctx))
            ; result SHOULD be sorted out of jvm, though isn't yet
            r-result @(r/apply-inner-r (r/track nil-or-hydrate (:peer ctx) (:branch ctx) request))
            :let [#_#_sort-fn (hyperfiddle.ui.sort/sort-fn % sort-col)
-                 r-schemas (r/track context/summon-schemas-grouped-by-dbname ctx)
-                 ctx (hypercrud.browser.context/fiddle ctx r-schemas r-fiddle r-result)
+                 ctx (hypercrud.browser.context/result ctx r-result)
                  ctx (assoc ctx :hypercrud.browser/attr-renderers reactive-attrs)]]
       (return ctx))))
 
 (defn data-from-route "either ctx, ctx-from-route" [route ctx]                           ; todo rename
   (mlet [ctx (-> (context/clean ctx)
-                 (routing/route+ route))
+                 (routing/route+ route)
+                 #_(context/schemas (r/track context/summon-schemas-grouped-by-dbname ctx)))
          meta-fiddle-request @(r/apply-inner-r (r/track meta-request-for-fiddle ctx))
-         fiddle @(r/apply-inner-r (r/track hydrate-fiddle meta-fiddle-request ctx))
-         fiddle-request @(r/apply-inner-r (r/track request-for-fiddle fiddle ctx))]
+         r-fiddle @(r/apply-inner-r (r/track hydrate-fiddle meta-fiddle-request ctx))
+         :let [ctx (context/schemas ctx (r/track context/summon-schemas-grouped-by-dbname ctx))
+               ctx (context/fiddle ctx r-fiddle)]
+         fiddle-request @(r/apply-inner-r (r/track request-for-fiddle ctx))]
     ; fiddle request can be nil for no-arg pulls (just draw readonly form)
-    (process-results fiddle fiddle-request ctx)))
+    (process-results fiddle-request ctx)))
 
 (defn data-from-route! [route ctx]
   (unwrap (constantly nil) (data-from-route route ctx)))

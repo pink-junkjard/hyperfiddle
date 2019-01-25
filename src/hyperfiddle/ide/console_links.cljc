@@ -95,7 +95,7 @@
 (defn console-links-fiddle
   "All sys links can be matched and merged with user-links. Matching is determined by link/rel and link/path"
   [schemas fiddle data]
-  (if-let [qfind (hyperfiddle.fiddle/parse-fiddle-query fiddle)]
+  (if-let [{:keys [:qfind]} (hyperfiddle.fiddle/parse-fiddle-query fiddle)]
     (map (comp fiddle/auto-link console-link)
          (repeat qfind)
          (contrib.data/ungroup (query-links-impl schemas qfind data)))))

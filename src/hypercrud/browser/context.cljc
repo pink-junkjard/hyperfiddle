@@ -60,9 +60,12 @@
 (s/def :hypercrud.browser/result-path (s/coll-of ::result-path-segment :kind vector?))
 (s/def :hypercrud.browser/element r/reactive?)
 (s/def :hypercrud.browser/element-index int?)
+(s/def :hypercrud.browser/schemas r/reactive?)
+(s/def :hypercrud.browser/schema r/reactive?)
 (s/def :hypercrud.browser/pull-path (s/coll-of keyword? :kind vector?))
 
 (defn clean [ctx]
+  ; Keeps the :peer which owns the schemas
   (dissoc ctx
           :hypercrud.ui/error
           :hyperfiddle.ui/layout
@@ -174,6 +177,11 @@
   (-> (->> @(hyperfiddle.runtime/state (:peer ctx) [:hyperfiddle.runtime/partitions (:branch ctx) :schemas])
            (contrib.data/map-keys #(hyperfiddle.domain/uri->dbname % (:hypercrud.browser/domain ctx))))
       (dissoc nil)))
+
+(defn schemas "Dumb setup method, separates context from :peer and helps with tests etc"
+  [ctx r-schemas]
+  {:post [#_(do (println (count @(:hypercrud.browser/schemas %))) true)]}
+  (assoc ctx :hypercrud.browser/schemas r-schemas))
 
 (defn hydrate-attribute [ctx ident & ?more-path]
   (runtime/state (:peer ctx) (concat [::runtime/partitions (:branch ctx) :schemas (uri ctx)] (cons ident ?more-path))))
@@ -399,42 +407,57 @@
                      (map (partial stable-entity-key ctx)))]
           [k (row ctx k)])))))
 
-(defn fiddle "Runtime sets this up, not public.
-  Careful this is highly sensitive to order of initalization."
-  [ctx r-schemas r-fiddle r-result]
-  {:pre [r-fiddle r-result]
-   :post [#_(do (println (:hypercrud.browser/qfind %) (:hypercrud.browser/result-enclosure %)) true)]}
-  (as-> ctx ctx
-        (assoc ctx :hypercrud.browser/fiddle r-fiddle)
-        (assoc ctx :hypercrud.browser/result r-result)      ; can be nil if no qfind
+(defn fiddle "Runtime sets this up, it's not public api.
+  Responsible for setting defaults.
+  Careful this is highly sensitive to order of initialization."
+  [ctx r-fiddle]
+  {:pre [r-fiddle
+         (:hypercrud.browser/schemas ctx)
+         (-> (:hypercrud.browser/schemas ctx) deref count (> 0))]}
+  (let [r-fiddle (r/fmap hyperfiddle.fiddle/apply-defaults r-fiddle)
+        r-qparsed (r/fmap-> r-fiddle hyperfiddle.fiddle/parse-fiddle-query)
+        r-qfind (r/fmap :qfind r-qparsed)
+        r-fiddle (r/fmap hyperfiddle.fiddle/apply-fiddle-links-defaults
+                         r-fiddle (:hypercrud.browser/schemas ctx) r-qparsed)]
+    (as-> ctx ctx
+          (assoc ctx :hypercrud.browser/fiddle r-fiddle)
+          (if r-qfind
+            (if @r-qfind
+              (assoc ctx :hypercrud.browser/qfind r-qfind)
+              ctx)
+            ctx)
+          (assoc ctx :hypercrud.browser/link-index (r/fmap -indexed-links-at r-fiddle))
+          (assoc ctx :hypercrud.browser/eav (r/apply stable-eav-av
+                                                     [(r/pure nil)
+                                                      (r/fmap :fiddle/ident r-fiddle)
+                                                      (r/pure nil)]))
+          ; push this down, it should be nil now
+          (assoc ctx :hypercrud.browser/pull-path []))))
 
-        (if-let [qfind (r/fmap-> r-fiddle hyperfiddle.fiddle/parse-fiddle-query)] ; i think check raw value
-          (if @qfind
-            (as-> ctx ctx
-                  (assoc ctx :hypercrud.browser/qfind qfind)
-                  (assoc ctx :hypercrud.browser/schemas r-schemas)
-                  (assoc ctx :hypercrud.browser/result-enclosure
-                             (r/ctxf contrib.datomic/result-enclosure ctx
-                                     :hypercrud.browser/schemas
-                                     :hypercrud.browser/qfind
-                                     :hypercrud.browser/result)))
+(defn result [ctx r-result]
+  {:pre [r-result
+         (:hypercrud.browser/fiddle ctx)]}
+  (as-> ctx ctx
+        (assoc ctx :hypercrud.browser/result r-result)      ; can be nil if no qfind
+        (if (:hypercrud.browser/qfind ctx)
+          (if @(:hypercrud.browser/qfind ctx)
+            (assoc ctx :hypercrud.browser/result-enclosure
+                       (r/ctxf contrib.datomic/result-enclosure ctx
+                               :hypercrud.browser/schemas
+                               :hypercrud.browser/qfind
+                               :hypercrud.browser/result))
             ctx)
           ctx)
-        (assoc ctx :hypercrud.browser/link-index (r/fmap -indexed-links-at r-fiddle))
-        (assoc ctx :hypercrud.browser/validation-hints (contrib.validation/validate
-                                                         (s/get-spec @(r/fmap :fiddle/ident r-fiddle))
-                                                         @(:hypercrud.browser/result ctx)
-                                                         (partial row-keyfn ctx)))
-        (assoc ctx :hypercrud.browser/eav (r/apply stable-eav-av
-                                                   [(r/pure nil)
-                                                    (r/fmap :fiddle/ident r-fiddle)
-                                                    (r/pure nil)]))
+        (assoc ctx :hypercrud.browser/validation-hints
+                   (contrib.validation/validate
+                     (s/get-spec @(r/fmap-> (:hypercrud.browser/fiddle ctx) :fiddle/ident))
+                     @(:hypercrud.browser/result ctx)
+                     (partial row-keyfn ctx)))
 
         ; index-result implicitly depends on eav in the tempid reversal stable entity code.
         ; Conceptually, it should be after qfind and before EAV.
-        (index-result ctx)                                  ; in row case, now indexed, but path is not aligned yet
-        ; push this down, it should be nil now
-        (assoc ctx :hypercrud.browser/pull-path [])))
+        (index-result ctx)                                ; in row case, now indexed, but path is not aligned yet
+        ))
 
 (defn stable-element-schema [schemas element]
   (let [{{db :symbol} :source} element]

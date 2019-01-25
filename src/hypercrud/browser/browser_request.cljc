@@ -21,6 +21,7 @@
 
 (defn request-from-route [route ctx]
   (when-let [ctx (-> (context/clean ctx)
+                     #_(context/schemas (r/track context/summon-schemas-grouped-by-dbname ctx))
                      (routing/route+ route)
                      -quiet-unwrap)]
     (when-let [meta-fiddle-request (-quiet-unwrap @(r/apply-inner-r (r/track base/meta-request-for-fiddle ctx)))]
@@ -28,14 +29,16 @@
       (concat [@meta-fiddle-request
                (project/attrs-request ctx)]
               (-quiet-unwrap
-                (mlet [fiddle @(r/apply-inner-r (r/track base/hydrate-fiddle meta-fiddle-request ctx))
-                       fiddle-request @(r/apply-inner-r (r/track base/request-for-fiddle fiddle ctx))]
-                  (s/assert r/reactive? fiddle)
+                (mlet [r-fiddle @(r/apply-inner-r (r/track base/hydrate-fiddle meta-fiddle-request ctx))
+                       :let [ctx (context/schemas ctx (r/track context/summon-schemas-grouped-by-dbname ctx))
+                             ctx (context/fiddle ctx r-fiddle)]
+                       fiddle-request @(r/apply-inner-r (r/track base/request-for-fiddle ctx))]
+                  (s/assert r/reactive? r-fiddle)
                   (s/assert r/reactive? fiddle-request)
                   (cats/return
                     (concat
                       (some-> @fiddle-request vector)
-                      (->> (base/process-results fiddle fiddle-request ctx)
+                      (->> (base/process-results fiddle-request ctx)
                            ; Don't set context/fiddle (would set A to fiddle-ident)
                            ; Context methods must be robust to fiddle-attrs now.
                            (cats/fmap requests)
