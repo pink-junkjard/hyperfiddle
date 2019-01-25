@@ -53,7 +53,7 @@
         (timbre/debug "Issuing request" (str "[" @req-hash "]") (:url req))
         ; todo inject a request-id to track on backend
         #?(:clj  (assert false "kvlt broken on jvm")
-           :cljs (-> (kvlt/request! (assoc req :kvlt.platform/credentials? true))
+           :cljs (-> (kvlt/request! req)
                      (p/catch (fn [e]
                                 (let [data (ex-data e)
                                       response-body (:body data)]
