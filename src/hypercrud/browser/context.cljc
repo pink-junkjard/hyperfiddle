@@ -315,6 +315,7 @@
 
 (defn data "Works in any context and infers the right stuff" ; todo just deref it
   [ctx]
+  {:pre [ctx]}
   (let [ctx (-infer-implicit-element ctx)
 
         ; Result-index is precomputed to match the expected path,
