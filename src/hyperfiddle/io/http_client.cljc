@@ -46,8 +46,10 @@
 
 (def ^:dynamic *force-refresh*)
 
-(defn http-request! [req]
-  (let [req-hash (delay (hash req))]
+(defn http-request! [req & [jwt]]
+  (let [req (cond-> req
+              jwt (assoc :auth {:bearer jwt}))
+        req-hash (delay (hash req))]
     (perf/time-promise
       (do
         (timbre/debug "Issuing request" (str "[" @req-hash "]") (:url req))
@@ -96,17 +98,15 @@
   (-> {:url (str service-uri (bidi/path-for (routes/build build) :global-basis))
        :accept :application/transit+json :as :auto
        :method :get}
-      (into (when jwt {:auth {:bearer jwt}}))
-      (http-request!)
+      (http-request! jwt)
       (p/then :body)))
 
 (defn hydrate-requests! [service-uri build local-basis staged-branches requests & [jwt]]
-  (let [req (into {:url (str service-uri (bidi/path-for (routes/build build) :hydrate-requests :local-basis (ednish/encode-uri local-basis))) ; serialize kvseq
-                   :accept :application/transit+json :as :auto
-                   :method :post                            ; hydrate-requests always has a POST body, though it has a basis and is cachable
-                   :form {:staged-branches staged-branches :request requests}
-                   :content-type :application/transit+json}
-                  (when jwt {:auth {:bearer jwt}}))]
+  (let [req {:url (str service-uri (bidi/path-for (routes/build build) :hydrate-requests :local-basis (ednish/encode-uri local-basis))) ; serialize kvseq
+             :accept :application/transit+json :as :auto
+             :method :post                                  ; hydrate-requests always has a POST body, though it has a basis and is cachable
+             :form {:staged-branches staged-branches :request requests}
+             :content-type :application/transit+json}]
     (timbre/debugf "hydrate-requests! request count= %s basis= %s form= %s" (count requests) (pr-str local-basis) (str/prune (pr-str (:form req)) 100))
     (-> (http-request! req)
         (p/then (fn [{:keys [body]}]
@@ -124,13 +124,12 @@
                                                      :encoded-route (base-64-url-safe/encode (pr-str route))
                                                      :branch (ednish/encode-uri branch)))
                 :accept :application/transit+json :as :auto}
-               (when jwt {:auth {:bearer jwt}})
                (if (empty? stage)
                  {:method :get}                             ; Try to hit CDN
                  {:method :post
                   :form stage
                   :content-type :application/transit+json}))
-        (http-request!)
+        (http-request! jwt)
         (p/then :body))))
 
 (defn local-basis! [service-uri build global-basis route & [jwt]]
@@ -141,8 +140,7 @@
                                             :encoded-route (base-64-url-safe/encode (pr-str route))))
        :accept :application/transit+json :as :auto
        :method :get}
-      (into (when jwt {:auth {:bearer jwt}}))
-      (http-request!)
+      (http-request! jwt)
       (p/then :body)))
 
 (defn sync! [service-uri build dbnames & [jwt]]
@@ -150,8 +148,7 @@
        :accept :application/transit+json :as :auto
        :method :post :form dbnames
        :content-type :application/transit+json}
-      (into (when jwt {:auth {:bearer jwt}}))
-      (http-request!)
+      (http-request! jwt)
       (p/then :body)))
 
 (defn transact! [service-uri build tx-groups & [jwt]]
@@ -159,8 +156,7 @@
        :accept :application/transit+json :as :auto
        :method :post :form tx-groups
        :content-type :application/transit+json}
-      (into (when jwt {:auth {:bearer jwt}}))
-      (http-request!)
+      (http-request! jwt)
       (p/then (fn [resp]
                 (if (= 200 (:status resp))
                   ; clear master stage
