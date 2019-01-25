@@ -290,6 +290,7 @@
     (is (= (contrib.datomic/cardinality fixtures.hfhf/schema :link/fiddle) :db.cardinality/one))
     (is (contrib.datomic/cardinality? fixtures.hfhf/schema :link/fiddle :db.cardinality/one))
     (is (contrib.datomic/ref-one? fixtures.hfhf/schema :link/fiddle))
+    (is (contrib.datomic/unique? fixtures.hfhf/schema :db/ident :db.unique/identity))
     )
   )
 

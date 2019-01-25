@@ -42,7 +42,8 @@
   (valueType [this a])
   (valueType? [this a k])
   (ref? [this a])
-  (unique [this a]))
+  (unique [this a])
+  (unique? [this a k]))
 
 (defn attr-unreverse [a]
   {:pre [(-> (name a) (subs 0 1) (= "_"))]}
@@ -62,6 +63,7 @@
   (cardinality [this a] (-attr this a :db/cardinality))
   (isComponent [this a] (-attr this a :db/isComponent))
   (unique [this a] (-attr this a :db/unique))
+  (unique? [this a k] (= k (unique this a)))
   (valueType? [this a k] (= k (valueType this a)))
   (cardinality? [this a k] (= k (cardinality this a)))
   (cardinality-loose [this a]
