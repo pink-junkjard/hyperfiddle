@@ -113,15 +113,12 @@
 
 (defn related-links [val ctx props]
   (if val
-    (->> (data/select-many-here ctx)                        ; or just here? http://tank.hyperfiddle.site/:dustingetz!counter/
-         (r/unsequence (r/partial context/stable-relation-key ctx)) ; kill
-         (remove (fn [[rv k]]
-                   (some #{:hf/new :hf/remove :hf/iframe} (:link/class @rv))))
-         (map (fn [[rv k]]
-                ^{:key k}
-                [hyperfiddle.ui/ui-from-link rv ctx props]))
-         seq
-         doall)))
+    (doall
+      ; or just here? http://tank.hyperfiddle.site/:dustingetz!counter/
+      (for [[k rv] (hyperfiddle.data/spread-links-here ctx)
+            :when (some #{:hf/new :hf/remove :hf/iframe} (:link/class @rv))]
+        ^{:key k}
+        [hyperfiddle.ui/ui-from-link rv ctx props]))))
 
 (defn ^:export ref [val ctx & [props]]
   (cond

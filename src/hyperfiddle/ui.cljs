@@ -69,12 +69,10 @@
           (and (> (context/depth ctx) 0)
                (let [[_ a _] (context/eav ctx)]
                  (not (contrib.datomic/ref-one? @(:hypercrud.browser/schema ctx) a)))))
-    (->> (hyperfiddle.data/select-many ctx :hf/iframe)
-         (r/unsequence (r/partial context/stable-relation-key ctx))
-         (map (fn [[rv k]]
-                ^{:key k}
-                [ui-from-link rv ctx props]))               ; mapcat, this is tupled
-         (into [:<>]))))
+    [:<>
+     (for [[k r-link] (hyperfiddle.data/spread-links-here ctx :hf/iframe)]
+       ^{:key k}
+       [ui-from-link r-link ctx props])]))
 
 (defn iframe-field-default [val ctx props]
   (let [props (-> props (dissoc :class) (assoc :label-fn (r/constantly nil) #_[:div "nested pull iframes"]))]
@@ -104,7 +102,8 @@
         [_ _ :db.cardinality/one] controls/edn
         [_ _ :db.cardinality/many] controls/edn-many))))
 
-(defn ^:export hyper-control [val ctx & [props]]            ; eav ctx props - use defmethod, not fn
+(defn ^:export hyper-control "Val is for userland field renderers, our builtin controls use ctx and ignore val."
+  [val ctx & [props]]
   {:post [%]}
   (or (attr-renderer-control val ctx props)
       (let [[_ a _] @(:hypercrud.browser/eav ctx)
@@ -358,7 +357,7 @@ User renderers should not be exposed to the reaction."
 (defn form "Not an abstraction." [columns val ctx & [props]]
   (let [ctx (assoc ctx ::layout :hyperfiddle.ui.layout/block)] ; make this go away
     (into
-      [:<> {:key (str (context/row-keyfn ctx val))}]
+      [:<> {:key (str (context/key-row ctx val))}]   ; when entity-keyfn?
       (columns ctx))))
 
 (defn columns [ctx & [props]]

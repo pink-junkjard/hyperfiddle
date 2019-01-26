@@ -216,15 +216,6 @@
      (->> @(fmap (partial map key-fn) rv)
           (map (fn [key] [(cursor lookup [key]) key]))))))
 
-(defn row-keyfn' "See hypercrud.browser.context/row-keyfn"
-  [f row]
-  {:pre [(not (reactive? row))]}
-  ; This keyfn is very tricky, read https://github.com/hyperfiddle/hyperfiddle/issues/341
-  (-> (if (or (vector? row) (seq? row))                     ; todo should probably inspect fields instead of seq
-        (map f row)
-        [(f row)])
-      (->> (clojure.string/join "`"))))
-
 (defn ctxf "reactive apply f to sequenced rvs extracted from map
   ks can be fns, but must be stable refs"
   [stable-f ctx & ks]

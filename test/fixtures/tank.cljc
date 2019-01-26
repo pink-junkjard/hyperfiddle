@@ -323,7 +323,53 @@
       "[:find\n (pull ?e [:db/id \n           :dustingetz.reg/email \n           :dustingetz.reg/age]) \n .\n :where\n [?e :dustingetz.reg/email \"dustin@example.com\"]]"}
 
      {:db/id 17592186046196, :dustingetz.reg/email "dustin@example.com", :dustingetz.reg/age 102}]
-    }
+
+    :dustingetz/slack-storm
+    [{:fiddle/cljs-ns
+      "(defn render-post-link [ctx [post _ :as row]]\n  (hyperfiddle.ui/link\n    :dustingetz.storm/view\n    (hypercrud.browser.context/row ctx (contrib.reactive/track identity row))\n    (contrib.string/or-str (:dustingetz.post/title post) \"–\")))",
+      :fiddle/css
+      ".-util-slack-parser { margin-top: 2em; }\n.soup + .CodeMirror { height: 10em; }\n\ndt { \n  width: 10em; \n  text-align: right;\n  font-weight: 400;\n}",
+      :fiddle/ident :dustingetz/slack-storm,
+      :fiddle/renderer
+      "(let [{:keys [:hypercrud.browser/fiddle]} ctx]\n  [:main.container props\n   [hyperfiddle.ui/markdown (:fiddle/markdown @fiddle) ctx]\n   [:h3 [hyperfiddle.ui/link :dustingetz.storm/new-storm ctx \"new storm\"]]\n   [:p]\n   [:p \"Recent storms\"]\n   [:p]\n   (->> val\n        (sort-by second) reverse      ;(sort-by (comp #(compare %2 %1) second))\n        (map (fn [[post _ :as row]]\n               [:<> {:key (str (:db/id post))}\n                [:dt (:dustingetz.storm/channel post) ]\n                [:dd [user/render-post-link ctx row]]]))\n        (into [:dl]))])",
+      :hyperfiddle/owners
+      [#uuid "5b0dd2d7-24a4-4122-bd8e-168817f2e0e7"],
+      :db/id 17592186046327,
+      :fiddle/type :query,
+      :fiddle/links
+      [{:db/id 17592186047088,
+        :link/fiddle
+        {:db/id 17592186047002,
+         :fiddle/ident :dustingetz.storm/view,
+         :fiddle/type :entity},
+        :link/path ":dustingetz.post/slug",
+        :link/rel :hf/rel}
+       {:db/id 17592186047120,
+        :link/fiddle
+        {:db/id 17592186047089,
+         :fiddle/ident :dustingetz.storm/new-storm,
+         :fiddle/type :entity},
+        :link/formula
+        "(constantly (hyperfiddle.api/tempid-detached \"$\" ctx))",
+        :link/path ":dustingetz/slack-storm",
+        :link/rel :hf/self}],
+      :fiddle/markdown
+      "# Slack Storm\n\n!span[Create documentation from Slack logs]{.lead}",
+      :hyperfiddle/starred true,
+      :fiddle/query
+      "[:find\n (pull ?e [:db/id\n           :dustingetz.post/title\n           :dustingetz.post/slug\n           :dustingetz.storm/channel\n           :dustingetz.post/published-date])\n (max ?tx)\n :where\n [?e :dustingetz.slack-converter/raw-source _ ?tx]\n (not [?e :dustingetz.post/hidden true])\n #_[?e :hyperfiddle/owners]] ; owned by me?"}
+
+     [[{:db/id 17592186047000,
+        :dustingetz.post/title "is js/console.log syntax future proof?",
+        :dustingetz.post/slug :asdf,
+        :dustingetz.storm/channel "#clojurescript",
+        :dustingetz.post/published-date #inst "2018-11-19T00:00:00.000-00:00"}
+       13194139535895]
+      [{:db/id 17592186047105,
+        :dustingetz.post/title "large strings and high churn attrs blow out indexes",
+        :dustingetz.storm/channel "#datomic",
+        :dustingetz.post/published-date #inst "2018-11-21T00:00:00.000-00:00"}
+       13194139536000]]]}
    )
 
 

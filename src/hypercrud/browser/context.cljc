@@ -123,9 +123,10 @@
   (some->
     ; Guard the implicit-element logic because this is called in tempid paths with an unbuilt context
     ; that i don't understand, this guard preserves old behavior
-    (if (:hypercrud.browser/qfind ctx)
-      (-infer-implicit-element ctx)
-      ctx)
+    ;(if (:hypercrud.browser/qfind ctx)
+    ;  (-infer-implicit-element ctx)
+    ;  ctx)
+    ctx
     :hypercrud.browser/element deref
     :source :symbol str))
 
@@ -149,28 +150,29 @@
     (contrib.datomic/tempid? id) id
     :else (get (ctx->id-lookup ctx) id)))
 
+(defn lookup-ref [schema e-map]
+  (if-let [a (contrib.datomic/find-identity-attr schema e-map)]
+    [a (a e-map)]))
+
 (defn smart-entity-identifier "Generates the best Datomic lookup ref for a given pull. ctx needs :branch and :peer"
   ; flip params for fmap->
-  [ctx {:keys [:db/id :db/ident] :as v}]                    ; v can be a ThinEntity or a pull i guess
-  {:post [(not (coll? %))]}
-  ; This must be called only on refs.
+  [ctx {:keys [:db/id :db/ident] :as e-map}]               ; v can be a ThinEntity or a pull i guess
+  {:pre [(map? e-map)]}
   ; If we have a color, and a (last path), ensure it is a ref.
   ; If we have a color and [] path, it is definitely a ref.
   ; If we have no color, it is a scalar or aggregate.
-  ;(assert (::field/data-has-id? @(:hypercrud.browser/field ctx)) "smart-identity works only on refs")
 
-  (let [identity-lookup nil]
-    (or (if (underlying-tempid ctx id)
-          ; the lookups are no good yet, must use the dbid
-          ; (not the tempid, actions/with will handle that reversal)
-          id)
-        ident
-        identity-lookup
-        id
-        (if-not (coll? v) v)                                ; id-scalar
-        nil                                                 ; This is an entity but you didn't pull identity - error?
-        ; Or it could be a relation. Why did this get called?
-        )))
+  ; If we're a new tempid this branch, the lookups are no good yet, must use the db/id
+  ; (NOT the tempid, the db/id will be reversed to the tempid by actions/with)
+  (or (if (underlying-tempid ctx id) id)
+      ident
+      ; Guard tangled tempid logic
+      (some-> (:hypercrud.browser/schema ctx) deref (lookup-ref e-map)) ; Entity must already be inferred for this to work
+      id
+      (if-not (coll? e-map) e-map)                        ; id-scalar
+      nil                                                   ; This is an entity but you didn't pull identity - error?
+      ; Or it could be a relation. Why did this get called?
+      ))
 
 (defn summon-schemas-grouped-by-dbname [ctx]
   {:post [(every? #(satisfies? contrib.datomic/SchemaIndexedNormalized %) (vals %))]}
@@ -197,16 +199,25 @@
   ; https://github.com/hyperfiddle/hyperfiddle/issues/345 - Form jank when tempid entity transitions to real entity
   (or (underlying-tempid ctx id)                            ; Note we use the tempid as the key, not the dbid
       (smart-entity-identifier ctx v)                       ; this also checks tempid but uses the dbid
-      (pr-str v)                                              ; fallback to hash if they didn't pull identity
-      ))
+      (pr-str v)))                                          ; fallback to hash if they didn't pull identity
 
-(defn stable-relation-key "Stable key that works on scalars too. ctx is for tempid-reversing"
-  [ctx v]
-  {:post [%]}
-  (or (stable-entity-key ctx v) v))                         ; bad
+(defn key-scalar "For at the top when you don't know"
+  [ctx element v]
+  (condp some [(type element)]
+    #{Aggregate Variable} v
+    #{Pull} (stable-entity-key ctx v)))
 
-(defn row-keyfn [ctx row]
-  (r/row-keyfn' (partial stable-relation-key ctx) row))     ; bad
+(defn key-row [{qfind :hypercrud.browser/qfind :as ctx} row]
+  ; This keyfn is very tricky, read https://github.com/hyperfiddle/hyperfiddle/issues/341
+  (condp some [(type @qfind)]
+    #{FindColl FindScalar}
+    (let [element (first (datascript.parser/find-elements @qfind))]
+      (key-scalar ctx element row))
+    #{FindRel FindTuple}
+    (->> (map (partial key-scalar ctx) (datascript.parser/find-elements @qfind) row)
+         (clojure.string/join "`"))))
+
+(def ^:export ^:legacy row-keyfn key-row)
 
 (defn stable-eav-v [[?e a _] ?v']
   {:pre [a
@@ -279,11 +290,11 @@
            ; sorting doesn't index keyfn lookup by design
            FindRel
            (assoc ctx :hypercrud.browser/result-index
-                      (r/fmap->> r-ordered-result (contrib.data/group-by-unique (partial row-keyfn ctx))))
+                      (r/fmap->> r-ordered-result (contrib.data/group-by-unique (partial key-row ctx))))
 
            FindColl
            (assoc ctx :hypercrud.browser/result-index
-                      (r/fmap->> r-ordered-result (contrib.data/group-by-unique (partial stable-entity-key ctx))))
+                      (r/fmap->> r-ordered-result (contrib.data/group-by-unique (partial key-row #_stable-entity-key ctx))))
 
            FindTuple
            ; Vectors are already indexed
@@ -294,7 +305,7 @@
            (assoc ctx :hypercrud.browser/result-index r-ordered-result)))
        :else (assert false)
        )))
-  ([ctx a] ; eav order of init issues, ::eav depends on this in :many
+  ([ctx a]                                                  ; eav order of init issues, ::eav depends on this in :many
    {:pre [(> (depth ctx) 0)]}
    (assert (not (:hypercrud.browser/head-sentinel ctx)) "this whole flag is trouble, not sure if this assert is strictly necessary")
    (case (contrib.datomic/cardinality-loose @(:hypercrud.browser/schema ctx) a)
@@ -343,13 +354,32 @@
         result)
       nil)))
 
-(defn v! [ctx]                                              ; It's just easier to end the reaction earlier
-  {:post [(not (coll? %))]}                                 ; V is identity | nil
-  ; Don't pass whole results or tuples to smart-entity-identifier, that's dumb
-  (if-not (:hypercrud.browser/head-sentinel ctx)
-    ; Sparse resultset, v can still be nil
-    (some-> (data ctx) deref                                ; data infers element
-            (->> (smart-entity-identifier ctx)))))
+; It's just easier to end the reaction earlier
+(defn v! "returns scalar | identity | lookupref | nil."
+  [{:keys [:hypercrud.browser/element] :as ctx}]
+  {:pre [element]}                                          ; infer the element above this?
+  ; Sparse resultset, v can still be nil, or fully refined to a scalar
+
+  (let [?v (some-> (data ctx) deref)]
+    (cond
+
+      (:hypercrud.browser/head-sentinel ctx)
+      nil
+
+      (= (depth ctx) 0)                                     ; element level
+      (condp some [(type @(:hypercrud.browser/qfind ctx))]
+        #{FindRel FindColl} nil                             ; no row yet, need row
+        #{FindTuple FindScalar} (smart-entity-identifier ctx ?v))
+
+      (and (#{FindRel FindColl} (type @(:hypercrud.browser/qfind ctx)))
+           (= (depth ctx) 1))                               ; These things need a row
+      (and ?v (key-row ctx ?v))                             ; Change in behavior, it was smart-entity-identifier before
+      ; ; why - formula vs view
+
+      (> (pull-depth ctx) 0)                                ; how deep are we? We can look at the attribute to decide what to do
+      (if (map? ?v)                                         ; Loosey but works. ref means smart identity. scalar means just the val. No vec here.
+        (smart-entity-identifier ctx ?v)
+        ?v))))
 
 (defn eav "Not reactive." [ctx]
   {:pre [(s/assert :hypercrud/context ctx)]}
@@ -368,7 +398,9 @@
         (set-parent ctx)
         (update ctx :hypercrud.browser/result-path (fnil conj []) k)
         ; Not pullpath, that is irrespective of the actual data
-        (assoc ctx :hypercrud.browser/eav (r/fmap-> (:hypercrud.browser/eav ctx) (stable-eav-v (v! ctx))))))
+        ; I don't think row should set v. Only if we infer an element can we set v.
+        ; ::eav tells us exactly where we are without optimisim. (eav) infers the rest.
+        #_(assoc ctx :hypercrud.browser/eav (r/fmap-> (:hypercrud.browser/eav ctx) (stable-eav-v (v! ctx))))))
 
 (defn ^:export spread-rows "spread across resultset row-or-rows; returns [k ctx] for your react key.
   Automatically accounts for query dimension - no-op in the case of FindTuple and FindScalar.
@@ -391,11 +423,11 @@
 
           FindRel
           (for [k (->> (sort-fn @r-ordered-result)          ; client side sorting – should happen in backend
-                       (map (partial row-keyfn ctx)))]
+                       (map (partial key-row ctx)))]
             [k (row ctx k)])
 
           FindTuple                                         ; no index
-          (let [k (row-keyfn ctx @r-ordered-result)]
+          (let [k (key-row ctx @r-ordered-result)]
             [[k ctx]])
 
           FindScalar                                        ; no index
@@ -453,11 +485,11 @@
                    (contrib.validation/validate
                      (s/get-spec @(r/fmap-> (:hypercrud.browser/fiddle ctx) :fiddle/ident))
                      @(:hypercrud.browser/result ctx)
-                     (partial row-keyfn ctx)))
+                     (partial key-row ctx)))
 
         ; index-result implicitly depends on eav in the tempid reversal stable entity code.
         ; Conceptually, it should be after qfind and before EAV.
-        (index-result ctx)                                ; in row case, now indexed, but path is not aligned yet
+        (index-result ctx)                                  ; in row case, now indexed, but path is not aligned yet
         ))
 
 (defn stable-element-schema [schemas element]
@@ -621,7 +653,8 @@
   [ctx criterias]                                           ; criterias can contain nil, meaning toptop
   (r/fmap->> (:hypercrud.browser/link-index ctx)
              (filter (partial link-criteria-match? criterias))
-             (mapv second)))
+             (mapv second)
+             #_(mapv (juxt :db/id identity))))
 
 (defn links-in-dimension' [ctx criterias]
   {:post [(not (r/reactive? %))]}
@@ -645,7 +678,7 @@
         (vec (distinct links))                              ; associative by index
         #_(->> links r/sequence (r/fmap vec))))))
 
-(defn links-in-dimension [ctx criterias]
+(defn links-in-dimension-r [ctx criterias]
   (r/track links-in-dimension' ctx criterias))
 
 (defn unwind [ctx n]
@@ -683,7 +716,9 @@
 
 (defn refocus "From view, find the closest satisfactory ctx accounting for cardinality. e.g. as in
   !link(:new-intent-naive :hf/remove). Caller believes that the deps are satisfied (right stuff is in scope).
-  todo unify with refocus'"
+  todo unify with refocus'
+
+  Notably: (refocus) and (attribute) are pretty much the same thing. This one has element tupling hacks."
   [ctx a']
   {:pre [ctx a']
    :post [%]}
@@ -776,6 +811,8 @@
            ; V legacy is tuple, it should be scalar by here (tuple the ctx, not the v)
            :let [[_ _ v] @(:hypercrud.browser/eav ctx)]
 
+           ; if a is identity, use the e instead of the v.
+
            ; Documented behavior is v in, tuple out, no colors.
            args (try-either (formula-fn v))]
       (return
@@ -867,19 +904,6 @@
 
       :else-valid
       (either/right params'))))
-
-(defn hash-ctx-data [ctx]
-  ; todo there are collisions when two links share the same 'location'
-  (let [{r-data :hypercrud.browser/data
-         r-qfind :hypercrud.browser/qfind} ctx]
-    ; why so defensive here?
-    (when (some-> r-qfind deref)                            ; there must be data if there is qfind
-      (condp some [(type @r-qfind)]
-        #{FindRel FindColl} @(r/fmap->> r-data
-                                        (mapv (r/partial stable-relation-key ctx))
-                                        (into #{})
-                                        hash)
-        #{FindTuple FindScalar} @(r/fmap->> r-data (stable-relation-key ctx))))))
 
 (defn tempid "stable" [ctx]
   ; recurse all the way up the path? just data + parent-data is relative not fully qualified, which is not unique
