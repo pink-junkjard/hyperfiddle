@@ -56,7 +56,7 @@
 
 (s/def :hypercrud.browser/eav r/reactive?)
 (s/def :hypercrud.browser/result r/reactive?)
-(s/def ::result-path-segment (s/or :element int? :attribute keyword? :relation string?))
+(s/def ::result-path-segment (s/or :element int? :attribute keyword? :relation string? :lookup-ref vector?))
 (s/def :hypercrud.browser/result-path (s/coll-of ::result-path-segment :kind vector?))
 (s/def :hypercrud.browser/element r/reactive?)
 (s/def :hypercrud.browser/element-index int?)
@@ -157,7 +157,8 @@
 (defn smart-entity-identifier "Generates the best Datomic lookup ref for a given pull. ctx needs :branch and :peer"
   ; flip params for fmap->
   [ctx {:keys [:db/id :db/ident] :as e-map}]               ; v can be a ThinEntity or a pull i guess
-  {:pre [(map? e-map)]}
+  ;{:pre [(map? e-map)]}
+  (s/assert map? e-map)
   ; If we have a color, and a (last path), ensure it is a ref.
   ; If we have a color and [] path, it is definitely a ref.
   ; If we have no color, it is a scalar or aggregate.
@@ -169,7 +170,7 @@
       ; Guard tangled tempid logic
       (some-> (:hypercrud.browser/schema ctx) deref (lookup-ref e-map)) ; Entity must already be inferred for this to work
       id
-      (if-not (coll? e-map) e-map)                        ; id-scalar
+      ;(if-not (coll? e-map) e-map)                        ; id-scalar
       nil                                                   ; This is an entity but you didn't pull identity - error?
       ; Or it could be a relation. Why did this get called?
       ))
@@ -360,26 +361,31 @@
   {:pre [element]}                                          ; infer the element above this?
   ; Sparse resultset, v can still be nil, or fully refined to a scalar
 
-  (let [?v (some-> (data ctx) deref)]
+  (let [?a (last (:hypercrud.browser/pull-path ctx))
+        ?v (some-> (data ctx) deref)]
     (cond
+
+      (nil? ?v)
+      nil
 
       (:hypercrud.browser/head-sentinel ctx)
       nil
 
-      (= (depth ctx) 0)                                     ; element level
-      (condp some [(type @(:hypercrud.browser/qfind ctx))]
-        #{FindRel FindColl} nil                             ; no row yet, need row
-        #{FindTuple FindScalar} (smart-entity-identifier ctx ?v))
-
-      (and (#{FindRel FindColl} (type @(:hypercrud.browser/qfind ctx)))
-           (= (depth ctx) 1))                               ; These things need a row
-      (and ?v (key-row ctx ?v))                             ; Change in behavior, it was smart-entity-identifier before
-      ; ; why - formula vs view
-
-      (> (pull-depth ctx) 0)                                ; how deep are we? We can look at the attribute to decide what to do
-      (if (map? ?v)                                         ; Loosey but works. ref means smart identity. scalar means just the val. No vec here.
+      ; Attribute level first, makes element level easier
+      (> (pull-depth ctx) 0)
+      (if (contrib.datomic/ref? @(:hypercrud.browser/schema ctx) ?a)
         (smart-entity-identifier ctx ?v)
-        ?v))))
+        ?v)
+
+      ; Change in behavior below, it was smart-entity-identifier before
+      ; which impacts formula vs view
+
+      ; We already have an element and we already know which
+      (= (pull-depth ctx) 0)                                ; element level confirmed
+      (condp some [(type @(:hypercrud.browser/qfind ctx))]
+        #{FindRel FindColl} (if (> (depth ctx) 0)           ; need row
+                              (key-scalar ctx @(:hypercrud.browser/element ctx) ?v))
+        #{FindTuple FindScalar} (key-scalar ctx @(:hypercrud.browser/element ctx) ?v)))))
 
 (defn eav "Not reactive." [ctx]
   {:pre [(s/assert :hypercrud/context ctx)]}

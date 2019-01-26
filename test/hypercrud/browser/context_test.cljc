@@ -57,7 +57,6 @@
 (def ctx (mock-fiddle! :dustingetz/gender-shirtsize))
 
 (deftest context
-  []
 
   (def ctx (mock-fiddle! :dustingetz/gender-shirtsize))
 
@@ -625,7 +624,7 @@
       (let [ctx (mock-fiddle! :dustingetz/slack-storm)
             ctx (context/row ctx "17592186047000`13194139535895")
             ctx (context/element ctx 0)]
-        (is (= (context/eav ctx) [nil :dustingetz/slack-storm nil]))
+        (is (= (context/eav ctx) [nil :dustingetz/slack-storm [:dustingetz.post/slug :asdf]]))
         (is (= @(context/data ctx)
                {:db/id 17592186047000,
                 :dustingetz.post/title "is js/console.log syntax future proof?",
@@ -638,11 +637,11 @@
 
         (is (= (for [[_ ctx] (context/spread-attributes ctx)]
                  (context/eav ctx))
-               [[:dustingetz.post/slug :asdf] :db/id 17592186047000]
-               [[:dustingetz.post/slug :asdf] :dustingetz.post/title "is js/console.log syntax future proof?"]
-               [[:dustingetz.post/slug :asdf] :dustingetz.post/slug :asdf]
-               [[:dustingetz.post/slug :asdf] :dustingetz.storm/channel "#clojurescript"]
-               [[:dustingetz.post/slug :asdf] :dustingetz.post/published-date #inst"2018-11-19T00:00:00.000-00:00"]))))
+               [[[:dustingetz.post/slug :asdf] :db/id 17592186047000]
+                [[:dustingetz.post/slug :asdf] :dustingetz.post/title "is js/console.log syntax future proof?"]
+                [[:dustingetz.post/slug :asdf] :dustingetz.post/slug :asdf]
+                [[:dustingetz.post/slug :asdf] :dustingetz.storm/channel "#clojurescript"]
+                [[:dustingetz.post/slug :asdf] :dustingetz.post/published-date #inst"2018-11-19T00:00:00.000-00:00"]]))))
     )
 
   (testing "FindRel tuple at attr level")
@@ -654,9 +653,38 @@
                    ctx [(context/row ctx "17592186047000`13194139535895" #_[:dustingetz.post/slug :asdf])]
                    [_ ctx] (context/spread-elements ctx)
                    #_#_[_ ctx] (context/spread-attributes ctx)]
-               (do (println "index: " @(:hypercrud.browser/result-index ctx))
-                   (println "data: " @(context/data ctx))
-                   (context/eav ctx))))
+               (context/eav ctx)))
+           [[nil :dustingetz/slack-storm [:dustingetz.post/slug :asdf]]
+            [nil :dustingetz/slack-storm 13194139535895]]))
+
+    (is (= (let [ctx (mock-fiddle! :dustingetz/slack-storm)]
+             (for [ctx [(context/row ctx "17592186047000`13194139535895" #_[:dustingetz.post/slug :asdf])]
+                   [_ ctx] (context/spread-elements ctx)
+                   [_ ctx] (context/spread-attributes ctx)]
+               (context/eav ctx)))
+           [[[:dustingetz.post/slug :asdf] :db/id 17592186047000]
+            [[:dustingetz.post/slug :asdf] :dustingetz.post/title "is js/console.log syntax future proof?"]
+            [[:dustingetz.post/slug :asdf] :dustingetz.post/slug :asdf]
+            [[:dustingetz.post/slug :asdf] :dustingetz.storm/channel "#clojurescript"]
+            [[:dustingetz.post/slug :asdf] :dustingetz.post/published-date #inst"2018-11-19T00:00:00.000-00:00"]]))
+
+    (is (= (let [ctx (mock-fiddle! :dustingetz/slack-storm)]
+             (for [ctx [(context/row ctx "17592186047000`13194139535895" #_[:dustingetz.post/slug :asdf])]
+                   [_ ctx] (context/spread-elements ctx)
+                   [_ ctx] (context/spread-attributes ctx)]
+               (context/eav ctx)))
+           [[[:dustingetz.post/slug :asdf] :db/id 17592186047000]
+            [[:dustingetz.post/slug :asdf] :dustingetz.post/title "is js/console.log syntax future proof?"]
+            [[:dustingetz.post/slug :asdf] :dustingetz.post/slug :asdf]
+            [[:dustingetz.post/slug :asdf] :dustingetz.storm/channel "#clojurescript"]
+            [[:dustingetz.post/slug :asdf] :dustingetz.post/published-date #inst"2018-11-19T00:00:00.000-00:00"]]))
+
+    (is (= (let [ctx (mock-fiddle! :dustingetz/slack-storm)]
+             (for [[_ ctx] (context/spread-rows ctx)
+                   #_#_ctx [(context/row ctx "17592186047000`13194139535895" #_[:dustingetz.post/slug :asdf])]
+                   [_ ctx] (context/spread-elements ctx)
+                   [_ ctx] (context/spread-attributes ctx)]
+               (context/eav ctx)))
            [[[:dustingetz.post/slug :asdf] :db/id 17592186047000]
             [[:dustingetz.post/slug :asdf] :dustingetz.post/title "is js/console.log syntax future proof?"]
             [[:dustingetz.post/slug :asdf] :dustingetz.post/slug :asdf]
@@ -667,17 +695,6 @@
             [17592186047105 :dustingetz.post/slug nil]
             [17592186047105 :dustingetz.storm/channel "#datomic"]
             [17592186047105 :dustingetz.post/published-date #inst"2018-11-21T00:00:00.000-00:00"]]))
-
-    (is (= (let [ctx (mock-fiddle! :dustingetz/slack-storm)]
-             (for [ctx [(context/row ctx [:dustingetz.post/slug :asdf])]
-                   [_ ctx] (context/spread-elements ctx)
-                   [_ ctx] (context/spread-attributes ctx)]
-               (context/eav ctx)))
-           [[[:dustingetz.post/slug :asdf] :db/id 17592186047000]
-            [[:dustingetz.post/slug :asdf] :dustingetz.post/title "is js/console.log syntax future proof?"]
-            [[:dustingetz.post/slug :asdf] :dustingetz.post/slug :asdf]
-            [[:dustingetz.post/slug :asdf] :dustingetz.storm/channel "#clojurescript"]
-            [[:dustingetz.post/slug :asdf] :dustingetz.post/published-date #inst"2018-11-19T00:00:00.000-00:00"]]))
     )
 
   ;; refocus post/slug
