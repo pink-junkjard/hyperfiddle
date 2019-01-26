@@ -610,8 +610,6 @@
       (is (let [ctx (mock-fiddle! :dustingetz/slack-storm)
                 ctx (context/row ctx "17592186047000`13194139535895")]
             (is (= (context/eav ctx) [nil :dustingetz/slack-storm nil])) ; could potentially set v to the rowkey here
-            (is (= (context/eav (context/element ctx 0)) [nil :dustingetz/slack-storm nil])) ; Can't set v to 7000 because A is ambiguous.
-            (is (= (context/eav (context/element ctx 1)) [nil :dustingetz/slack-storm nil])) ; Can't set v to 5895 because A is ambiguous.
             (is (= @(context/data (context/element ctx 0))
                    {:db/id 17592186047000,
                     :dustingetz.post/title "is js/console.log syntax future proof?",
@@ -619,6 +617,18 @@
                     :dustingetz.storm/channel "#clojurescript",
                     :dustingetz.post/published-date #inst "2018-11-19T00:00:00.000-00:00"}))
             (is (= @(context/data (context/element ctx 1)) 13194139535895)))))
+
+    (testing "element level does set value, it is not ambigous due to set semantics in FindRel"
+      (is (let [ctx (mock-fiddle! :dustingetz/slack-storm)
+                ctx (context/row ctx "17592186047000`13194139535895")]
+            (is (= (context/eav ctx) [nil :dustingetz/slack-storm nil])) ; could potentially set v to the rowkey here
+            ; Originally thought:
+            ; Can't set v to [:dustingetz.post/slug :asdf] because A is ambiguous.
+            ; Can't set v to 5895 because A is ambiguous.
+            ; NO, wrong.
+            ; Arguably this is NOT ambiguous due to set semantics. The same entity can't be pulled twice in a find relation.
+            (is (= (context/eav (context/element ctx 0)) [nil :dustingetz/slack-storm [:dustingetz.post/slug :asdf]]))
+            (is (= (context/eav (context/element ctx 1)) [nil :dustingetz/slack-storm 13194139535895])))))
 
     (testing "key all the way and then attributes"
       (let [ctx (mock-fiddle! :dustingetz/slack-storm)
