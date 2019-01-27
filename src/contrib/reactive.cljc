@@ -22,7 +22,7 @@
   (clojure.core/apply #?(:clj clojure.core/atom :cljs reagent/atom) x rest))
 
 (defn cursor [src path]
-  {:pre [(reactive? src)]}
+  {:pre [(s/assert reactive? src)]}
   ; todo support more than just IDeref
   #?(:clj  (delay (get-in @src path))
      :cljs (reagent/cursor src path)))

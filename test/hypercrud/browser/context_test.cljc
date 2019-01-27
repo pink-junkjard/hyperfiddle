@@ -8,7 +8,10 @@
     [hypercrud.browser.context :as context]))
 
 
-(defn mock-fiddle! [ident]
+(defn mock-fiddle! "This has some subtle differences around tempid handling - this mock
+  has no information about tempids at all, so these tests do not exercise tempid paths which
+  can subtly influence keyfns possibly other things."
+  [ident]
   (let [[fiddle result] (-> fixtures.tank/fiddles ident)]
     (-> {:hypercrud.browser/route nil}
         (context/schemas (r/pure fixtures.tank/schemas))
@@ -19,25 +22,74 @@
   []
   (testing "row keyfn on relation maps the smart identity"
     (def ctx (mock-fiddle! :hfnet.tank/index))
-    (def result @(:hypercrud.browser/result ctx))
+    (def result @(context/data ctx))
     (is (= (context/key-row ctx (first result))
-           "17592186045419`13194139534712`true")))
+           "[:fiddle/ident :karl.hardenstine/fiddles]`13194139534712`true" #_"17592186045419`13194139534712`true")))
+
+  (testing "key-row"
+
+    (let [ctx (mock-fiddle! :dustingetz/gender-shirtsize)
+          result @(context/data ctx)]
+      (is (= (context/key-row ctx (first result))
+             [:dustingetz.reg/email "dustin@example.com"] ; 17592186046196
+             )))
+    )
+
+  (testing "why is row index choosing dbid here?"
+    ; Must index in various dimensions for various kinds of identity! Yes there is canonical identity
+    ; but we have to index any possible way.
+    (let [ctx (mock-fiddle! :dustingetz/gender-shirtsize)
+          ctx (context/row ctx 17592186046196 #_[:dustingetz.reg/email "dustin@example.com"])
+          #_#_ctx (context/element ctx 0)]
+      (context/eav ctx))
+    )
+
+
+
+  (testing ""
+    (let [ctx (mock-fiddle! :hyperfiddle/ide)]
+      (is (= (context/eav ctx) [nil :hyperfiddle/ide [:fiddle/ident :hyperfiddle/ide]]))
+      (let [ctx (context/attribute ctx :fiddle/links)]
+        (is (= (context/eav ctx) [[:fiddle/ident :hyperfiddle/ide] :fiddle/links nil]))
+        (is (= (count @(context/data ctx)) 5))
+        (is (= (first @(context/data ctx)) {:db/id 17592186061848, :link/class [:hf/remove], :link/rel :hf/remove}))
+        (let [ctx (context/row ctx 17592186061848)]
+          (is (= (context/eav ctx) [[:fiddle/ident :hyperfiddle/ide] :fiddle/links 17592186061848]))
+          (is (= @(context/data ctx) {:db/id 17592186061848, :link/class [:hf/remove], :link/rel :hf/remove})))))
+    )
   )
 
 (deftest basics
   (def ctx (mock-fiddle! :dustingetz/gender-shirtsize))
 
-  (testing "FindColl rows are indexed by db/id"
-    (is (= @(:hypercrud.browser/result-index ctx)
-           {17592186046196 {:db/id 17592186046196,
-                            :dustingetz.reg/email "dustin@example.com",
-                            :dustingetz.reg/name "Dustin Getz",
-                            :dustingetz.reg/gender #:db{:ident :dustingetz.gender/male},
-                            :dustingetz.reg/shirt-size #:db{:ident :dustingetz.shirt-size/mens-large}},
-            17592186046763 {:db/id 17592186046763,
-                            :dustingetz.reg/email "bob@example.com",
-                            :dustingetz.reg/gender #:db{:ident :dustingetz.gender/male},
-                            :dustingetz.reg/shirt-size #:db{:ident :dustingetz.shirt-size/mens-large}}})))
+  (testing "row indexing"
+    (testing "data sidesteps indexing, userland never sees indexing."
+      (is (= (let [ctx (mock-fiddle! :dustingetz/gender-shirtsize)]
+               @(context/data ctx))
+             [{:db/id 17592186046196,
+               :dustingetz.reg/email "dustin@example.com",
+               :dustingetz.reg/name "Dustin Getz",
+               :dustingetz.reg/gender #:db{:ident :dustingetz.gender/male},
+               :dustingetz.reg/shirt-size #:db{:ident :dustingetz.shirt-size/mens-large}}
+              {:db/id 17592186046763,
+               :dustingetz.reg/email "bob@example.com",
+               :dustingetz.reg/gender #:db{:ident :dustingetz.gender/male},
+               :dustingetz.reg/shirt-size #:db{:ident :dustingetz.shirt-size/mens-large}}])))
+
+    (testing "FindColl rows are indexed by smart identity (only visible internally)"
+      (is (= (let [ctx (mock-fiddle! :dustingetz/gender-shirtsize)]
+               @(:hypercrud.browser/result-index ctx))
+             {[:dustingetz.reg/email "dustin@example.com"]
+              {:db/id 17592186046196,
+               :dustingetz.reg/email "dustin@example.com",
+               :dustingetz.reg/name "Dustin Getz",
+               :dustingetz.reg/gender #:db{:ident :dustingetz.gender/male},
+               :dustingetz.reg/shirt-size #:db{:ident :dustingetz.shirt-size/mens-large}},
+              [:dustingetz.reg/email "bob@example.com"]
+              {:db/id 17592186046763,
+               :dustingetz.reg/email "bob@example.com",
+               :dustingetz.reg/gender #:db{:ident :dustingetz.gender/male},
+               :dustingetz.reg/shirt-size #:db{:ident :dustingetz.shirt-size/mens-large}}}))))
 
   (testing "fiddle level context is set"
     (is (= @(r/fmap :fiddle/ident (:hypercrud.browser/fiddle ctx))
@@ -60,17 +112,7 @@
 
   (def ctx (mock-fiddle! :dustingetz/gender-shirtsize))
 
-  (testing "FindColl rows are indexed by db/id"
-    (is (= @(:hypercrud.browser/result-index ctx)
-           {17592186046196 {:db/id 17592186046196,
-                            :dustingetz.reg/email "dustin@example.com",
-                            :dustingetz.reg/name "Dustin Getz",
-                            :dustingetz.reg/gender #:db{:ident :dustingetz.gender/male},
-                            :dustingetz.reg/shirt-size #:db{:ident :dustingetz.shirt-size/mens-large}},
-            17592186046763 {:db/id 17592186046763,
-                            :dustingetz.reg/email "bob@example.com",
-                            :dustingetz.reg/gender #:db{:ident :dustingetz.gender/male},
-                            :dustingetz.reg/shirt-size #:db{:ident :dustingetz.shirt-size/mens-large}}})))
+
 
   (testing "refocus to self is noop and doesn't crash"
     (is (= (context/refocus ctx :dustingetz/gender-shirtsize)
@@ -237,7 +279,7 @@
     #_(:hypercrud.browser/result-path (context/row ctx 17592186046196))
     #_(:hypercrud.browser/result (context/row ctx 17592186046196))
     ; not sure if element can be inferred in data. Row does not infer.
-    (is (= @(context/data (-> ctx (context/element 0) (context/row 17592186046196)))
+    (is (= @(context/data (-> ctx (context/element 0) (context/row [:dustingetz.reg/email "dustin@example.com"] #_17592186046196)))
            {:db/id 17592186046196,
             :dustingetz.reg/email "dustin@example.com",
             :dustingetz.reg/name "Dustin Getz",
@@ -249,10 +291,10 @@
     (is (= @(:hypercrud.browser/eav (context/row ctx 17592186046196))
            [nil :dustingetz/gender-shirtsize nil])))
   (testing "target isolated row"
-    (is (= (for [ctx [(context/row ctx 17592186046196)]]
+    (is (= (for [ctx [(context/row ctx [:dustingetz.reg/email "dustin@example.com"] #_17592186046196)]]
              ; infers element
              @(context/data ctx))
-           (for [ctx [(context/row ctx 17592186046196)]
+           (for [ctx [(context/row ctx [:dustingetz.reg/email "dustin@example.com"] #_17592186046196)]
                  [_ ctx] (context/spread-elements ctx)]
              @(context/data ctx))
            [{:db/id 17592186046196,
@@ -278,7 +320,7 @@
              :dustingetz.reg/shirt-size #:db{:ident :dustingetz.shirt-size/mens-large}}])))
 
   (testing "focus attribute isolated"
-    (is (= (let [ctx (context/row ctx 17592186046196)
+    (is (= (let [ctx (context/row ctx [:dustingetz.reg/email "dustin@example.com"] #_17592186046196)
                  ctx (context/element ctx 0)
                  ctx (context/attribute ctx :dustingetz.reg/gender)]
              @(context/data ctx))
@@ -348,9 +390,10 @@
       (is (= (count @(context/data ctx)) 6))
       (let [ctx (context/attribute ctx :neighborhood/district)]
         (is (= (context/eav ctx) [nil :neighborhood/district nil])))
-      (let [ctx (context/row ctx 17592186045522)
+      (let [ctx (context/row ctx [:neighborhood/name "Admiral (West Seattle)"] #_17592186045522)
             ctx (context/attribute ctx :neighborhood/district)]
-        (is (= (context/eav ctx) [[:neighborhood/name "Admiral (West Seattle)"] :neighborhood/district [:district/name "Southwest"]])))
+        (is (= (context/eav ctx)
+               [[:neighborhood/name "Admiral (West Seattle)"] :neighborhood/district [:district/name "Southwest"]])))
       (testing "if head-sentinel, no v"
         (let [ctx (assoc ctx :hypercrud.browser/head-sentinel true)
               ctx (context/row ctx 17592186045522)
@@ -358,7 +401,7 @@
           (is (= (context/eav ctx) [nil :neighborhood/district nil]))))))
 
   (testing "refocus to :ref :one from row"
-    (is (= (let [ctx (context/row ctx 17592186046196)
+    (is (= (let [ctx (context/row ctx [:dustingetz.reg/email "dustin@example.com"] #_17592186046196)
                  ctx (context/element ctx 0)
                  ctx (context/refocus ctx :dustingetz.reg/gender)]
              @(context/data ctx))
@@ -375,11 +418,11 @@
            [#:db{:ident :dustingetz.gender/male}
             #:db{:ident :dustingetz.gender/male}]))
 
-    (is (= (let [ctx (context/row ctx 17592186046196)
+    (is (= (let [ctx (context/row ctx [:dustingetz.reg/email "dustin@example.com"] #_17592186046196)
                  ctx (context/element ctx 0)
                  ctx (context/refocus ctx :dustingetz.reg/gender)]
              @(:hypercrud.browser/eav ctx))
-           (let [ctx (context/row ctx 17592186046196)
+           (let [ctx (context/row ctx [:dustingetz.reg/email "dustin@example.com"] #_17592186046196)
                  ; infer element
                  ctx (context/refocus ctx :dustingetz.reg/gender)]
              @(:hypercrud.browser/eav ctx))
@@ -411,7 +454,7 @@
            [#:db{:ident :dustingetz.gender/male}
             #:db{:ident :dustingetz.gender/male}]))
 
-    (is (= (let [ctx (context/row ctx 17592186046196)
+    (is (= (let [ctx (context/row ctx [:dustingetz.reg/email "dustin@example.com"] #_17592186046196)
                  ctx (context/element ctx 0)
                  ctx (context/refocus ctx :dustingetz.reg/gender)]
              @(:hypercrud.browser/eav ctx))
@@ -556,7 +599,7 @@
   (testing "FindRel tuple at element level"
     (testing "addressing rowtuple by tupled rowkey"
       (is (= (let [ctx (mock-fiddle! :dustingetz/slack-storm)]
-               (for [ctx [(context/row ctx "17592186047000`13194139535895")]]
+               (for [ctx [(context/row ctx "[:dustingetz.post/slug :asdf]`13194139535895" #_"17592186047000`13194139535895")]]
                  @(context/data ctx)))
              [[{:db/id 17592186047000,
                 :dustingetz.post/title "is js/console.log syntax future proof?",
@@ -600,7 +643,7 @@
 
     (testing "rowkey then all elements"
       (is (= (let [ctx (mock-fiddle! :dustingetz/slack-storm)]
-               (for [ctx [(context/row ctx "17592186047000`13194139535895")]
+               (for [ctx [(context/row ctx "[:dustingetz.post/slug :asdf]`13194139535895")]
                      [_ ctx] (context/spread-elements ctx)]
                  @(context/data ctx)))
              [{:db/id 17592186047000,
@@ -612,7 +655,7 @@
 
     (testing "rowkey then single elements"
       (is (let [ctx (mock-fiddle! :dustingetz/slack-storm)
-                ctx (context/row ctx "17592186047000`13194139535895")]
+                ctx (context/row ctx "[:dustingetz.post/slug :asdf]`13194139535895")]
             (is (= (context/eav ctx) [nil :dustingetz/slack-storm nil])) ; could potentially set v to the rowkey here
             (is (= @(context/data (context/element ctx 0))
                    {:db/id 17592186047000,
@@ -624,7 +667,7 @@
 
     (testing "element level does set value, it is not ambigous due to set semantics in FindRel"
       (is (let [ctx (mock-fiddle! :dustingetz/slack-storm)
-                ctx (context/row ctx "17592186047000`13194139535895")]
+                ctx (context/row ctx "[:dustingetz.post/slug :asdf]`13194139535895")]
             (is (= (context/eav ctx) [nil :dustingetz/slack-storm nil])) ; could potentially set v to the rowkey here
             ; Originally thought:
             ; Can't set v to [:dustingetz.post/slug :asdf] because A is ambiguous.
@@ -636,7 +679,7 @@
 
     (testing "key all the way and then attributes"
       (let [ctx (mock-fiddle! :dustingetz/slack-storm)
-            ctx (context/row ctx "17592186047000`13194139535895")
+            ctx (context/row ctx "[:dustingetz.post/slug :asdf]`13194139535895")
             ctx (context/element ctx 0)]
         (is (= (context/eav ctx) [nil :dustingetz/slack-storm [:dustingetz.post/slug :asdf]]))
         (is (= @(context/data ctx)
@@ -664,7 +707,7 @@
 
     (is (= (let [ctx (mock-fiddle! :dustingetz/slack-storm)]
              (for [#_#_[_ ctx] (context/spread-rows ctx)
-                   ctx [(context/row ctx "17592186047000`13194139535895" #_[:dustingetz.post/slug :asdf])]
+                   ctx [(context/row ctx "[:dustingetz.post/slug :asdf]`13194139535895" #_[:dustingetz.post/slug :asdf])]
                    [_ ctx] (context/spread-elements ctx)
                    #_#_[_ ctx] (context/spread-attributes ctx)]
                (context/eav ctx)))
@@ -672,7 +715,7 @@
             [nil :dustingetz/slack-storm 13194139535895]]))
 
     (is (= (let [ctx (mock-fiddle! :dustingetz/slack-storm)]
-             (for [ctx [(context/row ctx "17592186047000`13194139535895" #_[:dustingetz.post/slug :asdf])]
+             (for [ctx [(context/row ctx "[:dustingetz.post/slug :asdf]`13194139535895" #_[:dustingetz.post/slug :asdf])]
                    [_ ctx] (context/spread-elements ctx)
                    [_ ctx] (context/spread-attributes ctx)]
                (context/eav ctx)))
@@ -683,7 +726,7 @@
             [[:dustingetz.post/slug :asdf] :dustingetz.post/published-date #inst"2018-11-19T00:00:00.000-00:00"]]))
 
     (is (= (let [ctx (mock-fiddle! :dustingetz/slack-storm)]
-             (for [ctx [(context/row ctx "17592186047000`13194139535895" #_[:dustingetz.post/slug :asdf])]
+             (for [ctx [(context/row ctx "[:dustingetz.post/slug :asdf]`13194139535895" #_[:dustingetz.post/slug :asdf])]
                    [_ ctx] (context/spread-elements ctx)
                    [_ ctx] (context/spread-attributes ctx)]
                (context/eav ctx)))
@@ -695,7 +738,6 @@
 
     (is (= (let [ctx (mock-fiddle! :dustingetz/slack-storm)]
              (for [[_ ctx] (context/spread-rows ctx)
-                   #_#_ctx [(context/row ctx "17592186047000`13194139535895" #_[:dustingetz.post/slug :asdf])]
                    [_ ctx] (context/spread-elements ctx)
                    [_ ctx] (context/spread-attributes ctx)]
                (context/eav ctx)))

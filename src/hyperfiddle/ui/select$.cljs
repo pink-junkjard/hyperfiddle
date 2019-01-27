@@ -38,7 +38,7 @@
 (defn option-label-default [row ctx]
   ; row is FindRel or FindCol
   (or
-    (some-> (hypercrud.browser.context/smart-entity-identifier ctx row) ident->label)
+    (some-> (hypercrud.browser.context/key-row ctx row) ident->label)
     (clojure.string/join " " (vals row))))
 
 (defn select-anchor-renderer' [props option-props ctx]      ; element, etc
@@ -58,8 +58,7 @@
                   (update :class #(str % (if (:disabled option-props) " disabled"))))
         label-fn (contrib.eval/ensure-fn (:option-label props option-label-default))
         option-value-fn (fn [row]
-                          (let [element (if (vector? row) (first row) row)] ; inspect datalog
-                            (pr-str (or (context/smart-entity-identifier ctx element) element))))]
+                          (hypercrud.browser.context/key-row ctx row))]
     ; assert value is in options?
     [:select.ui (select-keys props [:value :class :style :on-change :read-only :on-click]) ;(dissoc props :option-label) ; value
      ; .ui is because options are an iframe and need the pink box

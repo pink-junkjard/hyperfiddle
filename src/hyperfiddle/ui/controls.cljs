@@ -109,7 +109,7 @@
            [hyperfiddle.ui/ui-from-link link ctx props "new"])]))))
 
 (defn id-prompt [ctx val]
-  (pr-str (context/smart-entity-identifier ctx val)))
+  (pr-str val))
 
 (defn related-links [val ctx props]
   (if val
@@ -139,21 +139,21 @@
 (defn ^:export id-or-ident [val ctx & [props]]
   ; id control uses links from parent ctx (parent ref and parent path)
   ; select-here does not match :hf/self since it is in the parent ref position
-  (if-let [ctx (:hypercrud.browser/parent ctx)]
-    [:div
-     ; pr-str here to disambiguate `"tempid"` from `17592186046396` and `:gender/male`
-     ; ... This is dumb datomic hacks, views should never even see tempids
-     [:div.input (interpose " " (cons (id-prompt ctx val) (related-links val ctx props)))]
-     (if (let [[_ a _] @(:hypercrud.browser/eav ctx)]
-           (= :db.cardinality/one (contrib.datomic/cardinality-loose @(:hypercrud.browser/schema ctx) a)))
-       (if-let [link (->> (data/select-here+ ctx :hf/new)
-                          (contrib.ct/unwrap #(taoensso.timbre/warn %)))] ; todo more than one? this is many
-         [hyperfiddle.ui/ui-from-link link ctx props]))
-     (if-not (context/underlying-tempid ctx val)
-       (if-let [link (->> (data/select-here+ ctx :hf/remove)
-                          (contrib.ct/unwrap #(taoensso.timbre/warn %)))] ; todo more than one? this is many
-         [hyperfiddle.ui/ui-from-link link ctx props]))]
-    [:div [:div.input (pr-str val)]]))
+  ;(if-let [ctx (:hypercrud.browser/parent ctx)])
+  [:div
+   ; pr-str here to disambiguate `"tempid"` from `17592186046396` and `:gender/male`
+   ; ... This is dumb datomic hacks, views should never even see tempids
+   [:div.input (interpose " " (cons (id-prompt ctx val) (related-links val ctx props)))]
+   (if (let [[_ a _] @(:hypercrud.browser/eav ctx)]
+         (= :db.cardinality/one (contrib.datomic/cardinality-loose @(:hypercrud.browser/schema ctx) a)))
+     (if-let [link (->> (data/select-here+ ctx :hf/new)
+                        (contrib.ct/unwrap #(taoensso.timbre/warn %)))] ; todo more than one? this is many
+       [hyperfiddle.ui/ui-from-link link ctx props]))
+   (if-not (context/underlying-tempid ctx val)
+     (if-let [link (->> (data/select-here+ ctx :hf/remove)
+                        (contrib.ct/unwrap #(taoensso.timbre/warn %)))] ; todo more than one? this is many
+       [hyperfiddle.ui/ui-from-link link ctx props]))]
+  #_[:div [:div.input (pr-str val)]])
 
 (defn ^:export instant [val ctx & [props]]
   (let [props (-> (assoc props

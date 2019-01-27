@@ -56,7 +56,9 @@
 
 (s/def :hypercrud.browser/eav r/reactive?)
 (s/def :hypercrud.browser/result r/reactive?)
-(s/def ::result-path-segment (s/or :element int? :attribute keyword? :relation string? :lookup-ref vector?))
+(s/def ::result-path-segment (s/or :element int? :attribute keyword? :relation string?
+                                   :lookup-ref vector?
+                                   :scalar (s/and some? (complement sequential?))))
 (s/def :hypercrud.browser/result-path (s/coll-of ::result-path-segment :kind vector?))
 (s/def :hypercrud.browser/element r/reactive?)
 (s/def :hypercrud.browser/element-index int?)
@@ -154,11 +156,11 @@
   (if-let [a (contrib.datomic/find-identity-attr schema e-map)]
     [a (a e-map)]))
 
-(defn smart-entity-identifier "Generates the best Datomic lookup ref for a given pull. ctx needs :branch and :peer"
+(defn smart-entity-identifier "key-entity except without the pr-str fallback.
+  Generates the best Datomic lookup ref for a given pull. ctx needs :branch and :peer"
   ; flip params for fmap->
   [ctx {:keys [:db/id :db/ident] :as e-map}]               ; v can be a ThinEntity or a pull i guess
-  ;{:pre [(map? e-map)]}
-  (s/assert map? e-map)
+  (s/assert map? e-map)                                     ; used to be very loose, track down these cases now.
   ; If we have a color, and a (last path), ensure it is a ref.
   ; If we have a color and [] path, it is definitely a ref.
   ; If we have no color, it is a scalar or aggregate.
@@ -195,27 +197,36 @@
 (defn stable-entity-key "Like smart-entity-identifier but reverses top layer of tempids to stabilize view keys in
   branches. You must pull db/id to trigger tempid detection! Don't use this in labels."
   [ctx {:keys [:db/id :db/ident] :as v}]
-  {:post [%]}
   ; https://github.com/hyperfiddle/hyperfiddle/issues/563 - Regression: Schema editor broken due to smart-id
   ; https://github.com/hyperfiddle/hyperfiddle/issues/345 - Form jank when tempid entity transitions to real entity
-  (or (underlying-tempid ctx id)                            ; Note we use the tempid as the key, not the dbid
-      (smart-entity-identifier ctx v)                       ; this also checks tempid but uses the dbid
-      (pr-str v)))                                          ; fallback to hash if they didn't pull identity
+  (if v
+    (or (underlying-tempid ctx id)                          ; Note we use the tempid as the key, not the dbid
+        (smart-entity-identifier ctx v)                     ; this also checks tempid but uses the dbid
+        (pr-str v))))
+
+(defn key-entity [ctx v]
+  (if v
+    (or (smart-entity-identifier ctx v)                     ; this also checks tempid but uses the dbid
+        (pr-str v))))                                       ; fallback to hash if they didn't pull identity
 
 (defn key-scalar "For at the top when you don't know"
-  [ctx element v]
-  (condp some [(type element)]
+  [ctx v]
+  (condp some [(type @(:hypercrud.browser/element ctx))]
     #{Aggregate Variable} v
-    #{Pull} (stable-entity-key ctx v)))
+    #{Pull} (key-entity ctx v)))
 
-(defn key-row [{qfind :hypercrud.browser/qfind :as ctx} row]
+(declare element-head)
+(declare spread-elements)
+
+(defn key-row "Properly accounts for elements/schema"
+  [{qfind :hypercrud.browser/qfind :as ctx} row]
   ; This keyfn is very tricky, read https://github.com/hyperfiddle/hyperfiddle/issues/341
   (condp some [(type @qfind)]
     #{FindColl FindScalar}
-    (let [element (first (datascript.parser/find-elements @qfind))]
-      (key-scalar ctx element row))
+    (key-scalar (element-head ctx 0) row)
     #{FindRel FindTuple}
-    (->> (map (partial key-scalar ctx) (datascript.parser/find-elements @qfind) row)
+    (->> (for [[i ctx] (spread-elements ctx element-head)]  ; Data is not focused yet, must sidestep that logic
+           (key-scalar ctx (get row i)))
          (clojure.string/join "`"))))
 
 (def ^:export ^:legacy row-keyfn key-row)
@@ -318,7 +329,7 @@
      ctx
 
      :db.cardinality/many
-     (let [keyfn (partial stable-entity-key ctx)]           ; Group again by keyfn, we have seq and need lookup
+     (let [keyfn (partial key-entity ctx)]                  ; Group again by keyfn, we have seq and need lookup
        ; Deep update result in-place, at result-path, to index it. Don't clobber it!
        ; hang onto the set as we index for a future rowkey
        (let [set-ungrouped (r/cursor (:hypercrud.browser/result-index ctx) (:hypercrud.browser/result-path ctx))]
@@ -331,6 +342,11 @@
 (defn data "Works in any context and infers the right stuff" ; todo just deref it
   [ctx]
   {:pre [ctx]}
+
+  ; Data may be responsible for indexing the result, because it depends on the key paths.
+  ; They can be db/id, db/ident, lookupref, alt lookupref. It depends what was pulled.
+  ; Userland may use a non-canonical lookup ref and it should work.
+
   (let [ctx (-infer-implicit-element ctx)
 
         ; Result-index is precomputed to match the expected path,
@@ -377,7 +393,7 @@
       ; Attribute level first, makes element level easier
       (> (pull-depth ctx) 0)
       (if (contrib.datomic/ref? @(:hypercrud.browser/schema ctx) ?a)
-        (smart-entity-identifier ctx ?v)
+        (key-entity ctx ?v)
         ?v)
 
       ; Change in behavior below, it was smart-entity-identifier before
@@ -387,8 +403,8 @@
       (= (pull-depth ctx) 0)                                ; element level confirmed
       (condp some [(type @(:hypercrud.browser/qfind ctx))]
         #{FindRel FindColl} (if (> (depth ctx) 0)           ; need row
-                              (key-scalar ctx @(:hypercrud.browser/element ctx) ?v))
-        #{FindTuple FindScalar} (key-scalar ctx @(:hypercrud.browser/element ctx) ?v)))))
+                              (key-scalar ctx ?v))
+        #{FindTuple FindScalar} (key-scalar ctx ?v)))))
 
 (defn eav "Not reactive." [ctx]
   {:pre [(s/assert :hypercrud/context ctx)]}
@@ -405,6 +421,8 @@
    :post [(s/assert :hypercrud/context %)]}
   (as-> ctx ctx
         (set-parent ctx)
+
+        ; What if k is not the canonical key? db/id vs identity, etc
         (update ctx :hypercrud.browser/result-path (fnil conj []) k)
         ; Not pullpath, that is irrespective of the actual data
         ; I don't think row should set v. Only if we infer an element can we set v.
@@ -434,7 +452,7 @@
         (condp = (type @r-qfind)
           FindColl
           (for [k (->> (sort-fn @r-ordered-result)          ; client side sorting – should happen in backend
-                       (map (partial stable-entity-key ctx)))]
+                       (map (partial key-row ctx)))]
             [k (row ctx k)])
 
           FindRel
@@ -447,13 +465,13 @@
             [[k ctx]])
 
           FindScalar                                        ; no index
-          (let [k (stable-entity-key ctx @r-ordered-result)]
+          (let [k (key-row ctx @r-ordered-result)]
             [[k ctx]])))
 
       (> (depth ctx) 0)                                     ; nested attr
       (let [r-ordered-result (data ctx)]                    ; remember row order; this is broken check order
         (for [k (->> (sort-fn @r-ordered-result)
-                     (map (partial stable-entity-key ctx)))]
+                     (map (partial key-row ctx)))]
           [k (row ctx k)])))))
 
 (defn fiddle "Runtime sets this up, it's not public api.
@@ -513,18 +531,24 @@
     (if db
       (get schemas (str db)))))
 
-(defn element [ctx i]                                       ; [nil :seattle/neighborhoods 1234345]
-  {:pre []
-   :post [(s/assert r/reactive? (:hypercrud.browser/qfind %)) ; qfind set in base if it is available
-          (s/assert r/reactive? (:hypercrud.browser/schema %))]}
-
-  (let [r-element (r/fmap-> (:hypercrud.browser/qfind ctx) datascript.parser/find-elements (get i))
-        r-pull-enclosure (r/fmap-> (:hypercrud.browser/result-enclosure ctx) (get i))]
+; This complects two spread-elements concerns which are separate.
+; 1. Setting Schema and element
+; 2. Setting result and result related things
+(defn element-head [ctx i]
+  (let [r-element (r/fmap-> (:hypercrud.browser/qfind ctx) datascript.parser/find-elements (get i))]
     (as-> ctx ctx
           (assoc ctx :hypercrud.browser/element r-element)
           (assoc ctx :hypercrud.browser/schema (r/ctxf stable-element-schema ctx
                                                        :hypercrud.browser/schemas
-                                                       :hypercrud.browser/element))
+                                                       :hypercrud.browser/element)))))
+
+(defn element [ctx i]                                       ; [nil :seattle/neighborhoods 1234345]
+  {:pre []
+   :post [(s/assert r/reactive? (:hypercrud.browser/qfind %)) ; qfind set in base if it is available
+          (s/assert r/reactive? (:hypercrud.browser/schema %))]}
+  (let [r-pull-enclosure (r/fmap-> (:hypercrud.browser/result-enclosure ctx) (get i))]
+    (as-> ctx ctx
+          (element-head ctx i)
           (assoc ctx :hypercrud.browser/root-pull-enclosure r-pull-enclosure) ; for refocus
           (assoc ctx :hypercrud.browser/pull-enclosure r-pull-enclosure)
           (condp some [(type @(:hypercrud.browser/qfind ctx))]
@@ -633,15 +657,17 @@
       #{:query :entity} [[(:fiddle/ident @r-fiddle) ctx]])))
 
 (defn ^:export spread-elements "yields [i ctx] foreach element.
-  All query dimensions have at least one element."
-  [ctx]
+  All query dimensions have at least one element.
+  Default arity is for userland.
+  Second arity is for keyfns who need elements but not data."
+  [ctx & [f]]
   {:pre [(:hypercrud.browser/qfind ctx)
          (not (:hypercrud.browser/element ctx))]
    #_#_:post [(s/assert :hypercrud/context %)]}
   (let [r-qfind (:hypercrud.browser/qfind ctx)]
     ; No unsequence here? What if find elements change? Can we use something other than (range) as keyfn?
     (for [i (range (count (datascript.parser/find-elements @r-qfind)))]
-      [i (element ctx i)])))
+      [i ((or f element) ctx i)])))
 
 (defn spread-attributes "not recursive, just one entity level"
   [ctx]
@@ -770,17 +796,15 @@
                       temp-id))]
     (try-either (hyperfiddle.route/invert-route (:hypercrud.browser/domain ctx) route invert-id))))
 
-(defn normalize-args [?porps]
-  {:post [(vector? %) #_"route args are associative by position"]} ; can be []
-  (vec (contrib.data/xorxs ?porps)))
-
 (defn tag-v-with-color' [ctx v]
+  (println (str "tag-v-with-color' v: " v))
   (->ThinEntity (or (dbname ctx) "$")                       ; busted element level
-                (smart-entity-identifier ctx v)))
+                v
+                #_(smart-entity-identifier ctx v)))
 
 (defn tag-v-with-color "Tag dbids with color, at the last moment before they render into URLs"
   [ctx v]
-  (let [[_ a _] @(:hypercrud.browser/eav ctx)               ; this v might be a tuple, above v is one item in tuple?
+  (let [[e a _] @(:hypercrud.browser/eav ctx)               ; this v might be a tuple, above v is one item in tuple?
         is-element-level (= (pull-depth ctx) 0)]
     (cond
       (instance? ThinEntity v) v                            ; legacy compat with IDE legacy #entity formulas
@@ -806,8 +830,14 @@
             #{FindRel FindTuple}
             (do (timbre/warn "element-level links aren't well defined for tupled qfind: " qfind) nil))))
 
-      (contrib.datomic/ref? @(:hypercrud.browser/schema ctx) a) (tag-v-with-color' ctx v)
-      :scalar v)))
+      (contrib.datomic/ref? @(:hypercrud.browser/schema ctx) a)
+      (tag-v-with-color' ctx v)
+
+      (contrib.datomic/unique? @(:hypercrud.browser/schema ctx) a :db.unique/identity)
+      (tag-v-with-color' ctx e)                             ; or [a v], same
+
+      :scalar
+      v)))
 
 (let [eval-string!+ (memoize eval/eval-expr-str!+)]
   (defn build-args+ "Params are EAV-typed (uncolored)"
@@ -825,15 +855,25 @@
            formula-fn (try-either (formula-ctx-closure ctx))
 
            ; V legacy is tuple, it should be scalar by here (tuple the ctx, not the v)
-           :let [[_ _ v] @(:hypercrud.browser/eav ctx)]
+           :let [[e a v] @(:hypercrud.browser/eav ctx)
+                 ; if a is identity, use the e instead of the v.
+                 v' (cond
+                      (qfind-level? ctx)                    ; fiddle-attr, no schema
+                      v
 
-           ; if a is identity, use the e instead of the v.
+                      ; :identity signals to pass the entity in the formula, not the scalar value
+                      ; Pass by lookup ref if we have the value; in the tempid case the lookup ref isn't
+                      ; valid yet so use the tempid instead. If no value, pass nil, this link is invalid.
+                      (contrib.datomic/unique? @(:hypercrud.browser/schema ctx) a :db.unique/identity)
+                      e                                     ; Properly respects tempid/lookupref/dbid
 
+                      :scalar
+                      v)]
            ; Documented behavior is v in, tuple out, no colors.
-           args (try-either (formula-fn v))]
-      (return
-        ; No need to normalize once tupling works
-        (normalize-args args)))))
+           arg (try-either (formula-fn v'))]
+      ; Don't normalize, must handle tuple dimension properly.
+      ; For now assume no tuple.
+      (return [arg]))))
 
 (defn ^:export build-route' "There may not be a route! Fiddle is sometimes optional" ; build-route+
   [+args ctx {:keys [:link/fiddle :link/tx-fn] :as link}]
