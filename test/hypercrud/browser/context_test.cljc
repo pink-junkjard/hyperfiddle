@@ -505,8 +505,12 @@
               :dustingetz.post/slug :asdf,
               :dustingetz.storm/channel "#clojurescript",
               :dustingetz.post/published-date #inst"2018-11-19T00:00:00.000-00:00"}))
-      (is (= (context/smart-entity-identifier ctx e)        ; needs element
-             [:dustingetz.post/slug :asdf]))))
+
+      ; needs element to know schema, otherwise can't be done
+      (is (= (context/smart-entity-identifier (context/element ctx 0) e) [:dustingetz.post/slug :asdf]))
+      (is (= (context/smart-entity-identifier (context/element ctx 1) e) 17592186047000)) ; Untangle, this should probably assert
+      (is (= (context/smart-entity-identifier ctx e) 17592186047000)) ; Untangle, this should probably assert
+      ))
   )
 
 (deftest formulas
