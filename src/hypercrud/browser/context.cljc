@@ -333,11 +333,17 @@
        ; Deep update result in-place, at result-path, to index it. Don't clobber it!
        ; hang onto the set as we index for a future rowkey
        (let [set-ungrouped (r/cursor (:hypercrud.browser/result-index ctx) (:hypercrud.browser/result-path ctx))]
-         (assoc ctx :hypercrud.browser/result set-ungrouped
+         (assoc ctx :hypercrud.browser/result set-ungrouped ; replace with refined new tree
                     :hypercrud.browser/result-index
                     (r/fmap-> (:hypercrud.browser/result-index ctx)
                               (update-in (:hypercrud.browser/result-path ctx)
-                                         (partial contrib.data/group-by-unique keyfn)))))))))
+                                         (cond
+                                           (contrib.datomic/ref? @(:hypercrud.browser/schema ctx) a)
+                                           (partial contrib.data/group-by-unique keyfn)
+
+                                           :scalar
+                                           ; Sets are an index that evaluate to the key.
+                                           set)))))))))
 
 (defn data "Works in any context and infers the right stuff" ; todo just deref it
   [ctx]

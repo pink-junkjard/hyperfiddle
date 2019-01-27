@@ -241,12 +241,11 @@
 
       (testing "nested scalar many"
         (let [ctx (context/attribute ctx :hyperfiddle/owners)]
-
           (is (= (context/eav ctx) [[:fiddle/ident :hyperfiddle/ide] :hyperfiddle/owners nil]))
           (is (= @(context/data ctx) [#uuid "acd054a8-4e36-4d6c-a9ec-95bdc47f0d39"]))
-          (let [ctx (context/row ctx #uuid "5b0dd2d7-24a4-4122-bd8e-168817f2e0e7")]
+          (let [ctx (context/row ctx #uuid "acd054a8-4e36-4d6c-a9ec-95bdc47f0d39")]
             (is (= (context/eav ctx)
-                   [[:fiddle/ident :hyperfiddle/ide] :hyperfiddle/owners #uuid "5b0dd2d7-24a4-4122-bd8e-168817f2e0e7"])))
+                   [[:fiddle/ident :hyperfiddle/ide] :hyperfiddle/owners #uuid "acd054a8-4e36-4d6c-a9ec-95bdc47f0d39"])))
           ))))
 
   (testing "a is fiddle-ident if no element set"
