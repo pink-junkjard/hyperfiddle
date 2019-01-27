@@ -228,14 +228,26 @@
 
   (testing "nested pulls"
     (let [ctx (mock-fiddle! :hyperfiddle/ide)]
-      (is (= (context/eav ctx) [nil :hyperfiddle/ide [:fiddle/ident :hyperfiddle/ide]]))
-      (let [ctx (context/attribute ctx :fiddle/links)]
-        (is (= (context/eav ctx) [[:fiddle/ident :hyperfiddle/ide] :fiddle/links nil]))
-        (is (= (count @(context/data ctx)) 5))
-        (is (= (first @(context/data ctx)) {:db/id 17592186061848, :link/class [:hf/remove], :link/rel :hf/remove}))
-        (let [ctx (context/row ctx 17592186061848)]
-          (is (= (context/eav ctx) [[:fiddle/ident :hyperfiddle/ide] :fiddle/links 17592186061848]))
-          (is (= @(context/data ctx) {:db/id 17592186061848, :link/class [:hf/remove], :link/rel :hf/remove}))))))
+      (is (= (context/eav ctx) [nil :hyperfiddle/ide [:fiddle/ident :hyperfiddle/ide]])) ; infer scalar
+      ;(is (= @(context/data ctx) 42))
+      (testing "nested ref many"
+        (let [ctx (context/attribute ctx :fiddle/links)]
+          (is (= (context/eav ctx) [[:fiddle/ident :hyperfiddle/ide] :fiddle/links nil]))
+          (is (= (count @(context/data ctx)) 5))
+          (is (= (first @(context/data ctx)) {:db/id 17592186061848, :link/class [:hf/remove], :link/rel :hf/remove}))
+          (let [ctx (context/row ctx 17592186061848)]
+            (is (= (context/eav ctx) [[:fiddle/ident :hyperfiddle/ide] :fiddle/links 17592186061848]))
+            (is (= @(context/data ctx) {:db/id 17592186061848, :link/class [:hf/remove], :link/rel :hf/remove})))))
+
+      (testing "nested scalar many"
+        (let [ctx (context/attribute ctx :hyperfiddle/owners)]
+
+          (is (= (context/eav ctx) [[:fiddle/ident :hyperfiddle/ide] :hyperfiddle/owners nil]))
+          (is (= @(context/data ctx) [#uuid "acd054a8-4e36-4d6c-a9ec-95bdc47f0d39"]))
+          (let [ctx (context/row ctx #uuid "5b0dd2d7-24a4-4122-bd8e-168817f2e0e7")]
+            (is (= (context/eav ctx)
+                   [[:fiddle/ident :hyperfiddle/ide] :hyperfiddle/owners #uuid "5b0dd2d7-24a4-4122-bd8e-168817f2e0e7"])))
+          ))))
 
   (testing "a is fiddle-ident if no element set"
     (is (= (for [[_ ctx] (context/spread-result ctx)
@@ -860,5 +872,5 @@
   ;(is (= (deps-satisfied? [0] [0 :reg/gender]) true))  ; body count is =
   ;(is (= (deps-over-satisfied? [0] [0 :reg/gender]) false))
   ;(is (= (deps-over-satisfied? [0 :reg/gender] [0 :reg/gender]) true))
-  ; It would be over-satisfied if there was another 
+  ; It would be over-satisfied if there was another
   )

@@ -183,6 +183,7 @@
       :fiddle/css
       "table.hyperfiddle.-fiddle-links { table-layout: fixed; }\ntable.-fiddle-links th.-hypercrud-browser-path--fiddle-links { width: 60px; }\n\ntable.-fiddle-links td.-hypercrud-browser-path--fiddle-links--link-fiddle { display: flex; }\ntable.hyperfiddle.-fiddle-links td.field.-link-fiddle > select { flex: 0 1 80% !important; } /* line up :new */\n",
       :fiddle/ident :hyperfiddle/ide,
+      :hyperfiddle/owners [#uuid "acd054a8-4e36-4d6c-a9ec-95bdc47f0d39"]
       :hyperfiddle/starred true}
 
      {:db/id 17592186061847,
@@ -214,6 +215,7 @@
       :fiddle/css
       "table.hyperfiddle.-fiddle-links { table-layout: fixed; }\ntable.-fiddle-links th.-hypercrud-browser-path--fiddle-links { width: 60px; }\n\ntable.-fiddle-links td.-hypercrud-browser-path--fiddle-links--link-fiddle { display: flex; }\ntable.hyperfiddle.-fiddle-links td.field.-link-fiddle > select { flex: 0 1 80% !important; } /* line up :new */\n",
       :fiddle/ident :hyperfiddle/ide,
+      :hyperfiddle/owners [#uuid "acd054a8-4e36-4d6c-a9ec-95bdc47f0d39"]
       :hyperfiddle/starred true}
      ]
 
