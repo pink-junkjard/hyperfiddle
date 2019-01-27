@@ -269,6 +269,9 @@
 (defn pull-depth [ctx]
   (count (:hypercrud.browser/pull-path ctx)))
 
+(defn qfind-level? [ctx]
+  (= (pull-depth ctx) 0))
+
 (declare data)
 
 (defn index-result "Builds the result index based on qfind. Result index is orthogonal to sorting or order.
@@ -406,7 +409,14 @@
         ; Not pullpath, that is irrespective of the actual data
         ; I don't think row should set v. Only if we infer an element can we set v.
         ; ::eav tells us exactly where we are without optimisim. (eav) infers the rest.
-        #_(assoc ctx :hypercrud.browser/eav (r/fmap-> (:hypercrud.browser/eav ctx) (stable-eav-v (v! ctx))))))
+
+        (if (qfind-level? ctx)
+          ; ::eav depends on element which isn't known yet
+          ; (eav) can infer this, but keep the "cursor" precise
+          ctx
+
+          ; In nested case we do know precisely the eav has changed
+          (assoc ctx :hypercrud.browser/eav (r/fmap-> (:hypercrud.browser/eav ctx) (stable-eav-v (v! ctx)))))))
 
 (defn ^:export spread-rows "spread across resultset row-or-rows; returns [k ctx] for your react key.
   Automatically accounts for query dimension - no-op in the case of FindTuple and FindScalar.
