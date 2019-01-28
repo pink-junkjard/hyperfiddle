@@ -611,7 +611,11 @@
       (assoc ctx :hypercrud.browser/eav                     ; insufficent stability on r-?v? fixme
                  (case (contrib.datomic/cardinality-loose @(:hypercrud.browser/schema ctx) a')
                    :db.cardinality/many (r/fmap-> (:hypercrud.browser/eav ctx) (stable-eav-a a')) ; dont have v yet
-                   :db.cardinality/one (r/fmap-> (:hypercrud.browser/eav ctx) (stable-eav-av a' (v! ctx))))))))
+                   :db.cardinality/one (r/fmap-> (:hypercrud.browser/eav ctx) (stable-eav-av a' (v! ctx)))))
+
+      ; in :hf/new :identity case, E can be nil but we are about to have a tempid in the E
+      ; It is not our job here to focus that. I dont think we can set the E to the tempid in that case.
+      )))
 
 (defn validation-hints-here [ctx]
   (for [[path hint] (:hypercrud.browser/validation-hints ctx)
@@ -803,8 +807,9 @@
     (try-either (hyperfiddle.route/invert-route (:hypercrud.browser/domain ctx) route invert-id))))
 
 (defn tag-v-with-color' [ctx v]
-  (->ThinEntity (or (dbname ctx) "$")                       ; busted element level
-                v))
+  (if v
+    (->ThinEntity (or (dbname ctx) "$")                     ; busted element level
+                  v)))
 
 (defn tag-v-with-color "Tag dbids with color, at the last moment before they render into URLs"
   [ctx v]
@@ -837,8 +842,11 @@
       (contrib.datomic/ref? @(:hypercrud.browser/schema ctx) a)
       (tag-v-with-color' ctx v)
 
+      ; :dustingetz/slack-storm :new-storm exercises this branch
       (contrib.datomic/unique? @(:hypercrud.browser/schema ctx) a :db.unique/identity)
-      (tag-v-with-color' ctx e)                             ; or [a v], same
+      (if e                                                 ; tempid | lookup-ref | nil (:hf/new)
+        (tag-v-with-color' ctx e)
+        (tag-v-with-color' ctx v))                          ; :hf/new has nil e, but valid tempid v
 
       :scalar
       v)))
@@ -877,7 +885,11 @@
            arg (try-either (formula-fn v'))]
       ; Don't normalize, must handle tuple dimension properly.
       ; For now assume no tuple.
-      (return [arg]))))
+      (return
+        (if-not arg
+          nil                                               ; !link[⬅︎ Slack Storm](:dustingetz.storm/view)
+          [arg]))
+      )))
 
 (defn ^:export build-route' "There may not be a route! Fiddle is sometimes optional" ; build-route+
   [+args ctx {:keys [:link/fiddle :link/tx-fn] :as link}]
