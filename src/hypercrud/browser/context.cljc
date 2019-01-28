@@ -803,10 +803,8 @@
     (try-either (hyperfiddle.route/invert-route (:hypercrud.browser/domain ctx) route invert-id))))
 
 (defn tag-v-with-color' [ctx v]
-  (println (str "tag-v-with-color' v: " v))
   (->ThinEntity (or (dbname ctx) "$")                       ; busted element level
-                v
-                #_(smart-entity-identifier ctx v)))
+                v))
 
 (defn tag-v-with-color "Tag dbids with color, at the last moment before they render into URLs"
   [ctx v]
