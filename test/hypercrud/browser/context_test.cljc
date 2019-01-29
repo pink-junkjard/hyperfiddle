@@ -1,19 +1,33 @@
 (ns hypercrud.browser.context-test
   (:require
+    [cats.core :refer [mlet return fmap]]
+    [cats.monad.either :refer [left right]]
     [clojure.test :refer [deftest is testing]]
     [contrib.reactive :as r]
+    [contrib.ct :refer [unwrap]]
     [fixtures.tank]
     [hyperfiddle.data]
     [hyperfiddle.fiddle]
+    [hyperfiddle.runtime]
     [hypercrud.browser.context :as context]))
 
+
+(defn mock-peer []
+  ; Stop NPEs in tempid that inspect the stage.
+  (let [state-atom (-> (hyperfiddle.reducers/root-reducer nil nil)
+                       (r/atom))]
+    (reify
+      hyperfiddle.runtime/State
+      (state [rt] state-atom)
+      (state [rt path] (r/cursor state-atom path)))))
 
 (defn mock-fiddle! "This has some subtle differences around tempid handling - this mock
   has no information about tempids at all, so these tests do not exercise tempid paths which
   can subtly influence keyfns possibly other things."
   [ident]
   (let [[fiddle result] (-> fixtures.tank/fiddles ident)]
-    (-> {:hypercrud.browser/route nil}
+    (-> {:hypercrud.browser/route nil
+         :peer (mock-peer)}
         (context/schemas (r/pure fixtures.tank/schemas))
         (context/fiddle (r/pure fiddle))
         (context/result (r/pure result)))))
@@ -27,36 +41,17 @@
            [[:fiddle/ident :karl.hardenstine/fiddles] 13194139534712 true])))
 
   (testing "key-row"
-
     (let [ctx (mock-fiddle! :dustingetz/gender-shirtsize)
-          result @(context/data ctx)]
-      (is (= (context/key-row ctx (first result))
-             [:dustingetz.reg/email "dustin@example.com"] ; 17592186046196
-             )))
-    )
+          [row] @(context/data ctx)]
+      (is (= (context/key-row ctx row)
+             [:dustingetz.reg/email "dustin@example.com"]))))
 
-  (testing "why is row index choosing dbid here?"
-    ; Must index in various dimensions for various kinds of identity! Yes there is canonical identity
-    ; but we have to index any possible way.
-    (let [ctx (mock-fiddle! :dustingetz/gender-shirtsize)
-          ctx (context/row ctx 17592186046196 #_[:dustingetz.reg/email "dustin@example.com"])
-          #_#_ctx (context/element ctx 0)]
-      (context/eav ctx))
-    )
-
-
-
-  (testing ""
-    (let [ctx (mock-fiddle! :hyperfiddle/ide)]
-      (is (= (context/eav ctx) [nil :hyperfiddle/ide [:fiddle/ident :hyperfiddle/ide]]))
-      (let [ctx (context/attribute ctx :fiddle/links)]
-        (is (= (context/eav ctx) [[:fiddle/ident :hyperfiddle/ide] :fiddle/links nil]))
-        (is (= (count @(context/data ctx)) 5))
-        (is (= (first @(context/data ctx)) {:db/id 17592186061848, :link/class [:hf/remove], :link/rel :hf/remove}))
-        (let [ctx (context/row ctx 17592186061848)]
-          (is (= (context/eav ctx) [[:fiddle/ident :hyperfiddle/ide] :fiddle/links 17592186061848]))
-          (is (= @(context/data ctx) {:db/id 17592186061848, :link/class [:hf/remove], :link/rel :hf/remove})))))
-    )
+  (testing "from :identity refine to :db/id"
+    (is (= (let [ctx (mock-fiddle! :dustingetz/gender-shirtsize)
+                 ctx (context/row ctx [:dustingetz.reg/email "dustin@example.com"])
+                 ctx (context/attribute ctx :db/id)]
+             (context/eav ctx))
+           [[:dustingetz.reg/email "dustin@example.com"] :db/id 17592186046196])))
   )
 
 (deftest basics
@@ -248,6 +243,17 @@
                    [[:fiddle/ident :hyperfiddle/ide] :hyperfiddle/owners #uuid "acd054a8-4e36-4d6c-a9ec-95bdc47f0d39"])))
           ))))
 
+  (testing "nested pull on :hyperfiddle/ide :fiddle/links"
+    (let [ctx (mock-fiddle! :hyperfiddle/ide)]
+      (is (= (context/eav ctx) [nil :hyperfiddle/ide [:fiddle/ident :hyperfiddle/ide]]))
+      (let [ctx (context/attribute ctx :fiddle/links)]
+        (is (= (context/eav ctx) [[:fiddle/ident :hyperfiddle/ide] :fiddle/links nil]))
+        (is (= (count @(context/data ctx)) 5))
+        (is (= (first @(context/data ctx)) {:db/id 17592186061848, :link/class [:hf/remove], :link/rel :hf/remove}))
+        (let [ctx (context/row ctx 17592186061848)]
+          (is (= (context/eav ctx) [[:fiddle/ident :hyperfiddle/ide] :fiddle/links 17592186061848]))
+          (is (= @(context/data ctx) {:db/id 17592186061848, :link/class [:hf/remove], :link/rel :hf/remove}))))))
+
   (testing "a is fiddle-ident if no element set"
     (is (= (for [[_ ctx] (context/spread-result ctx)
                  [_ ctx] (context/spread-rows ctx)]
@@ -263,13 +269,15 @@
              :dustingetz.reg/gender #:db{:ident :dustingetz.gender/male},
              :dustingetz.reg/shirt-size #:db{:ident :dustingetz.shirt-size/mens-large}}])))
 
-  (testing "refocus"
-    (is (= (for [[_ ctx] (context/spread-result ctx)
+  (testing "refocusing from a row doesn't lose the row"
+    (is (= (for [[_ ctx] (-> (mock-fiddle! :dustingetz/gender-shirtsize)
+                             (context/spread-result))
                  [_ ctx] (context/spread-rows ctx)]
              (context/eav (context/refocus ctx :dustingetz/gender-shirtsize)))
-           '([nil :dustingetz/gender-shirtsize [:dustingetz.reg/email "dustin@example.com"]]
-              [nil :dustingetz/gender-shirtsize [:dustingetz.reg/email "bob@example.com"]])))
+           [[nil :dustingetz/gender-shirtsize [:dustingetz.reg/email "dustin@example.com"]]
+            [nil :dustingetz/gender-shirtsize [:dustingetz.reg/email "bob@example.com"]]])))
 
+  (testing "refocus"
     (is (= (for [[_ ctx] (context/spread-result ctx)
                  [_ ctx] (context/spread-rows ctx)
                  [_ ctx] (context/spread-elements ctx)]
@@ -764,7 +772,7 @@
             [17592186047105 :dustingetz.post/published-date #inst"2018-11-21T00:00:00.000-00:00"]]))
     )
 
-  (testing "identity links"
+  (testing "identity focusing"
     (def ctx (mock-fiddle! :dustingetz.tutorial/blog))
     (is (= @(context/data ctx)
            [[{:db/id 17592186047105,
@@ -833,23 +841,18 @@
            [nil :dustingetz.tutorial/blog [:dustingetz.post/slug :automatic-CRUD-links]]))
 
     #_(let [#_#_ctx (context/element ctx 0)]
-
-
-
-      (let [])
-
-      #_(is (= (context/eav ctx) [nil :dustingetz/slack-storm [:dustingetz.post/slug :asdf]]))
-      #_(is (= @(context/data ctx)
+      (is (= (context/eav ctx) [nil :dustingetz/slack-storm [:dustingetz.post/slug :asdf]]))
+      (is (= @(context/data ctx)
              {:db/id 17592186047000,
               :dustingetz.post/title "is js/console.log syntax future proof?",
               :dustingetz.post/slug :asdf,
               :dustingetz.storm/channel "#clojurescript",
               :dustingetz.post/published-date #inst "2018-11-19T00:00:00.000-00:00"}))
-      #_(let [ctx (context/attribute ctx :dustingetz.post/title)]
+      (let [ctx (context/attribute ctx :dustingetz.post/title)]
         (is (= @(context/data ctx) "is js/console.log syntax future proof?"))
         (is (= (context/eav ctx) [[:dustingetz.post/slug :asdf] :dustingetz.post/title "is js/console.log syntax future proof?"])))
 
-      #_(is (= (for [[_ ctx] (context/spread-attributes ctx)]
+      (is (= (for [[_ ctx] (context/spread-attributes ctx)]
                (context/eav ctx))
              [[[:dustingetz.post/slug :asdf] :db/id 17592186047000]
               [[:dustingetz.post/slug :asdf] :dustingetz.post/title "is js/console.log syntax future proof?"]
@@ -859,20 +862,62 @@
 
     )
 
-  ;; refocus post/slug
-  ;[nil :post/slug :asdf]                                    ; if the attr is identity, use a lookup ref in formula?
-  ;
-  ;
-  ;; Basically since it is :identity, we're talking about the entity not the value. Pretty much always.
-  ;; V should reflect that.
-  ;[nil :post/slug [:post/slug :asdf]]                       ; So this is canonical.
-  ;
-  ;[nil :dustingetz/slack-storm [:post/slug :asdf]]           ; this will indeed happen at fiddle level if FindColl
-  ;; but not FindRel, which will see a tupled-identity
+  (testing "link primitives"
+    (def ctx (-> (mock-fiddle! :dustingetz.tutorial/blog)
+                 (context/row [[:dustingetz.post/slug :automatic-CRUD-links]])
+                 (context/element 0)
+                 (context/attribute :dustingetz.post/slug)))
+    (is (= (->> (hyperfiddle.data/spread-links-here ctx) (map first))
+           [17592186047370 17592186047372]))
+    (is (= (->> (hyperfiddle.data/spread-links-here ctx) (map (comp :link/path deref second)))
+           [":dustingetz.post/slug" ":dustingetz.post/slug"]))
+    (is (= (->> (hyperfiddle.data/spread-links-here ctx :hf/new) (map (comp :link/path deref second)))
+           [":dustingetz.post/slug"]))
+    (is (= (->> (hyperfiddle.data/spread-links-here ctx :dustingetz.tutorial/view-post)
+                (map (comp :link/path deref second)))
+           [":dustingetz.post/slug"]))
 
-  (testing "focus of identity attr puts identity in V position, not scalar"
+    (is (= (mlet [r-link (hyperfiddle.data/select-here+ ctx :hf/new1)]
+             (return 42))
+           (left "no match for class: :hf/new1")))
+
+    (is (= (->> (hyperfiddle.data/select-here+ ctx :hf/new) (unwrap (constantly nil)) deref)
+           {:db/id 17592186047372,
+            :link/class [:hf/new],
+            :link/fiddle {:db/id 17592186047373,
+                          :fiddle/ident :dustingetz.tutorial.blog/new-post,
+                          :fiddle/type :entity,
+                          :fiddle/pull "[:db/id *]",
+                          :fiddle/pull-database "$",
+                          :fiddle/markdown "### :dustingetz.tutorial.blog/new-post",
+                          :fiddle/renderer nil},
+            :link/path ":dustingetz.post/slug",
+            :link/rel :hf/new,
+            :link/tx-fn ":user/new-post",
+            :link/formula "(constantly (hyperfiddle.api/tempid! ctx))"})))
+
+  (testing ":identity link refocus v is lookup-ref"
+    (def ctx (-> (mock-fiddle! :dustingetz.tutorial/blog)
+                 (context/row [[:dustingetz.post/slug :automatic-CRUD-links]])
+                 (context/element 0)
+                 (context/attribute :dustingetz.post/slug)))
+    (def r-link (->> (hyperfiddle.data/select-here+ ctx :dustingetz.tutorial/view-post) (unwrap (constantly nil))))
+    (is (= (let [[ctx r+route] (context/refocus' ctx r-link)]
+             (context/eav ctx))
+           [nil :dustingetz.tutorial/blog [:dustingetz.post/slug :automatic-CRUD-links]])))
+
+  (testing ":identity :hf/new formula evaluates to tempid"
+    (def ctx (-> (mock-fiddle! :dustingetz.tutorial/blog)
+                 (context/row [[:dustingetz.post/slug :automatic-CRUD-links]])
+                 (context/element 0)
+                 (context/attribute :dustingetz.post/slug)))
+    (def r-link (->> (hyperfiddle.data/select-here+ ctx :hf/new) (unwrap (constantly nil))))
+    (testing "at fiddle level, link :hf/new eav does not have a parent"
+      (is (= (let [[ctx r+route] (context/refocus' ctx r-link)]
+               (context/eav ctx))
+             ; should it be [nil nil "479925454"] from the txfn perspective?
+             [nil :dustingetz.tutorial/blog "479925454"])))
     )
-
   )
 
 (deftest links

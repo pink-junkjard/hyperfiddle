@@ -430,8 +430,6 @@
          #_(not (coll? k))]
    :post [(s/assert :hypercrud/context %)]}
   (as-> ctx ctx
-        (set-parent ctx)
-
         ; What if k is not the canonical key? db/id vs identity, etc
         (update ctx :hypercrud.browser/result-path (fnil conj []) k)
         ; Not pullpath, that is irrespective of the actual data
@@ -744,53 +742,70 @@
   [ctx a]
   {:pre [(:hypercrud.browser/element ctx)]
    :post [#_(let [[_ aa _] @(:hypercrud.browser/eav %)] (= a aa))]}
-  (let [current-path (:hypercrud.browser/pull-path ctx)
-        ; find a reachable path that contains the target-attr in the fewest hops
-        ;   me->mother ; me->sister->mother ; closest ctx is selected
-        ; What if there is more than one?  me->sister->mother; me->father->mother
-        ; Ambiguous, how did we even select this link? Probably need full datascript query language.
-        path-solutions (->> (contrib.datomic/reachable-pullpaths
-                              @(:hypercrud.browser/schema ctx)
-                              @(:hypercrud.browser/root-pull-enclosure ctx)
-                              current-path)
-                            ; xs is like '([] [:dustingetz.reg/gender] [:dustingetz.reg/shirt-size])
-                            (filter #(some (partial = a) %)))]
-    ; In tuple cases (off happy path) there might not be a solution. Can be fixed by tupling all the way up.
-    (if (seq path-solutions)                                ; found at least one solution
-      ; Warn if more than one solution? Diamonds are fine, but some are parallel solns
-      (let [chosen-path (->> path-solutions
-                             (map (partial take-while (partial not= a)))
-                             (sort-by count)                ; choose the shortest path, if ambiguous could be a problem
-                             first)                         ; nil/empty means unwind to nop
-            common-ancestor-path (ancestry-common current-path chosen-path)
-            unwind-offset (- (count current-path) (count common-ancestor-path)) ; 1 > 0 is fine
-            common-ancestor-ctx (unwind ctx unwind-offset)]
-        (focus common-ancestor-ctx (ancestry-divergence (conj (vec chosen-path) a) current-path)))
+  (cond
+    (contrib.datomic/unique? @(:hypercrud.browser/schema ctx) a :db.unique/identity)
+    (if (qfind-level? ctx)
+      ctx                                                   ; [nil :dustingetz.tutorial/blog [:dustingetz.post/slug :hehehe]]
+      (unwind ctx 1))
 
-      ; No solution found. This is a constraint failure and asserts upstack.
-      nil)))
+    (let [[_ aa _] @(:hypercrud.browser/eav ctx)] (= aa a))
+    ctx
+
+    :else
+    (let [current-path (:hypercrud.browser/pull-path ctx)
+          ; find a reachable path that contains the target-attr in the fewest hops
+          ;   me->mother ; me->sister->mother ; closest ctx is selected
+          ; What if there is more than one?  me->sister->mother; me->father->mother
+          ; Ambiguous, how did we even select this link? Probably need full datascript query language.
+          path-solutions (->> (contrib.datomic/reachable-pullpaths
+                                @(:hypercrud.browser/schema ctx)
+                                @(:hypercrud.browser/root-pull-enclosure ctx)
+                                current-path)
+                              ; xs is like '([] [:dustingetz.reg/gender] [:dustingetz.reg/shirt-size])
+                              (filter #(some (partial = a) %)))]
+      ; In tuple cases (off happy path) there might not be a solution. Can be fixed by tupling all the way up.
+      (if (seq path-solutions)                              ; found at least one solution
+        ; Warn if more than one solution? Diamonds are fine, but some are parallel solns
+        (let [chosen-path (->> path-solutions
+                               (map (partial take-while (partial not= a)))
+                               (sort-by count)              ; choose the shortest path, if ambiguous could be a problem
+                               first)                       ; nil/empty means unwind to nop
+              common-ancestor-path (ancestry-common current-path chosen-path)
+              unwind-offset (- (count current-path) (count common-ancestor-path)) ; 1 > 0 is fine
+              common-ancestor-ctx (unwind ctx unwind-offset)
+
+              foo (if (contrib.datomic/unique? @(:hypercrud.browser/schema ctx) a :db.unique/identity)
+                    ; FOR LINK REFOCUS ONLY, the prent entity ctx is correct
+                    chosen-path
+                    (conj (vec chosen-path) a))]
+          (focus common-ancestor-ctx (ancestry-divergence foo current-path)))
+
+        ; No solution found. This is a constraint failure and asserts upstack.
+        nil))))
 
 (defn refocus "From view, find the closest satisfactory ctx accounting for cardinality. e.g. as in
   !link(:new-intent-naive :hf/remove). Caller believes that the deps are satisfied (right stuff is in scope).
-  todo unify with refocus'
+  todo unify with refocus'.
+  This is ALWAYS focusing a link.
+  Handle :identity differently for links – we are not rendering forms, we are generating URLs,
+  which means :identity attributes need to name an entity, not a scalar. (This fn is complected with build-args+)
 
-  Notably: (refocus) and (attribute) are pretty much the same thing. This one has element tupling hacks."
+  Notably: (refocus) and (attribute) are pretty much the same thing. This one has element tupling hacks
+  and handles :identity differently, now."
   [ctx a']
-  {:pre [ctx a']
+  {:pre [ctx #_a']                                          ; disable assert for backwards compat until all links have a
    :post [%]}
   (cond
-    (let [[_ a _] @(:hypercrud.browser/eav ctx)] (= a' a))
-    ctx
-
     (= a' (@(:hypercrud.browser/fiddle ctx) :fiddle/ident))
     ; if no element, we already there (depth = 0)
-    (unwind ctx (depth ctx))
+    (unwind ctx (pull-depth ctx))
 
     (:hypercrud.browser/element ctx)
     (refocus-in-element ctx a')
 
     :else
     ; Assuming 0 works in happy path without tupling links all the way up.
+    ; In fact this link might be available in N find-elements and returns N ctxs.
     (refocus-in-element (element ctx 0) a')))
 
 (defn id->tempid+ [route ctx]
@@ -871,29 +886,15 @@
            formula-fn (try-either (formula-ctx-closure ctx))
 
            ; V legacy is tuple, it should be scalar by here (tuple the ctx, not the v)
-           :let [[e a v] @(:hypercrud.browser/eav ctx)
-                 ; if a is identity, use the e instead of the v.
-                 v' (cond
-                      (qfind-level? ctx)                    ; fiddle-attr, no schema
-                      v
+           :let [[e a v] @(:hypercrud.browser/eav ctx)]
 
-                      ; :identity signals to pass the entity in the formula, not the scalar value
-                      ; Pass by lookup ref if we have the value; in the tempid case the lookup ref isn't
-                      ; valid yet so use the tempid instead. If no value, pass nil, this link is invalid.
-                      (contrib.datomic/unique? @(:hypercrud.browser/schema ctx) a :db.unique/identity)
-                      e                                     ; Properly respects tempid/lookupref/dbid
-
-                      :scalar
-                      v)]
            ; Documented behavior is v in, tuple out, no colors.
-           arg (try-either (formula-fn v'))]
+           arg (try-either (formula-fn v))]
       ; Don't normalize, must handle tuple dimension properly.
       ; For now assume no tuple.
       (return
-        (if-not arg
-          nil                                               ; !link[⬅︎ Slack Storm](:dustingetz.storm/view)
-          [arg]))
-      )))
+        ; !link[⬅︎ Slack Storm](:dustingetz.storm/view)
+        (if arg [arg])))))
 
 (defn ^:export build-route' "There may not be a route! Fiddle is sometimes optional" ; build-route+
   [+args ctx {:keys [:link/fiddle :link/tx-fn] :as link}]
@@ -920,9 +921,10 @@
    :post [(s/assert (s/cat :ctx :hypercrud/context :route r/reactive?) %)]}
   (let [[_ a _] @(:hypercrud.browser/eav ctx)
         target-a @(r/fmap (r/comp hyperfiddle.fiddle/read-path :link/path) link-ref)
-        ctx (if (and target-a (not= target-a a))            ; backwards compat
-              (refocus ctx target-a)                        ; returns tuple
+        ctx (if target-a                                    ; compat
+              (refocus ctx target-a)                        ; TODO: this must return tuple
               ctx)
+        ; when focusing a LINK, handle :identity differently
         +args @(r/fmap->> link-ref (build-args+ ctx))       ; tuple
 
         ; EAV sugar is not interested in tuple case, that txfn is way off happy path
