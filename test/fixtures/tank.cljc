@@ -118,6 +118,47 @@
       {:db/ident :dustingetz.shirt-size/womens-small, :dustingetz.reg/gender {:db/ident :dustingetz.gender/female}}
       {:db/ident :dustingetz.shirt-size/womens-large, :dustingetz.reg/gender {:db/ident :dustingetz.gender/female}}]]
 
+    :dustingetz.tutorial/blog
+    [{:fiddle/cljs-ns
+      "(defmethod hyperfiddle.api/txfn :user/new-post [_ e a v ctx]\n  [[:db/add v :dustingetz.post/published-date (js/Date.)]])\n\n(defn render-dd [e ctx]\n  (hyperfiddle.ui/link \n   :dustingetz.tutorial/view-post\n   (hypercrud.browser.context/row ctx (:dustingetz.post/slug e))\n   (:dustingetz.post/title e)))\n\n(defn render-dt [e]\n  (or (some-> e \n        :dustingetz.post/published-date\n        (.toLocaleDateString \"en-US\")) \n      \"–\"))",
+      :fiddle/css
+      "dt { \n  font-weight: unset; \n  width: 5em; \n}",
+      :fiddle/ident :dustingetz.tutorial/blog,
+      :fiddle/renderer
+      "(let [{:keys [:hypercrud.browser/fiddle]} ctx]\n  [:div.container props\n   [hyperfiddle.ui/markdown (:fiddle/markdown @fiddle) ctx]\n   (->> val\n     (sort-by :dustingetz.post/published-date)\n     (map (fn [[e]]\n            [:<> {:key (str (:db/id e))}\n             [:dt [user/render-dt e]]  \n             [:dd [user/render-dd e ctx]]]))\n     (into [:dl]))])",
+      :hyperfiddle/owners
+      [#uuid "acd054a8-4e36-4d6c-a9ec-95bdc47f0d39"],
+      :db/id 17592186047369,
+      :fiddle/type :query,
+      :fiddle/links
+      [{:db/id 17592186047370,
+        :link/fiddle
+        {:db/id 17592186047371,
+         :fiddle/ident :dustingetz.tutorial/view-post,
+         :fiddle/type :entity},
+        :link/path ":dustingetz.post/slug",
+        :link/rel :hf/self}
+       {:db/id 17592186047372,
+        :link/class [:hf/new],
+        :link/fiddle
+        {:db/id 17592186047373,
+         :fiddle/ident
+         :dustingetz.tutorial.blog/new-post,
+         :fiddle/type :entity},
+        :link/path ":dustingetz.post/slug",
+        :link/rel :hf/new,
+        :link/tx-fn ":user/new-post"}],
+      :fiddle/query
+      "[:find\n (pull ?e [:dustingetz.post/published-date\n           :dustingetz.post/title\n           :dustingetz.post/slug\n           :db/id])\n :where\n [?e :dustingetz.post/slug]]"}
+     [[{:db/id 17592186047105,
+        :dustingetz.post/published-date #inst "2018-11-21T00:00:00.000-00:00",
+        :dustingetz.post/title "large strings and high churn attrs blow out indexes",
+        :dustingetz.post/slug :large-strings-and-high-churn-attrs-blow-out-indexes}]
+      [{:db/id 17592186047142,
+        :dustingetz.post/published-date #inst "2018-11-22T15:57:34.277-00:00",
+        :dustingetz.post/title "automatic CRUD links",
+        :dustingetz.post/slug :automatic-CRUD-links}]]]
+
     :hfnet.tank/index
     [{:db/id 17592186045830,
       :fiddle/css

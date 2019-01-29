@@ -218,18 +218,22 @@
 (declare element-head)
 (declare spread-elements)
 
-(defn key-row "Properly accounts for elements/schema"
+(defn row-key "Properly accounts for elements/schema"
   [{qfind :hypercrud.browser/qfind :as ctx} row]
   ; This keyfn is very tricky, read https://github.com/hyperfiddle/hyperfiddle/issues/341
   (condp some [(type @qfind)]
     #{FindColl FindScalar}
     (key-scalar (element-head ctx 0) row)
     #{FindRel FindTuple}
-    (->> (for [[i ctx] (spread-elements ctx element-head)]  ; Data is not focused yet, must sidestep that logic
-           (key-scalar ctx (get row i)))
-         (clojure.string/join "`"))))
+    ; The key is a tuple. For FindRel-1, this is confusing, it gets the wrapper tuple.
+    ; For this to be different, we would need to flatten all FindRel-1 into FindColl
+    ; basically at the qparse layer, which maybe we should.
+    (vec
+      (for [[i ctx] (spread-elements ctx element-head)]     ; Data is not focused yet, must sidestep that logic
+        (key-scalar ctx (get row i))))))
 
-(def ^:export ^:legacy row-keyfn key-row)
+(def ^:export ^:legacy row-keyfn row-key)
+(def ^:export ^:legacy key-row row-key)
 
 (defn stable-eav-v [[?e a _] ?v']
   {:pre [a
@@ -302,14 +306,13 @@
              r-ordered-result (:hypercrud.browser/result ctx)]
 
          (condp = (type @r-qfind)
-           ; sorting doesn't index keyfn lookup by design
            FindRel
            (assoc ctx :hypercrud.browser/result-index
                       (r/fmap->> r-ordered-result (contrib.data/group-by-unique (partial key-row ctx))))
 
            FindColl
            (assoc ctx :hypercrud.browser/result-index
-                      (r/fmap->> r-ordered-result (contrib.data/group-by-unique (partial key-row #_stable-entity-key ctx))))
+                      (r/fmap->> r-ordered-result (contrib.data/group-by-unique (partial key-row ctx))))
 
            FindTuple
            ; Vectors are already indexed
@@ -348,6 +351,7 @@
 (defn data "Works in any context and infers the right stuff" ; todo just deref it
   [ctx]
   {:pre [ctx]}
+  ; TODO validate that there is a row and element if required, and throw a spec error if not.
 
   ; Data may be responsible for indexing the result, because it depends on the key paths.
   ; They can be db/id, db/ident, lookupref, alt lookupref. It depends what was pulled.

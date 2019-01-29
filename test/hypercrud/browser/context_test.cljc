@@ -24,7 +24,7 @@
     (def ctx (mock-fiddle! :hfnet.tank/index))
     (def result @(context/data ctx))
     (is (= (context/key-row ctx (first result))
-           "[:fiddle/ident :karl.hardenstine/fiddles]`13194139534712`true" #_"17592186045419`13194139534712`true")))
+           [[:fiddle/ident :karl.hardenstine/fiddles] 13194139534712 true])))
 
   (testing "key-row"
 
@@ -610,7 +610,7 @@
   (testing "FindRel tuple at element level"
     (testing "addressing rowtuple by tupled rowkey"
       (is (= (let [ctx (mock-fiddle! :dustingetz/slack-storm)]
-               (for [ctx [(context/row ctx "[:dustingetz.post/slug :asdf]`13194139535895" #_"17592186047000`13194139535895")]]
+               (for [ctx [(context/row ctx [[:dustingetz.post/slug :asdf] 13194139535895])]]
                  @(context/data ctx)))
              [[{:db/id 17592186047000,
                 :dustingetz.post/title "is js/console.log syntax future proof?",
@@ -654,7 +654,7 @@
 
     (testing "rowkey then all elements"
       (is (= (let [ctx (mock-fiddle! :dustingetz/slack-storm)]
-               (for [ctx [(context/row ctx "[:dustingetz.post/slug :asdf]`13194139535895")]
+               (for [ctx [(context/row ctx [[:dustingetz.post/slug :asdf] 13194139535895])]
                      [_ ctx] (context/spread-elements ctx)]
                  @(context/data ctx)))
              [{:db/id 17592186047000,
@@ -666,7 +666,7 @@
 
     (testing "rowkey then single elements"
       (is (let [ctx (mock-fiddle! :dustingetz/slack-storm)
-                ctx (context/row ctx "[:dustingetz.post/slug :asdf]`13194139535895")]
+                ctx (context/row ctx [[:dustingetz.post/slug :asdf] 13194139535895])]
             (is (= (context/eav ctx) [nil :dustingetz/slack-storm nil])) ; could potentially set v to the rowkey here
             (is (= @(context/data (context/element ctx 0))
                    {:db/id 17592186047000,
@@ -678,7 +678,7 @@
 
     (testing "element level does set value, it is not ambigous due to set semantics in FindRel"
       (is (let [ctx (mock-fiddle! :dustingetz/slack-storm)
-                ctx (context/row ctx "[:dustingetz.post/slug :asdf]`13194139535895")]
+                ctx (context/row ctx [[:dustingetz.post/slug :asdf] 13194139535895])]
             (is (= (context/eav ctx) [nil :dustingetz/slack-storm nil])) ; could potentially set v to the rowkey here
             ; Originally thought:
             ; Can't set v to [:dustingetz.post/slug :asdf] because A is ambiguous.
@@ -690,7 +690,7 @@
 
     (testing "key all the way and then attributes"
       (let [ctx (mock-fiddle! :dustingetz/slack-storm)
-            ctx (context/row ctx "[:dustingetz.post/slug :asdf]`13194139535895")
+            ctx (context/row ctx [[:dustingetz.post/slug :asdf] 13194139535895])
             ctx (context/element ctx 0)]
         (is (= (context/eav ctx) [nil :dustingetz/slack-storm [:dustingetz.post/slug :asdf]]))
         (is (= @(context/data ctx)
@@ -718,7 +718,7 @@
 
     (is (= (let [ctx (mock-fiddle! :dustingetz/slack-storm)]
              (for [#_#_[_ ctx] (context/spread-rows ctx)
-                   ctx [(context/row ctx "[:dustingetz.post/slug :asdf]`13194139535895" #_[:dustingetz.post/slug :asdf])]
+                   ctx [(context/row ctx [[:dustingetz.post/slug :asdf] 13194139535895])]
                    [_ ctx] (context/spread-elements ctx)
                    #_#_[_ ctx] (context/spread-attributes ctx)]
                (context/eav ctx)))
@@ -726,7 +726,7 @@
             [nil :dustingetz/slack-storm 13194139535895]]))
 
     (is (= (let [ctx (mock-fiddle! :dustingetz/slack-storm)]
-             (for [ctx [(context/row ctx "[:dustingetz.post/slug :asdf]`13194139535895" #_[:dustingetz.post/slug :asdf])]
+             (for [ctx [(context/row ctx [[:dustingetz.post/slug :asdf] 13194139535895])]
                    [_ ctx] (context/spread-elements ctx)
                    [_ ctx] (context/spread-attributes ctx)]
                (context/eav ctx)))
@@ -737,7 +737,7 @@
             [[:dustingetz.post/slug :asdf] :dustingetz.post/published-date #inst"2018-11-19T00:00:00.000-00:00"]]))
 
     (is (= (let [ctx (mock-fiddle! :dustingetz/slack-storm)]
-             (for [ctx [(context/row ctx "[:dustingetz.post/slug :asdf]`13194139535895" #_[:dustingetz.post/slug :asdf])]
+             (for [ctx [(context/row ctx [[:dustingetz.post/slug :asdf] 13194139535895])]
                    [_ ctx] (context/spread-elements ctx)
                    [_ ctx] (context/spread-attributes ctx)]
                (context/eav ctx)))
@@ -762,6 +762,101 @@
             [17592186047105 :dustingetz.post/slug nil]
             [17592186047105 :dustingetz.storm/channel "#datomic"]
             [17592186047105 :dustingetz.post/published-date #inst"2018-11-21T00:00:00.000-00:00"]]))
+    )
+
+  (testing "identity links"
+    (def ctx (mock-fiddle! :dustingetz.tutorial/blog))
+    (is (= @(context/data ctx)
+           [[{:db/id 17592186047105,
+              :dustingetz.post/published-date #inst"2018-11-21T00:00:00.000-00:00",
+              :dustingetz.post/title "large strings and high churn attrs blow out indexes",
+              :dustingetz.post/slug :large-strings-and-high-churn-attrs-blow-out-indexes}]
+            [{:db/id 17592186047142,
+              :dustingetz.post/published-date #inst"2018-11-22T15:57:34.277-00:00",
+              :dustingetz.post/title "automatic CRUD links",
+              :dustingetz.post/slug :automatic-CRUD-links}]]))
+    (is (= (for [[_ ctx] (context/spread-elements ctx)]
+             (context/eav ctx))
+           [[nil :dustingetz.tutorial/blog nil]]))
+
+    ;(is (= (for [[_ ctx] (context/spread-elements ctx)]
+    ;         ; Asking for data without a row and unable to infer row
+    ;         @(context/data ctx))
+    ;       nil))
+
+    (is (= (for [[_ ctx] (context/spread-rows ctx)
+                 [_ ctx] (context/spread-elements ctx)]
+             @(context/data ctx))
+           [{:db/id 17592186047105,
+             :dustingetz.post/published-date #inst"2018-11-21T00:00:00.000-00:00",
+             :dustingetz.post/title "large strings and high churn attrs blow out indexes",
+             :dustingetz.post/slug :large-strings-and-high-churn-attrs-blow-out-indexes}
+            {:db/id 17592186047142,
+             :dustingetz.post/published-date #inst"2018-11-22T15:57:34.277-00:00",
+             :dustingetz.post/title "automatic CRUD links",
+             :dustingetz.post/slug :automatic-CRUD-links}]))
+
+    (is (= (for [[_ ctx] (context/spread-rows ctx)
+                 [_ ctx] (context/spread-elements ctx)]
+             (context/eav ctx))
+           [[nil :dustingetz.tutorial/blog [:dustingetz.post/slug :large-strings-and-high-churn-attrs-blow-out-indexes]]
+            [nil :dustingetz.tutorial/blog [:dustingetz.post/slug :automatic-CRUD-links]]]))
+
+    (is (= (for [[_ ctx] (context/spread-rows ctx)
+                 [_ ctx] (context/spread-elements ctx)]
+             (context/eav ctx))
+           [[nil :dustingetz.tutorial/blog [:dustingetz.post/slug :large-strings-and-high-churn-attrs-blow-out-indexes]]
+            [nil :dustingetz.tutorial/blog [:dustingetz.post/slug :automatic-CRUD-links]]]))
+
+    (is (= (hypercrud.browser.context/key-row ctx [{:db/id 17592186047142,
+                                                    :dustingetz.post/published-date #inst"2018-11-22T15:57:34.277-00:00",
+                                                    :dustingetz.post/title "automatic CRUD links",
+                                                    :dustingetz.post/slug :automatic-CRUD-links}])
+           ; Wrapper tuple. This kind of makes row-keys confusing for userland to figure out, they have to call
+           ; the key-row api.
+           [[:dustingetz.post/slug :automatic-CRUD-links]]))
+
+    (def ctx (-> (mock-fiddle! :dustingetz.tutorial/blog)
+                 (context/row [[:dustingetz.post/slug :automatic-CRUD-links]])
+                 (context/element 0)))
+    (is (= (:hypercrud.browser/result-path ctx) [[[:dustingetz.post/slug :automatic-CRUD-links]] 0]))
+    (is (= (keys @(:hypercrud.browser/result-index ctx))
+           [[[:dustingetz.post/slug :large-strings-and-high-churn-attrs-blow-out-indexes]]
+            [[:dustingetz.post/slug :automatic-CRUD-links]]]))
+
+    (is (= @(context/data ctx)
+           {:db/id 17592186047142,
+            :dustingetz.post/published-date #inst"2018-11-22T15:57:34.277-00:00",
+            :dustingetz.post/title "automatic CRUD links",
+            :dustingetz.post/slug :automatic-CRUD-links}))
+    (is (= (context/eav ctx)
+           [nil :dustingetz.tutorial/blog [:dustingetz.post/slug :automatic-CRUD-links]]))
+
+    #_(let [#_#_ctx (context/element ctx 0)]
+
+
+
+      (let [])
+
+      #_(is (= (context/eav ctx) [nil :dustingetz/slack-storm [:dustingetz.post/slug :asdf]]))
+      #_(is (= @(context/data ctx)
+             {:db/id 17592186047000,
+              :dustingetz.post/title "is js/console.log syntax future proof?",
+              :dustingetz.post/slug :asdf,
+              :dustingetz.storm/channel "#clojurescript",
+              :dustingetz.post/published-date #inst "2018-11-19T00:00:00.000-00:00"}))
+      #_(let [ctx (context/attribute ctx :dustingetz.post/title)]
+        (is (= @(context/data ctx) "is js/console.log syntax future proof?"))
+        (is (= (context/eav ctx) [[:dustingetz.post/slug :asdf] :dustingetz.post/title "is js/console.log syntax future proof?"])))
+
+      #_(is (= (for [[_ ctx] (context/spread-attributes ctx)]
+               (context/eav ctx))
+             [[[:dustingetz.post/slug :asdf] :db/id 17592186047000]
+              [[:dustingetz.post/slug :asdf] :dustingetz.post/title "is js/console.log syntax future proof?"]
+              [[:dustingetz.post/slug :asdf] :dustingetz.post/slug :asdf]
+              [[:dustingetz.post/slug :asdf] :dustingetz.storm/channel "#clojurescript"]
+              [[:dustingetz.post/slug :asdf] :dustingetz.post/published-date #inst"2018-11-19T00:00:00.000-00:00"]])))
+
     )
 
   ;; refocus post/slug
