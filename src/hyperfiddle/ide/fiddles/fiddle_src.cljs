@@ -57,7 +57,7 @@
       (fn [ctx]
         [(field [:link/path] ctx link-control)
          (field [:link/fiddle] ctx link-fiddle {:options :hyperfiddle.ide/fiddle-options
-                                                :option-label (r/comp pr-str :fiddle/ident first)})
+                                                :option-label (r/comp pr-str :fiddle/ident)})
          (field [:link/class] ctx link-control)
          (field [:link/tx-fn] ctx link-control)
          #_(field [:link/formula] ctx link-control)
