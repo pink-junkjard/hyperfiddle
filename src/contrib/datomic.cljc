@@ -27,6 +27,15 @@
         nil                                                 ; This is an entity but you didn't pull any identity - error?
         )))
 
+(def parser-types
+  {FindRel :FindRel
+   FindColl :FindColl
+   FindTuple :FindTuple
+   FindScalar :FindScalar
+   Pull :Pull
+   Variable :Variable
+   Aggregate :Aggregate})
+
 (defn consistent-relation-key "Key that the dbval has, but unstable in views with a branch"
   [v]
   (or (smart-lookup-ref-no-tempids v) v))
