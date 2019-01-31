@@ -308,11 +308,11 @@
          (condp = (type @r-qfind)
            FindRel
            (assoc ctx :hypercrud.browser/result-index
-                      (r/fmap->> r-ordered-result (contrib.data/group-by-unique (partial key-row ctx))))
+                      (r/fmap->> r-ordered-result (contrib.data/group-by-unique (partial row-key ctx))))
 
            FindColl
            (assoc ctx :hypercrud.browser/result-index
-                      (r/fmap->> r-ordered-result (contrib.data/group-by-unique (partial key-row ctx))))
+                      (r/fmap->> r-ordered-result (contrib.data/group-by-unique (partial row-key ctx))))
 
            FindTuple
            ; Vectors are already indexed
@@ -460,26 +460,26 @@
         (condp = (type @r-qfind)
           FindColl
           (for [k (->> (sort-fn @r-ordered-result)          ; client side sorting – should happen in backend
-                       (map (partial key-row ctx)))]
+                       (map (partial row-key ctx)))]
             [k (row ctx k)])
 
           FindRel
           (for [k (->> (sort-fn @r-ordered-result)          ; client side sorting – should happen in backend
-                       (map (partial key-row ctx)))]
+                       (map (partial row-key ctx)))]
             [k (row ctx k)])
 
           FindTuple                                         ; no index
-          (let [k (key-row ctx @r-ordered-result)]
+          (let [k (row-key ctx @r-ordered-result)]
             [[k ctx]])
 
           FindScalar                                        ; no index
-          (let [k (key-row ctx @r-ordered-result)]
+          (let [k (row-key ctx @r-ordered-result)]
             [[k ctx]])))
 
       (> (depth ctx) 0)                                     ; nested attr
       (let [r-ordered-result (data ctx)]                    ; remember row order; this is broken check order
         (for [k (->> (sort-fn @r-ordered-result)
-                     (map (partial key-row ctx)))]
+                     (map (partial row-key ctx)))]
           [k (row ctx k)])))))
 
 (defn fiddle "Runtime sets this up, it's not public api.
@@ -527,7 +527,7 @@
                    (contrib.validation/validate
                      (s/get-spec @(r/fmap-> (:hypercrud.browser/fiddle ctx) :fiddle/ident))
                      @(:hypercrud.browser/result ctx)
-                     (partial key-row ctx)))
+                     (partial row-key ctx)))
 
         ; index-result implicitly depends on eav in the tempid reversal stable entity code.
         ; Conceptually, it should be after qfind and before EAV.
