@@ -1,4 +1,4 @@
-(ns hyperfiddle.ui.select$                                  ; WARNING: Namespace hyperfiddle.ui.select clashes with var hyperfiddle.ui/select
+(ns hyperfiddle.ui.select$                                  ; Namespace clashes with var hyperfiddle.ui/select
   (:require
     [cats.core :refer [mlet return]]
     [cats.monad.either :as either]
@@ -15,7 +15,8 @@
 
 (defn ident->label [v]
   (if (instance? cljs.core/Keyword v)
-    (name v)                                                ; A sensible default for userland whose idents usually share a long namespace.
+    ; A sensible default for userland whose idents usually share a long namespace.
+    (name v)
     (str v)))
 
 ;(defn option-label-default' [row ctx]                                ; typechecks with keyword
@@ -92,7 +93,8 @@
         ; no value at all
         @(r/fmap nil? entity))))
 
-(defn select "This arity should take a selector string (class) instead of Right[Reaction[Link]], blocked on removing path backdoor"
+(defn select "This arity should take a selector string (class) instead of Right[Reaction[Link]],
+  blocked on removing path backdoor"
   [val ctx props]
   {:pre [ctx]}
   (assert (:options props) "select: :options prop is required")
@@ -102,7 +104,8 @@
                 props (-> (merge default-props props)
                           (assoc :value (str (let [[_ _ v] @(:hypercrud.browser/eav ctx)] v))))
                 props (-> (select-keys props [:class])
-                          (assoc :user-renderer (r/partial select-view-validated select-anchor-renderer' props {:disabled (compute-disabled ctx props)})))
+                          (assoc :user-renderer (r/partial select-view-validated select-anchor-renderer' props
+                                                           {:disabled (compute-disabled ctx props)})))
                 ctx (assoc ctx
                       :hypercrud.ui/display-mode (r/track identity :hypercrud.browser.browser-ui/user))]
             [hyperfiddle.ui/ui-from-link options-ref ctx props])))
