@@ -45,7 +45,9 @@
                      :on-change (with-entity-change! ctx)))]
      [debounced props contrib.ui/keyword])
    (doall
-     (for [[k r-link] (data/spread-links-here ctx)]
+     (for [[k r-link] (data/spread-links-here ctx)
+           ; If we're identity, remove hf/new, that's in the header ?
+           :when (not (some #{:hf/new} (:link/class @r-link)))]
        ; if val - no, it can be drawn invalid
        ^{:key (str k)}
        [hyperfiddle.ui/ui-from-link r-link ctx props]))])
