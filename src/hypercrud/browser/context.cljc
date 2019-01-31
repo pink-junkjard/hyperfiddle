@@ -221,14 +221,12 @@
 (defn row-key "Properly accounts for elements/schema"
   [{qfind :hypercrud.browser/qfind :as ctx} row]
   ; This keyfn is very tricky, read https://github.com/hyperfiddle/hyperfiddle/issues/341
+  #_(let [qfind (contrib.datomic/qfind-collapse-findrel-1 @qfind row)])
   (condp some [(type @qfind)]
     #{FindColl FindScalar}
     (key-scalar (element-head ctx 0) row)
     #{FindRel FindTuple}
-    ; The key is a tuple. For FindRel-1, this is confusing, it gets the wrapper tuple.
-    ; For this to be different, we would need to flatten all FindRel-1 into FindColl
-    ; basically at the qparse layer, which maybe we should.
-    (vec
+    (vec                                                    ; Tupled elements have tupled keys, except FindRel-1.
       (for [[i ctx] (spread-elements ctx element-head)]     ; Data is not focused yet, must sidestep that logic
         (key-scalar ctx (get row i))))))
 

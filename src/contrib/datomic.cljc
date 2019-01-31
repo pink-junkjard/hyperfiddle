@@ -303,7 +303,8 @@
                        (f schema e coll-normalized)))
                    schemas qfind data))
 
-(defn qfind-collapse-findrel-1 "Collapse FindRel-1 to FindColl, which simplifies hyperfiddle link biz rules"
+(defn qfind-collapse-findrel-1 "Collapse FindRel-1 to FindColl, which simplifies the context business rules.
+  TODO: also collapse FindRel-N where all elements are aggregates except one?"
   [qfind]
   (let [[e :as es] (datascript.parser/find-elements qfind)]
     (if (= 1 (count es))
