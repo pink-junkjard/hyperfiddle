@@ -159,7 +159,8 @@
 
 (defn tree-derivative "Derive a pull-shape which describes a pulled-tree"
   [schema pulled-tree]
-  {:pre [schema (map? pulled-tree)]}
+  {:pre [schema #_pulled-tree]}
+  ; nil pulled-tree is legal, see https://github.com/hyperfiddle/hyperfiddle/issues/298
   (->> pulled-tree
        (reduce-kv
          (fn [acc k v]

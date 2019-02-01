@@ -307,6 +307,7 @@
      [{:db/id 17592186045522,
        :neighborhood/name "Admiral (West Seattle)",
        :neighborhood/district {:db/id 17592186045521, :district/name "Southwest", :district/region {:db/ident :region/sw}}}
+      nil                                                   ; sneaky nil, can happen in sparse cases (this one is injected manually)
       {:db/id 17592186045524,
        :neighborhood/name "Alki",
        :neighborhood/district {:db/id 17592186045521, :district/name "Southwest", :district/region {:db/ident :region/sw}}}

@@ -58,7 +58,10 @@
 (s/def :hypercrud.browser/result r/reactive?)
 (s/def ::result-path-segment (s/or :element int? :attribute keyword? :relation string?
                                    :lookup-ref vector?
-                                   :scalar (s/and some? (complement sequential?))))
+                                   :scalar (s/and some? (complement sequential?))
+                                   ; nil is legal when entities are sparse
+                                   ; https://github.com/hyperfiddle/hyperfiddle/issues/298
+                                   :empty nil?))
 (s/def :hypercrud.browser/result-path (s/coll-of ::result-path-segment :kind vector?))
 (s/def :hypercrud.browser/element r/reactive?)
 (s/def :hypercrud.browser/element-index int?)

@@ -406,7 +406,7 @@
   (testing "head-sentinel sanity checks, head-sentinel needs to go"
     (let [ctx (mock-fiddle! :seattle/neighborhoods)]
       (is (= (context/eav ctx) [nil :seattle/neighborhoods nil]))
-      (is (= (count @(context/data ctx)) 6))
+      (is (= (count @(context/data ctx)) 7))
       (let [ctx (context/attribute ctx :neighborhood/district)]
         (is (= (context/eav ctx) [nil :neighborhood/district nil])))
       (let [ctx (context/row ctx [:neighborhood/name "Admiral (West Seattle)"] #_17592186045522)

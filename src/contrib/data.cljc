@@ -19,9 +19,12 @@
   (->> xs
        (map (juxt kf identity))
        (reduce (fn [acc [k _ :as kv]]
-                 (assert k (str "group-by-unique, nil key: " k))
-                 ; Don't collide on duplicates, it's fine.
                  ; https://github.com/hyperfiddle/hyperfiddle/issues/298
+                 ; nil key is legal for sparse entity that pulls to empty.
+                 #_(assert k (str "group-by-unique, nil key: " k))
+
+                 ; Legal duplicates happen for entity without identity.
+                 ; When indexing this is not a problem, because they have equal value and actually should coalesce.
                  #_(assert (not (contains? acc k)) (str "group-by-unique, duplicate key: " k))
                  (conj acc kv))
                {})
