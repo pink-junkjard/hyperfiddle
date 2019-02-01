@@ -32,7 +32,9 @@
             fiddle-name (if (keyword? fiddle-ident) (name fiddle-ident))]
         [tooltip {:label fiddle-name}
          [:span fiddle-name]])
-      [ui/link :fiddle-shortcuts ctx "index" {:tooltip [nil "Fiddles in this domain"] :iframe-as-popover true}]]
+      [ui/link :hyperfiddle.ide/entry-point-fiddles ctx "index"
+       {:tooltip [nil "Fiddles in this domain"]
+        :iframe-as-popover true}]]
 
      [:div.right-nav {:key "right-nav"}                     ; CAREFUL; this key prevents popover flickering
       [loading-spinner ctx]
@@ -56,8 +58,8 @@
                    :class (when-not @(r/fmap empty? (runtime/state (:peer ctx) [::runtime/partitions nil :stage]))
                             "stage-dirty")
                    :iframe-as-popover true}]
-        [ui/link :stage ctx "stage" props])
-      (ui/link :new-fiddle ctx "new" (let [disabled? (not (security/can-create? ctx)) ; we explicitly know the context here is $
+        [ui/link :hyperfiddle.ide/stage ctx "stage" props])
+      (ui/link :hyperfiddle.ide/new-fiddle ctx "new" (let [disabled? (not (security/can-create? ctx)) ; we explicitly know the context here is $
                                                    anonymous? (nil? @(runtime/state (:peer ctx) [::runtime/user-id]))]
                                                {:disabled disabled?
                                                 :tooltip (cond
@@ -67,10 +69,10 @@
                                                                                    [(:fiddle/ident popover-data)])}))
       [tooltip {:label "Environment administration"} (ui/link :domain ctx "env")]
       (if @(runtime/state (:peer ctx) [::runtime/user-id])
-        (if-let [{:keys [:hypercrud.browser/result]} (hyperfiddle.data/browse ctx :account)]
+        (if-let [{:keys [:hypercrud.browser/result]} (hyperfiddle.data/browse ctx :hyperfiddle.ide/account)]
           (let [props {:tooltip [nil @(r/fmap :user/email result)]
                        :iframe-as-popover true}]
-            [ui/link :account ctx @(r/fmap :user/name result) props]))
+            [ui/link :hyperfiddle.ide/account ctx @(r/fmap :user/name result) props]))
         [:a {:href (foundation/stateless-login-url ctx)} "login"])]]))
 
 (defn hack-login-renderer [val ctx props]
