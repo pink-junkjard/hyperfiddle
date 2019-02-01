@@ -16,7 +16,7 @@
          (= (.-from o) (.-from other))))
 
   IDeref
-  (-deref [this] (from @ratom))
+  (-deref [this] @(r/fmap from ratom))
 
   IReset
   (-reset! [this new-value] (from (-swap! ratom to new-value)))
