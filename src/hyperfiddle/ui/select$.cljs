@@ -111,7 +111,7 @@
       ; always be untupled (FindColl). FindRel options are never valid, unless FindRel-1 can
       ; theoretically collapse here. (See comment in row-key)
       (#{FindRel FindTuple} target-qfind-type)
-      [select-error-cmp (str "Options must be FindColl, got: " (contrib.datomic/parser-types target-qfind-type))]
+      [select-error-cmp (str "Options must be FindColl, got: " (name (contrib.datomic/parser-types target-qfind-type)))]
 
       ; A possible valid FindRel-N is when first element is Pull and remaining are aggregates, meaning
       ; the first element is sufficient identity http://hyperfiddle.hyperfiddle.net/:database!options-list/
