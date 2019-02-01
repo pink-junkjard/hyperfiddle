@@ -76,11 +76,10 @@
   [:span msg])
 
 (defn compute-disabled [ctx props]
-  (let [entity (hypercrud.browser.context/data ctx)]        ; how can this be loading??
+  (let [[e _ _] (context/eav ctx)]
     (or (boolean (:disabled props))
         (boolean (:read-only props))                        ; legacy
-        ; no value at all
-        @(r/fmap nil? entity))))
+        (nil? e))))
 
 (defn options-value-bridge [select-view
                             anchor-props anchor-ctx
@@ -89,7 +88,7 @@
   ; if select is pull-level, is options qfind untupled?
   ; We must compare both ctxs to decide this.
   (let [options (->> @(hypercrud.browser.context/data target-ctx)
-                     (map #(context/row-key target-ctx %)))
+                     (map #(context/row-key target-ctx %))) ; no fallback v, that can be a failure case if records aren't distinct.
 
         target-qfind-type (some-> (:hypercrud.browser/qfind target-ctx) deref type)]
     (cond
