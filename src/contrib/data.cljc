@@ -15,12 +15,14 @@
        (map (juxt f identity))
        (into {})))
 
-(defn group-by-unique [f xs]                                ; i think args are flipped, this is more like update-in than map
+(defn group-by-unique [kf xs]                                ; i think args are flipped, this is more like update-in than map
   (->> xs
-       (map (juxt f identity))
+       (map (juxt kf identity))
        (reduce (fn [acc [k _ :as kv]]
                  (assert k (str "group-by-unique, nil key: " k))
-                 (assert (not (contains? acc k)) (str "group-by-unique, duplicate key: " k))
+                 ; Don't collide on duplicates, it's fine.
+                 ; https://github.com/hyperfiddle/hyperfiddle/issues/298
+                 #_(assert (not (contains? acc k)) (str "group-by-unique, duplicate key: " k))
                  (conj acc kv))
                {})
        doall                                                ; catch duplicate key errors sooner
