@@ -102,6 +102,17 @@
         [_ _ :db.cardinality/one] controls/edn
         [_ _ :db.cardinality/many] controls/edn-many))))
 
+(defn identity-widget? "ctx is for schema and :tempid-lookup"
+  [ctx a]
+  (let [[e _ _] (context/eav ctx)                           ; Wrong in child case
+        attr (and a (contrib.datomic/attr @(:hypercrud.browser/schema ctx) a))]
+    (match* [a attr]
+      [:db/id _] true
+      ; For first time entity creation only, use e.g. keyword editor to set the identity
+      [:db/ident _] (not (context/underlying-tempid ctx e))
+      [_ {:db/unique :db.unique/identity}] (not (context/underlying-tempid ctx e))
+      [_ _] false)))
+
 (defn ^:export hyper-control "Val is for userland field renderers, our builtin controls use ctx and ignore val."
   [val ctx & [props]]
   {:post [%]}
@@ -109,17 +120,26 @@
       (let [[_ a _] @(:hypercrud.browser/eav ctx)
             children (contrib.datomic/pull-level (hypercrud.browser.context/pull-enclosure-here ctx))]
         (cond                                               ; Duplicate options test to avoid circular dependency in controls/ref
-          (:options props) [(control val ctx props) val ctx props]
-          (contains? #{:db/id :db/ident} a) [controls/id-or-ident val ctx props]
-          ;(int? a) [controls/id-or-ident]
+          (:options props)
+          [(control val ctx props) val ctx props]
+
+          (identity-widget? ctx a)
+          [controls/id-or-ident val ctx props]
+
+          ; flatten useless nesting
           (and (seq children)
-               (every? #{:db/id :db/ident} children)) (let [W (control val ctx props)]
-                                                        [W val ctx props]) ; flatten useless nesting
-          (seq children) (let [ctx (dissoc ctx ::layout)]
-                           [:div                            ; wrapper div: https://github.com/hyperfiddle/hyperfiddle/issues/541
-                            [pull val ctx props]
-                            [iframe-field-default val ctx props]])
-          :else [(control val ctx props) val ctx props]))))
+               (every? (partial identity-widget? ctx) children))
+          (let [W (control val ctx props)]
+            [W val ctx props])
+
+          (seq children)
+          (let [ctx (dissoc ctx ::layout)]
+            [:div                                           ; wrapper div: https://github.com/hyperfiddle/hyperfiddle/issues/541
+             [pull val ctx props]
+             [iframe-field-default val ctx props]])
+
+          :else
+          [(control val ctx props) val ctx props]))))
 
 (defn ^:export hyper-label [_ ctx & [props]]
   ; core.match scope hacks
@@ -129,10 +149,10 @@
         element (:hypercrud.browser/element ctx)
         element-type (some-> element deref type)
         i (:hypercrud.browser/element-index ctx)
-        [_ a _] @(:hypercrud.browser/eav ctx)               ; a can be int now for findelement - hax
+        [_ a _] @(:hypercrud.browser/eav ctx)
         attr (and a (contrib.datomic/attr @(:hypercrud.browser/schema ctx) a))]
-    (match* [i element-type a attr]                           ; has-child-fields @(r/fmap-> (:hypercrud.browser/field ctx) ::field/children nil? not)
-      [_ nil _ _] nil                                         ; e.g. !field[js/user.hyperblog-post-link]()
+    (match* [i element-type a attr]                         ; has-child-fields @(r/fmap-> (:hypercrud.browser/field ctx) ::field/children nil? not)
+      [_ nil _ _] nil                                       ; e.g. !field[js/user.hyperblog-post-link]()
       [_ Pull :db/id _] (identity-label _ ctx props)        ; fixme, is this even in play?
       [_ Pull :db/ident _] (identity-label _ ctx props)
       [_ Pull _ {:db/unique :db.unique/identity}] (identity-label _ ctx props)

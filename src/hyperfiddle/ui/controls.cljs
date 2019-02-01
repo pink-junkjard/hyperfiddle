@@ -102,14 +102,15 @@
 (defn id-prompt [ctx val]
   ; pr-str here to disambiguate `"tempid"` from `17592186046396` and `:gender/male`
   ; ... This is dumb datomic hacks, views should never even see tempids
-  (pr-str val))
+  (let [[_ _ v] (context/eav ctx)]
+    (str v)))
 
 (defn related-links [val ctx props]
   (if val
     (doall
       ; or just here? http://tank.hyperfiddle.site/:dustingetz!counter/
       (for [[k rv] (hyperfiddle.data/spread-links-here ctx)
-            :when (some #{:hf/new :hf/remove :hf/iframe} (:link/class @rv))]
+            :when (not (some #{:hf/new :hf/remove :hf/iframe} (:link/class @rv)))]
         ^{:key k}
         [hyperfiddle.ui/ui-from-link rv ctx props]))))
 
@@ -133,12 +134,13 @@
 
 (defn ^:export id-or-ident [val ctx & [props]]
   [:div.hyperfiddle-input-group
-   [:div.input (interpose " " (cons (id-prompt ctx val) (related-links val ctx props)))]
-   (if (let [[_ a _] @(:hypercrud.browser/eav ctx)]
+   [:div.input (id-prompt ctx val)]
+   #_(if (let [[_ a _] @(:hypercrud.browser/eav ctx)]
          (= :db.cardinality/one (contrib.datomic/cardinality-loose @(:hypercrud.browser/schema ctx) a)))
      (for [[k r-link] (hyperfiddle.data/spread-links-here ctx :hf/new)]
        ^{:key k}
        [hyperfiddle.ui/ui-from-link r-link ctx props]))
+   (related-links val ctx props)
    (if-not (context/underlying-tempid ctx val)
      (for [[k r-link] (hyperfiddle.data/spread-links-here ctx :hf/remove)]
        ^{:key k}

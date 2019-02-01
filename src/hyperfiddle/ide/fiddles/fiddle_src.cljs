@@ -105,9 +105,9 @@
    :hf.src/fiddle
    (fn [val ctx props]
      [:<>
-      (field [:fiddle/ident] ctx hyper-control (assoc props :disabled true))
-      (field [:fiddle/uuid] ctx hyper-control (assoc props :disabled true))
-      (field [:fiddle/hydrate-result-as-fiddle] ctx hyper-control props)
+      (field [:fiddle/ident] ctx hyper-control)
+      (field [:fiddle/uuid] ctx hyper-control)
+      (field [:fiddle/hydrate-result-as-fiddle] ctx hyper-control)
       [:div.p "Additional attributes"]
       (for [[k _] (hypercrud.browser.context/spread-attributes ctx)
             :when (and (not= :db/id k)
