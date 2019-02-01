@@ -8,6 +8,7 @@
     [fixtures.tank]
     [hyperfiddle.data]
     [hyperfiddle.fiddle]
+    [hyperfiddle.reducers]
     [hyperfiddle.runtime]
     [hypercrud.browser.context :as context]))
 
