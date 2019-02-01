@@ -194,20 +194,19 @@
 (defn- set-parent [ctx]
   (assoc ctx :hypercrud.browser/parent ctx))
 
-(defn stable-entity-key "Like smart-entity-identifier but reverses top layer of tempids to stabilize view keys in
-  branches. You must pull db/id to trigger tempid detection! Don't use this in labels."
-  [ctx {:keys [:db/id :db/ident] :as v}]
-  ; https://github.com/hyperfiddle/hyperfiddle/issues/563 - Regression: Schema editor broken due to smart-id
-  ; https://github.com/hyperfiddle/hyperfiddle/issues/345 - Form jank when tempid entity transitions to real entity
-  (if v
-    (or (underlying-tempid ctx id)                          ; Note we use the tempid as the key, not the dbid
-        (smart-entity-identifier ctx v)                     ; this also checks tempid but uses the dbid
-        (pr-str v))))
-
 (defn key-entity [ctx v]
   (if v
     (or (smart-entity-identifier ctx v)                     ; this also checks tempid but uses the dbid
         (pr-str v))))                                       ; fallback to hash if they didn't pull identity
+
+(defn reagent-entity-key "Specialized key that works around Datomic issue to stabilize views as we transition from
+  empty entity to entity with datoms. Not useful for anything except as internal reagent key."
+  [ctx {:keys [:db/id :db/ident] :as v}]
+  ; https://github.com/hyperfiddle/hyperfiddle/issues/563 - Regression: Schema editor broken due to smart-id
+  ; https://github.com/hyperfiddle/hyperfiddle/issues/345 - Form jank when tempid entity transitions to real entity
+  (if v
+    (or (underlying-tempid ctx id)                          ; Tempid is stable for entire view lifecycle
+        (key-entity ctx v))))
 
 (defn key-scalar "For at the top when you don't know"
   [ctx v]

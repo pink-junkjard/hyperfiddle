@@ -141,7 +141,7 @@
   (let [child-branch (let [child-id-str (-> [(hypercrud.browser.context/tempid visual-ctx)
                                              @(r/fmap :db/id link-ref)
                                              (:route props)
-                                             @(r/fmap (r/partial hypercrud.browser.context/stable-entity-key ctx) (:hypercrud.browser/fiddle ctx))]
+                                             @(r/fmap (r/partial hypercrud.browser.context/reagent-entity-key ctx) (:hypercrud.browser/fiddle ctx))]
                                             hash str)]
                        (branch/encode-branch-child (:branch ctx) child-id-str))
         popover-id child-branch                             ; just use child-branch as popover-id
