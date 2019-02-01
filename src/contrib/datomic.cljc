@@ -44,6 +44,7 @@
   ; Implement this interface in both peer and Hypercrud client
   (-attr [this a k])
   (-repr-portable-hack [this])
+  (attr [this a])
   (cardinality [this a])
   (cardinality? [this a k])
   (cardinality-loose [this a])
@@ -61,6 +62,13 @@
 (deftype Schema [schema-pulledtree schema-by-attr]
   SchemaIndexedNormalized
   (-repr-portable-hack [this] (str "#schema " (pr-str schema-pulledtree)))
+  (attr [this a]
+    (s/assert keyword? a)
+    (-> (schema-by-attr a)
+        (contrib.data/update-existing :db/valueType smart-lookup-ref-no-tempids)
+        (contrib.data/update-existing :db/cardinality smart-lookup-ref-no-tempids)
+        (contrib.data/update-existing :db/isComponent smart-lookup-ref-no-tempids)
+        (contrib.data/update-existing :db/unique smart-lookup-ref-no-tempids)))
   (-attr [this a k]                                         ; Todo assert attribute is found.
     #_(s/assert keyword? a)                                 ; def real assert currenetly failing
     #_(s/assert keyword? k)

@@ -11,7 +11,8 @@
     [cuerdas.core :as str]
     [datascript.parser]
     #_[hyperfiddle.ui]
-    [taoensso.timbre :as timbre]))
+    [taoensso.timbre :as timbre]
+    [hypercrud.browser.context :as context]))
 
 
 (defmulti fiddle-type :fiddle/type)
@@ -81,11 +82,11 @@
 
 (defn read-a "Use :qin to infer the src if the link/a eschews it."
   [s qin]
-  (let [xs (->> (contrib.reader/memoized-read-edn-string+ (str "[" s "]"))
-                (unwrap #(timbre/error %)))]
+  (let [[x :as xs] (->> (contrib.reader/memoized-read-edn-string+ (str "[" s "]"))
+                        (unwrap #(timbre/error %)))]
     (condp = (count xs)
       2 xs
-      1 ['$ xs]                                             ; TODO: Use :qin to choose the right color
+      1 ['$ x]                                              ; TODO: Use :qin to choose the right color
       ; 0 is invalid
       0 nil)))
 
@@ -116,10 +117,19 @@
                  ; Auto parent-child management for eav ref contexts
                  (let [[src-db a] (read-a (contrib.string/blank->nil (:link/path link)) qin)
                        ; Consider: ref, fiddle-ident, scalar (e.g. :streaker/date, :fiddle/ident, :db/ident)
-                       is-ref (and a (contrib.datomic/ref? (get schemas (str src-db)) a))]
+                       schema (get schemas (str src-db))
+                       is-identity (and a (contrib.datomic/unique? schema a :db.unique/identity))
+                       is-ref (and a (contrib.datomic/ref? schema a))]
                    (condp some (:link/class link)
-                     #{:hf/new :hf/affix} (if is-ref ":db/add" ":zero") ; hack to draw as popover
-                     #{:hf/remove :hf/detach} (if is-ref ":db/retract" ":db.fn/retractEntity")
+                     #{:hf/new :hf/affix} (cond
+                                            is-identity ":zero" ; hack to draw as popover
+                                            is-ref ":db/add"
+                                            :else ":zero")  ; nil a, or qfind-level
+
+                     #{:hf/remove :hf/detach} (cond
+                                                is-identity ":db.fn/retractEntity"
+                                                is-ref ":db/retract"
+                                                :else ":db.fn/retractEntity") ; legacy compat, remove
                      nil)))})
 
 (def fiddle-defaults
@@ -133,7 +143,6 @@
    :fiddle/type (constantly :blank)})                       ; default is :query from new-fiddle; but from links panel, it's :entity
 
 (defn auto-link [schemas qin link]
-  ; need the parsed query (:qin) and schemas
   (-> link
       (update-existing :link/fiddle apply-defaults)
       (update :link/formula or-str ((:link/formula link-defaults) link))

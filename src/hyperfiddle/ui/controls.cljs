@@ -90,25 +90,14 @@
    (let [label-props (select-keys props [:on-click :class])] ; https://github.com/hyperfiddle/hyperfiddle/issues/511
      [:label.hyperfiddle label-props label (if help-md [:sup "†"])])])
 
-(defn dbid-label [_ ctx & [props]]
+(defn identity-label [_ ctx & [props]]
   {:pre [(:hypercrud.browser/element ctx)
          (:hypercrud.browser/schema ctx)]}
-  (into
+  (let [[_ a _] @(:hypercrud.browser/eav ctx)]
     [:<>
-     (let [[_ a _] @(:hypercrud.browser/eav ctx)]
-       (label-with-docs a (semantic-docstring ctx) props))]
-    ; dbid links are at parent path, but we don't always have a parent #543
-    (let [ctx (:hypercrud.browser/parent ctx)
-          [_ a _] @(:hypercrud.browser/eav ctx)]
-      (cond
-        (and a (or (= (context/depth ctx) 0)
-                   (contrib.datomic/cardinality? @(:hypercrud.browser/schema ctx) a :db.cardinality/many))) ; :one is handled by the body
-        [(if-let [link (->> (data/select-here+ ctx :hf/new) (contrib.ct/unwrap #(taoensso.timbre/warn %)))]
-           [hyperfiddle.ui/ui-from-link link ctx props "new"])]
-
-        (#{FindColl} (type (:hypercrud.browser/element ctx))) ; Prob is mistake to exclude FindRel
-        [(if-let [link (->> (data/select-here+ ctx :hf/new) (contrib.ct/unwrap #(taoensso.timbre/warn %)))]
-           [hyperfiddle.ui/ui-from-link link ctx props "new"])]))))
+     (label-with-docs a (semantic-docstring ctx) props)
+     (if-let [link (->> (data/select-here+ ctx :hf/new) (contrib.ct/unwrap #(taoensso.timbre/warn %)))]
+       [hyperfiddle.ui/ui-from-link link ctx props])]))
 
 (defn id-prompt [ctx val]
   ; pr-str here to disambiguate `"tempid"` from `17592186046396` and `:gender/male`

@@ -496,7 +496,8 @@
           (assoc ctx :hypercrud.browser/fiddle r-fiddle)
           (if r-qfind
             (if @r-qfind
-              (assoc ctx :hypercrud.browser/qfind r-qfind)
+              (assoc ctx :hypercrud.browser/qfind r-qfind
+                         :hypercrud.browser/qparsed r-qparsed)
               ctx)
             ctx)
           (assoc ctx :hypercrud.browser/link-index (r/fmap -indexed-links-at r-fiddle))

@@ -28,7 +28,7 @@
     [hyperfiddle.runtime]
     [hyperfiddle.security.client :as security]
     [hyperfiddle.ui.api]
-    [hyperfiddle.ui.controls :as controls :refer [label-with-docs dbid-label magic-new]]
+    [hyperfiddle.ui.controls :as controls :refer [label-with-docs identity-label magic-new]]
     [hyperfiddle.ui.docstring :refer [semantic-docstring]]
     [hyperfiddle.ui.iframe :refer [iframe-cmp]]
     [hyperfiddle.ui.popover :refer [effect-cmp popover-cmp]]
@@ -129,15 +129,17 @@
         element (:hypercrud.browser/element ctx)
         element-type (some-> element deref type)
         i (:hypercrud.browser/element-index ctx)
-        [_ a _] @(:hypercrud.browser/eav ctx)]              ; a can be int now for findelement - hax
-    (match* [i element-type a]                              ; has-child-fields @(r/fmap-> (:hypercrud.browser/field ctx) ::field/children nil? not)
-      [_ nil _] nil                                         ; e.g. !field[js/user.hyperblog-post-link]()
-      [_ Pull :db/id] (dbid-label _ ctx props)              ; fixme, is this even in play?
-      [_ Pull :db/ident] (dbid-label _ ctx props)
-      [i Pull nil] (label-with-docs (get-in element [:variable :symbol]) (semantic-docstring ctx) props)
-      [_ Pull aa] (label-with-docs (name aa) (semantic-docstring ctx) props)
-      [_ Variable _] (label-with-docs (get-in element [:variable :symbol]) (semantic-docstring ctx) props)
-      [_ Aggregate _] (let [label (str (cons (get-in element [:fn :symbol])
+        [_ a _] @(:hypercrud.browser/eav ctx)               ; a can be int now for findelement - hax
+        attr (and a (contrib.datomic/attr @(:hypercrud.browser/schema ctx) a))]
+    (match* [i element-type a attr]                           ; has-child-fields @(r/fmap-> (:hypercrud.browser/field ctx) ::field/children nil? not)
+      [_ nil _ _] nil                                         ; e.g. !field[js/user.hyperblog-post-link]()
+      [_ Pull :db/id _] (identity-label _ ctx props)        ; fixme, is this even in play?
+      [_ Pull :db/ident _] (identity-label _ ctx props)
+      [_ Pull _ {:db/unique :db.unique/identity}] (identity-label _ ctx props)
+      [i Pull nil _] (label-with-docs (get-in element [:variable :symbol]) (semantic-docstring ctx) props)
+      [_ Pull aa _] (label-with-docs (name aa) (semantic-docstring ctx) props)
+      [_ Variable _ _] (label-with-docs (get-in element [:variable :symbol]) (semantic-docstring ctx) props)
+      [_ Aggregate _ _] (let [label (str (cons (get-in element [:fn :symbol])
                                            (map (comp second first) (:args element))))]
                       (label-with-docs label (semantic-docstring ctx) props)))))
 

@@ -45,23 +45,26 @@
       empty-renderer (fn [val ctx props]
                        (link #{:fiddle/links :hf/remove} ctx))
       link-control (fn [val ctx props]
-                     (let [#_#_props (if-some [f (get fiddle/link-defaults a)]
-                                   (assoc props :default-value @(r/fmap f (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data])))
-                                   props)]
-                       (hyper-control val ctx props))
-                     )]
+                     (let [[_ a _] (context/eav ctx)
+                           link (fiddle/auto-link @(:hypercrud.browser/schemas ctx)
+                                                  (:qin @(:hypercrud.browser/qparsed ctx))
+                                                  @(::row ctx))
+                           props (assoc props :default-value (get link a)
+                                              #_@(r/fmap f (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data])))]
+                       (hyper-control val ctx props)))]
   (defn links-renderer [val ctx props]
     [:div
      (link :hyperfiddle.ide/new-link ctx)
      [table
       (fn [ctx]
-        [(field [:link/path] ctx link-control)
-         (field [:link/fiddle] ctx link-fiddle {:options :hyperfiddle.ide/fiddle-options
-                                                :option-label (r/comp pr-str :fiddle/ident)})
-         (field [:link/class] ctx link-control)
-         (field [:link/tx-fn] ctx link-control)
-         #_(field [:link/formula] ctx link-control)
-         (field [] ctx empty-renderer)])
+        (let [ctx (assoc ctx ::row (context/data ctx))]
+          [(field [:link/path] ctx link-control)
+           (field [:link/fiddle] ctx link-fiddle {:options :hyperfiddle.ide/fiddle-options
+                                                  :option-label (r/comp pr-str :fiddle/ident)})
+           (field [:link/class] ctx link-control)
+           (field [:link/tx-fn] ctx link-control)
+           #_(field [:link/formula] ctx link-control)
+           (field [] ctx empty-renderer)]))
       ctx
       props]]))
 
@@ -110,8 +113,8 @@
             :when (and (not= :db/id k)
                        (not= "fiddle" (namespace k)))]
         (field [k] ctx))
-      (field [] ctx (fn [val ctx props]
-                      [:div (link #{:hyperfiddle/ide :hf/remove} ctx "Remove fiddle" {:class "btn-outline-danger"})]))
+      #_(field [:fiddle/ident] ctx (fn [val ctx props]
+                                   [:div (link #{:fiddle/ident :hf/remove} ctx "Remove fiddle" {:class "btn-outline-danger"})]))
       #_[:div.p "Spec debugging"]
       #_[:pre
          (with-out-str
