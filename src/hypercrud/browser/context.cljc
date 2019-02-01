@@ -196,8 +196,7 @@
 
 (defn key-entity [ctx v]
   (if v
-    (or (smart-entity-identifier ctx v)                     ; this also checks tempid but uses the dbid
-        (pr-str v))))                                       ; fallback to hash if they didn't pull identity
+    (smart-entity-identifier ctx v)))
 
 (defn reagent-entity-key "Specialized key that works around Datomic issue to stabilize views as we transition from
   empty entity to entity with datoms. Not useful for anything except as internal reagent key."
@@ -206,7 +205,8 @@
   ; https://github.com/hyperfiddle/hyperfiddle/issues/345 - Form jank when tempid entity transitions to real entity
   (if v
     (or (underlying-tempid ctx id)                          ; Tempid is stable for entire view lifecycle
-        (key-entity ctx v))))
+        (key-entity ctx v)
+        #_(pr-str v))))
 
 (defn key-scalar "For at the top when you don't know"
   [ctx v]
@@ -217,7 +217,7 @@
 (declare element-head)
 (declare spread-elements)
 
-(defn row-key "Properly accounts for elements/schema"
+(defn row-key "Properly accounts for elements/schema"       ; does it return nil, or a v?
   [{qfind :hypercrud.browser/qfind :as ctx} row]
   ; This keyfn is very tricky, read https://github.com/hyperfiddle/hyperfiddle/issues/341
   #_(let [qfind (contrib.datomic/qfind-collapse-findrel-1 @qfind row)])
@@ -286,6 +286,12 @@
 
 (declare data)
 
+(defn row-key-v [ctx row]
+  (or (row-key ctx row) row))
+
+(defn entity-key-v [ctx v]
+  (or (key-entity ctx v) v))
+
 (defn index-result "Builds the result index based on qfind. Result index is orthogonal to sorting or order.
   All paths get a result-index, though if there is no collection, then this is just the result as no indexing is needed.
   (data ctx) is no good until after this is done.
@@ -305,11 +311,11 @@
          (condp = (type @r-qfind)
            FindRel
            (assoc ctx :hypercrud.browser/result-index
-                      (r/fmap->> r-ordered-result (contrib.data/group-by-unique (partial row-key ctx))))
+                      (r/fmap->> r-ordered-result (contrib.data/group-by-unique (partial row-key-v ctx))))
 
            FindColl
            (assoc ctx :hypercrud.browser/result-index
-                      (r/fmap->> r-ordered-result (contrib.data/group-by-unique (partial row-key ctx))))
+                      (r/fmap->> r-ordered-result (contrib.data/group-by-unique (partial row-key-v ctx))))
 
            FindTuple
            ; Vectors are already indexed
@@ -329,21 +335,21 @@
      ctx
 
      :db.cardinality/many
-     (let [keyfn (partial key-entity ctx)]                  ; Group again by keyfn, we have seq and need lookup
-       ; Deep update result in-place, at result-path, to index it. Don't clobber it!
-       ; hang onto the set as we index for a future rowkey
-       (let [set-ungrouped (r/cursor (:hypercrud.browser/result-index ctx) (:hypercrud.browser/result-path ctx))]
-         (assoc ctx :hypercrud.browser/result set-ungrouped ; replace with refined new tree
-                    :hypercrud.browser/result-index
-                    (r/fmap-> (:hypercrud.browser/result-index ctx)
-                              (update-in (:hypercrud.browser/result-path ctx)
-                                         (cond
-                                           (contrib.datomic/ref? @(:hypercrud.browser/schema ctx) a)
-                                           (partial contrib.data/group-by-unique keyfn)
+     ; Group again by keyfn, we have seq and need lookup
+     ; Deep update result in-place, at result-path, to index it. Don't clobber it!
+     ; hang onto the set as we index for a future rowkey
+     (let [set-ungrouped (r/cursor (:hypercrud.browser/result-index ctx) (:hypercrud.browser/result-path ctx))]
+       (assoc ctx :hypercrud.browser/result set-ungrouped   ; replace with refined new tree
+                  :hypercrud.browser/result-index
+                  (r/fmap-> (:hypercrud.browser/result-index ctx)
+                            (update-in (:hypercrud.browser/result-path ctx)
+                                       (cond
+                                         (contrib.datomic/ref? @(:hypercrud.browser/schema ctx) a)
+                                         (partial contrib.data/group-by-unique (partial entity-key-v ctx))
 
-                                           :scalar
-                                           ; Sets are an index that evaluate to the key.
-                                           set)))))))))
+                                         :scalar
+                                         ; Sets are an index that evaluate to the key.
+                                         set))))))))
 
 (defn data "Works in any context and infers the right stuff" ; todo just deref it
   [ctx]
@@ -382,7 +388,7 @@
       nil)))
 
 ; It's just easier to end the reaction earlier
-(defn v! "returns scalar | identity | lookupref | nil."
+(defn v! "returns scalar | identity | lookupref | nil."     ; never a fallback v
   [{:keys [:hypercrud.browser/element] :as ctx}]
   {:pre [element]}                                          ; infer the element above this?
   ; Sparse resultset, v can still be nil, or fully refined to a scalar
@@ -400,7 +406,7 @@
       ; Attribute level first, makes element level easier
       (> (pull-depth ctx) 0)
       (if (contrib.datomic/ref? @(:hypercrud.browser/schema ctx) ?a)
-        (key-entity ctx ?v)
+        (key-entity ctx ?v)                                 ; no fallback, this must be a real identity or nil
         ?v)
 
       ; Change in behavior below, it was smart-entity-identifier before
@@ -456,28 +462,32 @@
             r-ordered-result (:hypercrud.browser/result ctx)]
         (condp = (type @r-qfind)
           FindColl
-          (for [k (->> (sort-fn @r-ordered-result)          ; client side sorting – should happen in backend
-                       (map (partial row-key ctx)))]
-            [k (row ctx k)])
+          (for [[?k k] (->> (sort-fn @r-ordered-result)     ; client side sorting – should happen in backend
+                            (map (juxt (partial row-key ctx)
+                                       (partial row-key-v ctx))))]
+            [?k (row ctx k)])
 
           FindRel
-          (for [k (->> (sort-fn @r-ordered-result)          ; client side sorting – should happen in backend
-                       (map (partial row-key ctx)))]
-            [k (row ctx k)])
+          (for [[?k k] (->> (sort-fn @r-ordered-result)     ; client side sorting – should happen in backend
+                            (map (juxt (partial row-key ctx)
+                                       (partial row-key-v ctx))))]
+            [?k (row ctx k)])
 
           FindTuple                                         ; no index
-          (let [k (row-key ctx @r-ordered-result)]
-            [[k ctx]])
+          (let [?k (row-key ctx @r-ordered-result)]
+            [[?k ctx]])
 
           FindScalar                                        ; no index
-          (let [k (row-key ctx @r-ordered-result)]
-            [[k ctx]])))
+          (let [?k (row-key ctx @r-ordered-result)]
+            [[?k ctx]])))
 
+      ; where is the cardinality test
       (> (depth ctx) 0)                                     ; nested attr
       (let [r-ordered-result (data ctx)]                    ; remember row order; this is broken check order
-        (for [k (->> (sort-fn @r-ordered-result)
-                     (map (partial row-key ctx)))]
-          [k (row ctx k)])))))
+        (for [[?k k] (->> (sort-fn @r-ordered-result)
+                          (map (juxt (partial row-key ctx)
+                                     (partial row-key-v ctx))))]
+          [?k (row ctx k)])))))
 
 (defn fiddle "Runtime sets this up, it's not public api.
   Responsible for setting defaults.
@@ -525,7 +535,7 @@
                    (contrib.validation/validate
                      (s/get-spec @(r/fmap-> (:hypercrud.browser/fiddle ctx) :fiddle/ident))
                      @(:hypercrud.browser/result ctx)
-                     (partial row-key ctx)))
+                     (partial row-key ctx)))                ; i dont think fallback v
 
         ; index-result implicitly depends on eav in the tempid reversal stable entity code.
         ; Conceptually, it should be after qfind and before EAV.

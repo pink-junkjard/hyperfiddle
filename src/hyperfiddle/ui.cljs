@@ -364,10 +364,13 @@ User renderers should not be exposed to the reaction."
         [:table (select-keys props [:class :style])
          [:thead (into [:tr] (columns ctx))]
          ; filter? Group-by? You can't. This is data driven. Shape your data in the peer.
-         (into [:tbody] (for [[k ctx] (hypercrud.browser.context/spread-rows ctx #(sort/sort-fn % sort-col))]
+         (into [:tbody] (for [[ix [?k ctx]] (->> (hypercrud.browser.context/spread-rows ctx #(sort/sort-fn % sort-col))
+                                                 ; Duplicate rows https://github.com/hyperfiddle/hyperfiddle/issues/298
+                                                 (map-indexed vector))]
                           ; columns keys should work out, field sets it on inside
-                          #_[:tr {:key (str k)} (columns ctx)]
-                          (let [cs (columns ctx)]
+                          #_[:tr {:key (str ?k)} (columns ctx)]
+                          (let [k (or ?k ix)
+                                cs (columns ctx)]
                             (into [:tr {:key (str k)}] cs))))]))))
 
 (defn hint [val {:keys [hypercrud.browser/fiddle] :as ctx} props]
