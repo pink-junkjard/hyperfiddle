@@ -130,7 +130,8 @@
                   (assoc :on-click (r/partial run-txfn! link-ref ctx props))
                   ; use twbs btn coloring but not "btn" itself
                   (update :class css "btn-warning"))]
-    [:button props [:span (str label "!")]]))
+    [:button (select-keys props [:class :style :disabled :on-click])
+     [:span (str label "!")]]))
 
 (defn popover-cmp [link-ref ctx visual-ctx props label]
   ; try to auto-generate branch/popover-id from the product of:
@@ -147,11 +148,11 @@
         child-branch (when @(r/fmap (r/comp some? blank->nil :link/tx-fn) link-ref)
                        child-branch)
         btn-props (-> props
-                      (dissoc :route :tooltip ::redirect)
+                      ;(dissoc :route :tooltip ::redirect)
                       (assoc :on-click (r/partial open! (:route props) popover-id child-branch ctx))
                       ; use twbs btn coloring but not "btn" itself
                       (update :class css "btn-default"))]
-    [wrap-with-tooltip popover-id ctx props
+    [wrap-with-tooltip popover-id ctx (select-keys props [:class :on-click :style :disabled :tooltip])
      [with-keychord
       "esc" #(do (js/console.warn "esc") (if child-branch
                                            (cancel! popover-id child-branch ctx)
@@ -159,7 +160,8 @@
       [re-com/popover-anchor-wrapper
        :showing? (show-popover? popover-id ctx)
        :position :below-center
-       :anchor [:button btn-props [:span (str label "▾")]]
+       :anchor [:button (select-keys btn-props [:class :style :disabled :on-click])
+                [:span (str label "▾")]]
        :popover [re-com/popover-content-wrapper
                  :no-clip? true
                  :body [managed-popover-body (:route props) popover-id child-branch link-ref ctx props]]]]]))
