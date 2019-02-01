@@ -39,7 +39,7 @@
       :db.type/uuid uuid?)))
 
 (defn ^:export keyword [val ctx & [props]]
-  [:<>
+  [:div.hyperfiddle-input-group
    (let [props (-> (assoc props
                      :value val
                      :on-change (with-entity-change! ctx)))]
@@ -132,7 +132,7 @@
    ctx props])
 
 (defn ^:export id-or-ident [val ctx & [props]]
-  [:div
+  [:div.hyperfiddle-input-group
    [:div.input (interpose " " (cons (id-prompt ctx val) (related-links val ctx props)))]
    (if (let [[_ a _] @(:hypercrud.browser/eav ctx)]
          (= :db.cardinality/one (contrib.datomic/cardinality-loose @(:hypercrud.browser/schema ctx) a)))
