@@ -11,8 +11,7 @@
     [cuerdas.core :as str]
     [datascript.parser]
     #_[hyperfiddle.ui]
-    [taoensso.timbre :as timbre]
-    [hypercrud.browser.context :as context]))
+    [taoensso.timbre :as timbre]))
 
 
 (defmulti fiddle-type :fiddle/type)
