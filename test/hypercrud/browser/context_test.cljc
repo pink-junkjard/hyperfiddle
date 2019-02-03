@@ -6,6 +6,7 @@
     [contrib.reactive :as r]
     [contrib.ct :refer [unwrap]]
     [fixtures.tank]
+    [hyperfiddle.core]                                      ; avoid cycle hyperfiddle.api
     [hyperfiddle.data]
     [hyperfiddle.fiddle]
     [hyperfiddle.reducers]
@@ -908,18 +909,59 @@
            [nil :dustingetz.tutorial/blog [:dustingetz.post/slug :automatic-CRUD-links]])))
 
   (testing ":identity :hf/new formula evaluates to tempid"
-    (def ctx (-> (mock-fiddle! :dustingetz.tutorial/blog)
+    (def ctx (-> (mock-fiddle! :dustingetz.tutorial/blog)   ; FindRel
                  (context/row [[:dustingetz.post/slug :automatic-CRUD-links]])
-                 (context/element 0)
+                 (context/element 0)                        ; required for FindRel
                  (context/attribute :dustingetz.post/slug)))
     (def r-link (->> (hyperfiddle.data/select-here+ ctx :hf/new) (unwrap (constantly nil))))
     (testing "at fiddle level, link :hf/new eav does not have a parent"
       (is (= (let [[ctx r+route] (context/refocus' ctx r-link)]
                (context/eav ctx))
              ; should it be [nil nil "479925454"] from the txfn perspective?
-             [nil :dustingetz.tutorial/blog "479925454"])))
+             [nil :dustingetz.tutorial/blog "479925454"]))
+      (is (= (let [[ctx r+route] (context/refocus' ctx r-link)]
+               @r+route)
+             (right [:dustingetz.tutorial.blog/new-post [#entity["$" "479925454"]]]))))
     )
   )
+
+#_(testing "refocus link from tupled qfind, identity focused from element ctx"
+  (def ctx (-> (mock-fiddle! :dustingetz.tutorial/blog)
+               (context/row [[:dustingetz.post/slug :automatic-CRUD-links]])
+               #_(context/element 0)
+               (context/attribute :dustingetz.post/slug)))
+  (def r-link (->> (hyperfiddle.data/select-here+ ctx :hf/new) (unwrap (constantly nil))))
+  (testing "at fiddle level, link :hf/new eav does not have a parent"
+    (is (= (let [[ctx r+route] (context/refocus' ctx r-link)]
+             (context/eav ctx))
+           ; should it be [nil nil "479925454"] from the txfn perspective?
+           [nil :dustingetz.tutorial/blog "479925454"])))
+  )
+
+(testing "refocus link from tupled qfind, identity focused from result ctx"
+  ; Select a link from the root context that is reachable but not exactly here.
+  ; So select post/slug from a row ctx, as can happen in a view but not an autogrid.
+  ; This exercises tag-v-with-color edge cases
+
+  (def ctx (-> (mock-fiddle! :dustingetz.tutorial/blog)     ; FindRel-1
+               (context/row [[:dustingetz.post/slug :automatic-CRUD-links]])
+               #_(context/element 0)                        ; Specifically no element
+               ))
+
+  (def r-link (hyperfiddle.data/select ctx :hf/new))
+  (is (= (let [[ctx r+route] (context/refocus' ctx r-link)]
+           (context/eav ctx))
+         [nil :dustingetz.tutorial/blog "479925454"]))
+  (is (= (let [[ctx r+route] (context/refocus' ctx r-link)]
+           @r+route)
+         ; Astoundingly, this works. HOW???
+         (right [:dustingetz.tutorial.blog/new-post [#entity["$" "479925454"]]]))))
+
+
+
+(testing "refocus link from scalar qfind, identity focused from result ctx (infer element)"
+  )
+(testing "refocus link from scalar qfind, identity focused from element ctx")
 
 (deftest links
   []

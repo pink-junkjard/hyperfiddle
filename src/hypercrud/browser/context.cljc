@@ -588,11 +588,21 @@
 
 (defn -infer-implicit-element "auto-focus single elements - legacy field path compat"
   [ctx]
-  (or
-    (if-not (:hypercrud.browser/element ctx)
-      (if (#{FindColl FindScalar} (type @(:hypercrud.browser/qfind ctx)))
-        (element ctx 0)))
-    ctx))
+  (let [qfind @(:hypercrud.browser/qfind ctx)]
+    (cond
+      (:hypercrud.browser/element ctx)
+      ctx
+
+      (#{FindColl FindScalar} (type qfind))
+      (element ctx 0)
+
+      ; Can't infer this because the result index is not the right shape
+      ;(and (#{FindRel FindTuple} (type qfind))
+      ;     (= 1 (count (datascript.parser/find-elements qfind))))
+      ;(element ctx 0)
+
+      :else
+      ctx)))
 
 (defn -validate-qfind-element [ctx]
   {:pre [(s/assert r/reactive? (:hypercrud.browser/qfind ctx))
@@ -814,6 +824,15 @@
     (:hypercrud.browser/element ctx)
     (refocus-in-element ctx a')
 
+    (let [qfind @(:hypercrud.browser/qfind ctx)]
+      (and (#{FindRel FindTuple} (type qfind))
+           (= 1 (count (datascript.parser/find-elements qfind)))))
+    (refocus-in-element (element ctx 0) a')
+
+    #_#_:else
+    (do (timbre/warn "element-level links aren't well defined for tupled qfind: " @(:hypercrud.browser/qfind ctx))
+        nil)
+
     :else
     ; Assuming 0 works in happy path without tupling links all the way up.
     ; In fact this link might be available in N find-elements and returns N ctxs.
@@ -841,6 +860,12 @@
     (->ThinEntity (or (dbname ctx) "$")                     ; busted element level
                   v)))
 
+(defn tag-element-v-with-color [{:keys [:hypercrud.browser/element] :as ctx} v]
+  {:pre [element]}
+  (condp some [(type @element)]
+    #{Pull} (tag-v-with-color' ctx v)
+    #{Aggregate Variable} v))
+
 (defn tag-v-with-color "Tag dbids with color, at the last moment before they render into URLs"
   [ctx v]
   (let [[e a _] @(:hypercrud.browser/eav ctx)               ; this v might be a tuple, above v is one item in tuple?
@@ -851,23 +876,21 @@
       is-element-level                                      ; includes hf/new
       (do
         (assert (:hypercrud.browser/qfind ctx) ":blank fiddle (no qfind) with hf/new is illegal, specify a qfind.")
-        (let [qfind @(:hypercrud.browser/qfind ctx)         ; crashing on blank
-              element-type (type (contrib.datomic/qfind-collapse-findrel-1 qfind))]
-          (condp some [element-type]
-            ; At fiddle(element)-level, we don't know which element to check if it is a Pull.
-            ; However in the qfind scalar case, we can infer it.
-            #{FindColl FindScalar} (let [element (first
-                                                   (datascript.parser/find-elements qfind))]
-                                     (condp some [(type element)]
-                                       ; FIXME: refocus the element ctx to get the color right
-                                       #{Pull} (tag-v-with-color' ctx v)
-                                       #{Aggregate Variable} v))
 
-            ; In the qfind tuple case, we don't have enough info to know which element.
-            ; We could assume scalar, but I opted to make this an error case.
-            ; We can fix it i think by pushing (mapv args) down to this level and correlating with elements.
-            #{FindRel FindTuple}
-            (do (timbre/warn "element-level links aren't well defined for tupled qfind: " qfind) nil))))
+        ; Includes FindColl and FindScalar inferred above
+        ; We can hack in FindRel-1 support here too
+        (let [ctx (-infer-implicit-element ctx)             ; don't infer FindRel-1, the result index isn't shaped right
+              element (:hypercrud.browser/element ctx)]
+          (if element
+            (tag-element-v-with-color ctx v)
+
+            ; Qfind tuple case without an element in the ctx, means we have to handle all N elements in parallel.
+            ; Example: [:find (pull ?e [:post/slug]) (pull ?f [:post/slug])] should generate both links.
+            ; Currently this is an error case. If we push (mapv args) down to this level it can be done.
+            (do (timbre/warn "element-level links aren't well defined for tupled qfind: "
+                             ; FindRel and FindTuple
+                             @(:hypercrud.browser/qfind ctx))
+                nil))))
 
       (contrib.datomic/ref? @(:hypercrud.browser/schema ctx) a)
       (tag-v-with-color' ctx v)

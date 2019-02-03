@@ -11,6 +11,7 @@
     [cuerdas.core :as str]
     [datascript.parser]
     #_[hyperfiddle.ui]
+    #_[hyperfiddle.api]                                     ; tempid formulas
     [taoensso.timbre :as timbre]))
 
 
