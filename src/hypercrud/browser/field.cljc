@@ -4,8 +4,11 @@
             [clojure.set :as set]
             [contrib.data :refer [transpose]]
             [contrib.reactive :as r]
+            [contrib.reader :as reader]
+            [clojure.string :as string]
             [contrib.try$ :refer [try-either]]
             [datascript.parser :as parser #?@(:cljs [:refer [FindRel FindColl FindTuple FindScalar Variable Aggregate Pull]])]
+            [hypercrud.browser.q-util :as q-util]
             [hyperfiddle.runtime :as runtime])
   #?(:clj (:import (datascript.parser FindRel FindColl FindTuple FindScalar Variable Aggregate Pull))))
 
@@ -192,13 +195,22 @@
 (defn auto-field [request {:keys [:hypercrud.browser/data] :as ctx}]
   (let [schemas @(runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :schemas])]
     (case @(r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/type])
-      :entity (let [dbname @(r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/pull-database])
+      :entity (let [dbname @(r/cursor request [:db :dbname])
                     source-symbol (symbol dbname)
                     label nil #_"entity"                    ; "entity" is terrible as a label
                     pull-pattern @(r/cursor request [:pull-exp])]
                 (either/right (pull-one schemas @data source-symbol label pull-pattern)))
 
-      :query (mlet [{:keys [qfind] :as q} (try-either (parser/parse-query @(r/cursor request [:query])))]
+      :query (mlet [{:keys [qfind] :as q} (try-either (parser/parse-query @(r/cursor request [:query])))
+                    query-holes (try-either (q-util/parse-holes @(r/cursor request [:query])))
+                    :let [source-sym-lookup (let [m (->> (map (fn [arg hole]
+                                                                (when (string/starts-with? hole "$")
+                                                                  [(symbol hole) (symbol (:dbname arg))]))
+                                                              @(r/cursor request [:params])
+                                                              query-holes)
+                                                         (remove nil?)
+                                                         (into {}))]
+                                              (fn [query-symbol] (get m query-symbol query-symbol)))]]
                (cats/return
                  (merge {::query q}
                         (condp = (type qfind)
@@ -214,7 +226,7 @@
                                                                      (variable-rel fe-pos element)
 
                                                                      Pull
-                                                                     (let [source-symbol (get-in element [:source :symbol])
+                                                                     (let [source-symbol (source-sym-lookup (get-in element [:source :symbol]))
                                                                            pull-pattern (get-in element [:pattern :value])]
                                                                        {::cardinality :db.cardinality/one
                                                                         ::children (pull->fields (get schemas (str source-symbol)) source-symbol pull-pattern (get results-by-column fe-pos) [])
@@ -240,7 +252,7 @@
                                     (assoc ::cardinality :db.cardinality/many))
 
                                 Pull
-                                (let [source-symbol (get-in qfind [:element :source :symbol])
+                                (let [source-symbol (source-sym-lookup (get-in qfind [:element :source :symbol]))
                                       pull-pattern (get-in qfind [:element :pattern :value])]
                                   {::cardinality :db.cardinality/many
                                    ::children (pull->fields (get schemas (str source-symbol)) source-symbol pull-pattern @data [])
@@ -265,7 +277,7 @@
                                                                 (variable-rel fe-pos element)
 
                                                                 Pull
-                                                                (let [source-symbol (get-in element [:source :symbol])
+                                                                (let [source-symbol (source-sym-lookup (get-in element [:source :symbol]))
                                                                       pull-pattern (get-in element [:pattern :value])]
                                                                   {::cardinality :db.cardinality/one
                                                                    ::children (pull->fields (get schemas (str source-symbol)) source-symbol pull-pattern (get @data fe-pos) [])
@@ -293,7 +305,7 @@
 
                                 Pull
                                 (pull-one schemas @data
-                                          (get-in qfind [:element :source :symbol])
+                                          (source-sym-lookup (get-in qfind [:element :source :symbol]))
                                           (get-in qfind [:element :variable :symbol])
                                           (get-in qfind [:element :pattern :value]))
 

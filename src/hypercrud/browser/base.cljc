@@ -11,15 +11,18 @@
             [hypercrud.browser.field :as field]
             [hypercrud.browser.link :as link]
             [hypercrud.browser.routing :as routing]
-            [hyperfiddle.ide.system-fiddle :as system-fiddle]
             [hypercrud.client.core :as hc]
+            [hypercrud.types.DbName :refer [#?(:cljs DbName)]]
             [hypercrud.types.DbRef :refer [->DbRef]]
             [hypercrud.types.EntityRequest :refer [->EntityRequest]]
             [hypercrud.types.QueryRequest :refer [->QueryRequest]]
             [hyperfiddle.fiddle :as fiddle]
             [hyperfiddle.ide.console-links]                 ; just the parser
-            )
-  #?(:clj (:import (datascript.parser FindRel FindColl FindTuple FindScalar Variable Aggregate Pull))))
+            [hyperfiddle.system-fiddle :as system-fiddle])
+  #?(:clj
+     (:import
+       (datascript.parser FindRel FindColl FindTuple FindScalar Variable Aggregate Pull)
+       (hypercrud.types.DbName DbName))))
 
 
 (defn legacy-fiddle-ident->lookup-ref [fiddle]              ; SHould be an ident but sometimes is a long today
@@ -58,7 +61,7 @@
 (defn hydrate-fiddle [meta-fiddle-request ctx]
   (mlet [:let [[arg1 :as route] @(:hypercrud.browser/route ctx)]
          fiddle (if (system-fiddle/system-fiddle? arg1)
-                  (system-fiddle/hydrate-system-fiddle arg1)
+                  (system-fiddle/hydrate arg1)
                   (mlet [fiddle @(hc/hydrate (:peer ctx) (:branch ctx) @meta-fiddle-request)]
                     (validate-fiddle fiddle)))]
     (return
@@ -71,14 +74,17 @@
              (return (->QueryRequest q args)))
 
     :entity
-    (if-let [dbname @(r/cursor fiddle [:fiddle/pull-database])]
-      (let [[_ [?e :as args]] @(:hypercrud.browser/route ctx) ; Missing entity param is valid state now https://github.com/hyperfiddle/hyperfiddle/issues/268
-            db (->DbRef dbname (:branch ctx))
-            pull-exp (or (-> (memoized-read-edn-string+ @(r/cursor fiddle [:fiddle/pull]))
-                             (either/branch (constantly nil) identity))
-                         ['*])]
-        (either/right (->EntityRequest (or (:db/id ?e) ?e) db pull-exp)))
-      (either/left (ex-info "Missing :fiddle/pull-database" {:fiddle @(r/cursor fiddle [:fiddle/ident])})))
+    (let [[_ args] @(:hypercrud.browser/route ctx)          ; Missing entity param is valid state now https://github.com/hyperfiddle/hyperfiddle/issues/268
+          [dbname ?e] (if (instance? DbName (first args))
+                        [(:dbname (first args)) (second args)]
+                        [nil (first args)])]
+      (if-let [dbname (or dbname @(r/cursor fiddle [:fiddle/pull-database]))]
+        (let [db (->DbRef dbname (:branch ctx))
+              pull-exp (or (-> (memoized-read-edn-string+ @(r/cursor fiddle [:fiddle/pull]))
+                               (either/branch (constantly nil) identity))
+                           ['*])]
+          (either/right (->EntityRequest (or (:db/id ?e) ?e) db pull-exp)))
+        (either/left (ex-info "Missing :fiddle/pull-database" {:fiddle @(r/cursor fiddle [:fiddle/ident])}))))
 
     :blank (either/right nil)
 

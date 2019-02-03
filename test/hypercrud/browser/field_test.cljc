@@ -8,7 +8,6 @@
             [hypercrud.types.DbRef :refer [->DbRef]]
             [hypercrud.types.EntityRequest :refer [->EntityRequest]]
             [hypercrud.types.QueryRequest :refer [->QueryRequest]]
-            [hypercrud.types.ThinEntity :refer [->ThinEntity]]
             [hyperfiddle.runtime :as runtime]))
 
 

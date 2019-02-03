@@ -64,9 +64,9 @@
   (= (dissoc-frag a) (dissoc-frag b)))
 
 (defn decoding-error [e s]
-  [:hyperfiddle.system.route/decoding-error [s
-                                             #?(:cljs (ex-message e) :clj (.getMessage e))
-                                             (pprint-str (ex-data e))]])
+  [:hyperfiddle.system/decoding-error [s
+                                       #?(:cljs (ex-message e) :clj (.getMessage e))
+                                       (pprint-str (ex-data e))]])
 
 (defn url-encode [route home-route]
   {:pre [(s/valid? :hyperfiddle/route route) (s/valid? :hyperfiddle/route home-route)]
@@ -75,7 +75,7 @@
     (if (compare-routes route home-route)
       (str "/" (some->> frag empty->nil (str "#")))
       (case fiddle
-        :hyperfiddle.system.route/decoding-error (first datomic-args)
+        :hyperfiddle.system/decoding-error (first datomic-args)
         (str "/"
              (ednish/encode-uri fiddle)
              "/"

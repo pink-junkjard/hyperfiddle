@@ -6,7 +6,6 @@
     [contrib.reader :refer [read-edn-string!]]
     [contrib.string :refer [abc empty->nil]]
     [cuerdas.core :as str]
-    [hyperfiddle.ide.system-fiddle :refer [system-fiddle?]]
     [hyperfiddle.route :refer [assoc-frag]]
     [hypercrud.types.ThinEntity :refer [->ThinEntity #?(:cljs ThinEntity)]])
   #?(:clj
@@ -88,7 +87,6 @@
   (if ?r {:handler h :route-params ps}))
 
 (defn ->bidi [[fiddle ?datomic-args ?serivce-args ?frag :as ?r]]
-  (assert (not (system-fiddle? fiddle)) "bidi router doesn't handle sys links")
   ; this is going to generate param names of 0, 1, ... which maybe doesn't work for all routes
   ; we would need to disallow bidi keywords for this to be valid. Can bidi use ints? I think not :(
   (if ?r (apply conj [fiddle] (mapcat vector (abc) ?datomic-args))))
@@ -101,7 +99,7 @@
         route (some-> (bidi/match-route router path) ->bidi-consistency-wrapper bidi->hf)]
     (if route
       (assoc-frag route (empty->nil frag))
-      [:hyperfiddle.system.route/not-found])))
+      [:hyperfiddle.system/not-found])))
 
 (comment
   (def path-and-frag "/:hyperblog.2!tag/:hyperfiddle#:src")

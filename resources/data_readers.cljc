@@ -1,4 +1,6 @@
-{entity hyperfiddle.readers/entity
+{
+ dbname hyperfiddle.readers/dbname
+ entity hyperfiddle.readers/entity
  uri hyperfiddle.readers/uri
 
  ; defrecords get these for free in clj

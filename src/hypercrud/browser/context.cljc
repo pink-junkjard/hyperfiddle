@@ -2,6 +2,7 @@
   (:require
     [cats.core :refer [mlet return]]
     [cats.monad.either :as either :refer [left right]]
+    [clojure.string :as string]
     [contrib.data :refer [ancestry-common ancestry-divergence]]
     [contrib.datomic]
     [contrib.eval :as eval]
@@ -13,13 +14,16 @@
     [hypercrud.browser.field :as field]
     [hypercrud.browser.link]
     [hypercrud.browser.q-util]
+    [hypercrud.types.DbName :refer [#?(:cljs DbName)]]
     [hypercrud.types.DbRef :refer [->DbRef]]
     [hypercrud.types.ThinEntity :refer [->ThinEntity #?(:cljs ThinEntity)]]
     [hypercrud.util.branch]
     [hyperfiddle.route :as route]
     [hyperfiddle.runtime :as runtime])
   #?(:clj
-     (:import (hypercrud.types.ThinEntity ThinEntity))))
+     (:import
+       (hypercrud.types.DbName DbName)
+       (hypercrud.types.ThinEntity ThinEntity))))
 
 
 (s/def :hypercrud/context
@@ -230,6 +234,7 @@
                     :db.type/ref)]                          ; if there is no a in scope, we must be a new entity
     (cond
       (instance? ThinEntity v) v                            ; backwards compat with old hfhf formulas which return #entity
+      (instance? DbName v) v
       (= valueType :db.type/ref) (->ThinEntity (or (dbname ctx) "$") ; in the tuple case, each element may be a different color, so we need to refocus the ctx here (with find element index) to infer this
                                                (smart-entity-identifier ctx v))
 
@@ -305,17 +310,17 @@
 (defn validate-query-params+ [q args ctx]
   (mlet [query-holes (try-either (hypercrud.browser.q-util/parse-holes q)) #_"normalizes for :in $"
          :let [[params' unused] (loop [acc []
-                                       args args
-                                       [x & xs] query-holes]
-                                  (let [is-db (clojure.string/starts-with? x "$")
-                                        next-arg (if is-db
-                                                   (->DbRef x (:branch ctx))
-                                                   (fix-param ctx (first args)))
-                                        args (if is-db args (rest args))
-                                        acc (conj acc next-arg)]
-                                    (if xs
-                                      (recur acc args xs)
-                                      [acc args])))]]
+                                       [arg & next-args :as args] args
+                                       [hole & next-holes] query-holes]
+                                  (let [[arg next-args] (if (string/starts-with? hole "$")
+                                                          (if (instance? DbName arg)
+                                                            [(->DbRef (:dbname arg) (:branch ctx)) next-args]
+                                                            [(->DbRef hole (:branch ctx)) args])
+                                                          [(fix-param ctx arg) next-args])
+                                        acc (conj acc arg)]
+                                    (if next-holes
+                                      (recur acc next-args next-holes)
+                                      [acc next-args])))]]
     ;(assert (= 0 (count (filter nil? params')))) ; datomic will give a data source error
     ; validation. better to show the query and overlay the params or something?
     (cond #_#_(seq unused) (either/left {:message "unused param" :data {:query q :params params' :unused unused}})

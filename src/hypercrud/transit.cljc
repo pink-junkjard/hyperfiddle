@@ -4,6 +4,7 @@
     [cognitect.transit :as t]
     #?(:cljs [com.cognitect.transit.types])
     [contrib.uri :refer [->URI #?(:cljs URI)]]
+    [hypercrud.types.DbName :refer [->DbName #?(:cljs DbName)]]
     [hypercrud.types.DbRef :refer [->DbRef #?(:cljs DbRef)]]
     [hypercrud.types.DbVal :refer [->DbVal #?(:cljs DbVal)]]
     [hypercrud.types.EntityRequest :refer [->EntityRequest #?(:cljs EntityRequest)]]
@@ -15,6 +16,7 @@
   #?(:clj
      (:import
        (cats.monad.either Left Right)
+       (hypercrud.types.DbName DbName)
        (hypercrud.types.DbRef DbRef)
        (hypercrud.types.DbVal DbVal)
        (hypercrud.types.EntityRequest EntityRequest)
@@ -28,6 +30,7 @@
 
 (def read-handlers
   {
+   "DbName" (t/read-handler ->DbName)
    "DbRef" (t/read-handler #(apply ->DbRef %))
    "DbVal" (t/read-handler #(apply ->DbVal %))
    "EReq" (t/read-handler #(apply ->EntityRequest %))
@@ -43,6 +46,7 @@
 
 (def write-handlers
   {
+   DbName (t/write-handler (constantly "DbName") (fn [v] (:dbname v)))
    DbRef (t/write-handler (constantly "DbRef") (fn [v] [(:dbname v) (:branch v)]))
    DbVal (t/write-handler (constantly "DbVal") (fn [v] [(:uri v) (:branch v)]))
    EntityRequest (t/write-handler (constantly "EReq") (fn [v] [(:e v) (:db v) (:pull-exp v)]))

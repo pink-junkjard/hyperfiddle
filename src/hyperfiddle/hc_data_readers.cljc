@@ -3,6 +3,7 @@
     #?(:cljs [contrib.uuid :refer [read-uuid]])
     [#?(:cljs cljs.reader :clj clojure.tools.reader.default-data-readers)]
     [hyperfiddle.readers]                                   ; important
+    [hypercrud.types.DbName :refer [->DbName]]
     [hypercrud.types.DbRef :refer [map->DbRef]]
     [hypercrud.types.DbVal :refer [read-DbVal]]
     [hypercrud.types.EntityRequest :refer [read-EntityRequest]]
@@ -17,6 +18,7 @@
    'uuid #?(:cljs read-uuid :clj clojure.tools.reader.default-data-readers/default-uuid-reader)
    ;'queue #?(:cljs cljs.reader/read-queue) ; queue not supported on JVM: https://dev.clojure.org/jira/browse/CLJ-976
    ;'js #?(:cljs cljs.tagged-literals/read-js) ; compiler, not reader ?
+   'dbname ->DbName
    'entity read-ThinEntity
    'uri read-URI
    'hypercrud.types.DbRef.DbRef map->DbRef
