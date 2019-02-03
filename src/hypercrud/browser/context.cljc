@@ -162,7 +162,7 @@
 (defn smart-entity-identifier "key-entity except without the pr-str fallback.
   Generates the best Datomic lookup ref for a given pull. ctx needs :branch and :peer"
   ; flip params for fmap->
-  [ctx {:keys [:db/id :db/ident] :as e-map}]               ; v can be a ThinEntity or a pull i guess
+  [ctx {:keys [:db/id :db/ident] :as e-map}]                ; v can be a ThinEntity or a pull i guess
   (s/assert map? e-map)                                     ; used to be very loose, track down these cases now.
   ; If we have a color, and a (last path), ensure it is a ref.
   ; If we have a color and [] path, it is definitely a ref.
@@ -573,6 +573,8 @@
           (condp some [(type @(:hypercrud.browser/qfind ctx))]
             #{FindRel FindTuple} (as-> ctx ctx
                                        (update ctx :hypercrud.browser/result-path (fnil conj []) i)
+                                       ; I don't think we index result here, uncertain.
+                                       ; Related to collapse FindRel-N to FindColl
                                        (assoc ctx :hypercrud.browser/element-index i)) ; used only in labels
             #{FindColl FindScalar} ctx)
 
@@ -834,8 +836,11 @@
         nil)
 
     :else
-    ; Assuming 0 works in happy path without tupling links all the way up.
-    ; In fact this link might be available in N find-elements and returns N ctxs.
+    ; This never happens in autogrids, only in custom views.
+    ; If the custom view is on a FindRel-1, this does the right thing.
+    ; If the custom view is a FindRel-N, then this needs to tuple all the way up.
+    ; It is probably not what they want. They should make an element ctx and place
+    ; each link individually. This hack probably never needs to get fixed.
     (refocus-in-element (element ctx 0) a')))
 
 (defn id->tempid+ [route ctx]

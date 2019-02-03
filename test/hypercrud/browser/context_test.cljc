@@ -942,19 +942,18 @@
   ; Select a link from the root context that is reachable but not exactly here.
   ; So select post/slug from a row ctx, as can happen in a view but not an autogrid.
   ; This exercises tag-v-with-color edge cases
-
   (def ctx (-> (mock-fiddle! :dustingetz.tutorial/blog)     ; FindRel-1
                (context/row [[:dustingetz.post/slug :automatic-CRUD-links]])
                #_(context/element 0)                        ; Specifically no element
                ))
-
   (def r-link (hyperfiddle.data/select ctx :hf/new))
   (is (= (let [[ctx r+route] (context/refocus' ctx r-link)]
            (context/eav ctx))
          [nil :dustingetz.tutorial/blog "479925454"]))
   (is (= (let [[ctx r+route] (context/refocus' ctx r-link)]
            @r+route)
-         ; Astoundingly, this works. HOW???
+         ; This works because refocus hardcodes element 0, which it turns out is almost always
+         ; what the custom renderer wants.
          (right [:dustingetz.tutorial.blog/new-post [#entity["$" "479925454"]]]))))
 
 
