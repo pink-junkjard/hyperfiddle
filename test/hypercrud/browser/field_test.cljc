@@ -239,25 +239,25 @@
 (deftest entity []
   (pull->attr-tests {:fiddle/type :entity
                      :fiddle/pull-database "$"}
-                    #(->EntityRequest 1 (->DbRef nil nil) %)
+                    #(->EntityRequest 1 (->DbRef "$" nil) %)
                     merge-into-one))
 
 (deftest query-rel []
   (pull->attr-tests {:fiddle/type :query}
-                    #(->QueryRequest [:find (list 'pull '?e %) :in '$ '?e] {"$" nil "?e" 1})
+                    #(->QueryRequest [:find (list 'pull '?e %) :in '$ '?e] [(->DbRef "$" nil) 1])
                     (partial map vector)))
 
 (deftest query-coll []
   (pull->attr-tests {:fiddle/type :query}
-                    #(->QueryRequest [:find [(list 'pull '?e %) '...] :in '$ '?e] {"$" nil "?e" 1})
+                    #(->QueryRequest [:find [(list 'pull '?e %) '...] :in '$ '?e] [(->DbRef "$" nil) 1])
                     identity))
 
 (deftest query-tuple []
   (pull->attr-tests {:fiddle/type :query}
-                    #(->QueryRequest [:find [(list 'pull '?e %)] :in '$ '?e] {"$" nil "?e" 1})
+                    #(->QueryRequest [:find [(list 'pull '?e %)] :in '$ '?e] [(->DbRef "$" nil) 1])
                     (comp vector merge-into-one)))
 
 (deftest query-scalar []
   (pull->attr-tests {:fiddle/type :query}
-                    #(->QueryRequest [:find (list 'pull '?e %) '. :in '$ '?e] {"$" nil "?e" 1})
+                    #(->QueryRequest [:find (list 'pull '?e %) '. :in '$ '?e] [(->DbRef "$" nil) 1])
                     merge-into-one))

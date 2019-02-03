@@ -4,6 +4,7 @@
             [contrib.data :as data]
             [contrib.reactive :as r]
             [hypercrud.browser.field :as field :refer [auto-field]]
+            [hypercrud.types.DbRef :refer [->DbRef]]
             [hypercrud.types.QueryRequest :refer [->QueryRequest]]
             [hyperfiddle.runtime :as runtime]))
 
@@ -51,7 +52,7 @@
                                                                {:one-ref1 [:db/id :some-string]
                                                                 :many-ref1 [:db/id :some-string]}]}])
                                   :in $ ?e]
-                                {"$" nil "?e" 1})
+                                [(->DbRef "$" nil) 1])
         result nil
         ctx (build-ctx fiddle result)
         field @(auto-field (r/atom request) ctx)]

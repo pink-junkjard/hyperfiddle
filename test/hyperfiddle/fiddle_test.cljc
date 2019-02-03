@@ -3,7 +3,8 @@
     [clojure.test :refer [deftest is]]
     [contrib.datomic :refer [smart-lookup-ref-no-tempids]]
     [contrib.validation :refer [validate]]
-    [hyperfiddle.fiddle :refer [apply-defaults]]))
+    [hyperfiddle.fiddle :refer [apply-defaults]]
+    [hyperfiddle.ui]))
 
 
 (deftest test-data-defaults []
