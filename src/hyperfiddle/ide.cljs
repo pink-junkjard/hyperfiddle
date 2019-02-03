@@ -15,7 +15,6 @@
 
     ; pull in the entire ide app for reference from user-land
     [hyperfiddle.ide.fiddles.fiddle-src]
-    [hyperfiddle.ide.fiddles.schema]
     [hyperfiddle.ide.fiddles.schema-attribute]
     [hyperfiddle.ide.fiddles.topnav]
     [hyperfiddle.ide.preview.view]))
