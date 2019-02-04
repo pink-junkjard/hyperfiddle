@@ -47,14 +47,14 @@
                           (s/explain-data :hyperfiddle/route route)))))
 
 (defn canonicalize "(apply canonicalize route)"
-  [& [fiddle #_?fiddle-args ?datomic-params ?service-args ?initial-state]]
+  [& [fiddle ?datomic-params ?service-args ?fragment]]
   {:post [(let [[_ params] %]
             ; Route params are indexed by position
             (or (nil? params) (vector? params)))]}
-  (orp seq (rtrim-coll nil? [fiddle ?datomic-params ?service-args ?initial-state])))
+  (orp seq (rtrim-coll nil? [fiddle ?datomic-params ?service-args ?fragment])))
 
-(defn assoc-frag [[fiddle ?datomic-args ?service-args ?initial-state] frag]
-  {:pre [(nil? ?initial-state)]}
+(defn assoc-frag [[fiddle ?datomic-args ?service-args ?fragment] frag]
+  {:pre [(nil? ?fragment)]}
   (canonicalize fiddle ?datomic-args ?service-args frag))
 
 (defn dissoc-frag [[fiddle ?datomic-args ?service-args _]]
