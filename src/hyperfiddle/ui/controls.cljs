@@ -2,6 +2,7 @@
   (:refer-clojure :exclude [boolean keyword long])
   (:require
     [cats.monad.either :refer [branch]]
+    [contrib.css]
     [contrib.pprint :refer [pprint-str]]
     [contrib.reactive :as r]
     [contrib.reader :as reader]
@@ -217,7 +218,7 @@
 
 (defn ^:export radio-group [val ctx & [props]]
   (into [:span.radio-group (-> (select-keys props [:class])
-                               (update :class css (when (:is-invalid props) "invalid")))]
+                               (update :class contrib.css/css (when (:is-invalid props) "invalid")))]
         (->> (:options props)
              (map (let [props (dissoc props :is-invalid :class :options)]
                     (fn [option-props]
