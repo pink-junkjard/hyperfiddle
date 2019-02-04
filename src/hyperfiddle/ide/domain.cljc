@@ -23,21 +23,22 @@
   (databases [domain] databases)
   (environment [domain] environment)
 
-  ; todo unit test url encode/decode
   (url-decode [domain s]
-    (let [[fiddle-ident & rest :as route] (route/url-decode s home-route)]
+    (let [[fiddle-ident :as route] (route/url-decode s home-route)]
       (if (and (keyword? fiddle-ident) (= "hyperfiddle.ide" (namespace fiddle-ident)))
         route
-        ; todo handle args and frag
-        (route/canonicalize :hyperfiddle.ide/edit [(base/legacy-fiddle-ident->lookup-ref fiddle-ident)] rest))))
+        (let [[user-fiddle user-datomic-args service-args fragment] route
+              ide-fiddle :hyperfiddle.ide/edit
+              ide-datomic-args (into [(base/legacy-fiddle-ident->lookup-ref user-fiddle)] user-datomic-args)]
+          (route/canonicalize ide-fiddle ide-datomic-args service-args fragment)))))
   (url-encode [domain route]
-    (if (= :hyperfiddle.ide/edit (first route))
-      ; todo handle args and frag
-      (let [[_ [lookup-ref] rest] route]
-        (-> (route/canonicalize (base/legacy-lookup-ref->fiddle-ident lookup-ref) rest)
-            (route/url-encode home-route)))
-      (route/url-encode route home-route)))
-  )
+    (if (not= :hyperfiddle.ide/edit (first route))
+      (route/url-encode route home-route)
+      (let [[ide-fiddle ide-datomic-args service-args fragment] route
+            [user-fiddle-lookup-ref & user-datomic-args] ide-datomic-args
+            user-fiddle (base/legacy-lookup-ref->fiddle-ident user-fiddle-lookup-ref)]
+        (-> (route/canonicalize user-fiddle (vec user-datomic-args) service-args fragment)
+            (route/url-encode home-route))))))
 
 (defn with-serializer [ide-domain]
   (->> (let [rep-fn #(-> (into {} %) (dissoc :hack-transit-serializer))]

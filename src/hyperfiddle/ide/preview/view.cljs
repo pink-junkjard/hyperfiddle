@@ -15,6 +15,7 @@
     [hyperfiddle.ide.preview.runtime :refer [->Runtime]]
     [hyperfiddle.ide.preview.state :refer [->FAtom]]
     [hyperfiddle.reducers :as reducers]
+    [hyperfiddle.route :as route]
     [hyperfiddle.runtime :as runtime]
     [hyperfiddle.ui.iframe :refer [iframe-cmp]]
     [hyperfiddle.ui.loading :refer [loading-page]]
@@ -130,8 +131,13 @@
         (fn [e] [:h2 "user-domain misconfigured :("])       ; todo
         (fn [user-domain]
           (let [ide-branch (:branch ctx)
-                user-route (let [[_ [fiddle-lookup-ref] user-args encoded-fragment] @(runtime/state (:peer ctx) [::runtime/partitions ide-branch :route])]
-                             (into [(base/legacy-lookup-ref->fiddle-ident fiddle-lookup-ref)] user-args))
+                user-route (let [[_ [fiddle-lookup-ref & datomic-args] service-args encoded-fragment] @(runtime/state (:peer ctx) [::runtime/partitions ide-branch :route])]
+                             (route/canonicalize
+                               (base/legacy-lookup-ref->fiddle-ident fiddle-lookup-ref)
+                               (vec datomic-args)
+                               service-args
+                               ; todo remove ide fragment values
+                               encoded-fragment))
                 user-state (->FAtom (runtime/state (:peer ctx)) to (r/partial from ide-branch))
                 user-io (let [build (.-build (runtime/io (:peer ctx))) ; getting the build this way is hacky
                               service-uri (:hyperfiddle.ide/app-fqdn (runtime/domain (:peer ctx)))]
