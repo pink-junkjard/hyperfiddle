@@ -413,7 +413,24 @@
         :dustingetz.post/title "large strings and high churn attrs blow out indexes",
         :dustingetz.storm/channel "#datomic",
         :dustingetz.post/published-date #inst "2018-11-21T00:00:00.000-00:00"}
-       13194139536000]]]}
+       13194139536000]]]
+
+    :cookbook/markdown-table
+    [{:db/id 17592186046741,
+      :fiddle/ident :cookbook/markdown-table,
+      :fiddle/markdown
+      "### table with body renderers\n\ntable:\n:::\n!field(:task/completed) \n!field[hyperfiddle.ui.controls/tristate-boolean](:task/completed)\n!field[hyperfiddle.ui.controls/edn](:task/completed)\n!field[(comp str identity)](:task/title)\n:::",
+      :fiddle/query
+      "[:find \n [(pull ?e [:db/id \n           :task/title \n           :task/completed]) ...] \n :where\n [?e :task/title]]",
+      :fiddle/renderer
+      "(let [{:keys [:hypercrud.browser/fiddle]} ctx]\n  [:div.container-fluid props\n   [hyperfiddle.ui/markdown (:fiddle/markdown @fiddle) ctx]])",
+      :fiddle/type :query,
+      :hyperfiddle/owners
+      [#uuid "acd054a8-4e36-4d6c-a9ec-95bdc47f0d39"]}
+     [{:db/id 17592186046744, :task/title "Feed baby", :task/completed true}
+      {:db/id 17592186046745, :task/title "Mow the lawn"}
+      {:db/id 17592186046746, :task/title "Do the dishes", :task/completed true}]]
+    }
    )
 
 

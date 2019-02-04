@@ -620,6 +620,10 @@
   (let [{:keys [:hypercrud.browser/pull-path
                 :hypercrud.browser/result-path
                 :hypercrud.browser/qfind]} ctx]
+
+    ; Schema aliases can crash here https://github.com/hyperfiddle/hyperfiddle.net/issues/182
+    #_(if-not (contrib.datomic/cardinality-loose @(:hypercrud.browser/schema ctx) a')
+      ctx)
     (as->
       ctx ctx
       (-infer-implicit-element ctx)                         ; ensure pull-enclosure
