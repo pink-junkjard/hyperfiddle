@@ -77,10 +77,11 @@
                   "true" true
                   "false" false))]
   (defn ^:export tristate-boolean [val ctx & [props]]
-    (let [option-props props]
-      [:select (-> (dissoc props :label-fn)
-                   (assoc :value (if (nil? val) "" (str val))
-                          :on-change (r/comp (with-entity-change! ctx) adapter)))
+    (let [option-props (select-keys props [])
+          select-props (select-keys props [:value :on-change :class :style :disabled])]
+      [:select (assoc select-props
+                 :value (if (nil? val) "" (str val))
+                 :on-change (r/comp (with-entity-change! ctx) adapter))
        [:option (assoc option-props :key true :value "true") "True"]
        [:option (assoc option-props :key false :value "false") "False"]
        [:option (assoc option-props :key :nil :value "") "--"]])))
