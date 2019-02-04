@@ -55,7 +55,7 @@
                     (validate-fiddle fiddle)))]
     (return fiddle)))
 
-(defn request-for-fiddle [{fiddle :hypercrud.browser/fiddle :as ctx}]                       ; depends on route
+(defn request-for-fiddle [{fiddle :hypercrud.browser/fiddle :as ctx} & reaction-bust]                       ; depends on route
   ; it's a fiddle-ctx now, which has the defaults applied
   (case @(r/cursor fiddle [:fiddle/type])
     :query (mlet [q (reader/memoized-read-string+ @(r/cursor fiddle [:fiddle/query]))
@@ -102,7 +102,14 @@
          r-fiddle @(r/apply-inner-r (r/track hydrate-fiddle meta-fiddle-request ctx))
          :let [ctx (context/schemas ctx (r/track context/summon-schemas-grouped-by-dbname ctx))
                ctx (context/fiddle ctx r-fiddle)]
-         fiddle-request @(r/apply-inner-r (r/track request-for-fiddle ctx))]
+         fiddle-request @(r/apply-inner-r (r/track request-for-fiddle
+                                                   ctx
+                                                   ; blatant broken deref very bad fix
+                                                   @(r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/query])
+                                                   @(r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/pull])
+                                                   @(r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/pull-database])
+                                                   @(r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/type])
+                                                   ))]
     ; fiddle request can be nil for no-arg pulls (just draw readonly form)
     (process-results fiddle-request ctx)))
 
