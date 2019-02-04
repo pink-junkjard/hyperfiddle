@@ -338,15 +338,16 @@
 
 (defn validate-element [schema element _]
   (case (parser-type element)
-    ::Variable true
-    ::Aggregate true
+    ::Variable []
+    ::Aggregate []
     ::Pull (let [{{pull-pattern :value} :pattern} element]
              (->> (pull-traverse (pull-shape pull-pattern))
                   (remove empty?)
                   (map last)
                   (map (juxt identity #(attr schema %)))
                   (filter (comp nil? second))               ; reject good ones
-                  (map first))
+                  (map first)
+                  #_empty?)
              #_(tree-seq map?
                        (fn [m]
                          (concat (keys m)
