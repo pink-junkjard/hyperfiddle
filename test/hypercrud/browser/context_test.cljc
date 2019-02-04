@@ -105,12 +105,8 @@
 
 (def ctx (mock-fiddle! :dustingetz/gender-shirtsize))
 
-(deftest context
-
+(deftest simple
   (def ctx (mock-fiddle! :dustingetz/gender-shirtsize))
-
-
-
   (testing "refocus to self is noop and doesn't crash"
     (is (= (context/refocus ctx :dustingetz/gender-shirtsize)
            ctx)))
@@ -152,77 +148,78 @@
            '([:dustingetz.reg/email] [:dustingetz.reg/name] [:db/id]
               [:dustingetz.reg/gender] [:dustingetz.reg/shirt-size]))))
 
-
   (testing "depth"
     (is (= (for [[_ ctx] (context/spread-result ctx)
                  [_ ctx] (context/spread-rows ctx)]
              (context/depth ctx))
            '(1 1))))
 
-  (testing "eav"
-    (testing "fiddle level a is fiddle-ident"
-      (is (= @(:hypercrud.browser/eav ctx)
-             [nil :dustingetz/gender-shirtsize nil])))
+  (testing "fiddle level a is fiddle-ident"
+    (is (= @(:hypercrud.browser/eav ctx)
+           [nil :dustingetz/gender-shirtsize nil])))
 
-    (testing "spread-result does not touch eav"
-      (is (= [@(:hypercrud.browser/eav ctx)]
-             (for [[_ ctx] (context/spread-result ctx)]
-               @(:hypercrud.browser/eav ctx))
-             '([nil :dustingetz/gender-shirtsize nil]))))
+  (testing "spread-result does not touch eav"
+    (is (= [@(:hypercrud.browser/eav ctx)]
+           (for [[_ ctx] (context/spread-result ctx)]
+             @(:hypercrud.browser/eav ctx))
+           '([nil :dustingetz/gender-shirtsize nil]))))
+  )
 
-    (testing "fiddle-level v is the element"
-      (is (= (for [[_ ctx] (context/spread-rows ctx)
-                   [_ ctx] (context/spread-elements ctx)]
-               @(:hypercrud.browser/eav ctx))
-             (for [[_ ctx] (context/spread-result ctx)
-                   [_ ctx] (context/spread-rows ctx)
-                   [_ ctx] (context/spread-elements ctx)]
-               @(:hypercrud.browser/eav ctx))
-             (for [[_ ctx] (context/spread-result ctx)
-                   [_ ctx] (context/spread-rows ctx)
-                   [_ ctx] (context/spread-elements ctx)]
-               (context/eav ctx))
-             '([nil :dustingetz/gender-shirtsize [:dustingetz.reg/email "dustin@example.com"]]
-                [nil :dustingetz/gender-shirtsize [:dustingetz.reg/email "bob@example.com"]]))))
+(deftest context-a
+  (def ctx (mock-fiddle! :dustingetz/gender-shirtsize))
 
-    (testing "spread-row doesnt prefill v, but it can be inferred"
-      (is (= #_(for [[_ ctx] (context/spread-rows ctx)]
-               @(:hypercrud.browser/eav ctx))               ; element not inferred, why no lookup ref? Because no schema.
-             (for [[_ ctx] (context/spread-rows ctx)]
-               (context/eav ctx))
-             [[nil :dustingetz/gender-shirtsize [:dustingetz.reg/email "dustin@example.com"]]
-              [nil :dustingetz/gender-shirtsize [:dustingetz.reg/email "bob@example.com"]]]))
-
-      (is (= (for [[_ ctx] (context/spread-rows ctx)]
-               (context/eav ctx))
-             '([nil :dustingetz/gender-shirtsize [:dustingetz.reg/email "dustin@example.com"]]
-                [nil :dustingetz/gender-shirtsize [:dustingetz.reg/email "bob@example.com"]]))))
-
-    (is (= (for [[_ ctx] (context/spread-result ctx)
+  (testing "fiddle-level v is the element"
+    (is (= (for [[_ ctx] (context/spread-rows ctx)
+                 [_ ctx] (context/spread-elements ctx)]
+             @(:hypercrud.browser/eav ctx))
+           (for [[_ ctx] (context/spread-result ctx)
                  [_ ctx] (context/spread-rows ctx)
                  [_ ctx] (context/spread-elements ctx)]
              @(:hypercrud.browser/eav ctx))
+           (for [[_ ctx] (context/spread-result ctx)
+                 [_ ctx] (context/spread-rows ctx)
+                 [_ ctx] (context/spread-elements ctx)]
+             (context/eav ctx))
            '([nil :dustingetz/gender-shirtsize [:dustingetz.reg/email "dustin@example.com"]]
-              [nil :dustingetz/gender-shirtsize [:dustingetz.reg/email "bob@example.com"]])))
-    )
+              [nil :dustingetz/gender-shirtsize [:dustingetz.reg/email "bob@example.com"]]))))
 
+  (testing "spread-row doesnt prefill v, but it can be inferred"
+    (is (= #_(for [[_ ctx] (context/spread-rows ctx)]
+               @(:hypercrud.browser/eav ctx))               ; element not inferred, why no lookup ref? Because no schema.
+          (for [[_ ctx] (context/spread-rows ctx)]
+            (context/eav ctx))
+          [[nil :dustingetz/gender-shirtsize [:dustingetz.reg/email "dustin@example.com"]]
+           [nil :dustingetz/gender-shirtsize [:dustingetz.reg/email "bob@example.com"]]]))
+
+    (is (= (for [[_ ctx] (context/spread-rows ctx)]
+             (context/eav ctx))
+           '([nil :dustingetz/gender-shirtsize [:dustingetz.reg/email "dustin@example.com"]]
+              [nil :dustingetz/gender-shirtsize [:dustingetz.reg/email "bob@example.com"]]))))
+
+  (is (= (for [[_ ctx] (context/spread-result ctx)
+               [_ ctx] (context/spread-rows ctx)
+               [_ ctx] (context/spread-elements ctx)]
+           @(:hypercrud.browser/eav ctx))
+         '([nil :dustingetz/gender-shirtsize [:dustingetz.reg/email "dustin@example.com"]]
+            [nil :dustingetz/gender-shirtsize [:dustingetz.reg/email "bob@example.com"]]))))
+
+(deftest context-c
   (testing "fiddle/type :pull"
-    (testing "row and element are inferred"
-      (is (= (for [ctx [(mock-fiddle! :hyperfiddle/ide)]
-                   [_ ctx] (context/spread-rows ctx)
-                   [_ ctx] (context/spread-elements ctx)]
-               (context/eav ctx))
-             (for [ctx [(mock-fiddle! :hyperfiddle/ide)]]
-               (context/eav ctx))
-             [[nil :hyperfiddle/ide [:fiddle/ident :hyperfiddle/ide]]]
-             ))
+    (is (= (for [ctx [(mock-fiddle! :hyperfiddle/ide)]
+                 [_ ctx] (context/spread-rows ctx)
+                 [_ ctx] (context/spread-elements ctx)]
+             (context/eav ctx))
+           (for [ctx [(mock-fiddle! :hyperfiddle/ide)]]
+             (context/eav ctx))
+           [[nil :hyperfiddle/ide [:fiddle/ident :hyperfiddle/ide]]]))
 
-      (is (= (let [ctx (mock-fiddle! :hyperfiddle/ide)
-                   ctx (context/attribute ctx :fiddle/renderer)]
-               (context/eav ctx))
-             [[:fiddle/ident :hyperfiddle/ide] :fiddle/renderer "hyperfiddle.ide.fiddles.fiddle-src/fiddle-src-renderer"])))
-    )
+    (is (= (let [ctx (mock-fiddle! :hyperfiddle/ide)
+                 ctx (context/attribute ctx :fiddle/renderer)]
+             (context/eav ctx))
+           [[:fiddle/ident :hyperfiddle/ide] :fiddle/renderer "hyperfiddle.ide.fiddles.fiddle-src/fiddle-src-renderer"]))))
 
+(deftest context-b
+  (def ctx (mock-fiddle! :dustingetz/gender-shirtsize))
   (testing "nested pulls"
     (let [ctx (mock-fiddle! :hyperfiddle/ide)]
       (is (= (context/eav ctx) [nil :hyperfiddle/ide [:fiddle/ident :hyperfiddle/ide]])) ; infer scalar
@@ -296,6 +293,114 @@
               [[:dustingetz.reg/email "bob@example.com"] :dustingetz.reg/gender :dustingetz.gender/male])))
     )
 
+
+
+  (testing "focus attribute isolated"
+    (is (= (let [ctx (context/row ctx [:dustingetz.reg/email "dustin@example.com"] #_17592186046196)
+                 ctx (context/element ctx 0)
+                 ctx (context/attribute ctx :dustingetz.reg/gender)]
+             @(context/data ctx))
+           #:db{:ident :dustingetz.gender/male})))
+
+  (testing "FindColl Pull nested"
+    (is (= (let [ctx (mock-fiddle! :tutorial.race/shirt-sizes)
+                 ctx (context/row ctx :dustingetz.shirt-size/womens-medium)]
+             (context/eav ctx))
+           [nil :tutorial.race/shirt-sizes :dustingetz.shirt-size/womens-medium]))
+
+    (is (= (let [ctx (mock-fiddle! :tutorial.race/shirt-sizes)
+                 ctx (context/row ctx :dustingetz.shirt-size/womens-medium)
+                 ctx (context/attribute ctx :dustingetz.reg/gender)]
+             (context/eav ctx))
+           [:dustingetz.shirt-size/womens-medium :dustingetz.reg/gender :dustingetz.gender/female]))
+
+    (is (= (let [ctx (mock-fiddle! :tutorial.race/shirt-sizes)
+                 ctx (context/row ctx :dustingetz.shirt-size/womens-medium)
+                 ;ctx (context/element ctx 0)
+                 ctx (context/attribute ctx :db/ident)]
+             (context/eav ctx))
+           [:dustingetz.shirt-size/womens-medium :db/ident :dustingetz.shirt-size/womens-medium])))
+
+  #_(testing "refocus from root to gender"
+      (is (= (for [[_ ctx] (context/spread-rows ctx)
+                   #_#_[_ ctx] (context/spread-elements ctx)]
+               #_@(:hypercrud.browser/result-index ctx)
+               @(:hypercrud.browser/result ctx)
+               #_@(:hypercrud.browser/result-index (context/refocus ctx :dustingetz.reg/gender))
+               )
+             '({17592186046196 {:db/id 17592186046196,
+                                :dustingetz.reg/email "dustin@example.com",
+                                :dustingetz.reg/name "Dustin Getz",
+                                :dustingetz.reg/gender #:db{:ident :dustingetz.gender/male},
+                                :dustingetz.reg/shirt-size #:db{:ident :dustingetz.shirt-size/mens-large}},
+                17592186046763 {:db/id 17592186046763,
+                                :dustingetz.reg/email "bob@example.com",
+                                :dustingetz.reg/gender #:db{:ident :dustingetz.gender/male},
+                                :dustingetz.reg/shirt-size #:db{:ident :dustingetz.shirt-size/mens-large}}}
+                {17592186046196 {:db/id 17592186046196,
+                                 :dustingetz.reg/email "dustin@example.com",
+                                 :dustingetz.reg/name "Dustin Getz",
+                                 :dustingetz.reg/gender #:db{:ident :dustingetz.gender/male},
+                                 :dustingetz.reg/shirt-size #:db{:ident :dustingetz.shirt-size/mens-large}},
+                 17592186046763 {:db/id 17592186046763,
+                                 :dustingetz.reg/email "bob@example.com",
+                                 :dustingetz.reg/gender #:db{:ident :dustingetz.gender/male},
+                                 :dustingetz.reg/shirt-size #:db{:ident :dustingetz.shirt-size/mens-large}}})))
+
+      (is (= (for [[_ ctx] (context/spread-rows ctx)
+                   [_ ctx] (context/spread-elements ctx)]
+               @(:hypercrud.browser/eav (context/refocus ctx :dustingetz.reg/gender)))
+             '([17592186046196 :dustingetz.reg/gender :dustingetz.gender/male]
+                [17592186046763 :dustingetz.reg/gender :dustingetz.gender/male])))
+      )
+
+  )
+
+(deftest element-inference
+  (def ctx (mock-fiddle! :dustingetz/gender-shirtsize))
+  (testing "element inference"
+    (is (= (let [ctx (mock-fiddle! :tutorial.race/shirt-sizes)
+                 ctx (context/row ctx :dustingetz.shirt-size/womens-medium)
+                 ctx (context/attribute ctx :db/ident)]
+             @(context/data ctx))
+           :dustingetz.shirt-size/womens-medium))
+
+    (is (= (let [ctx (mock-fiddle! :tutorial.race/shirt-sizes)
+                 ctx (context/row ctx :dustingetz.shirt-size/womens-medium)]
+             ; infer element
+             @(context/data ctx))
+           {:db/ident :dustingetz.shirt-size/womens-medium, :dustingetz.reg/gender #:db{:ident :dustingetz.gender/female}}))))
+
+(deftest data
+  (def ctx (mock-fiddle! :dustingetz/gender-shirtsize))
+  (testing "data"
+    (is (= (let [ctx (mock-fiddle! :tutorial.race/shirt-sizes)
+                 ctx (context/row ctx :dustingetz.shirt-size/womens-medium)
+                 ctx (context/attribute ctx :dustingetz.reg/gender)]
+             @(context/data ctx))
+           #:db{:ident :dustingetz.gender/female}))
+
+    (is (= (let [ctx (mock-fiddle! :tutorial.race/shirt-sizes)
+                 ctx (context/row ctx :dustingetz.shirt-size/womens-medium)
+                 ctx (context/attribute ctx :db/ident)]
+             @(context/data ctx))
+           :dustingetz.shirt-size/womens-medium))
+
+    (is (= (let [ctx (mock-fiddle! :tutorial.race/shirt-sizes)
+                 ctx (context/row ctx :dustingetz.shirt-size/womens-medium)]
+             @(context/data ctx))
+           {:db/ident :dustingetz.shirt-size/womens-medium,
+            :dustingetz.reg/gender #:db{:ident :dustingetz.gender/female}}))
+
+    (is (= (let [ctx (mock-fiddle! :tutorial.race/shirt-sizes)]
+             @(context/data ctx))
+           [{:db/ident :dustingetz.shirt-size/womens-medium, :dustingetz.reg/gender #:db{:ident :dustingetz.gender/female}}
+            {:db/ident :dustingetz.shirt-size/womens-small, :dustingetz.reg/gender #:db{:ident :dustingetz.gender/female}}
+            {:db/ident :dustingetz.shirt-size/womens-large, :dustingetz.reg/gender #:db{:ident :dustingetz.gender/female}}]))
+    ))
+
+(deftest rows
+  (def ctx (mock-fiddle! :dustingetz/gender-shirtsize))
   (testing "row data by dbid"
     #_(:hypercrud.browser/result-path (context/row ctx 17592186046196))
     #_(:hypercrud.browser/result (context/row ctx 17592186046196))
@@ -338,73 +443,10 @@
             {:db/id 17592186046763,
              :dustingetz.reg/email "bob@example.com",
              :dustingetz.reg/gender #:db{:ident :dustingetz.gender/male},
-             :dustingetz.reg/shirt-size #:db{:ident :dustingetz.shirt-size/mens-large}}])))
+             :dustingetz.reg/shirt-size #:db{:ident :dustingetz.shirt-size/mens-large}}]))))
 
-  (testing "focus attribute isolated"
-    (is (= (let [ctx (context/row ctx [:dustingetz.reg/email "dustin@example.com"] #_17592186046196)
-                 ctx (context/element ctx 0)
-                 ctx (context/attribute ctx :dustingetz.reg/gender)]
-             @(context/data ctx))
-           #:db{:ident :dustingetz.gender/male})))
-
-  (testing "FindColl Pull nested"
-    (testing "eav"
-      (is (= (let [ctx (mock-fiddle! :tutorial.race/shirt-sizes)
-                   ctx (context/row ctx :dustingetz.shirt-size/womens-medium)]
-               (context/eav ctx))
-             [nil :tutorial.race/shirt-sizes :dustingetz.shirt-size/womens-medium]))
-
-      (is (= (let [ctx (mock-fiddle! :tutorial.race/shirt-sizes)
-                   ctx (context/row ctx :dustingetz.shirt-size/womens-medium)
-                   ctx (context/attribute ctx :dustingetz.reg/gender)]
-               (context/eav ctx))
-             [:dustingetz.shirt-size/womens-medium :dustingetz.reg/gender :dustingetz.gender/female]))
-
-      (is (= (let [ctx (mock-fiddle! :tutorial.race/shirt-sizes)
-                   ctx (context/row ctx :dustingetz.shirt-size/womens-medium)
-                   ;ctx (context/element ctx 0)
-                   ctx (context/attribute ctx :db/ident)]
-               (context/eav ctx))
-             [:dustingetz.shirt-size/womens-medium :db/ident :dustingetz.shirt-size/womens-medium]))))
-
-  (testing "data"
-    (is (= (let [ctx (mock-fiddle! :tutorial.race/shirt-sizes)
-                 ctx (context/row ctx :dustingetz.shirt-size/womens-medium)
-                 ctx (context/attribute ctx :dustingetz.reg/gender)]
-             @(context/data ctx))
-           #:db{:ident :dustingetz.gender/female}))
-
-    (is (= (let [ctx (mock-fiddle! :tutorial.race/shirt-sizes)
-                 ctx (context/row ctx :dustingetz.shirt-size/womens-medium)
-                 ctx (context/attribute ctx :db/ident)]
-             @(context/data ctx))
-           :dustingetz.shirt-size/womens-medium))
-
-    (is (= (let [ctx (mock-fiddle! :tutorial.race/shirt-sizes)
-                 ctx (context/row ctx :dustingetz.shirt-size/womens-medium)]
-             @(context/data ctx))
-           {:db/ident :dustingetz.shirt-size/womens-medium,
-            :dustingetz.reg/gender #:db{:ident :dustingetz.gender/female}}))
-
-    (is (= (let [ctx (mock-fiddle! :tutorial.race/shirt-sizes)]
-             @(context/data ctx))
-           [{:db/ident :dustingetz.shirt-size/womens-medium, :dustingetz.reg/gender #:db{:ident :dustingetz.gender/female}}
-            {:db/ident :dustingetz.shirt-size/womens-small, :dustingetz.reg/gender #:db{:ident :dustingetz.gender/female}}
-            {:db/ident :dustingetz.shirt-size/womens-large, :dustingetz.reg/gender #:db{:ident :dustingetz.gender/female}}]))
-    )
-  (testing "element inference"
-    (is (= (let [ctx (mock-fiddle! :tutorial.race/shirt-sizes)
-                 ctx (context/row ctx :dustingetz.shirt-size/womens-medium)
-                 ctx (context/attribute ctx :db/ident)]
-             @(context/data ctx))
-           :dustingetz.shirt-size/womens-medium))
-
-    (is (= (let [ctx (mock-fiddle! :tutorial.race/shirt-sizes)
-                 ctx (context/row ctx :dustingetz.shirt-size/womens-medium)]
-             ; infer element
-             @(context/data ctx))
-           {:db/ident :dustingetz.shirt-size/womens-medium, :dustingetz.reg/gender #:db{:ident :dustingetz.gender/female}})))
-
+(deftest head-sentinel
+  (def ctx (mock-fiddle! :dustingetz/gender-shirtsize))
   (testing "head-sentinel sanity checks, head-sentinel needs to go"
     (let [ctx (mock-fiddle! :seattle/neighborhoods)]
       (is (= (context/eav ctx) [nil :seattle/neighborhoods nil]))
@@ -420,7 +462,10 @@
               ctx (context/row ctx 17592186045522)
               ctx (context/attribute ctx :neighborhood/district)]
           (is (= (context/eav ctx) [nil :neighborhood/district nil]))))))
+  )
 
+(deftest refocus-a
+  (def ctx (mock-fiddle! :dustingetz/gender-shirtsize))
   (testing "refocus to :ref :one from row"
     (is (= (let [ctx (context/row ctx [:dustingetz.reg/email "dustin@example.com"] #_17592186046196)
                  ctx (context/element ctx 0)
@@ -461,7 +506,12 @@
               [[:dustingetz.reg/email "bob@example.com"] :dustingetz.reg/gender :dustingetz.gender/male]))))
 
   (testing "refocus to :ref :many from row")
+  (testing "refocus from myself when already here but not at root")
 
+  )
+
+(deftest refocus-b
+  (def ctx (mock-fiddle! :dustingetz/gender-shirtsize))
   (testing "refocus to :ref :one from top"
     (is (= (let [ctx (context/refocus ctx :dustingetz.reg/gender)]
              ; Can't do it. Should this throw?
@@ -487,42 +537,6 @@
                @(:hypercrud.browser/eav ctx)))
            [[[:dustingetz.reg/email "dustin@example.com"] :dustingetz.reg/gender :dustingetz.gender/male]
             [[:dustingetz.reg/email "bob@example.com"] :dustingetz.reg/gender :dustingetz.gender/male]])))
-
-  #_(testing "refocus from root to gender"
-      (is (= (for [[_ ctx] (context/spread-rows ctx)
-                   #_#_[_ ctx] (context/spread-elements ctx)]
-               #_@(:hypercrud.browser/result-index ctx)
-               @(:hypercrud.browser/result ctx)
-               #_@(:hypercrud.browser/result-index (context/refocus ctx :dustingetz.reg/gender))
-               )
-             '({17592186046196 {:db/id 17592186046196,
-                                :dustingetz.reg/email "dustin@example.com",
-                                :dustingetz.reg/name "Dustin Getz",
-                                :dustingetz.reg/gender #:db{:ident :dustingetz.gender/male},
-                                :dustingetz.reg/shirt-size #:db{:ident :dustingetz.shirt-size/mens-large}},
-                17592186046763 {:db/id 17592186046763,
-                                :dustingetz.reg/email "bob@example.com",
-                                :dustingetz.reg/gender #:db{:ident :dustingetz.gender/male},
-                                :dustingetz.reg/shirt-size #:db{:ident :dustingetz.shirt-size/mens-large}}}
-                {17592186046196 {:db/id 17592186046196,
-                                 :dustingetz.reg/email "dustin@example.com",
-                                 :dustingetz.reg/name "Dustin Getz",
-                                 :dustingetz.reg/gender #:db{:ident :dustingetz.gender/male},
-                                 :dustingetz.reg/shirt-size #:db{:ident :dustingetz.shirt-size/mens-large}},
-                 17592186046763 {:db/id 17592186046763,
-                                 :dustingetz.reg/email "bob@example.com",
-                                 :dustingetz.reg/gender #:db{:ident :dustingetz.gender/male},
-                                 :dustingetz.reg/shirt-size #:db{:ident :dustingetz.shirt-size/mens-large}}})))
-
-      (is (= (for [[_ ctx] (context/spread-rows ctx)
-                   [_ ctx] (context/spread-elements ctx)]
-               @(:hypercrud.browser/eav (context/refocus ctx :dustingetz.reg/gender)))
-             '([17592186046196 :dustingetz.reg/gender :dustingetz.gender/male]
-                [17592186046763 :dustingetz.reg/gender :dustingetz.gender/male])))
-      )
-
-  (testing "refocus from myself when already here but not at root")
-
   )
 
 (deftest refocus-and-attribute-parallels
@@ -592,30 +606,30 @@
         )))
 
   #_(testing "smart identity should prefer identity attrs to db/id"
-    (is (= (for [[_ ctx] (context/spread-rows ctx)
-                 [_ ctx] (context/spread-elements ctx)
-                 #_#_[_ ctx] (context/spread-attributes ctx)]
-             (context/eav ctx))
-           [[nil :dustingetz/slack-storm 17592186047000]
-            [nil :dustingetz/slack-storm 13194139535895]    ; tx
-            [nil :dustingetz/slack-storm 17592186047105]
-            [nil :dustingetz/slack-storm 13194139536000]    ; tx
-            ]))
-    )
+      (is (= (for [[_ ctx] (context/spread-rows ctx)
+                   [_ ctx] (context/spread-elements ctx)
+                   #_#_[_ ctx] (context/spread-attributes ctx)]
+               (context/eav ctx))
+             [[nil :dustingetz/slack-storm 17592186047000]
+              [nil :dustingetz/slack-storm 13194139535895]  ; tx
+              [nil :dustingetz/slack-storm 17592186047105]
+              [nil :dustingetz/slack-storm 13194139536000]  ; tx
+              ]))
+      )
 
   #_(testing "FindRel fiddle-level, how to identify each rel?"
-    (is (= (for [[_ ctx] (context/spread-rows ctx)
-                 [_ ctx] (context/spread-elements ctx)
-                 #_#_[_ ctx] (context/spread-attributes ctx)]
-             (context/eav ctx))
+      (is (= (for [[_ ctx] (context/spread-rows ctx)
+                   [_ ctx] (context/spread-elements ctx)
+                   #_#_[_ ctx] (context/spread-attributes ctx)]
+               (context/eav ctx))
 
-           ; I think these shouldn't be addressable at all from fiddle-level.
-           [[nil :dustingetz/slack-storm [:dustingetz.post/slug :asdf]]
-            [nil :dustingetz/slack-storm 13194139535895]    ; (max ?tx)
-            [nil :dustingetz/slack-storm 17592186047105]    ; ?e but :identity attr is nil
-            [nil :dustingetz/slack-storm 13194139536000]    ; (max ?tx)
-            ]))
-    )
+             ; I think these shouldn't be addressable at all from fiddle-level.
+             [[nil :dustingetz/slack-storm [:dustingetz.post/slug :asdf]]
+              [nil :dustingetz/slack-storm 13194139535895]  ; (max ?tx)
+              [nil :dustingetz/slack-storm 17592186047105]  ; ?e but :identity attr is nil
+              [nil :dustingetz/slack-storm 13194139536000]  ; (max ?tx)
+              ]))
+      )
 
   (testing "FindRel tuple at element level"
     (testing "addressing rowtuple by tupled rowkey"
@@ -843,24 +857,24 @@
            [nil :dustingetz.tutorial/blog [:dustingetz.post/slug :automatic-CRUD-links]]))
 
     #_(let [#_#_ctx (context/element ctx 0)]
-      (is (= (context/eav ctx) [nil :dustingetz/slack-storm [:dustingetz.post/slug :asdf]]))
-      (is (= @(context/data ctx)
-             {:db/id 17592186047000,
-              :dustingetz.post/title "is js/console.log syntax future proof?",
-              :dustingetz.post/slug :asdf,
-              :dustingetz.storm/channel "#clojurescript",
-              :dustingetz.post/published-date #inst "2018-11-19T00:00:00.000-00:00"}))
-      (let [ctx (context/attribute ctx :dustingetz.post/title)]
-        (is (= @(context/data ctx) "is js/console.log syntax future proof?"))
-        (is (= (context/eav ctx) [[:dustingetz.post/slug :asdf] :dustingetz.post/title "is js/console.log syntax future proof?"])))
+        (is (= (context/eav ctx) [nil :dustingetz/slack-storm [:dustingetz.post/slug :asdf]]))
+        (is (= @(context/data ctx)
+               {:db/id 17592186047000,
+                :dustingetz.post/title "is js/console.log syntax future proof?",
+                :dustingetz.post/slug :asdf,
+                :dustingetz.storm/channel "#clojurescript",
+                :dustingetz.post/published-date #inst "2018-11-19T00:00:00.000-00:00"}))
+        (let [ctx (context/attribute ctx :dustingetz.post/title)]
+          (is (= @(context/data ctx) "is js/console.log syntax future proof?"))
+          (is (= (context/eav ctx) [[:dustingetz.post/slug :asdf] :dustingetz.post/title "is js/console.log syntax future proof?"])))
 
-      (is (= (for [[_ ctx] (context/spread-attributes ctx)]
-               (context/eav ctx))
-             [[[:dustingetz.post/slug :asdf] :db/id 17592186047000]
-              [[:dustingetz.post/slug :asdf] :dustingetz.post/title "is js/console.log syntax future proof?"]
-              [[:dustingetz.post/slug :asdf] :dustingetz.post/slug :asdf]
-              [[:dustingetz.post/slug :asdf] :dustingetz.storm/channel "#clojurescript"]
-              [[:dustingetz.post/slug :asdf] :dustingetz.post/published-date #inst"2018-11-19T00:00:00.000-00:00"]])))
+        (is (= (for [[_ ctx] (context/spread-attributes ctx)]
+                 (context/eav ctx))
+               [[[:dustingetz.post/slug :asdf] :db/id 17592186047000]
+                [[:dustingetz.post/slug :asdf] :dustingetz.post/title "is js/console.log syntax future proof?"]
+                [[:dustingetz.post/slug :asdf] :dustingetz.post/slug :asdf]
+                [[:dustingetz.post/slug :asdf] :dustingetz.storm/channel "#clojurescript"]
+                [[:dustingetz.post/slug :asdf] :dustingetz.post/published-date #inst"2018-11-19T00:00:00.000-00:00"]])))
 
     )
 
@@ -926,17 +940,17 @@
   )
 
 #_(testing "refocus link from tupled qfind, identity focused from element ctx"
-  (def ctx (-> (mock-fiddle! :dustingetz.tutorial/blog)
-               (context/row [[:dustingetz.post/slug :automatic-CRUD-links]])
-               #_(context/element 0)
-               (context/attribute :dustingetz.post/slug)))
-  (def r-link (->> (hyperfiddle.data/select-here+ ctx :hf/new) (unwrap (constantly nil))))
-  (testing "at fiddle level, link :hf/new eav does not have a parent"
-    (is (= (let [[ctx r+route] (context/refocus' ctx r-link)]
-             (context/eav ctx))
-           ; should it be [nil nil "479925454"] from the txfn perspective?
-           [nil :dustingetz.tutorial/blog "479925454"])))
-  )
+    (def ctx (-> (mock-fiddle! :dustingetz.tutorial/blog)
+                 (context/row [[:dustingetz.post/slug :automatic-CRUD-links]])
+                 #_(context/element 0)
+                 (context/attribute :dustingetz.post/slug)))
+    (def r-link (->> (hyperfiddle.data/select-here+ ctx :hf/new) (unwrap (constantly nil))))
+    (testing "at fiddle level, link :hf/new eav does not have a parent"
+      (is (= (let [[ctx r+route] (context/refocus' ctx r-link)]
+               (context/eav ctx))
+             ; should it be [nil nil "479925454"] from the txfn perspective?
+             [nil :dustingetz.tutorial/blog "479925454"])))
+    )
 
 (testing "refocus link from tupled qfind, identity focused from result ctx"
   ; Select a link from the root context that is reachable but not exactly here.
@@ -1035,17 +1049,17 @@
   )
 
 #_(deftest deps-satisfied-1
-  []
-  (is (= (deps-satisfied? [0 :fiddle/links] [0 :fiddle/links :link/fiddle]) false))
-  (is (= (deps-satisfied? [0 :gender] [0 :shirt-size]) true))
-  (is (= (deps-satisfied? [0] [0 :shirt-size]) true))
-  (is (= (deps-satisfied? [0] [0 :fiddle/links :link/fiddle]) false))
-  (is (= (deps-satisfied? [0 :fiddle/links] [0 :fiddle/links :link/fiddle]) false))
-  (is (= (deps-satisfied? [] [0]) false))
-  (is (= (deps-satisfied? [] [0 :user/user-id]) false)) ; This becomes true if a relation can be implied in scope
-  (is (= (deps-satisfied? [] [0 :user/user-id]) true))
-  (is (= (deps-satisfied? [0 :user/user-id] []) true))
-  )
+    []
+    (is (= (deps-satisfied? [0 :fiddle/links] [0 :fiddle/links :link/fiddle]) false))
+    (is (= (deps-satisfied? [0 :gender] [0 :shirt-size]) true))
+    (is (= (deps-satisfied? [0] [0 :shirt-size]) true))
+    (is (= (deps-satisfied? [0] [0 :fiddle/links :link/fiddle]) false))
+    (is (= (deps-satisfied? [0 :fiddle/links] [0 :fiddle/links :link/fiddle]) false))
+    (is (= (deps-satisfied? [] [0]) false))
+    (is (= (deps-satisfied? [] [0 :user/user-id]) false))   ; This becomes true if a relation can be implied in scope
+    (is (= (deps-satisfied? [] [0 :user/user-id]) true))
+    (is (= (deps-satisfied? [0 :user/user-id] []) true))
+    )
 
 (deftest link-path-floor-1
   []
