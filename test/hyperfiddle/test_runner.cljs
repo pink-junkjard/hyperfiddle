@@ -16,9 +16,9 @@
     contrib.rfc3986-test
     contrib.string-test
     contrib.validation-test
-    ;hypercrud.browser.field-test
     hypercrud.browser.nested-pull-test
     hypercrud.browser.router-bidi-test
+    hyperfiddle.context-test
     hyperfiddle.fiddle-test
     hyperfiddle.foundation-test
     hyperfiddle.ide.console-links-test
@@ -45,9 +45,9 @@
     'contrib.rfc3986-test
     'contrib.string-test
     'contrib.validation-test
-    ;'hypercrud.browser.field-test
     'hypercrud.browser.nested-pull-test
     'hypercrud.browser.router-bidi-test
+   ' hyperfiddle.context-test
     'hyperfiddle.fiddle-test
     'hyperfiddle.foundation-test
     'hyperfiddle.ide.console-links-test
