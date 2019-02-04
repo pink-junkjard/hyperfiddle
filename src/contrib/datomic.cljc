@@ -359,5 +359,6 @@
              ; collect the errors
              )))
 
-(defn validate-qfind-attrs [schemas qfind]
+(defn validate-qfind-attrs "Validate the pull attributes against schema. Bug: doesn't see Datomic aliases."
+  [schemas qfind]
   (spread-elements' validate-element schemas qfind nil))

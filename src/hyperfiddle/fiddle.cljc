@@ -178,7 +178,6 @@
                                   :fiddle/type              ; validation
                                   ]}
                    :link/formula
-                   :link/ident                              ; legacy
                    :link/path
                    :link/tx-fn]}
    :fiddle/markdown

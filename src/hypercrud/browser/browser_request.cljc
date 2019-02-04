@@ -68,7 +68,9 @@
 (defn requests [ctx]
   ; More efficient to drive from links. But to do this, we need to refocus
   ; from the top, multiplying out for all possible dependencies.
-  (if-not (:hypercrud.browser/qfind-invalid-attrs ctx)
+
+  (if (:hypercrud.browser/qfind-invalid-attrs ctx)
+    (taoensso.timbre/warn "invalid attrs: " (pr-str (:hypercrud.browser/qfind-invalid-attrs ctx)))
     (flatten
       [(requests-here ctx)
        (for [[_ ctx] (hypercrud.browser.context/spread-result ctx)]

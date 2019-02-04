@@ -42,6 +42,7 @@
                 :hypercrud.browser/fiddle
                 :hypercrud.browser/result-index             ; private, interpreted relative to result-path. never individually
                 :hypercrud.browser/qfind
+                :hypercrud.browser/qfind-invalid-attrs
                 :hypercrud.browser/eav                      ; V is scalar or nil. A is attr or fiddle-ident
                 :hypercrud.browser/validation-hints
                 :hypercrud.browser/element                  ; not included in EAV
@@ -504,9 +505,9 @@
         r-qfind (r/fmap :qfind r-qparsed)
         r-fiddle (r/fmap hyperfiddle.fiddle/apply-fiddle-links-defaults
                          r-fiddle (:hypercrud.browser/schemas ctx) r-qparsed)
-        r-invalid-attrs (r/fmap contrib.datomic/validate-qfind-attrs r-qfind)]
-
-    ; Validate the pull attributes against schema
+        element-validation-issues (if-let [qfind @r-qfind]
+                                    (seq (contrib.datomic/validate-qfind-attrs
+                                           @(:hypercrud.browser/schemas ctx) qfind)))]
     (as-> ctx ctx
           (assoc ctx :hypercrud.browser/fiddle r-fiddle)
           (if r-qfind
@@ -514,7 +515,9 @@
               (as-> ctx ctx
                     (assoc ctx :hypercrud.browser/qfind r-qfind
                                :hypercrud.browser/qparsed r-qparsed)
-                    (if-not r-invalid-attrs ctx (assoc ctx :hypercrud.browser/qfind-invalid-attrs r-invalid-attrs)))
+                    (if element-validation-issues
+                      (assoc ctx :hypercrud.browser/qfind-invalid-attrs element-validation-issues)
+                      ctx))
               ctx)
             ctx)
           (assoc ctx :hypercrud.browser/link-index (r/fmap -indexed-links-at r-fiddle))
