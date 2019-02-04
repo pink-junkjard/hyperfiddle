@@ -2,12 +2,14 @@
   (:require
     [clojure.test :refer [deftest is testing]]
     [contrib.datomic :refer [pull-shape tree-derivative pull-enclosure pull-level
-                             pull-traverse pull-union normalize-result]]
+                             pull-traverse pull-union normalize-result
+                             validate-qfind-attrs]]
     [contrib.ct]
     [contrib.try$]
     [fixtures.ctx]
     [fixtures.domains]
     [fixtures.hfhf]
+    [fixtures.tank]
     [datascript.parser #?@(:cljs [:refer [FindRel FindColl FindTuple FindScalar Variable Aggregate Pull]])])
   #?(:clj (:import (datascript.parser FindRel FindColl FindTuple FindScalar Variable Aggregate Pull))))
 
@@ -292,6 +294,7 @@
     (is (contrib.datomic/ref-one? fixtures.hfhf/schema :link/fiddle))
     (is (contrib.datomic/unique? fixtures.hfhf/schema :db/ident :db.unique/identity))
     (is (contrib.datomic/unique? fixtures.hfhf/schema :fiddle/ident :db.unique/identity))
+    (is (contrib.datomic/attr fixtures.hfhf/schema :fiddle/ident))
     (is (= (contrib.datomic/find-identity-attr fixtures.hfhf/schema {:a 1 :fiddle/ident :yo}) :fiddle/ident))
     (is (= (contrib.datomic/find-identity-attr fixtures.hfhf/schema {:a 1}) nil))
     (is (= (contrib.datomic/find-identity-attr fixtures.hfhf/schema nil) nil))
@@ -327,4 +330,19 @@
     (is (= (contrib.datomic/qfind-collapse-findrel-1 (:qfind (datascript.parser/parse-query '[:find ?e :where [?e]])))
            (contrib.datomic/qfind-collapse-findrel-1 (:qfind (datascript.parser/parse-query '[:find [?e ...] :where [?e]])))))
     )
+  )
+
+(deftest pull-validation
+  (def qparsed (datascript.parser/parse-query '[:find (pull ?e [:db/id
+                                                            :dustingetz.reg/email
+                                                                :yo
+                                                            :dustingetz.reg/age
+                                                            {:dustingetz.reg/gender [:db/ident :foo]
+                                                             :baz [:db/id :buzz]
+                                                             :dustingetz.reg/shirt-size [:db/ident]}])
+                                            .
+                                            :where [?e]]))
+  (is (= (validate-qfind-attrs fixtures.tank/schemas (:qfind qparsed))
+         [:yo :foo :baz :buzz]))
+
   )

@@ -503,13 +503,18 @@
         r-qparsed (r/fmap-> r-fiddle hyperfiddle.fiddle/parse-fiddle-query)
         r-qfind (r/fmap :qfind r-qparsed)
         r-fiddle (r/fmap hyperfiddle.fiddle/apply-fiddle-links-defaults
-                         r-fiddle (:hypercrud.browser/schemas ctx) r-qparsed)]
+                         r-fiddle (:hypercrud.browser/schemas ctx) r-qparsed)
+        r-invalid-attrs (r/fmap contrib.datomic/validate-qfind-attrs r-qfind)]
+
+    ; Validate the pull attributes against schema
     (as-> ctx ctx
           (assoc ctx :hypercrud.browser/fiddle r-fiddle)
           (if r-qfind
             (if @r-qfind
-              (assoc ctx :hypercrud.browser/qfind r-qfind
-                         :hypercrud.browser/qparsed r-qparsed)
+              (as-> ctx ctx
+                    (assoc ctx :hypercrud.browser/qfind r-qfind
+                               :hypercrud.browser/qparsed r-qparsed)
+                    (if-not r-invalid-attrs ctx (assoc ctx :hypercrud.browser/qfind-invalid-attrs r-invalid-attrs)))
               ctx)
             ctx)
           (assoc ctx :hypercrud.browser/link-index (r/fmap -indexed-links-at r-fiddle))

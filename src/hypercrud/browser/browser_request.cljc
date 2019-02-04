@@ -66,14 +66,17 @@
       (request-from-route [inner-fiddle (vec inner-args)] ctx))))
 
 (defn requests [ctx]
-  (flatten
-    [(requests-here ctx)
-     (for [[_ ctx] (hypercrud.browser.context/spread-result ctx)]
-       [(requests-here ctx)
-        (for [[_ ctx] (hypercrud.browser.context/spread-rows ctx)]
-          [(requests-here ctx)
-           (for [[i ctx] (hypercrud.browser.context/spread-elements ctx)]
-             [(requests-here ctx)
-              (for [[a ctx] (hypercrud.browser.context/spread-attributes ctx)] ; TODO loop recur
-                (requests-here ctx))])])])
-     (cross-streams ctx)]))
+  ; More efficient to drive from links. But to do this, we need to refocus
+  ; from the top, multiplying out for all possible dependencies.
+  (if-not (:hypercrud.browser/qfind-invalid-attrs ctx)
+    (flatten
+      [(requests-here ctx)
+       (for [[_ ctx] (hypercrud.browser.context/spread-result ctx)]
+         [(requests-here ctx)
+          (for [[_ ctx] (hypercrud.browser.context/spread-rows ctx)]
+            [(requests-here ctx)
+             (for [[i ctx] (hypercrud.browser.context/spread-elements ctx)]
+               [(requests-here ctx)
+                (for [[a ctx] (hypercrud.browser.context/spread-attributes ctx)] ; TODO loop recur
+                  (requests-here ctx))])])])
+       (cross-streams ctx)])))

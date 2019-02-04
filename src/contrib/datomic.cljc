@@ -11,7 +11,7 @@
 (defn tempid? [id]
   (string? id))
 
-(defn identity-segment? [attr-spec]
+(defn identity-segment? [attr-spec]                         ; need schema for :identity
   ; Not necessarily a keyword
   ; But accepts pull-shapes, so doesn't have to be the full attr spec
   (contains? #{:db/id :db/ident} attr-spec))
@@ -27,14 +27,16 @@
         nil                                                 ; This is an entity but you didn't pull any identity - error?
         )))
 
-(def parser-types
-  {FindRel ::FindRel
-   FindColl ::FindColl
-   FindTuple ::FindTuple
-   FindScalar ::FindScalar
-   Pull ::Pull
-   Variable ::Variable
-   Aggregate ::Aggregate})
+(def parser-types {FindRel ::FindRel
+                   FindColl ::FindColl
+                   FindTuple ::FindTuple
+                   FindScalar ::FindScalar
+                   Pull ::Pull
+                   Variable ::Variable
+                   Aggregate ::Aggregate})
+
+(defn parser-type [element]
+  (parser-types (type element)))
 
 (defn consistent-relation-key "Key that the dbval has, but unstable in views with a branch"
   [v]
@@ -119,7 +121,8 @@
 
 (declare pull-shape)
 
-(defn- attr-spec->shape "Take the pull and get rid of everything, even splat, just attrs requested."
+(defn- attr-spec->shape "Take the pull and get rid of everything, even splat, just attrs requested.
+  Does not validate and does not look at schema, do that later."
   [a]
   ; todo :as
   (cond
@@ -185,7 +188,7 @@
    (->> pull-shape
         (mapcat (fn [attr-spec]
                   (cond
-                    (identity-segment? attr-spec)
+                    (identity-segment? attr-spec)           ; todo needs schema
                     [[]]                                    ; blank path means the element
 
                     (keyword? attr-spec)                    ; scalars, never refs
@@ -332,3 +335,28 @@
        (map (juxt identity #(contrib.datomic/unique? schema % :db.unique/identity)))
        (filter second)
        (some first)))
+
+(defn validate-element [schema element _]
+  (case (parser-type element)
+    ::Variable true
+    ::Aggregate true
+    ::Pull (let [{{pull-pattern :value} :pattern} element]
+             (->> (pull-traverse (pull-shape pull-pattern))
+                  (remove empty?)
+                  (map last)
+                  (map (juxt identity #(attr schema %)))
+                  (filter (comp nil? second))               ; reject good ones
+                  (map first))
+             #_(tree-seq map?
+                       (fn [m]
+                         (concat (keys m)
+                                 (apply concat (vals m))))
+                       (pull-shape pull-pattern))
+             #_(->> (pull-traverse (pull-shape pull-pattern))
+                  (map last)
+                  (mapcat identity))
+             ; collect the errors
+             )))
+
+(defn validate-qfind-attrs [schemas qfind]
+  (spread-elements' validate-element schemas qfind nil))
