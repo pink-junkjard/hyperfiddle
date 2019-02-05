@@ -3,8 +3,10 @@
     [cats.monad.either :as either]
     [contrib.base-64-url-safe :as base64-url-safe]
     [contrib.css :refer [css]]
+    [contrib.ednish :as ednish]
     [contrib.pprint :as pprint]
     [contrib.reactive :as r]
+    [contrib.reader :as reader]
     [hyperfiddle.domain :as domain]
     [hyperfiddle.io.routes :as routes]
     [hyperfiddle.project :as project]
@@ -19,6 +21,11 @@
     [hyperfiddle.ide.fiddles.topnav]
     [hyperfiddle.ide.preview.view]))
 
+
+(defn parse-ide-fragment [s-fragment]
+  (let [fragment (some-> s-fragment ednish/decode-ednish reader/read-edn-string+ (either/branch (constantly nil) identity))]
+    (when (= "hf.src" (some-> fragment namespace))
+      fragment)))
 
 (defn stateless-login-url
   ([ctx] (stateless-login-url ctx (domain/url-encode (runtime/domain (:peer ctx)) @(runtime/state (:peer ctx) [::runtime/partitions nil :route]))))

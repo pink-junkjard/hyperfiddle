@@ -136,8 +136,8 @@
                                (base/legacy-lookup-ref->fiddle-ident fiddle-lookup-ref)
                                (vec datomic-args)
                                service-args
-                               ; todo remove ide fragment values
-                               encoded-fragment))
+                               (when-not (hyperfiddle.ide/parse-ide-fragment encoded-fragment)
+                                 encoded-fragment)))
                 user-state (->FAtom (runtime/state (:peer ctx)) to (r/partial from ide-branch))
                 user-io (let [build (.-build (runtime/io (:peer ctx))) ; getting the build this way is hacky
                               service-uri (:hyperfiddle.ide/app-fqdn (runtime/domain (:peer ctx)))]
