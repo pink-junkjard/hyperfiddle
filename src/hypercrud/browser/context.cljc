@@ -997,7 +997,9 @@
 
 (defn- fix-param [ctx param]
   (if (instance? ThinEntity param)
-    (smart-entity-identifier ctx param)                     ; throws away the dbname
+    ; I think it already has the correct identity and tempid is already accounted
+    #_(smart-entity-identifier ctx param)
+    (.-id param)                                            ; throw away dbname
     param))
 
 (defn validate-query-params+ [q args ctx]

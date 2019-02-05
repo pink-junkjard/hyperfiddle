@@ -11,7 +11,7 @@
   (str "#entity" (pr-str [(.-dbname o) (.-id o)])))
 
 ; dbname = $, for URIs
-(deftype ThinEntity [dbname id]
+(deftype ThinEntity [dbname id]                             ; id can be db/ident and lookup ref
   #?@(:clj  [Object
              (equals [o other]
                (and (instance? ThinEntity other)
@@ -22,7 +22,7 @@
              (hasheq [o] (impl-hash o))
 
              Seqable
-             (seq [o] (seq {:db/id id}))
+             (seq [o] (seq {:db/id id}))                    ; lookup ref?
 
              Counted
              (count [o] (count {:db/id id}))
