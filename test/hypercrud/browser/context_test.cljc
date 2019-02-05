@@ -977,13 +977,12 @@
 (testing "refocus link from scalar qfind, identity focused from element ctx")
 
 (deftest links
-  []
   (testing "race shirt-sizes iframe"
     (def ctx (mock-fiddle! :tutorial.race/submission))
     (is (-> @(hyperfiddle.data/select-many ctx :dustingetz.reg/gender)
             first :link/fiddle :fiddle/ident (= :tutorial.race/shirt-sizes)))
     ;(println @(hyperfiddle.data/select-many ctx :tutorial.race/submission))
-    @(hyperfiddle.data/select-many ctx :hf/iframe)
+    (is (= 2 (count @(hyperfiddle.data/select-many ctx :hf/iframe))))
     )
 
   (testing "seattle neighborhood districts iframe"
@@ -1000,9 +999,9 @@
   (testing "indexed-links"
 
     (def ctx (mock-fiddle! :seattle/neighborhoods))
-    @(context/links-in-dimension-r ctx #{})
-    @(context/links-at ctx #{})
     @(:hypercrud.browser/link-index ctx)
+    (context/links-at @(:hypercrud.browser/link-index ctx) #{})
+    @(context/links-in-dimension-r ctx #{})
     )
   )
 
