@@ -110,12 +110,13 @@
       (field [:fiddle/uuid] ctx hyper-control)
       (field [:fiddle/hydrate-result-as-fiddle] ctx hyper-control)
       [:div.p "Additional attributes"]
-      (for [[k _] (hypercrud.browser.context/spread-attributes ctx)
-            :when (and (not= :db/id k)
-                       (not= "fiddle" (namespace k)))]
-        (field [k] ctx))
+      (doall
+        (for [[k _] (hypercrud.browser.context/spread-attributes ctx)
+              :when (and (not= :db/id k)
+                         (not= "fiddle" (namespace k)))]
+          (field [k] ctx)))
       #_(field [:fiddle/ident] ctx (fn [val ctx props]
-                                   [:div (link #{:fiddle/ident :hf/remove} ctx "Remove fiddle" {:class "btn-outline-danger"})]))
+                                     [:div (link #{:fiddle/ident :hf/remove} ctx "Remove fiddle" {:class "btn-outline-danger"})]))
       #_[:div.p "Spec debugging"]
       #_[:pre
          (with-out-str
