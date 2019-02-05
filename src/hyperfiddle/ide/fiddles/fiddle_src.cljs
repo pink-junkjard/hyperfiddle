@@ -5,6 +5,7 @@
     [contrib.reactive :as r]
     [hypercrud.browser.context :as context]
     [hypercrud.browser.field :as field]
+    [hypercrud.types.DbName :refer [->DbName]]
     [hyperfiddle.domain :as domain]
     [hyperfiddle.fiddle :as fiddle]
     [hyperfiddle.runtime :as runtime]
@@ -23,7 +24,7 @@
        keys
        sort
        (map (fn [dbname]
-              (let [props {:route [(keyword "hyperfiddle.schema" dbname)]
+              (let [props {:route [:hyperfiddle.ide/schema [(->DbName dbname)]]
                            #_#_:target "_blank"}]
                 ^{:key dbname}
                 [anchor ctx props dbname])))
