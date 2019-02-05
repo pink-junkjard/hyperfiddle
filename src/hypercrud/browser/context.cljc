@@ -738,8 +738,8 @@
 (defn links-at "where criterias is some of #{ident txfn class class2}.
   Links include all links reachable by navigating :ref :one. (Change this by specifying an :ident)
   The index internals are reactive."
-  [link-index criterias]                                           ; criterias can contain nil, meaning toptop
-  (->> link-index
+  [r-link-index criterias]                                           ; criterias can contain nil, meaning toptop
+  (r/fmap->> r-link-index
        (filter (partial link-criteria-match? criterias))
        (mapv second)
        #_(mapv (juxt :db/id identity))))
@@ -748,10 +748,9 @@
   {:post [(not (r/reactive? %))]}
   (let [?element (some-> ctx :hypercrud.browser/element deref)
         ?schema (some-> ctx :hypercrud.browser/schema deref)
-        ?pullpath (:hypercrud.browser/pull-path ctx)
-        link-index @(:hypercrud.browser/link-index ctx)]
+        ?pullpath (:hypercrud.browser/pull-path ctx)]
     (if-not (and ?element ?schema ?pullpath)
-      (links-at link-index criterias)
+      @(links-at (:hypercrud.browser/link-index ctx) criterias)
       (let [pull-pattern (get-in ?element [:pattern :value])
             ; if pullpath is [], add fiddle-ident. Or if EAV a is not a keyword.
             ; EAV A may already be the fiddle-ident, or if its an int, use fiddle-ident too.
@@ -760,10 +759,10 @@
             links (->> as
                        ; Places within reach
                        (mapcat (fn [a]
-                                 (links-at link-index (conj criterias a))))
+                                 @(links-at (:hypercrud.browser/link-index ctx) (conj criterias a))))
 
                        ; This place is where we are now
-                       (concat (links-at link-index criterias)))] ; this causes duplicates, there are bugs here
+                       (concat @(links-at (:hypercrud.browser/link-index ctx) criterias)))] ; this causes duplicates, there are bugs here
         (vec (distinct links))                              ; associative by index
         #_(->> links r/sequence (r/fmap vec))))))
 
