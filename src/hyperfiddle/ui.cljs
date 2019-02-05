@@ -34,7 +34,8 @@
     [hyperfiddle.ui.popover :refer [effect-cmp popover-cmp]]
     [hyperfiddle.ui.select$]
     [hyperfiddle.ui.sort :as sort]
-    [hyperfiddle.ui.util :refer [writable-entity?]]))
+    [hyperfiddle.ui.util :refer [writable-entity?]]
+    [cljs.spec.alpha :as s]))
 
 
 (let [memoized-eval-expr-str!+ (memoize eval/eval-expr-str!+) ; don't actually need to safely eval, just want to memoize exceptions)
@@ -354,9 +355,11 @@ User renderers should not be exposed to the reaction."
 
 (defn ^:export table "Semantic table; columns driven externally" ; this is just a widget
   [columns ctx & [props]]
+  {:pre [(s/assert :hypercrud/context ctx)]}
   ; Need backwards compat arity
   (let [sort-col (r/atom (::sort/initial-sort props))]
     (fn [columns ctx & [props]]
+      {:pre [(s/assert :hypercrud/context ctx)]}
       (let [props (update props :class (fnil css "hyperfiddle") "unp") ; fnil case is iframe root (not a field :many)
             ctx (assoc ctx ::sort/sort-col sort-col
                            :hypercrud.browser/head-sentinel true ; hacks - this is coordination with the context, how to fix?
@@ -381,19 +384,21 @@ User renderers should not be exposed to the reaction."
      [:a {:href "~entity('$','tempid')"} [:code "~entity('$','tempid')"]] "."]))
 
 (defn form "Not an abstraction." [columns val ctx & [props]]
+  {:pre [(s/assert :hypercrud/context ctx)]}
   (let [ctx (assoc ctx ::layout :hyperfiddle.ui.layout/block)] ; make this go away
     (into
       [:<> {:key (str (context/key-row ctx val))}]   ; when entity-keyfn?
       (columns ctx))))
 
 (defn columns [ctx & [props]]
-  {:pre [ctx]}
+  {:pre [(s/assert :hypercrud/context ctx)]}
   #_(cons (field relpath ctx nil props))
   (doall (for [[k _] (hypercrud.browser.context/spread-attributes ctx)]
            (field [k] ctx nil props))))
 
 (defn pull "handles any datomic result that isn't a relation, recursively"
   [val ctx & [props]]
+  {:pre [(s/assert :hypercrud/context ctx)]}
   (let [[_ a _] @(:hypercrud.browser/eav ctx)]
     ; detect top and do fiddle-level here, instead of in columns?
     (match* [(contrib.datomic/cardinality-loose @(:hypercrud.browser/schema ctx) a)] ; this is parent - not focused?
