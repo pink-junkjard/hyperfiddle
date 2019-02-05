@@ -275,9 +275,8 @@
                    (disj nil))]                             ; Preserve set type
     [idents link]))
 
-(defn -indexed-links-at [fiddle]
-  (->> (:fiddle/links fiddle)
-       (map link-identifiers)))
+(defn -indexed-links-at [links]
+  (map link-identifiers links))
 
 (defn depth [ctx]
   (count (:hypercrud.browser/result-path ctx)))
@@ -503,8 +502,8 @@
   (let [r-fiddle (r/fmap hyperfiddle.fiddle/apply-defaults r-fiddle)
         r-qparsed (r/fmap-> r-fiddle hyperfiddle.fiddle/parse-fiddle-query)
         r-qfind (r/fmap :qfind r-qparsed)
-        r-fiddle (r/fmap hyperfiddle.fiddle/apply-fiddle-links-defaults
-                         r-fiddle (:hypercrud.browser/schemas ctx) r-qparsed)
+        r-fiddle (r/fmap->> (r/sequence [r-fiddle (:hypercrud.browser/schemas ctx) r-qparsed])
+                            (apply hyperfiddle.fiddle/apply-fiddle-links-defaults))
         element-validation-issues (if-let [qfind @r-qfind]
                                     (seq (contrib.datomic/validate-qfind-attrs
                                            @(:hypercrud.browser/schemas ctx) qfind)))]
@@ -520,7 +519,7 @@
                       ctx))
               ctx)
             ctx)
-          (assoc ctx :hypercrud.browser/link-index (r/fmap -indexed-links-at r-fiddle))
+          (assoc ctx :hypercrud.browser/link-index (r/fmap->> r-fiddle :fiddle/links (map link-identifiers)))
           (assoc ctx :hypercrud.browser/eav (r/apply stable-eav-av
                                                      [(r/pure nil)
                                                       (r/fmap :fiddle/ident r-fiddle)
@@ -739,19 +738,20 @@
 (defn links-at "where criterias is some of #{ident txfn class class2}.
   Links include all links reachable by navigating :ref :one. (Change this by specifying an :ident)
   The index internals are reactive."
-  [ctx criterias]                                           ; criterias can contain nil, meaning toptop
-  (r/fmap->> (:hypercrud.browser/link-index ctx)
-             (filter (partial link-criteria-match? criterias))
-             (mapv second)
-             #_(mapv (juxt :db/id identity))))
+  [link-index criterias]                                           ; criterias can contain nil, meaning toptop
+  (->> link-index
+       (filter (partial link-criteria-match? criterias))
+       (mapv second)
+       #_(mapv (juxt :db/id identity))))
 
 (defn links-in-dimension' [ctx criterias]
   {:post [(not (r/reactive? %))]}
   (let [?element (some-> ctx :hypercrud.browser/element deref)
         ?schema (some-> ctx :hypercrud.browser/schema deref)
-        ?pullpath (:hypercrud.browser/pull-path ctx)]
+        ?pullpath (:hypercrud.browser/pull-path ctx)
+        link-index @(:hypercrud.browser/link-index ctx)]
     (if-not (and ?element ?schema ?pullpath)
-      @(links-at ctx criterias)
+      (links-at link-index criterias)
       (let [pull-pattern (get-in ?element [:pattern :value])
             ; if pullpath is [], add fiddle-ident. Or if EAV a is not a keyword.
             ; EAV A may already be the fiddle-ident, or if its an int, use fiddle-ident too.
@@ -760,10 +760,10 @@
             links (->> as
                        ; Places within reach
                        (mapcat (fn [a]
-                                 @(links-at ctx (conj criterias a))))
+                                 (links-at link-index (conj criterias a))))
 
                        ; This place is where we are now
-                       (concat @(links-at ctx criterias)))] ; this causes duplicates, there are bugs here
+                       (concat (links-at link-index criterias)))] ; this causes duplicates, there are bugs here
         (vec (distinct links))                              ; associative by index
         #_(->> links r/sequence (r/fmap vec))))))
 
