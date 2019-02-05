@@ -70,7 +70,7 @@
                (let [[_ a _] (context/eav ctx)]
                  (not (contrib.datomic/ref-one? @(:hypercrud.browser/schema ctx) a)))))
     [:<>
-     (for [[k r-link] (hyperfiddle.data/spread-links-here ctx :hf/iframe)]
+     (for [[k r-link] (hyperfiddle.data/spread-links-in-dimension ctx :hf/iframe)]
        ^{:key k}
        [ui-from-link r-link ctx props])]))
 

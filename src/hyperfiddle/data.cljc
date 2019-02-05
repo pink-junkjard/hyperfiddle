@@ -41,7 +41,7 @@
          (context/summon-schemas-grouped-by-dbname ctx)]
    :post [(r/reactive? %)]}
   (->> (select+ ctx ?corcs)
-       (unwrap (constantly (r/track identity nil)))))
+       (unwrap (constantly (r/pure nil)))))
 
 (defn ^:export select-many-here "reactive" ; collapses if eav is part of corcs
   [ctx & [?corcs]]
@@ -73,6 +73,12 @@
 
 (defn spread-links-here [ctx & [?corcs]]
   (->> (select-many-here ctx ?corcs)
+       (r/unsequence :db/id)
+       (map (fn [[rv k]]
+              [k rv]))))
+
+(defn spread-links-in-dimension [ctx & [?corcs]]
+  (->> (select-many ctx ?corcs)
        (r/unsequence :db/id)
        (map (fn [[rv k]]
               [k rv]))))
