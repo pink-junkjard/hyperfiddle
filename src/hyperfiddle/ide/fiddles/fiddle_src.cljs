@@ -55,7 +55,7 @@
      (link :hyperfiddle.ide/new-link ctx)
      [table
       (fn [ctx]
-        (let [ctx (assoc-if ctx ::record (if (:hypercrud.browser/head-sentinel ctx)
+        (let [ctx (assoc-if ctx ::record (if-not (:hypercrud.browser/head-sentinel ctx)
                                            (fiddle/auto-link @(:hypercrud.browser/schemas ctx)
                                                              (:qin @(:hypercrud.browser/qparsed ctx))
                                                              (context/data ctx))))]
