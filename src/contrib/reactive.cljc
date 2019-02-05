@@ -1,7 +1,7 @@
 (ns contrib.reactive
   (:refer-clojure :exclude [atom comp constantly partial sequence apply])
-  (:require [cats.core :as cats]
-            [cats.monad.either]
+  (:require [cats.core :as cats :refer [return]]
+            [cats.monad.either :refer [branch left right]]
             [clojure.spec.alpha :as s]
             [contrib.data :as util]
     #?(:cljs [reagent.core :as reagent])
@@ -135,12 +135,14 @@
   #?(:clj  (delay (clojure.core/apply f args))
      :cljs (clojure.core/apply reagent/track f args)))
 
-(defn sequence "see cats.core/sequence" [rvs]
-  (track (partial map deref) rvs)
-  #_(reduce (fn [acc rv]
-              (fmap (partial cons acc) rv))
-            (atom ())
-            rvs))
+(let [f (fn [rvs]
+          (doall (map deref rvs)))]
+  (defn sequence "see cats.core/sequence" [rvs]
+    (track f rvs)
+    #_(reduce (fn [acc rv]
+                (fmap (partial cons acc) rv))
+              (atom ())
+              rvs)))
 
 (declare apply)
 
@@ -149,9 +151,10 @@
    {:pre [f]}
    (assert (reactive? rv) (str "fmap rv: " rv " did you pass nil instead of (r/atom nil)?"))
    (track (comp f deref) rv))
-  ([f rv & rvs]
+  ; Not idiomatic
+  #_([f rv & rvs]
     ; java.lang.RuntimeException: Can't have fixed arity function with more params than variadic function
-   (apply f (concat [rv] rvs))))
+   (apply f (cons rv rvs))))
 
 (defn apply
   ([f rvs]
