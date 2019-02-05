@@ -121,7 +121,7 @@
     (if-let [f (some->> content memoized-safe-eval (unwrap #(timbre/warn %)))]
       [f ctx]
       (hyperfiddle.ui/result
-        (:hypercrud.browser/result ctx) #_@(hypercrud.browser.context/data ctx) ; backwards compat
+        (:hypercrud.browser/result ctx) #_(hypercrud.browser.context/data ctx) ; backwards compat
         ctx
         (update props :class css "unp")))))
 

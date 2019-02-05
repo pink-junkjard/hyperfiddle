@@ -354,41 +354,37 @@
                                          ; Sets are an index that evaluate to the key.
                                          set))))))))
 
-(defn data "Works in any context and infers the right stuff" ; todo just deref it
-  [ctx]
+(defn data "Works in any context and infers the right stuff"
+  [{qfind :hypercrud.browser/qfind :as ctx}]
   {:pre [ctx]}
   ; TODO validate that there is a row and element if required, and throw a spec error if not.
-
+  ;
   ; Data may be responsible for indexing the result, because it depends on the key paths.
   ; They can be db/id, db/ident, lookupref, alt lookupref. It depends what was pulled.
   ; Userland may use a non-canonical lookup ref and it should work.
-
-  (let [ctx (-infer-implicit-element ctx)
-
-        ; Result-index is precomputed to match the expected path,
-        ; in some cases it is just the result (no indexing was done)
-        ; Returning an index makes no sense, that's never data.
-        {:keys [:hypercrud.browser/qfind
-                :hypercrud.browser/element
-                :hypercrud.browser/result
-                :hypercrud.browser/result-index
-                :hypercrud.browser/result-path]} ctx
-
-        ; Compare pullpath to resultpath? How do we know to do an index lookup vs return the table?
-        ; if pullpath has an a but resultpath doesn't have a corresponding row, return the set.
-        ; Count the dimension of the pullpath and compare to the count of the resultpath?
-        ; Or inspect resultpath - if the last thing is an attr and it's :many, then we are awaiting a rowkey
-        k (last result-path)
-        is-awaiting-rowkey (and (keyword? k)
-                                (= :db.cardinality/many (contrib.datomic/cardinality-loose
-                                                          @(:hypercrud.browser/schema ctx) k)))]
-    (if qfind
+  ;
+  ; Result-index is precomputed to match the expected path,
+  ; in some cases it is just the result (no indexing was done)
+  ; The user never sees a raw index, it is just for internal lookups.
+  (if qfind
+    (let [ctx (-infer-implicit-element ctx)
+          {:keys [:hypercrud.browser/element
+                  :hypercrud.browser/result
+                  :hypercrud.browser/result-index
+                  :hypercrud.browser/result-path]} ctx
+          ; Compare pullpath to resultpath? How do we know to do an index lookup vs return the table?
+          ; if pullpath has an a but resultpath doesn't have a corresponding row, return the set.
+          ; Count the dimension of the pullpath and compare to the count of the resultpath?
+          ; Or inspect resultpath - if the last thing is an attr and it's :many, then we are awaiting a rowkey
+          k (last result-path)
+          is-awaiting-rowkey (and (keyword? k)
+                                  (= :db.cardinality/many (contrib.datomic/cardinality-loose
+                                                            @(:hypercrud.browser/schema ctx) k)))]
       (if result-path                                       ; hax, still tangled. Can be exact without guesswork
         (if is-awaiting-rowkey
-          result                                            ; We hang on to sets as we descend
-          (r/cursor result-index result-path))
-        result)
-      nil)))
+          @result                                           ; We hang on to sets as we descend
+          @(r/cursor result-index result-path))
+        @result))))
 
 ; It's just easier to end the reaction earlier
 (defn v! "returns scalar | identity | lookupref | nil."     ; never a fallback v
@@ -397,7 +393,7 @@
   ; Sparse resultset, v can still be nil, or fully refined to a scalar
 
   (let [?a (last (:hypercrud.browser/pull-path ctx))
-        ?v (some-> (data ctx) deref)]
+        ?v (data ctx)]
     (cond
 
       (nil? ?v)
@@ -487,7 +483,7 @@
       ; where is the cardinality test
       (> (depth ctx) 0)                                     ; nested attr
       (let [r-ordered-result (data ctx)]                    ; remember row order; this is broken check order
-        (for [[?k k] (->> (sort-fn @r-ordered-result)
+        (for [[?k k] (->> (sort-fn r-ordered-result)
                           (map (juxt (partial row-key ctx)
                                      (partial row-key-v ctx))))]
           [?k (row ctx k)])))))

@@ -38,13 +38,13 @@
   []
   (testing "row keyfn on relation maps the smart identity"
     (def ctx (mock-fiddle! :hfnet.tank/index))
-    (def result @(context/data ctx))
+    (def result (context/data ctx))
     (is (= (context/key-row ctx (first result))
            [[:fiddle/ident :karl.hardenstine/fiddles] 13194139534712 true])))
 
   (testing "key-row"
     (let [ctx (mock-fiddle! :dustingetz/gender-shirtsize)
-          [row] @(context/data ctx)]
+          [row] (context/data ctx)]
       (is (= (context/key-row ctx row)
              [:dustingetz.reg/email "dustin@example.com"]))))
 
@@ -62,7 +62,7 @@
   (testing "row indexing"
     (testing "data sidesteps indexing, userland never sees indexing."
       (is (= (let [ctx (mock-fiddle! :dustingetz/gender-shirtsize)]
-               @(context/data ctx))
+               (context/data ctx))
              [{:db/id 17592186046196,
                :dustingetz.reg/email "dustin@example.com",
                :dustingetz.reg/name "Dustin Getz",
@@ -223,20 +223,20 @@
   (testing "nested pulls"
     (let [ctx (mock-fiddle! :hyperfiddle/ide)]
       (is (= (context/eav ctx) [nil :hyperfiddle/ide [:fiddle/ident :hyperfiddle/ide]])) ; infer scalar
-      ;(is (= @(context/data ctx) 42))
+      ;(is (= (context/data ctx) 42))
       (testing "nested ref many"
         (let [ctx (context/attribute ctx :fiddle/links)]
           (is (= (context/eav ctx) [[:fiddle/ident :hyperfiddle/ide] :fiddle/links nil]))
-          (is (= (count @(context/data ctx)) 5))
-          (is (= (first @(context/data ctx)) {:db/id 17592186061848, :link/class [:hf/remove], :link/rel :hf/remove}))
+          (is (= (count (context/data ctx)) 5))
+          (is (= (first (context/data ctx)) {:db/id 17592186061848, :link/class [:hf/remove], :link/rel :hf/remove}))
           (let [ctx (context/row ctx 17592186061848)]
             (is (= (context/eav ctx) [[:fiddle/ident :hyperfiddle/ide] :fiddle/links 17592186061848]))
-            (is (= @(context/data ctx) {:db/id 17592186061848, :link/class [:hf/remove], :link/rel :hf/remove})))))
+            (is (= (context/data ctx) {:db/id 17592186061848, :link/class [:hf/remove], :link/rel :hf/remove})))))
 
       (testing "nested scalar many"
         (let [ctx (context/attribute ctx :hyperfiddle/owners)]
           (is (= (context/eav ctx) [[:fiddle/ident :hyperfiddle/ide] :hyperfiddle/owners nil]))
-          (is (= @(context/data ctx) [#uuid "acd054a8-4e36-4d6c-a9ec-95bdc47f0d39"]))
+          (is (= (context/data ctx) [#uuid "acd054a8-4e36-4d6c-a9ec-95bdc47f0d39"]))
           (let [ctx (context/row ctx #uuid "acd054a8-4e36-4d6c-a9ec-95bdc47f0d39")]
             (is (= (context/eav ctx)
                    [[:fiddle/ident :hyperfiddle/ide] :hyperfiddle/owners #uuid "acd054a8-4e36-4d6c-a9ec-95bdc47f0d39"])))
@@ -247,17 +247,17 @@
       (is (= (context/eav ctx) [nil :hyperfiddle/ide [:fiddle/ident :hyperfiddle/ide]]))
       (let [ctx (context/attribute ctx :fiddle/links)]
         (is (= (context/eav ctx) [[:fiddle/ident :hyperfiddle/ide] :fiddle/links nil]))
-        (is (= (count @(context/data ctx)) 5))
-        (is (= (first @(context/data ctx)) {:db/id 17592186061848, :link/class [:hf/remove], :link/rel :hf/remove}))
+        (is (= (count (context/data ctx)) 5))
+        (is (= (first (context/data ctx)) {:db/id 17592186061848, :link/class [:hf/remove], :link/rel :hf/remove}))
         (let [ctx (context/row ctx 17592186061848)]
           (is (= (context/eav ctx) [[:fiddle/ident :hyperfiddle/ide] :fiddle/links 17592186061848]))
-          (is (= @(context/data ctx) {:db/id 17592186061848, :link/class [:hf/remove], :link/rel :hf/remove}))))))
+          (is (= (context/data ctx) {:db/id 17592186061848, :link/class [:hf/remove], :link/rel :hf/remove}))))))
 
   (testing "a is fiddle-ident if no element set"
     (is (= (for [[_ ctx] (context/spread-result ctx)
                  [_ ctx] (context/spread-rows ctx)]
              ; Element got inferred here
-             @(context/data ctx))
+             (context/data ctx))
            [{:db/id 17592186046196,
              :dustingetz.reg/email "dustin@example.com",
              :dustingetz.reg/name "Dustin Getz",
@@ -299,7 +299,7 @@
     (is (= (let [ctx (context/row ctx [:dustingetz.reg/email "dustin@example.com"] #_17592186046196)
                  ctx (context/element ctx 0)
                  ctx (context/attribute ctx :dustingetz.reg/gender)]
-             @(context/data ctx))
+             (context/data ctx))
            #:db{:ident :dustingetz.gender/male})))
 
   (testing "FindColl Pull nested"
@@ -362,13 +362,13 @@
     (is (= (let [ctx (mock-fiddle! :tutorial.race/shirt-sizes)
                  ctx (context/row ctx :dustingetz.shirt-size/womens-medium)
                  ctx (context/attribute ctx :db/ident)]
-             @(context/data ctx))
+             (context/data ctx))
            :dustingetz.shirt-size/womens-medium))
 
     (is (= (let [ctx (mock-fiddle! :tutorial.race/shirt-sizes)
                  ctx (context/row ctx :dustingetz.shirt-size/womens-medium)]
              ; infer element
-             @(context/data ctx))
+             (context/data ctx))
            {:db/ident :dustingetz.shirt-size/womens-medium, :dustingetz.reg/gender #:db{:ident :dustingetz.gender/female}}))))
 
 (deftest data
@@ -377,23 +377,23 @@
     (is (= (let [ctx (mock-fiddle! :tutorial.race/shirt-sizes)
                  ctx (context/row ctx :dustingetz.shirt-size/womens-medium)
                  ctx (context/attribute ctx :dustingetz.reg/gender)]
-             @(context/data ctx))
+             (context/data ctx))
            #:db{:ident :dustingetz.gender/female}))
 
     (is (= (let [ctx (mock-fiddle! :tutorial.race/shirt-sizes)
                  ctx (context/row ctx :dustingetz.shirt-size/womens-medium)
                  ctx (context/attribute ctx :db/ident)]
-             @(context/data ctx))
+             (context/data ctx))
            :dustingetz.shirt-size/womens-medium))
 
     (is (= (let [ctx (mock-fiddle! :tutorial.race/shirt-sizes)
                  ctx (context/row ctx :dustingetz.shirt-size/womens-medium)]
-             @(context/data ctx))
+             (context/data ctx))
            {:db/ident :dustingetz.shirt-size/womens-medium,
             :dustingetz.reg/gender #:db{:ident :dustingetz.gender/female}}))
 
     (is (= (let [ctx (mock-fiddle! :tutorial.race/shirt-sizes)]
-             @(context/data ctx))
+             (context/data ctx))
            [{:db/ident :dustingetz.shirt-size/womens-medium, :dustingetz.reg/gender #:db{:ident :dustingetz.gender/female}}
             {:db/ident :dustingetz.shirt-size/womens-small, :dustingetz.reg/gender #:db{:ident :dustingetz.gender/female}}
             {:db/ident :dustingetz.shirt-size/womens-large, :dustingetz.reg/gender #:db{:ident :dustingetz.gender/female}}]))
@@ -405,7 +405,7 @@
     #_(:hypercrud.browser/result-path (context/row ctx 17592186046196))
     #_(:hypercrud.browser/result (context/row ctx 17592186046196))
     ; not sure if element can be inferred in data. Row does not infer.
-    (is (= @(context/data (-> ctx (context/element 0) (context/row [:dustingetz.reg/email "dustin@example.com"] #_17592186046196)))
+    (is (= (context/data (-> ctx (context/element 0) (context/row [:dustingetz.reg/email "dustin@example.com"] #_17592186046196)))
            {:db/id 17592186046196,
             :dustingetz.reg/email "dustin@example.com",
             :dustingetz.reg/name "Dustin Getz",
@@ -419,10 +419,10 @@
   (testing "target isolated row"
     (is (= (for [ctx [(context/row ctx [:dustingetz.reg/email "dustin@example.com"] #_17592186046196)]]
              ; infers element
-             @(context/data ctx))
+             (context/data ctx))
            (for [ctx [(context/row ctx [:dustingetz.reg/email "dustin@example.com"] #_17592186046196)]
                  [_ ctx] (context/spread-elements ctx)]
-             @(context/data ctx))
+             (context/data ctx))
            [{:db/id 17592186046196,
              :dustingetz.reg/email "dustin@example.com",
              :dustingetz.reg/name "Dustin Getz",
@@ -431,10 +431,10 @@
 
   (testing "target all rows"
     (is (= (for [[_ ctx] (context/spread-rows ctx)]
-             @(context/data ctx))
+             (context/data ctx))
            (for [[_ ctx] (context/spread-rows ctx)
                  [_ ctx] (context/spread-elements ctx)]
-             @(context/data ctx))
+             (context/data ctx))
            [{:db/id 17592186046196,
              :dustingetz.reg/email "dustin@example.com",
              :dustingetz.reg/name "Dustin Getz",
@@ -450,7 +450,7 @@
   (testing "head-sentinel sanity checks, head-sentinel needs to go"
     (let [ctx (mock-fiddle! :seattle/neighborhoods)]
       (is (= (context/eav ctx) [nil :seattle/neighborhoods nil]))
-      (is (= (count @(context/data ctx)) 7))
+      (is (= (count (context/data ctx)) 7))
       (let [ctx (context/attribute ctx :neighborhood/district)]
         (is (= (context/eav ctx) [nil :neighborhood/district nil])))
       (let [ctx (context/row ctx [:neighborhood/name "Admiral (West Seattle)"] #_17592186045522)
@@ -470,17 +470,17 @@
     (is (= (let [ctx (context/row ctx [:dustingetz.reg/email "dustin@example.com"] #_17592186046196)
                  ctx (context/element ctx 0)
                  ctx (context/refocus ctx :dustingetz.reg/gender)]
-             @(context/data ctx))
+             (context/data ctx))
            #:db{:ident :dustingetz.gender/male}))
 
     (is (= (for [[_ ctx] (context/spread-rows ctx)
                  [_ ctx] (context/spread-elements ctx)]
              (let [ctx (context/refocus ctx :dustingetz.reg/gender)]
-               @(context/data ctx)))
+               (context/data ctx)))
            (for [[_ ctx] (context/spread-rows ctx)]
              ; infer element
              (let [ctx (context/refocus ctx :dustingetz.reg/gender)]
-               @(context/data ctx)))
+               (context/data ctx)))
            [#:db{:ident :dustingetz.gender/male}
             #:db{:ident :dustingetz.gender/male}]))
 
@@ -515,13 +515,13 @@
   (testing "refocus to :ref :one from top"
     (is (= (let [ctx (context/refocus ctx :dustingetz.reg/gender)]
              ; Can't do it. Should this throw?
-             @(context/data ctx))
+             (context/data ctx))
            nil))
 
     (is (= (for [[_ ctx] (context/spread-rows ctx)
                  [_ ctx] (context/spread-elements ctx)]
              (let [ctx (context/refocus ctx :dustingetz.reg/gender)]
-               @(context/data ctx)))
+               (context/data ctx)))
            [#:db{:ident :dustingetz.gender/male}
             #:db{:ident :dustingetz.gender/male}]))
 
@@ -543,17 +543,17 @@
   (testing "refocus and attribute are nearly the same thing"
     (let [ctx (mock-fiddle! :tutorial.race/submission)]
       (let [ctx (context/refocus ctx :dustingetz.reg/gender)]
-        (is (= (context/smart-entity-identifier ctx @(context/data ctx))
+        (is (= (context/smart-entity-identifier ctx (context/data ctx))
                :dustingetz.gender/male)))
       (let [ctx (context/attribute ctx :dustingetz.reg/gender)]
-        (is (= (context/smart-entity-identifier ctx @(context/data ctx))
+        (is (= (context/smart-entity-identifier ctx (context/data ctx))
                :dustingetz.gender/male)))))
   )
 
 (deftest smart-identity
   (testing "smart-entity-identifier db/id"
     (let [ctx (mock-fiddle! :tutorial.race/submission)
-          e @(context/data ctx)]
+          e (context/data ctx)]
       (is (= e
              {:db/id 17592186046196,
               :dustingetz.reg/email "dustin@example.com",
@@ -568,15 +568,15 @@
   (testing "smart-entity-identifier db/ident"
     (let [ctx (mock-fiddle! :tutorial.race/submission)]
       (let [ctx (context/refocus ctx :dustingetz.reg/gender)]
-        (is (= (context/smart-entity-identifier ctx @(context/data ctx))
+        (is (= (context/smart-entity-identifier ctx (context/data ctx))
                :dustingetz.gender/male)))
       (let [ctx (context/refocus ctx :dustingetz.reg/gender)]
-        (is (= (context/smart-entity-identifier ctx @(context/data ctx))
+        (is (= (context/smart-entity-identifier ctx (context/data ctx))
                :dustingetz.gender/male)))))
 
   (testing "smart-entity-identifier :db.unique/identity"
     (let [ctx (mock-fiddle! :dustingetz/slack-storm)
-          [[e tx]] @(context/data ctx)]
+          [[e tx]] (context/data ctx)]
       (is (= e
              {:db/id 17592186047000,
               :dustingetz.post/title "is js/console.log syntax future proof?",
@@ -601,7 +601,7 @@
       (for [[_ ctx] (context/spread-rows ctx)
             [_ ctx] (context/spread-elements ctx)
             #_#_[_ ctx] (context/spread-attributes ctx)]
-        #_@(context/data ctx)
+        #_(context/data ctx)
         (context/eav ctx)
         )))
 
@@ -635,7 +635,7 @@
     (testing "addressing rowtuple by tupled rowkey"
       (is (= (let [ctx (mock-fiddle! :dustingetz/slack-storm)]
                (for [ctx [(context/row ctx [[:dustingetz.post/slug :asdf] 13194139535895])]]
-                 @(context/data ctx)))
+                 (context/data ctx)))
              [[{:db/id 17592186047000,
                 :dustingetz.post/title "is js/console.log syntax future proof?",
                 :dustingetz.post/slug :asdf,
@@ -646,7 +646,7 @@
     (testing "extract tuples"
       (is (= (let [ctx (mock-fiddle! :dustingetz/slack-storm)]
                (for [[_ ctx] (context/spread-rows ctx)]
-                 @(context/data ctx)))
+                 (context/data ctx)))
              [[{:db/id 17592186047000,
                 :dustingetz.post/title "is js/console.log syntax future proof?",
                 :dustingetz.post/slug :asdf,
@@ -663,7 +663,7 @@
       (is (= (let [ctx (mock-fiddle! :dustingetz/slack-storm)]
                (for [[_ ctx] (context/spread-rows ctx)
                      [_ ctx] (context/spread-elements ctx)]
-                 @(context/data ctx)))
+                 (context/data ctx)))
              [{:db/id 17592186047000,
                :dustingetz.post/title "is js/console.log syntax future proof?",
                :dustingetz.post/slug :asdf,
@@ -680,7 +680,7 @@
       (is (= (let [ctx (mock-fiddle! :dustingetz/slack-storm)]
                (for [ctx [(context/row ctx [[:dustingetz.post/slug :asdf] 13194139535895])]
                      [_ ctx] (context/spread-elements ctx)]
-                 @(context/data ctx)))
+                 (context/data ctx)))
              [{:db/id 17592186047000,
                :dustingetz.post/title "is js/console.log syntax future proof?",
                :dustingetz.post/slug :asdf,
@@ -692,13 +692,13 @@
       (is (let [ctx (mock-fiddle! :dustingetz/slack-storm)
                 ctx (context/row ctx [[:dustingetz.post/slug :asdf] 13194139535895])]
             (is (= (context/eav ctx) [nil :dustingetz/slack-storm nil])) ; could potentially set v to the rowkey here
-            (is (= @(context/data (context/element ctx 0))
+            (is (= (context/data (context/element ctx 0))
                    {:db/id 17592186047000,
                     :dustingetz.post/title "is js/console.log syntax future proof?",
                     :dustingetz.post/slug :asdf,
                     :dustingetz.storm/channel "#clojurescript",
                     :dustingetz.post/published-date #inst "2018-11-19T00:00:00.000-00:00"}))
-            (is (= @(context/data (context/element ctx 1)) 13194139535895)))))
+            (is (= (context/data (context/element ctx 1)) 13194139535895)))))
 
     (testing "element level does set value, it is not ambigous due to set semantics in FindRel"
       (is (let [ctx (mock-fiddle! :dustingetz/slack-storm)
@@ -717,14 +717,14 @@
             ctx (context/row ctx [[:dustingetz.post/slug :asdf] 13194139535895])
             ctx (context/element ctx 0)]
         (is (= (context/eav ctx) [nil :dustingetz/slack-storm [:dustingetz.post/slug :asdf]]))
-        (is (= @(context/data ctx)
+        (is (= (context/data ctx)
                {:db/id 17592186047000,
                 :dustingetz.post/title "is js/console.log syntax future proof?",
                 :dustingetz.post/slug :asdf,
                 :dustingetz.storm/channel "#clojurescript",
                 :dustingetz.post/published-date #inst "2018-11-19T00:00:00.000-00:00"}))
         (let [ctx (context/attribute ctx :dustingetz.post/title)]
-          (is (= @(context/data ctx) "is js/console.log syntax future proof?"))
+          (is (= (context/data ctx) "is js/console.log syntax future proof?"))
           (is (= (context/eav ctx) [[:dustingetz.post/slug :asdf] :dustingetz.post/title "is js/console.log syntax future proof?"])))
 
         (is (= (for [[_ ctx] (context/spread-attributes ctx)]
@@ -790,7 +790,7 @@
 
   (testing "identity focusing"
     (def ctx (mock-fiddle! :dustingetz.tutorial/blog))
-    (is (= @(context/data ctx)
+    (is (= (context/data ctx)
            [[{:db/id 17592186047105,
               :dustingetz.post/published-date #inst"2018-11-21T00:00:00.000-00:00",
               :dustingetz.post/title "large strings and high churn attrs blow out indexes",
@@ -805,12 +805,12 @@
 
     ;(is (= (for [[_ ctx] (context/spread-elements ctx)]
     ;         ; Asking for data without a row and unable to infer row
-    ;         @(context/data ctx))
+    ;         (context/data ctx))
     ;       nil))
 
     (is (= (for [[_ ctx] (context/spread-rows ctx)
                  [_ ctx] (context/spread-elements ctx)]
-             @(context/data ctx))
+             (context/data ctx))
            [{:db/id 17592186047105,
              :dustingetz.post/published-date #inst"2018-11-21T00:00:00.000-00:00",
              :dustingetz.post/title "large strings and high churn attrs blow out indexes",
@@ -848,7 +848,7 @@
            [[[:dustingetz.post/slug :large-strings-and-high-churn-attrs-blow-out-indexes]]
             [[:dustingetz.post/slug :automatic-CRUD-links]]]))
 
-    (is (= @(context/data ctx)
+    (is (= (context/data ctx)
            {:db/id 17592186047142,
             :dustingetz.post/published-date #inst"2018-11-22T15:57:34.277-00:00",
             :dustingetz.post/title "automatic CRUD links",
@@ -858,14 +858,14 @@
 
     #_(let [#_#_ctx (context/element ctx 0)]
         (is (= (context/eav ctx) [nil :dustingetz/slack-storm [:dustingetz.post/slug :asdf]]))
-        (is (= @(context/data ctx)
+        (is (= (context/data ctx)
                {:db/id 17592186047000,
                 :dustingetz.post/title "is js/console.log syntax future proof?",
                 :dustingetz.post/slug :asdf,
                 :dustingetz.storm/channel "#clojurescript",
                 :dustingetz.post/published-date #inst "2018-11-19T00:00:00.000-00:00"}))
         (let [ctx (context/attribute ctx :dustingetz.post/title)]
-          (is (= @(context/data ctx) "is js/console.log syntax future proof?"))
+          (is (= (context/data ctx) "is js/console.log syntax future proof?"))
           (is (= (context/eav ctx) [[:dustingetz.post/slug :asdf] :dustingetz.post/title "is js/console.log syntax future proof?"])))
 
         (is (= (for [[_ ctx] (context/spread-attributes ctx)]
@@ -987,8 +987,8 @@
 
   (testing "seattle neighborhood districts iframe"
     (def ctx (mock-fiddle! :seattle/neighborhoods))
-    (-> @(hyperfiddle.data/select-many-here ctx :seattle/districts)
-        first :link/fiddle :fiddle/ident (= :seattle/districts))
+    (is (-> @(hyperfiddle.data/select-many-here ctx :seattle/districts)
+            first :link/fiddle :fiddle/ident (= :seattle/districts)))
 
     #_(testing "if head-sentinel, no v"
         (let [ctx (assoc ctx :hypercrud.browser/head-sentinel true)
@@ -999,16 +999,16 @@
   (testing "indexed-links"
 
     (def ctx (mock-fiddle! :seattle/neighborhoods))
-    @(:hypercrud.browser/link-index ctx)
-    (context/links-at @(:hypercrud.browser/link-index ctx) #{})
-    @(context/links-in-dimension-r ctx #{})
+    (is @(:hypercrud.browser/link-index ctx))
+    (is (context/links-at (:hypercrud.browser/link-index ctx) #{}))
+    (is @(context/links-in-dimension-r ctx #{}))
     )
   )
 
 (deftest schema-aliases
   (testing "Disabled test breaks without schema alias support"
     (def ctx (mock-fiddle! :cookbook/markdown-table))
-    (is (= @(context/data ctx)
+    (is (= (context/data ctx)
            [{:db/id 17592186046744, :task/title "Feed baby", :task/completed true}
             {:db/id 17592186046745, :task/title "Mow the lawn"}
             {:db/id 17592186046746, :task/title "Do the dishes", :task/completed true}]))
@@ -1017,7 +1017,7 @@
                  (context/row 17592186046744)
                  ;(context/element 0)                        ; required for FindRel
                  #_(context/attribute :dustingetz.post/slug)))
-    (is (= @(context/data ctx)
+    (is (= (context/data ctx)
            {:db/id 17592186046744, :task/title "Feed baby", :task/completed true}))
     (is (= (context/eav ctx)
            [nil :cookbook/markdown-table 17592186046744]))

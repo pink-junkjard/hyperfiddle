@@ -47,7 +47,7 @@
   ; hack in the selected value if we don't have options hydrated?
   ; Can't, since we only have the #DbId hydrated, and it gets complicated with relaton vs entity etc
   ; This is possible if the value matches the row-key (qfind) of options query
-  (let [is-no-options @(r/fmap empty? (hypercrud.browser.context/data ctx))
+  (let [is-no-options (empty? (hypercrud.browser.context/data ctx))
         select-props (-> select-props
                          (update :on-change (fn [on-change]
                                               (fn [e]
@@ -65,7 +65,7 @@
     [:select.ui (select-keys select-props [:value :class :style :on-change :read-only :on-click]) ;(dissoc props :option-label)
      ; .ui is because options are an iframe and need the pink box
      (conj
-       (->> @(hypercrud.browser.context/data ctx)
+       (->> (hypercrud.browser.context/data ctx)
             (mapv (juxt #(context/key-row ctx %) #(label-fn % ctx)))
             (sort-by second)
             (map (fn [[id label]]
@@ -87,7 +87,7 @@
   ; if select is qfind-level, is value tupled according to options qfind?
   ; if select is pull-level, is options qfind untupled?
   ; We must compare both ctxs to decide this.
-  (let [options (->> @(hypercrud.browser.context/data target-ctx)
+  (let [options (->> (hypercrud.browser.context/data target-ctx)
                      (map #(context/row-key target-ctx %))) ; no fallback v, that can be a failure case if records aren't distinct.
 
         target-qfind-type (some-> (:hypercrud.browser/qfind target-ctx) deref type)]

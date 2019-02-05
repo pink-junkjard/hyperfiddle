@@ -46,10 +46,7 @@
                        (link #{:fiddle/links :hf/remove} ctx))
       link-control (fn [val ctx props]
                      (let [[_ a _] (context/eav ctx)
-                           link (fiddle/auto-link @(:hypercrud.browser/schemas ctx)
-                                                  (:qin @(:hypercrud.browser/qparsed ctx))
-                                                  @(::row ctx))
-                           props (assoc props :default-value (get link a)
+                           props (assoc props :default-value (get (::record ctx) a)
                                               #_@(r/fmap f (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data])))]
                        (hyper-control val ctx props)))]
   (defn links-renderer [val ctx props]
@@ -57,7 +54,9 @@
      (link :hyperfiddle.ide/new-link ctx)
      [table
       (fn [ctx]
-        (let [ctx (assoc ctx ::row (context/data ctx))]
+        (let [ctx (assoc ctx ::record (fiddle/auto-link @(:hypercrud.browser/schemas ctx)
+                                                        (:qin @(:hypercrud.browser/qparsed ctx))
+                                                        (context/data ctx)))]
           [(field [:link/path] ctx link-control)
            (field [:link/fiddle] ctx link-fiddle {:options :hyperfiddle.ide/fiddle-options
                                                   :option-label (r/comp pr-str :fiddle/ident)})
@@ -133,7 +132,7 @@
   (let [tab-state (r/atom (if (contains? tabs (:initial-tab props)) (:initial-tab props) :hf.src/query))]
     (fn [_ ctx props]
       (let [ctx (hypercrud.browser.context/element ctx 0)
-            val @(hypercrud.browser.context/data ctx)]
+            val (hypercrud.browser.context/data ctx)]
         [:div (into {:key (str (:fiddle/ident val))} (select-keys props [:class]))
          [horizontal-tabs
           :tabs (->> [:hf.src/query :hf.src/links :hf.src/markdown :hf.src/view :hf.src/ns :hf.src/css :hf.src/fiddle]

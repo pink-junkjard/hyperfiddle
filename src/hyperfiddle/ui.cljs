@@ -191,7 +191,7 @@ User renderers should not be exposed to the reaction."
   [relative-path ctx ?f & [props]]                          ; ?f :: (ref, props, ctx) => DOM
   (let [ctx (context/focus ctx relative-path)
         props (update props :class css (semantic-css ctx))]
-    [(or ?f hyper-control) @(hypercrud.browser.context/data ctx) ctx props]))
+    [(or ?f hyper-control) (hypercrud.browser.context/data ctx) ctx props]))
 
 (defn ^:export anchor [ctx props & children]
   (let [props (-> props
@@ -312,7 +312,7 @@ User renderers should not be exposed to the reaction."
                        (update props :disabled #(or % (not @(r/track writable-entity? ctx))))
                        (update props :is-invalid #(or % (context/leaf-invalid? ctx)))
                        (update props :class css (if (:disabled props) "disabled")))]
-       [Body @(hypercrud.browser.context/data ctx) ctx props])]))
+       [Body (hypercrud.browser.context/data ctx) ctx props])]))
 
 (defn table-field "Form fields are label AND value. Table fields are label OR value."
   [ctx Body Head props]                                     ; Body :: (val props ctx) => DOM, invoked as component
@@ -330,7 +330,7 @@ User renderers should not be exposed to the reaction."
                              (update props :disabled #(or % (not @(r/track writable-entity? ctx))))
                              (update props :is-invalid #(or % (context/leaf-invalid? ctx)))
                              (update props :class css (if (:disabled props) "disabled")))]
-             [Body @(hypercrud.browser.context/data ctx) ctx props])]))
+             [Body (hypercrud.browser.context/data ctx) ctx props])]))
 
 (defn ^:export field "Works in a form or table context. Draws label and/or value."
   [relative-path ctx & [?f props]]
