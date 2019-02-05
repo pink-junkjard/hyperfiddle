@@ -129,9 +129,7 @@
                [hyperfiddle.ui/ui-from-link r-link ctx props]))]))
 
 (defn ^:export ref-many [val ctx & [props]]
-  [hyperfiddle.ui/table
-   (r/partial hyperfiddle.ui/columns [])
-   ctx props])
+  [hyperfiddle.ui/table hyperfiddle.ui/columns ctx props])
 
 (defn ^:export id-or-ident [val ctx & [props]]
   [:div.hyperfiddle-input-group
