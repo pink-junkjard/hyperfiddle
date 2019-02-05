@@ -65,6 +65,12 @@
     (let [[_ [inner-fiddle & inner-args]] @(:hypercrud.browser/route ctx)]
       (request-from-route [inner-fiddle (vec inner-args)] ctx))))
 
+(defn request-attr-level [ctx]
+  (for [[a ctx] (hypercrud.browser.context/spread-attributes ctx)]
+    [(requests-here ctx)
+     ; UnsupportedOperationException: Can only recur from tail position
+     (request-attr-level ctx)]))
+
 (defn requests [ctx]
   ; More efficient to drive from links. But to do this, we need to refocus
   ; from the top, multiplying out for all possible dependencies.
@@ -79,6 +85,5 @@
             [(requests-here ctx)
              (for [[i ctx] (hypercrud.browser.context/spread-elements ctx)]
                [(requests-here ctx)
-                (for [[a ctx] (hypercrud.browser.context/spread-attributes ctx)] ; TODO loop recur
-                  (requests-here ctx))])])])
+                (request-attr-level ctx)])])])
        (cross-streams ctx)])))

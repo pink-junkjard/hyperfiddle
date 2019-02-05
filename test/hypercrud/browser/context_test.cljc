@@ -937,6 +937,17 @@
                @r+route)
              (right [:dustingetz.tutorial.blog/new-post [#entity["$" "479925454"]]]))))
     )
+
+  (testing "iframe at double nested attr"
+    (def ctx (-> (mock-fiddle! :dustingetz.seattle/communities)
+                 (context/row 17592186045537)
+                 (context/attribute :community/neighborhood)
+                 (context/attribute :neighborhood/district)
+                 (context/attribute :district/region)))
+    (is (= (context/eav ctx) [[:district/name "Ballard"] :district/region :region/nw]))
+    (is @(->> (hyperfiddle.data/select-here+ ctx :hf/iframe) (unwrap (constantly nil))))
+    ; Really we want to assert it was hydrated but no tests for that yet
+    )
   )
 
 #_(testing "refocus link from tupled qfind, identity focused from element ctx"

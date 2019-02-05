@@ -260,6 +260,7 @@
       :hyperfiddle/starred true}
      ]
 
+
     :seattle/neighborhoods
     [{:db/id 17592186045743,
       :fiddle/ident :seattle/neighborhoods,
@@ -345,6 +346,117 @@
       {:db/id 17592186045594, :district/name "Lake Union"}
       {:db/id 17592186045563, :district/name "Northwest"}
       {:db/id 17592186045535, :district/name "Ballard"}]]
+
+    :dustingetz.seattle/communities
+    [{:db/id 17592186047478,
+      :fiddle/css
+      ".hyperfiddle-user table.hyperfiddle { \n  table-layout: fixed; \n}\n\n.hyperfiddle-user th.hyperfiddle.attribute {\n  width: 60px;\n}\n\n.hyperfiddle-user th.hyperfiddle.attribute.-community-neighborhood {\n  width: unset;\n}",
+      :fiddle/ident :dustingetz.seattle/communities,
+      :fiddle/links
+      [{:db/id 17592186047481,
+        :link/class [:hf/iframe],
+        :link/fiddle
+        {:db/id 17592186045750,
+         :fiddle/ident :seattle/districts,
+         :fiddle/query
+         "[:find \n [(pull ?e [:district/name :db/id]) ...]\n :where \n [?e :district/name]]",
+         :fiddle/type :query},
+        :link/path ":district/region"}],
+      :fiddle/query
+      "[:find \n [(pull ?e [*\n            \n            {:community/type [:db/ident]\n             :community/orgtype [:db/ident]\n             :community/neighborhood \n             [:neighborhood/name \n              {:neighborhood/district \n               [:db/id \n                :district/name\n                {:district/region \n                 [:db/ident]}]}\n              :db/id\n              :hyperfiddle/owners]}])\n  ...]\n :where \n [?e :community/name ?name]\n [(< ?name \"B\")]]\n\n",
+      :fiddle/type :query,
+      :hyperfiddle/owners
+      [#uuid "acd054a8-4e36-4d6c-a9ec-95bdc47f0d39"]}
+     [{:db/id 17592186045537,
+       :community/name "At Large in Ballard",
+       :community/url "http://blog.seattlepi.com/ballard/",
+       :community/neighborhood
+       {:db/id 17592186045536,
+        :neighborhood/name "Ballard",
+        :neighborhood/district {:db/id 17592186045535, :district/name "Ballard", :district/region {:db/ident :region/nw}}},
+       :community/category ["human interest" "news"],
+       :community/orgtype {:db/ident :community.orgtype/commercial},
+       :community/type [{:db/ident :community.type/blog}]}
+      {:db/id 17592186045523,
+       :community/name "Admiral Neighborhood Association",
+       :community/url "http://groups.yahoo.com/group/AdmiralNeighborhood/",
+       :community/neighborhood
+       {:db/id 17592186045522,
+        :neighborhood/name "Admiral (West Seattle)",
+        :neighborhood/district {:db/id 17592186045521, :district/name "Southwest", :district/region {:db/ident :region/sw}}},
+       :community/category ["neighborhood association"],
+       :community/orgtype {:db/ident :community.orgtype/community},
+       :community/type [{:db/ident :community.type/email-list}]}
+      {:db/id 17592186045540,
+       :community/name "Aurora Seattle",
+       :community/url "http://www.auroraseattle.com/",
+       :community/neighborhood
+       {:db/id 17592186045539,
+        :neighborhood/name "Regional Sites",
+        :neighborhood/district {:db/id 17592186045538, :district/name "Northeast", :district/region {:db/ident :region/ne}}},
+       :community/category ["news" "planning" "traffic"],
+       :community/orgtype {:db/ident :community.orgtype/community},
+       :community/type [{:db/ident :community.type/blog}]}
+      {:db/id 17592186045525,
+       :community/name "Alki News",
+       :community/url "http://groups.yahoo.com/group/alkibeachcommunity/",
+       :community/neighborhood
+       {:db/id 17592186045524,
+        :neighborhood/name "Alki",
+        :neighborhood/district {:db/id 17592186045521, :district/name "Southwest", :district/region {:db/ident :region/sw}}},
+       :community/category ["members of the Alki Community Council and residents of the Alki Beach neighborhood"],
+       :community/orgtype {:db/ident :community.orgtype/community},
+       :community/type [{:db/ident :community.type/email-list}]}
+      {:db/id 17592186045526,
+       :community/name "Alki News/Alki Community Council",
+       :community/url "http://alkinews.wordpress.com/",
+       :community/neighborhood
+       {:db/id 17592186045524,
+        :neighborhood/name "Alki",
+        :neighborhood/district {:db/id 17592186045521, :district/name "Southwest", :district/region {:db/ident :region/sw}}},
+       :community/category ["council meetings" "news"],
+       :community/orgtype {:db/ident :community.orgtype/community},
+       :community/type [{:db/ident :community.type/blog}]}
+      {:db/id 17592186045529,
+       :community/name "All About Belltown",
+       :community/url "http://www.belltown.org/",
+       :community/neighborhood
+       {:db/id 17592186045528,
+        :neighborhood/name "Belltown",
+        :neighborhood/district {:db/id 17592186045527, :district/name "Downtown", :district/region {:db/ident :region/w}}},
+       :community/category ["community council"],
+       :community/orgtype {:db/ident :community.orgtype/community},
+       :community/type [{:db/ident :community.type/website}]}
+      {:db/id 17592186045532,
+       :community/name "All About South Park",
+       :community/url "http://www.allaboutsouthpark.com/",
+       :community/neighborhood
+       {:db/id 17592186045531,
+        :neighborhood/name "South Park",
+        :neighborhood/district {:db/id 17592186045530, :district/name "Greater Duwamish", :district/region {:db/ident :region/s}}},
+       :community/category ["neighborhood info"],
+       :community/orgtype {:db/ident :community.orgtype/community},
+       :community/type [{:db/ident :community.type/website}]}
+      {:db/id 17592186045534,
+       :community/name "ArtsWest",
+       :community/url "http://www.artswest.org/?q=node/28",
+       :community/neighborhood
+       {:db/id 17592186045533,
+        :neighborhood/name "West Seattle",
+        :neighborhood/district {:db/id 17592186045521, :district/name "Southwest", :district/region {:db/ident :region/sw}}},
+       :community/category ["arts"],
+       :community/orgtype {:db/ident :community.orgtype/community},
+       :community/type [{:db/ident :community.type/website}]}
+      {:db/id 17592186045520,
+       :community/name "15th Ave Community",
+       :community/url "http://groups.yahoo.com/group/15thAve_Community/",
+       :community/neighborhood
+       {:db/id 17592186045519,
+        :neighborhood/name "Capitol Hill",
+        :neighborhood/district {:db/id 17592186045518, :district/name "East", :district/region {:db/ident :region/e}}},
+       :community/category ["15th avenue residents"],
+       :community/orgtype {:db/ident :community.orgtype/community},
+       :community/type [{:db/ident :community.type/email-list}]}]]
 
     :dustingetz/counter
     [{:fiddle/cljs-ns
