@@ -325,7 +325,7 @@ User renderers should not be exposed to the reaction."
                              (assoc :on-click (r/partial sort/toggle-sort! (:hypercrud.browser/pull-path ctx) ctx)))]]
     ; Field omits [] but table does not, because we use it to specifically draw repeating anchors with a field renderer.
     :body [:td {:class (css "field" (:class props))
-                :style {:border-color (connection-color ctx)}}
+                :style {:border-color (connection-color ctx 92)}}
            (let [props (as-> props props
                              (update props :disabled #(or % (not @(r/track writable-entity? ctx))))
                              (update props :is-invalid #(or % (context/leaf-invalid? ctx)))
