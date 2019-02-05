@@ -203,3 +203,6 @@
   ; pad bs only, not as
   (->> (drop-while (partial apply =) (map vector as (pad nil bs)))
        (map first)))
+
+(defn assoc-if [m k v]
+  (conj m (if v [k v])))

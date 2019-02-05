@@ -2,6 +2,7 @@
   (:require
     [clojure.spec.alpha :as s]
     [clojure.pprint]
+    [contrib.data :refer [assoc-if]]
     [contrib.reactive :as r]
     [hypercrud.browser.context :as context]
     [hyperfiddle.api]
@@ -54,9 +55,10 @@
      (link :hyperfiddle.ide/new-link ctx)
      [table
       (fn [ctx]
-        (let [ctx (assoc ctx ::record (fiddle/auto-link @(:hypercrud.browser/schemas ctx)
-                                                        (:qin @(:hypercrud.browser/qparsed ctx))
-                                                        (context/data ctx)))]
+        (let [ctx (assoc-if ctx ::record (if (:hypercrud.browser/head-sentinel ctx)
+                                           (fiddle/auto-link @(:hypercrud.browser/schemas ctx)
+                                                             (:qin @(:hypercrud.browser/qparsed ctx))
+                                                             (context/data ctx))))]
           [(field [:link/path] ctx link-control)
            (field [:link/fiddle] ctx link-fiddle {:options :hyperfiddle.ide/fiddle-options
                                                   :option-label (r/comp pr-str :fiddle/ident)})

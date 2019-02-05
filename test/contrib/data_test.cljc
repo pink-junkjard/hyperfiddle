@@ -4,7 +4,8 @@
     [contrib.string :refer [blank->nil]]
     [contrib.data :refer [xorxs
                           cond-let map-pad pad rtrim-coll fix-arity fvor take-to ungroup dissoc-nils
-                          compare-by-index ancestry-common ancestry-divergence merge-by collect orp]]))
+                          compare-by-index ancestry-common ancestry-divergence merge-by collect orp
+                          assoc-if]]))
 
 
 (comment
@@ -155,4 +156,9 @@
            [0 {:id 0}]))
 
     )
+  )
+
+(deftest assoc-if'
+  (is (= (assoc-if {:a 1} :b 2) {:a 1, :b 2}))
+  (is (= (assoc-if {:a 1} :b nil) {:a 1}))
   )
