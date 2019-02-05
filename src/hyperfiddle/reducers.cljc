@@ -63,11 +63,7 @@
                               (assoc-in partitions [branch :local-basis] local-basis))
 
            :partition-route (let [[branch route] args]
-                              (if (= route (get-in partitions [branch :route]))
-                                partitions
-                                (-> partitions
-                                    (assoc-in [branch :route] route)
-                                    #_(dissoc :error :attr-renderers :project :ptm :schemas :tempid-lookups))))
+                              (assoc-in partitions [branch :route] route))
 
            :with (let [[branch dbname tx] args]
                    (update partitions branch with dbname tx))
