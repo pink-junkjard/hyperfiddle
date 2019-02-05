@@ -97,8 +97,8 @@
   (let [[_ a _] @(:hypercrud.browser/eav ctx)]
     [:<>
      (label-with-docs a (semantic-docstring ctx) props)
-     (if-let [link (->> (data/select-here+ ctx :hf/new) (contrib.ct/unwrap #(taoensso.timbre/warn %)))]
-       [hyperfiddle.ui/ui-from-link link ctx props])]))
+     (for [[k rv] (hyperfiddle.data/spread-links-here ctx :hf/new)]
+       [hyperfiddle.ui/ui-from-link rv ctx props])]))
 
 (defn id-prompt [ctx val]
   ; pr-str here to disambiguate `"tempid"` from `17592186046396` and `:gender/male`
