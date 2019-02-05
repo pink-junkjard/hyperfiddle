@@ -1,5 +1,7 @@
 (ns contrib.reactive-test
   (:require
+    [cats.core]
+    [cats.monad.either :refer [left right]]
     [clojure.test :refer [deftest is testing]]
     [contrib.reactive :as r]))
 
@@ -68,4 +70,12 @@
   (testing "empty list"
     (is (= (deref (r/sequence []))
            []))
+    ))
+
+(deftest either-reactions
+  (testing ""
+    (is (= @@@(r/apply-inner-r (r/pure (right 32))) 32))
+    (is (= @(r/apply-inner-r (r/pure (left "error"))) (left "error")))
+
+
     ))
