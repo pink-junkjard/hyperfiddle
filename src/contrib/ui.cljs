@@ -158,7 +158,8 @@
                     (dissoc :is-invalid)
                     (cond-> (:is-invalid props) (update :class css "invalid"))
                     (update-existing :on-change r/comp target-value))]
-      [:input (select-keys props [:type :value :default-value :on-change :class :style :read-only :disabled])])))
+      [:input (select-keys props [:type :value :default-value :on-change :class :style :read-only :disabled
+                                  :placeholder])])))
 
 (let [parse-string (fn [s]                                  ; letfn not working #470
                      (let [v (some-> s contrib.reader/read-edn-string!)]
