@@ -1,6 +1,7 @@
 (ns hyperfiddle.ui.popover
   (:require
     [cats.core :refer [fmap]]
+    [cats.monad.either :refer [left right branch]]
     [contrib.css :refer [css]]
     [contrib.ct :refer [unwrap]]
     [contrib.data :refer [dissoc-nils]]
@@ -9,7 +10,7 @@
     [contrib.reactive :as r]
     [contrib.pprint :refer [pprint-str]]
     [contrib.string :refer [blank->nil]]
-    [contrib.try$ :refer [try-promise]]
+    [contrib.try$ :refer [try-either either->promise]]
     [contrib.ui.tooltip :refer [tooltip tooltip-props]]
     [hypercrud.browser.base :as base]
     [hypercrud.browser.context :as context]
@@ -23,35 +24,39 @@
     [taoensso.timbre :as timbre]))
 
 
-(let [safe-eval-string #(try-promise (eval/eval-expr-str! %))
-      memoized-eval-string (memoize safe-eval-string)]
-  (defn- with-swap-fn [link-ref ctx f]
-    (let [{:keys [:link/tx-fn] :as link} @link-ref]
-      (-> (if (blank->nil tx-fn)
-            (memoized-eval-string tx-fn)                    ; TODO migrate type to keyword
-            (p/resolved (constantly nil)))
-          (p/then
-            (fn [user-txfn]
-              (p/promise
-                (fn [resolve! reject!]
-                  (let [swap-fn-async (fn []
-                                        (let [result (let [[e a v] @(:hypercrud.browser/eav ctx)
-                                                           result (hyperfiddle.api/txfn user-txfn e a v ctx)]
-                                                       ; txfn may be sync or async
-                                                       (if-not (p/promise? result) (p/resolved result) result))]
-                                          ; let the caller of this :stage fn know the result
-                                          ; This is super funky, a swap-fn should not be effecting, but seems like it would work.
-                                          (-> result (p/branch (fn [v] (resolve! nil))
-                                                               (fn [e]
-                                                                 (reject! e)
-                                                                 (timbre/warn e))))
+(let [safe-eval-string #(try-either (eval/eval-expr-str! %))
+      memoized-read-string (memoize safe-eval-string)]
+  (defn memoized-read-txfn+ [kw-str]                              ; TODO migrate type to keyword
+    (if (blank->nil kw-str)
+      (memoized-read-string kw-str)
+      (right (constantly nil)))))
 
-                                          ; return the result to the action, it could be a promise
-                                          result))]
-                    (runtime/dispatch! (:peer ctx) [:txfn (:link/class link) (:link/path link)])
-                    (f swap-fn-async))))))
-          ; todo something better with these exceptions (could be user error)
-          (p/catch (fn [err] (js/alert (pprint-str err))))))))
+(defn- with-swap-fn [link-ref ctx f]
+  (let [{:keys [:link/tx-fn] :as link} @link-ref]
+    (-> (either->promise
+          (memoized-read-txfn+ tx-fn))
+        (p/then
+          (fn [user-txfn]
+            (p/promise
+              (fn [resolve! reject!]
+                (let [swap-fn-async (fn []
+                                      (let [result (let [[e a v] @(:hypercrud.browser/eav ctx)
+                                                         result (hyperfiddle.api/txfn user-txfn e a v ctx)]
+                                                     ; txfn may be sync or async
+                                                     (if-not (p/promise? result) (p/resolved result) result))]
+                                        ; let the caller of this :stage fn know the result
+                                        ; This is super funky, a swap-fn should not be effecting, but seems like it would work.
+                                        (-> result (p/branch (fn [v] (resolve! nil))
+                                                             (fn [e]
+                                                               (reject! e)
+                                                               (timbre/warn e))))
+
+                                        ; return the result to the action, it could be a promise
+                                        result))]
+                  (runtime/dispatch! (:peer ctx) [:txfn (:link/class link) (:link/path link)])
+                  (f swap-fn-async))))))
+        ; todo something better with these exceptions (could be user error)
+        (p/catch (fn [err] (js/alert (pprint-str err)))))))
 
 (defn stage! [link-ref popover-id child-branch ctx r-popover-data props]
   (let [f (fn [swap-fn-async]
@@ -129,7 +134,10 @@
   (let [props (-> props
                   (assoc :on-click (r/partial run-txfn! link-ref ctx props))
                   ; use twbs btn coloring but not "btn" itself
-                  (update :class css "btn-warning"))]
+                  (update :class css (let [txfn (->> @(r/fmap :link/tx-fn link-ref) memoized-read-txfn+ (unwrap (constantly nil)))]
+                                       (if-not (contains? (methods hyperfiddle.api/txfn) txfn)
+                                         "btn-outline-danger"
+                                         "btn-warning"))))]
     [:button (select-keys props [:class :style :disabled :on-click])
      [:span (str label "!")]]))
 

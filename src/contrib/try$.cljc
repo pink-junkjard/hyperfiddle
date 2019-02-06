@@ -1,7 +1,7 @@
 (ns contrib.try$
   #?(:cljs (:require-macros [contrib.try$]))
   (:require
-    [cats.monad.either :as either]
+    [cats.monad.either :as either :refer [branch]]
     [promesa.core :as p]))
 
 
@@ -37,3 +37,6 @@
      [& body]
      (let [e (gensym)]
        `(try-catch-non-fatal (p/resolved (do ~@body)) ~e (p/rejected ~e)))))
+
+(defn either->promise [mv]
+  (branch mv p/rejected p/resolved))
