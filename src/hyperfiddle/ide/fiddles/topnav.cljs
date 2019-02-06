@@ -1,16 +1,13 @@
 (ns hyperfiddle.ide.fiddles.topnav
   (:require
-    [cats.monad.either :as either]
     [clojure.string :as string]
     [contrib.reactive :as r]
-    [contrib.ui :refer [easy-checkbox]]
     [contrib.ui.tooltip :refer [tooltip]]
-    [hyperfiddle.actions :as actions]
     [hyperfiddle.data]
     [hyperfiddle.domain :as domain]
     [hyperfiddle.runtime :as runtime]
     [hyperfiddle.security.client :as security]
-    [hyperfiddle.ui :as ui :refer [markdown]]))
+    [hyperfiddle.ui :as ui]))
 
 
 (defn any-loading? [peer]
@@ -43,7 +40,7 @@
    [:div.right-nav {:key "right-nav"}                       ; CAREFUL; this key prevents popover flickering
     [loading-spinner ctx]
     (let [tooltip [:div {:style {:text-align "left"}}
-                   [markdown
+                   [ui/markdown
                     (->> (runtime/domain (:peer ctx))
                          domain/databases
                          keys
@@ -90,47 +87,4 @@
             renderer')]
     [f value ctx props]))
 
-(letfn [(toggle-auto-transact! [ctx selected-dbname]
-          (runtime/dispatch! (:peer ctx) [:toggle-auto-transact @selected-dbname]))]
-  (defn ^:export stage-ui-buttons [selected-dbname stage ctx]
-    (let [writes-allowed?+ (let [hf-db (domain/database (runtime/domain (:peer ctx)) @selected-dbname)
-                                 subject @(runtime/state (:peer ctx) [::runtime/user-id])]
-                             (security/subject-can-transact? hf-db subject))
-          anonymous? (nil? @(runtime/state (:peer ctx) [::runtime/user-id]))]
-      [:<>
-       [tooltip (either/branch
-                  writes-allowed?+
-                  (fn [e] {:status :warning :label "Misconfigured db security"})
-                  (fn [writes-allowed?]
-                    (cond (and (not writes-allowed?) anonymous?) {:status :warning :label "Please login"}
-                          (not writes-allowed?) {:status :warning :label "Writes restricted"}
-                          (empty? @stage) {:status :warning :label "no changes"})))
-        (let [disabled? (either/branch
-                          writes-allowed?+
-                          (constantly true)
-                          (fn [writes-allowed?] (or (not writes-allowed?) (empty? @stage))))]
-          [:button {:disabled disabled?
-                    :style (if disabled? {:pointer-events "none"})
-                    :on-click (fn []
-                                (let [action (actions/manual-transact-db! (:peer ctx) @selected-dbname)]
-                                  (runtime/dispatch! (:peer ctx) action)))}
-           "transact!"])]
-       " "
-       #_[tooltip (either/branch
-                    writes-allowed?+
-                    (fn [e] {:status :warning :label "Misconfigured db security"})
-                    (fn [writes-allowed?]
-                      (cond (and anonymous? (not writes-allowed?)) {:status :warning :label "Please login"}
-                            (not writes-allowed?) {:status :warning :label "Writes restricted"}
-                            (not (empty? @stage)) {:status :warning :label "please transact! all changes first"})))
-          (let [is-disabled (either/branch
-                              writes-allowed?+
-                              (constantly true)
-                              (fn [writes-allowed?]
-                                (or (not writes-allowed?) (not (empty? @stage)))))
-                is-auto-transact @(runtime/state (:peer ctx) [::runtime/auto-transact @selected-dbname])]
-            [easy-checkbox {:disabled is-disabled
-                            :style (if is-disabled {:pointer-events "none"})
-                            :checked (boolean is-auto-transact)
-                            :on-change (r/partial toggle-auto-transact! ctx selected-dbname)}
-             "auto-transact"])]])))
+(def ^:deprecated stage-ui-buttons hyperfiddle.ui.staging/stage-ui-buttons)
