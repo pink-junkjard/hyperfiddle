@@ -367,6 +367,7 @@
   ; in some cases it is just the result (no indexing was done)
   ; The user never sees a raw index, it is just for internal lookups.
   (if qfind
+    ; check head-sentinel?
     (let [ctx (-infer-implicit-element ctx)
           {:keys [:hypercrud.browser/element
                   :hypercrud.browser/result
@@ -399,7 +400,7 @@
       (nil? ?v)
       nil
 
-      (:hypercrud.browser/head-sentinel ctx)
+      (:hypercrud.browser/head-sentinel ctx)                ; do in (data)?
       nil
 
       ; Attribute level first, makes element level easier
