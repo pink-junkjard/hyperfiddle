@@ -20,72 +20,6 @@
     [taoensso.timbre]))
 
 
-(defn value-validator [ctx]
-  (let [[_ a _] @(:hypercrud.browser/eav ctx)]
-    (case (contrib.datomic/valueType @(:hypercrud.browser/schema ctx) a)
-      :db.type/bigdec any?                                  ;  todo
-      :db.type/bigint any?                                  ;  todo
-      :db.type/boolean boolean?
-      :db.type/bytes any?                                   ;  todo
-      :db.type/double number?
-      :db.type/float number?
-      :db.type/fn any?                                      ;  todo
-      :db.type/instant any?                                 ;  todo
-      :db.type/keyword keyword?
-      :db.type/long any?                                    ;  todo
-      :db.type/ref any?                                     ;  todo
-      :db.type/string string?
-      :db.type/uri is-uri?
-      :db.type/uuid uuid?)))
-
-(defn ^:export keyword [val ctx & [props]]
-  [:div.hyperfiddle-input-group
-   (let [props (-> (assoc props
-                     :value val
-                     :on-change (with-entity-change! ctx)))]
-     [debounced props contrib.ui/keyword])
-   (doall
-     (for [[k r-link] (data/spread-links-here ctx)
-           ; If we're identity, remove hf/new, that's in the header ?
-           :when (not (some #{:hf/new} (:link/class @r-link)))]
-       ; if val - no, it can be drawn invalid
-       ^{:key (str k)}
-       [hyperfiddle.ui/ui-from-link r-link ctx props]))])
-
-(defn ^:export string [val ctx & [props]]
-  (let [props (-> (assoc props
-                    :value val
-                    :on-change (with-entity-change! ctx)))]
-    [debounced props contrib.ui/text #_contrib.ui/textarea]))
-
-(defn ^:export long [val ctx & [props]]
-  (let [props (-> (assoc props
-                    :value val
-                    :on-change (with-entity-change! ctx)))]
-    [debounced props contrib.ui/long]))
-
-(defn ^:export boolean [val ctx & [props]]
-  [:div (select-keys props [:class :style])
-   (let [props (assoc props
-                 :checked (clojure.core/boolean val)
-                 :on-change (with-entity-change! ctx))]
-     [contrib.ui/easy-checkbox (select-keys props [:class :style :is-invalid :checked :on-change :disabled])])]) ; readonly?
-
-(let [adapter (fn [e]
-                (case (.-target.value e)
-                  "" nil
-                  "true" true
-                  "false" false))]
-  (defn ^:export tristate-boolean [val ctx & [props]]
-    (let [option-props (select-keys props [])
-          select-props (select-keys props [:value :on-change :class :style :disabled])]
-      [:select (assoc select-props
-                 :value (if (nil? val) "" (str val))
-                 :on-change (r/comp (with-entity-change! ctx) adapter))
-       [:option (assoc option-props :key true :value "true") "True"]
-       [:option (assoc option-props :key false :value "false") "False"]
-       [:option (assoc option-props :key :nil :value "") "--"]])))
-
 (defn label-with-docs [label help-md props]
   [tooltip-thick (if help-md [:div.hyperfiddle.docstring [contrib.ui/markdown help-md]])
    (let [label-props (select-keys props [:on-click :class])] ; https://github.com/hyperfiddle/hyperfiddle/issues/511
@@ -106,44 +40,72 @@
   (let [[_ _ v] (context/eav ctx)]
     (str v)))
 
-(defn related-links [val ctx props]
+(defn hf-new [_ ctx]
+  (for [[k r-link] (hyperfiddle.data/spread-links-here ctx :hf/new)]
+    ^{:key k}
+    [hyperfiddle.ui/ui-from-link r-link ctx]))
+
+(defn hf-remove [val ctx]
+  (if val
+    (for [[k r-link] (hyperfiddle.data/spread-links-here ctx :hf/remove)]
+      ^{:key k}
+      [hyperfiddle.ui/ui-from-link r-link ctx])))
+
+(defn related-links "Refs don't call this directly, but scalars can.
+  These are like Right JOIN. If there is no ref you can't traverse it."
+  [val ctx]
   (if val
     (doall
       ; or just here? http://tank.hyperfiddle.site/:dustingetz!counter/
       (for [[k rv] (hyperfiddle.data/spread-links-here ctx)
-            :when (not (some #{:hf/new :hf/remove :hf/iframe} (:link/class @rv)))]
-        ^{:key k}
-        [hyperfiddle.ui/ui-from-link rv ctx props]))))
+            :when (not (some #{:hf/new :hf/remove :hf/iframe}
+                             (:link/class @rv)))]
+        [k rv]))))
+
+(defn entity-links [val ctx]
+  (let [[[k rv] :as rkvs] (related-links val ctx)]
+    (cond
+      (= 1 (count rkvs))
+      ; Use the id-prompt as the anchor label if there is only one related link.
+      ; There is almost always only one. This conserves a lot of width.
+      [:div.input
+       [hyperfiddle.ui/ui-from-link rv ctx nil (id-prompt ctx val)]]
+
+      :else
+      ; Disambiguate the links with link labels
+      [:<>
+       [:div.input (id-prompt ctx val)]
+       (doall
+         (for [[k rv] rkvs]
+           ^{:key k}
+           [hyperfiddle.ui/ui-from-link rv ctx]))])))
 
 (defn ^:export ref [val ctx & [props]]
   (cond
-    (:options props) [select val ctx props]
-    :else [:div
-           [:div.input (interpose " " (cons (id-prompt ctx val) (related-links val ctx props)))]
-           (for [[k r-link] (hyperfiddle.data/spread-links-here ctx :hf/new)]
-             ^{:key k}
-             [hyperfiddle.ui/ui-from-link r-link ctx props])
-           (if val
-             (for [[k r-link] (hyperfiddle.data/spread-links-here ctx :hf/remove)]
-               ^{:key k}
-               [hyperfiddle.ui/ui-from-link r-link ctx props]))]))
+    (:options props)
+    [select val ctx props]
+
+    :else
+    [:div.hyperfiddle-input-group
+     (entity-links val ctx)
+     (hf-new val ctx)                                       ; new child
+     (hf-remove val ctx)]))
+
+(defn ^:export keyword [val ctx & [props]]
+  [:div.hyperfiddle-input-group
+   (let [props (assoc props :value val :on-change (with-entity-change! ctx))]
+     [debounced props contrib.ui/keyword])
+   (hf-remove val ctx)
+   (related-links val ctx)])
 
 (defn ^:export ref-many [val ctx & [props]]
   [hyperfiddle.ui/table hyperfiddle.ui/columns ctx props])
 
 (defn ^:export id-or-ident [val ctx & [props]]
   [:div.hyperfiddle-input-group
-   [:div.input (id-prompt ctx val)]
-   #_(if (let [[_ a _] @(:hypercrud.browser/eav ctx)]
-         (= :db.cardinality/one (contrib.datomic/cardinality-loose @(:hypercrud.browser/schema ctx) a)))
-     (for [[k r-link] (hyperfiddle.data/spread-links-here ctx :hf/new)]
-       ^{:key k}
-       [hyperfiddle.ui/ui-from-link r-link ctx props]))
-   (related-links val ctx props)
+   (entity-links val ctx)
    (if-not (context/underlying-tempid ctx val)
-     (for [[k r-link] (hyperfiddle.data/spread-links-here ctx :hf/remove)]
-       ^{:key k}
-       [hyperfiddle.ui/ui-from-link r-link ctx props]))])
+     (hf-remove val ctx))])
 
 (defn ^:export instant [val ctx & [props]]
   (let [props (-> (assoc props
@@ -178,6 +140,24 @@
                     :mode "markdown"
                     :lineWrapping true))]
     [debounced props (code-comp ctx)]))
+
+(defn value-validator [ctx]
+  (let [[_ a _] @(:hypercrud.browser/eav ctx)]
+    (case (contrib.datomic/valueType @(:hypercrud.browser/schema ctx) a)
+      :db.type/bigdec any?                                  ;  todo
+      :db.type/bigint any?                                  ;  todo
+      :db.type/boolean boolean?
+      :db.type/bytes any?                                   ;  todo
+      :db.type/double number?
+      :db.type/float number?
+      :db.type/fn any?                                      ;  todo
+      :db.type/instant any?                                 ;  todo
+      :db.type/keyword keyword?
+      :db.type/long any?                                    ;  todo
+      :db.type/ref any?                                     ;  todo
+      :db.type/string string?
+      :db.type/uri is-uri?
+      :db.type/uuid uuid?)))
 
 (let [parse-string (fn [value-pred s]
                      (let [v (reader/read-edn-string! s)]
@@ -246,3 +226,37 @@
          ; Uncontrolled widget on purpose i think
          ; Cardinality :many not needed, because as soon as we assoc one value, we rehydrate typed
          [contrib.ui/edn props])])))
+
+(defn ^:export string [val ctx & [props]]
+  (let [props (-> (assoc props
+                    :value val
+                    :on-change (with-entity-change! ctx)))]
+    [debounced props contrib.ui/text #_contrib.ui/textarea]))
+
+(defn ^:export long [val ctx & [props]]
+  (let [props (-> (assoc props
+                    :value val
+                    :on-change (with-entity-change! ctx)))]
+    [debounced props contrib.ui/long]))
+
+(defn ^:export boolean [val ctx & [props]]
+  [:div (select-keys props [:class :style])
+   (let [props (assoc props
+                 :checked (clojure.core/boolean val)
+                 :on-change (with-entity-change! ctx))]
+     [contrib.ui/easy-checkbox (select-keys props [:class :style :is-invalid :checked :on-change :disabled])])]) ; readonly?
+
+(let [adapter (fn [e]
+                (case (.-target.value e)
+                  "" nil
+                  "true" true
+                  "false" false))]
+  (defn ^:export tristate-boolean [val ctx & [props]]
+    (let [option-props (select-keys props [])
+          select-props (select-keys props [:value :on-change :class :style :disabled])]
+      [:select (assoc select-props
+                 :value (if (nil? val) "" (str val))
+                 :on-change (r/comp (with-entity-change! ctx) adapter))
+       [:option (assoc option-props :key true :value "true") "True"]
+       [:option (assoc option-props :key false :value "false") "False"]
+       [:option (assoc option-props :key :nil :value "") "--"]])))
