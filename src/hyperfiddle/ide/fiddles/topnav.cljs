@@ -23,7 +23,7 @@
 (defn renderer' [value ctx props]
   [:div props
    [:div.left-nav
-    [tooltip {:label "Home"} [:a {:href "/"} (domain/ident (runtime/domain (:peer ctx)))]]
+    [tooltip {:label "Home"} [:a {:href "/"} (:app-domain-ident (runtime/domain (:peer ctx)))]]
     (let [props {:tooltip [nil "Fiddles in this domain"]
                  :iframe-as-popover true}]
       [ui/link :fiddle-shortcuts ctx "index" props])
