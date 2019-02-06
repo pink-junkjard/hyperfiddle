@@ -49,6 +49,7 @@
   ; This is possible if the value matches the row-key (qfind) of options query
   (let [is-no-options (empty? (hypercrud.browser.context/data ctx))
         select-props (-> select-props
+                         (update :value str)
                          (update :on-change (fn [on-change]
                                               (fn [e]
                                                 (-> (some->> (.-target.value e)
@@ -66,7 +67,7 @@
      ; .ui is because options are an iframe and need the pink box
      (conj
        (->> (hypercrud.browser.context/data ctx)
-            (mapv (juxt #(context/row-key ctx %) #(label-fn % ctx)))
+            (mapv (juxt #(context/row-key ctx %) #(label-fn % ctx))) ; is lookup ref good yet?
             (sort-by second)
             (map (fn [[id label]]
                    [:option (assoc option-props :key (str id) :value (str id)) label])))
@@ -98,7 +99,7 @@
       (context/qfind-level? anchor-ctx)
       [select-error-cmp (str "Select requires attribute ctx, eav: " (context/eav anchor-ctx))]
 
-      (and (:value anchor-props) ((set options) (:value anchor-props)))
+      (and (:value anchor-props) (not (contains? (set options) (:value anchor-props))))
       [select-error-cmp (str "Select value: " (:value anchor-props) " not seen in options")]
 
       (#{FindColl FindScalar} target-qfind-type)
@@ -125,7 +126,8 @@
         (return
           (let [default-props {:on-change (with-entity-change! ctx)}
                 props (-> (merge default-props props)
-                          (assoc :value (str (let [[_ _ v] @(:hypercrud.browser/eav ctx)] v))))
+                          (assoc :value (let [[_ _ v] @(:hypercrud.browser/eav ctx)]
+                                          v #_(context/underlying-tempid ctx v))))
                 props (-> (select-keys props [:class])
                           (assoc :user-renderer (r/partial options-value-bridge select-html props ctx)))
                 ctx (assoc ctx
