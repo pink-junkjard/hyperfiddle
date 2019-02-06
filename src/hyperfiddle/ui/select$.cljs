@@ -40,10 +40,10 @@
 (defn option-label-default [row ctx]
   ; row is FindRel or FindCol
   (or
-    (some-> (hypercrud.browser.context/key-row ctx row) ident->label)
+    (some-> (hypercrud.browser.context/row-key ctx row) ident->label)
     (clojure.string/join " " (vals row))))
 
-(defn select-anchor-renderer' [select-props option-props ctx]      ; element, etc
+(defn select-html [select-props option-props ctx]           ; element, etc
   ; hack in the selected value if we don't have options hydrated?
   ; Can't, since we only have the #DbId hydrated, and it gets complicated with relaton vs entity etc
   ; This is possible if the value matches the row-key (qfind) of options query
@@ -66,7 +66,7 @@
      ; .ui is because options are an iframe and need the pink box
      (conj
        (->> (hypercrud.browser.context/data ctx)
-            (mapv (juxt #(context/key-row ctx %) #(label-fn % ctx)))
+            (mapv (juxt #(context/row-key ctx %) #(label-fn % ctx)))
             (sort-by second)
             (map (fn [[id label]]
                    [:option (assoc option-props :key (str id) :value (str id)) label])))
@@ -127,7 +127,7 @@
                 props (-> (merge default-props props)
                           (assoc :value (str (let [[_ _ v] @(:hypercrud.browser/eav ctx)] v))))
                 props (-> (select-keys props [:class])
-                          (assoc :user-renderer (r/partial options-value-bridge select-anchor-renderer' props ctx)))
+                          (assoc :user-renderer (r/partial options-value-bridge select-html props ctx)))
                 ctx (assoc ctx
                       :hypercrud.ui/display-mode (r/track identity :hypercrud.browser.browser-ui/user))]
             [hyperfiddle.ui/ui-from-link options-ref ctx props])))

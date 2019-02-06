@@ -39,13 +39,13 @@
   (testing "row keyfn on relation maps the smart identity"
     (def ctx (mock-fiddle! :hfnet.tank/index))
     (def result (context/data ctx))
-    (is (= (context/key-row ctx (first result))
+    (is (= (context/row-key ctx (first result))
            [[:fiddle/ident :karl.hardenstine/fiddles] 13194139534712 true])))
 
   (testing "key-row"
     (let [ctx (mock-fiddle! :dustingetz/gender-shirtsize)
           [row] (context/data ctx)]
-      (is (= (context/key-row ctx row)
+      (is (= (context/row-key ctx row)
              [:dustingetz.reg/email "dustin@example.com"]))))
 
   (testing "from :identity refine to :db/id"
@@ -832,7 +832,7 @@
            [[nil :dustingetz.tutorial/blog [:dustingetz.post/slug :large-strings-and-high-churn-attrs-blow-out-indexes]]
             [nil :dustingetz.tutorial/blog [:dustingetz.post/slug :automatic-CRUD-links]]]))
 
-    (is (= (hypercrud.browser.context/key-row ctx [{:db/id 17592186047142,
+    (is (= (hypercrud.browser.context/row-key ctx [{:db/id 17592186047142,
                                                     :dustingetz.post/published-date #inst"2018-11-22T15:57:34.277-00:00",
                                                     :dustingetz.post/title "automatic CRUD links",
                                                     :dustingetz.post/slug :automatic-CRUD-links}])
