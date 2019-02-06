@@ -62,6 +62,12 @@
                              (:link/class @rv)))]
         [k rv]))))
 
+(defn render-related-links [val ctx]
+  [:<>
+   (for [[k rv] (related-links val ctx)]
+     ^{:key k}
+     [hyperfiddle.ui/ui-from-link rv ctx])])
+
 (defn entity-links [val ctx]
   (let [[[k rv] :as rkvs] (related-links val ctx)]
     (cond
@@ -95,8 +101,8 @@
   [:div.hyperfiddle-input-group
    (let [props (assoc props :value val :on-change (with-entity-change! ctx))]
      [debounced props contrib.ui/keyword])
-   (hf-remove val ctx)
-   (related-links val ctx)])
+   (hf-remove val ctx)                                      ; why? They can just backspace it
+   (render-related-links val ctx)])
 
 (defn ^:export ref-many [val ctx & [props]]
   [hyperfiddle.ui/table hyperfiddle.ui/columns ctx props])
@@ -108,9 +114,7 @@
      (hf-remove val ctx))])
 
 (defn ^:export instant [val ctx & [props]]
-  (let [props (-> (assoc props
-                    :value val
-                    :on-change (with-entity-change! ctx)))]
+  (let [props (assoc props :value val :on-change (with-entity-change! ctx))]
     [recom-date props]))
 
 (defn- code-comp [ctx]
@@ -164,6 +168,7 @@
                        (assert (every? value-pred v))
                        v))]
   (defn ^:export edn-many [val ctx & [props]]
+    ; Links aren't handled, we need to isolate individual values for that
     (let [[_ a _] @(:hypercrud.browser/eav ctx)
           val (set (if (contrib.datomic/valueType? @(:hypercrud.browser/schema ctx) a :db.type/ref)
                      (map (r/partial context/smart-entity-identifier ctx) val)
@@ -182,14 +187,18 @@
                        (assert ((some-fn nil? value-pred) v))
                        v))]
   (defn ^:export edn [val ctx & [props]]
-    (let [props (-> (assoc props
-                      :value val
-                      :mode "clojure"
-                      :on-change (with-entity-change! ctx)))]
-      [debounced props contrib.ui/validated-cmp (r/partial parse-string (value-validator ctx)) pprint-str
-       (case (:hyperfiddle.ui/layout ctx :hyperfiddle.ui.layout/block)
-         :hyperfiddle.ui.layout/block contrib.ui/code
-         :hyperfiddle.ui.layout/table contrib.ui/code-inline-block)])))
+    [:div.hyperfiddle-input-group
+     (let [props (assoc props
+                   :value val
+                   :mode "clojure"
+                   :on-change (with-entity-change! ctx))]
+       [debounced props contrib.ui/validated-cmp
+        (r/partial parse-string (value-validator ctx))
+        pprint-str
+        (case (:hyperfiddle.ui/layout ctx :hyperfiddle.ui.layout/block)
+          :hyperfiddle.ui.layout/block contrib.ui/code
+          :hyperfiddle.ui.layout/table contrib.ui/code-inline-block)])
+     (render-related-links val ctx)]))
 
 (defn ^:export radio-group [val ctx & [props]]
   (into [:span.radio-group (-> (select-keys props [:class])
@@ -228,23 +237,26 @@
          [contrib.ui/edn props])])))
 
 (defn ^:export string [val ctx & [props]]
-  (let [props (-> (assoc props
-                    :value val
-                    :on-change (with-entity-change! ctx)))]
-    [debounced props contrib.ui/text #_contrib.ui/textarea]))
+  [:div.hyperfiddle-input-group
+   (let [props (assoc props :value val :on-change (with-entity-change! ctx))]
+     [debounced props contrib.ui/text #_contrib.ui/textarea])
+   (render-related-links val ctx)])
 
 (defn ^:export long [val ctx & [props]]
-  (let [props (-> (assoc props
-                    :value val
-                    :on-change (with-entity-change! ctx)))]
-    [debounced props contrib.ui/long]))
+  [:div.hyperfiddle-input-group
+   (let [props (assoc props :value val :on-change (with-entity-change! ctx))]
+     [debounced props contrib.ui/long])
+   (render-related-links val ctx)])
 
 (defn ^:export boolean [val ctx & [props]]
-  [:div (select-keys props [:class :style])
-   (let [props (assoc props
-                 :checked (clojure.core/boolean val)
-                 :on-change (with-entity-change! ctx))]
-     [contrib.ui/easy-checkbox (select-keys props [:class :style :is-invalid :checked :on-change :disabled])])]) ; readonly?
+  [:div.hyperfiddle-input-group
+   [:div (select-keys props [:class :style])
+    (let [props (assoc props
+                  :checked (clojure.core/boolean val)
+                  :on-change (with-entity-change! ctx))]
+      [contrib.ui/easy-checkbox
+       (select-keys props [:class :style :is-invalid :checked :on-change :disabled])])] ; readonly?
+   (render-related-links val ctx)])
 
 (let [adapter (fn [e]
                 (case (.-target.value e)
@@ -252,11 +264,13 @@
                   "true" true
                   "false" false))]
   (defn ^:export tristate-boolean [val ctx & [props]]
-    (let [option-props (select-keys props [])
-          select-props (select-keys props [:value :on-change :class :style :disabled])]
-      [:select (assoc select-props
-                 :value (if (nil? val) "" (str val))
-                 :on-change (r/comp (with-entity-change! ctx) adapter))
-       [:option (assoc option-props :key true :value "true") "True"]
-       [:option (assoc option-props :key false :value "false") "False"]
-       [:option (assoc option-props :key :nil :value "") "--"]])))
+    [:div.hyperfiddle-input-group
+     (let [option-props (select-keys props [])
+           select-props (select-keys props [:value :on-change :class :style :disabled])]
+       [:select (assoc select-props
+                  :value (if (nil? val) "" (str val))
+                  :on-change (r/comp (with-entity-change! ctx) adapter))
+        [:option (assoc option-props :key true :value "true") "True"]
+        [:option (assoc option-props :key false :value "false") "False"]
+        [:option (assoc option-props :key :nil :value "") "--"]])
+     (render-related-links val ctx)]))
