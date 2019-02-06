@@ -4,7 +4,8 @@
     [contrib.reactive :as r]
     [contrib.ui :refer [markdown]]
     [hypercrud.types.Err :as Err]
-    [hyperfiddle.ide.staging :refer [staging]]))
+    [hyperfiddle.runtime :as runtime]
+    [hyperfiddle.ui.staging :as staging]))
 
 
 (defn e->map [e]
@@ -34,10 +35,12 @@
      #_(if (:query data) [markdown (str "```\n" (:query data) "\n```")])]))
 
 (defn error-block-with-stage [ctx e & [props]]
-  [:<>
-   [error-block e props]
-   (when (:branch ctx)
-     [staging ctx])])
+  (let [selected-dbname (r/atom nil)]
+    (fn [ctx e & [props]]
+      [:<>
+       [error-block e props]
+       (when (:branch ctx)
+         [staging/cmp (runtime/domain (:peer ctx)) selected-dbname ctx])])))
 
 (defn error-comp [ctx]
   ; :find-element :attribute :value

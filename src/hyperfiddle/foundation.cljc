@@ -2,16 +2,15 @@
   (:require
     [cats.monad.either :as either]
     #?(:cljs [contrib.css :refer [css]])
-    [hypercrud.browser.browser-request :refer [request-from-route]]
-    [hypercrud.client.core :as hc]
+    #?(:cljs [contrib.reactive :as r])
     [hypercrud.types.Err :as Err]
     [hyperfiddle.actions :as actions]
     [hyperfiddle.domain :as domain]
-    #?(:cljs [hyperfiddle.ide.staging])
     [hyperfiddle.project :as project]
     [hyperfiddle.runtime :as runtime]
     [hyperfiddle.security.domains]
     #?(:cljs [hyperfiddle.ui.iframe :refer [iframe-cmp]])
+    #?(:cljs [hyperfiddle.ui.staging :as staging])
     [promesa.core :as p]
     [taoensso.timbre :as timbre]))
 
@@ -42,15 +41,27 @@
          [:fieldset [:legend "(.-stack e)"]                 ; network error
           [:pre (.-stack e)]]])]))
 
-#?(:cljs (defn ^:deprecated staging [ctx & [child]] [hyperfiddle.ide.staging/staging ctx child]))
+#?(:cljs
+   (defn ^:deprecated staging [ctx & [child]]
+     ; this is only writable because the browser's state impl uses reagent cursors all the way to the top
+     (let [selected-dbname (runtime/state (:peer ctx) [:staging/selected-uri])]
+       (fn [ctx & [child]]
+         (timbre/warn "hyperfiddle.foundation/staging has been deprecated and will be removed")
+         [staging/cmp (runtime/domain (:peer ctx)) selected-dbname ctx child]))))
+
+#?(:cljs
+   (defn- error-cmp-with-stage [ctx e]
+     (let [selected-dbname (r/atom nil)]
+       (fn [ctx e]
+         [:<>
+          [error-cmp e]
+          [staging/cmp (runtime/domain (:peer ctx)) selected-dbname ctx]]))))
 
 #?(:cljs
    (defn view [ctx]
      (if-let [e (or @(runtime/state (:peer ctx) [::runtime/fatal-error])
                     (some-> @(runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :error])))]
-       [:<>
-        [error-cmp e]
-        [staging ctx]]
+       [error-cmp-with-stage ctx e]
        [:<>
         [:style {:dangerouslySetInnerHTML {:__html @(runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :project :project/css])}}]
         (either/branch
