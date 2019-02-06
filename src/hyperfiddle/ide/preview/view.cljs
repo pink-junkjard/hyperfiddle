@@ -118,7 +118,9 @@
     (assoc parent-state ::runtime/user-state user-state)))
 
 (defn- from [ide-branch parent-state]
-  (let [nil-partition {:stage {'hyperfiddle.domain/fiddle-database (get-in parent-state [::runtime/partitions ide-branch :stage "$"])}}]
+  (let [nil-partition (-> (get-in parent-state [::runtime/partitions ide-branch ])
+                          (select-keys [:route :stage])
+                          (update :stage (fn [stage] {'hyperfiddle.domain/fiddle-database (get stage "$")})))]
     (-> (::runtime/user-state parent-state)
         (assoc-in [::runtime/partitions nil] nil-partition)
         (reducers/root-reducer nil))))
