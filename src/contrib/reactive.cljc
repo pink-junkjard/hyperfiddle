@@ -212,12 +212,12 @@
    (assert @(fmap #(or (vector? %) (nil? %)) rv) "unsequencing by index requires vector input, maybe try using a key like :db/id?")
    (->> (range @(fmap count rv))
         ; cursur indexing by index silently fails if @rv is a list here
-        (map (fn [index] [(cursor rv [index]) index]))))
+        (map (fn [ix] [ix (cursor rv [ix])]))))
   ([key-fn rv]                                              ; kill this arity
    {:pre [(reactive? rv)]}
    (let [lookup (fmap (partial util/group-by-unique key-fn) rv)] ; because results are vectors(sets) and we need to traverse by id
      (->> @(fmap (partial map key-fn) rv)
-          (map (fn [key] [(cursor lookup [key]) key]))))))
+          (map (fn [k] [k (cursor lookup [k])]))))))
 
 (defn ctxf "reactive apply f to sequenced rvs extracted from map
   ks can be fns, but must be stable refs"

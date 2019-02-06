@@ -73,12 +73,8 @@
 
 (defn spread-links-here [ctx & [?corcs]]
   (->> (select-many-here ctx ?corcs)
-       (r/unsequence :db/id)
-       (map (fn [[rv k]]
-              [k rv]))))
+       (r/unsequence :db/id)))
 
 (defn spread-links-in-dimension [ctx & [?corcs]]
   (->> (select-many ctx ?corcs)
-       (r/unsequence :db/id)
-       (map (fn [[rv k]]
-              [k rv]))))
+       (r/unsequence :db/id)))
