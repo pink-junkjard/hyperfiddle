@@ -1,6 +1,6 @@
 (ns hypercrud.browser.context-test
   (:require
-    [cats.core :refer [mlet return fmap]]
+    [cats.core :refer [mlet return fmap extract]]
     [cats.monad.either :refer [left right]]
     [clojure.test :refer [deftest is testing]]
     [contrib.reactive :as r]
@@ -106,13 +106,15 @@
 (def ctx (mock-fiddle! :dustingetz/gender-shirtsize))
 
 (deftest simple
-  (def ctx (mock-fiddle! :dustingetz/gender-shirtsize))
+
   (testing "refocus to self is noop and doesn't crash"
-    (is (= (context/refocus ctx :dustingetz/gender-shirtsize)
+    (def ctx (mock-fiddle! :dustingetz/gender-shirtsize))
+    (is (= (extract (context/refocus+ ctx :dustingetz/gender-shirtsize))
            ctx)))
 
   (testing "refocus to dependent didn't crash"
-    (is (= @(:hypercrud.browser/eav (context/refocus ctx :dustingetz.reg/gender))
+    (def ctx (mock-fiddle! :dustingetz/gender-shirtsize))
+    (is (= @(:hypercrud.browser/eav (extract (context/refocus+ ctx :dustingetz.reg/gender)))
            [nil :dustingetz.reg/gender nil])))
 
 
@@ -272,7 +274,7 @@
     (is (= (for [[_ ctx] (-> (mock-fiddle! :dustingetz/gender-shirtsize)
                              (context/spread-result))
                  [_ ctx] (context/spread-rows ctx)]
-             (context/eav (context/refocus ctx :dustingetz/gender-shirtsize)))
+             (context/eav (extract (context/refocus+ ctx :dustingetz/gender-shirtsize))))
            [[nil :dustingetz/gender-shirtsize [:dustingetz.reg/email "dustin@example.com"]]
             [nil :dustingetz/gender-shirtsize [:dustingetz.reg/email "bob@example.com"]]])))
 
@@ -281,21 +283,23 @@
                  [_ ctx] (context/spread-rows ctx)
                  [_ ctx] (context/spread-elements ctx)]
              ; Focusing the element
-             @(:hypercrud.browser/eav ctx #_(context/refocus ctx :dustingetz/gender-shirtsize)))
+             @(:hypercrud.browser/eav ctx #_(extract (context/refocus+ ctx :dustingetz/gender-shirtsize))))
            '([nil :dustingetz/gender-shirtsize [:dustingetz.reg/email "dustin@example.com"]]
               [nil :dustingetz/gender-shirtsize [:dustingetz.reg/email "bob@example.com"]])))
 
     (is (= (for [[_ ctx] (context/spread-result ctx)
                  [_ ctx] (context/spread-rows ctx)]
              @(:hypercrud.browser/eav
-                (context/refocus ctx :dustingetz.reg/gender)))
+                (extract (context/refocus+ ctx :dustingetz.reg/gender))))
            '([[:dustingetz.reg/email "dustin@example.com"] :dustingetz.reg/gender :dustingetz.gender/male]
               [[:dustingetz.reg/email "bob@example.com"] :dustingetz.reg/gender :dustingetz.gender/male])))
     )
 
+  )
 
-
+(deftest context-d
   (testing "focus attribute isolated"
+    (def ctx (mock-fiddle! :dustingetz/gender-shirtsize))
     (is (= (let [ctx (context/row ctx [:dustingetz.reg/email "dustin@example.com"] #_17592186046196)
                  ctx (context/element ctx 0)
                  ctx (context/attribute ctx :dustingetz.reg/gender)]
@@ -326,7 +330,7 @@
                    #_#_[_ ctx] (context/spread-elements ctx)]
                #_@(:hypercrud.browser/result-index ctx)
                @(:hypercrud.browser/result ctx)
-               #_@(:hypercrud.browser/result-index (context/refocus ctx :dustingetz.reg/gender))
+               #_@(:hypercrud.browser/result-index (extract (context/refocus+ ctx :dustingetz.reg/gender)))
                )
              '({17592186046196 {:db/id 17592186046196,
                                 :dustingetz.reg/email "dustin@example.com",
@@ -349,12 +353,10 @@
 
       (is (= (for [[_ ctx] (context/spread-rows ctx)
                    [_ ctx] (context/spread-elements ctx)]
-               @(:hypercrud.browser/eav (context/refocus ctx :dustingetz.reg/gender)))
+               @(:hypercrud.browser/eav (extract (context/refocus+ ctx :dustingetz.reg/gender))))
              '([17592186046196 :dustingetz.reg/gender :dustingetz.gender/male]
                 [17592186046763 :dustingetz.reg/gender :dustingetz.gender/male])))
-      )
-
-  )
+      ))
 
 (deftest element-inference
   (def ctx (mock-fiddle! :dustingetz/gender-shirtsize))
@@ -469,38 +471,38 @@
   (testing "refocus to :ref :one from row"
     (is (= (let [ctx (context/row ctx [:dustingetz.reg/email "dustin@example.com"] #_17592186046196)
                  ctx (context/element ctx 0)
-                 ctx (context/refocus ctx :dustingetz.reg/gender)]
+                 ctx (extract (context/refocus+ ctx :dustingetz.reg/gender))]
              (context/data ctx))
            #:db{:ident :dustingetz.gender/male}))
 
     (is (= (for [[_ ctx] (context/spread-rows ctx)
                  [_ ctx] (context/spread-elements ctx)]
-             (let [ctx (context/refocus ctx :dustingetz.reg/gender)]
+             (let [ctx (extract (context/refocus+ ctx :dustingetz.reg/gender))]
                (context/data ctx)))
            (for [[_ ctx] (context/spread-rows ctx)]
              ; infer element
-             (let [ctx (context/refocus ctx :dustingetz.reg/gender)]
+             (let [ctx (extract (context/refocus+ ctx :dustingetz.reg/gender))]
                (context/data ctx)))
            [#:db{:ident :dustingetz.gender/male}
             #:db{:ident :dustingetz.gender/male}]))
 
     (is (= (let [ctx (context/row ctx [:dustingetz.reg/email "dustin@example.com"] #_17592186046196)
                  ctx (context/element ctx 0)
-                 ctx (context/refocus ctx :dustingetz.reg/gender)]
+                 ctx (extract (context/refocus+ ctx :dustingetz.reg/gender))]
              @(:hypercrud.browser/eav ctx))
            (let [ctx (context/row ctx [:dustingetz.reg/email "dustin@example.com"] #_17592186046196)
                  ; infer element
-                 ctx (context/refocus ctx :dustingetz.reg/gender)]
+                 ctx (extract (context/refocus+ ctx :dustingetz.reg/gender))]
              @(:hypercrud.browser/eav ctx))
            [[:dustingetz.reg/email "dustin@example.com"] :dustingetz.reg/gender :dustingetz.gender/male]))
 
     (is (= (for [[_ ctx] (context/spread-rows ctx)
                  [_ ctx] (context/spread-elements ctx)]
-             (let [ctx (context/refocus ctx :dustingetz.reg/gender)]
+             (let [ctx (extract (context/refocus+ ctx :dustingetz.reg/gender))]
                @(:hypercrud.browser/eav ctx)))
            (for [[_ ctx] (context/spread-rows ctx)]
              ; infer elements
-             (let [ctx (context/refocus ctx :dustingetz.reg/gender)]
+             (let [ctx (extract (context/refocus+ ctx :dustingetz.reg/gender))]
                @(:hypercrud.browser/eav ctx)))
            '([[:dustingetz.reg/email "dustin@example.com"] :dustingetz.reg/gender :dustingetz.gender/male]
               [[:dustingetz.reg/email "bob@example.com"] :dustingetz.reg/gender :dustingetz.gender/male]))))
@@ -513,27 +515,27 @@
 (deftest refocus-b
   (def ctx (mock-fiddle! :dustingetz/gender-shirtsize))
   (testing "refocus to :ref :one from top"
-    (is (= (let [ctx (context/refocus ctx :dustingetz.reg/gender)]
+    (is (= (let [ctx (extract (context/refocus+ ctx :dustingetz.reg/gender))]
              ; Can't do it. Should this throw?
              (context/data ctx))
            nil))
 
     (is (= (for [[_ ctx] (context/spread-rows ctx)
                  [_ ctx] (context/spread-elements ctx)]
-             (let [ctx (context/refocus ctx :dustingetz.reg/gender)]
+             (let [ctx (extract (context/refocus+ ctx :dustingetz.reg/gender))]
                (context/data ctx)))
            [#:db{:ident :dustingetz.gender/male}
             #:db{:ident :dustingetz.gender/male}]))
 
     (is (= (let [ctx (context/row ctx [:dustingetz.reg/email "dustin@example.com"] #_17592186046196)
                  ctx (context/element ctx 0)
-                 ctx (context/refocus ctx :dustingetz.reg/gender)]
+                 ctx (extract (context/refocus+ ctx :dustingetz.reg/gender))]
              @(:hypercrud.browser/eav ctx))
            [[:dustingetz.reg/email "dustin@example.com"] :dustingetz.reg/gender :dustingetz.gender/male]))
 
     (is (= (for [[_ ctx] (context/spread-rows ctx)
                  [_ ctx] (context/spread-elements ctx)]
-             (let [ctx (context/refocus ctx :dustingetz.reg/gender)]
+             (let [ctx (extract (context/refocus+ ctx :dustingetz.reg/gender))]
                @(:hypercrud.browser/eav ctx)))
            [[[:dustingetz.reg/email "dustin@example.com"] :dustingetz.reg/gender :dustingetz.gender/male]
             [[:dustingetz.reg/email "bob@example.com"] :dustingetz.reg/gender :dustingetz.gender/male]])))
@@ -542,7 +544,7 @@
 (deftest refocus-and-attribute-parallels
   (testing "refocus and attribute are nearly the same thing"
     (let [ctx (mock-fiddle! :tutorial.race/submission)]
-      (let [ctx (context/refocus ctx :dustingetz.reg/gender)]
+      (let [ctx (extract (context/refocus+ ctx :dustingetz.reg/gender))]
         (is (= (context/smart-entity-identifier ctx (context/data ctx))
                :dustingetz.gender/male)))
       (let [ctx (context/attribute ctx :dustingetz.reg/gender)]
@@ -567,10 +569,10 @@
 
   (testing "smart-entity-identifier db/ident"
     (let [ctx (mock-fiddle! :tutorial.race/submission)]
-      (let [ctx (context/refocus ctx :dustingetz.reg/gender)]
+      (let [ctx (extract (context/refocus+ ctx :dustingetz.reg/gender))]
         (is (= (context/smart-entity-identifier ctx (context/data ctx))
                :dustingetz.gender/male)))
-      (let [ctx (context/refocus ctx :dustingetz.reg/gender)]
+      (let [ctx (extract (context/refocus+ ctx :dustingetz.reg/gender))]
         (is (= (context/smart-entity-identifier ctx (context/data ctx))
                :dustingetz.gender/male)))))
 
@@ -918,7 +920,7 @@
                  (context/element 0)
                  (context/attribute :dustingetz.post/slug)))
     (def r-link (->> (hyperfiddle.data/select-here+ ctx :dustingetz.tutorial/view-post) (unwrap (constantly nil))))
-    (is (= (let [[ctx r+route] (context/refocus' ctx r-link)]
+    (is (= (mlet [[ctx ?route] (context/refocus-to-link+ ctx @r-link)]
              (context/eav ctx))
            [nil :dustingetz.tutorial/blog [:dustingetz.post/slug :automatic-CRUD-links]])))
 
@@ -927,14 +929,14 @@
                  (context/row [[:dustingetz.post/slug :automatic-CRUD-links]])
                  (context/element 0)                        ; required for FindRel
                  (context/attribute :dustingetz.post/slug)))
-    (def r-link (->> (hyperfiddle.data/select-here+ ctx :hf/new) (unwrap (constantly nil))))
+    (def link @(extract (hyperfiddle.data/select-here+ ctx :hf/new)))
     (testing "at fiddle level, link :hf/new eav does not have a parent"
-      (is (= (let [[ctx r+route] (context/refocus' ctx r-link)]
+      (is (= (mlet [[ctx r+route] (context/refocus-to-link+ ctx link)]
                (context/eav ctx))
              ; should it be [nil nil "479925454"] from the txfn perspective?
              [nil :dustingetz.tutorial/blog "479925454"]))
-      (is (= (let [[ctx r+route] (context/refocus' ctx r-link)]
-               @r+route)
+      (is (= (mlet [[ctx +route] (context/refocus-to-link+ ctx link)]
+               (return +route))
              (right [:dustingetz.tutorial.blog/new-post [#entity["$" "479925454"]]]))))
     )
 
@@ -957,7 +959,7 @@
                  (context/attribute :dustingetz.post/slug)))
     (def r-link (->> (hyperfiddle.data/select-here+ ctx :hf/new) (unwrap (constantly nil))))
     (testing "at fiddle level, link :hf/new eav does not have a parent"
-      (is (= (let [[ctx r+route] (context/refocus' ctx r-link)]
+      (is (= (let [[ctx r+route] (context/refocus-to-link+ ctx r-link)]
                (context/eav ctx))
              ; should it be [nil nil "479925454"] from the txfn perspective?
              [nil :dustingetz.tutorial/blog "479925454"])))
@@ -972,10 +974,10 @@
                #_(context/element 0)                        ; Specifically no element
                ))
   (def r-link (hyperfiddle.data/select ctx :hf/new))
-  (is (= (let [[ctx r+route] (context/refocus' ctx r-link)]
+  (is (= (mlet [[ctx r+route] (context/refocus-to-link+ ctx @r-link)]
            (context/eav ctx))
          [nil :dustingetz.tutorial/blog "479925454"]))
-  (is (= (let [[ctx r+route] (context/refocus' ctx r-link)]
+  (is (= (mlet [[ctx r+route] (context/refocus-to-link+ ctx r-link)]
            @r+route)
          ; This works because refocus hardcodes element 0, which it turns out is almost always
          ; what the custom renderer wants.
@@ -1046,7 +1048,7 @@
 
   (testing "counter button at scalar"
     (def ctx (mock-fiddle! :dustingetz/counter))
-    (def ctx (context/refocus ctx :dustingetz.reg/age))
+    (def ctx (extract (context/refocus+ ctx :dustingetz.reg/age)))
     (= (context/eav ctx) [17592186046196 :dustingetz.reg/age 102])
 
     )

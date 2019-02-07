@@ -111,19 +111,11 @@
 
 (defn from-link [link ctx with-route]                       ; ctx is for formula and routing (tempids and domain)
   {:post [%]}
-  (let [+args (if-let [target-a (hyperfiddle.fiddle/read-path (:link/path link))]
-                (context/build-args+
-                  ; In the element level this returns tuple, e.g. [nil ctx]
-                  (context/refocus ctx target-a)            ; can return tuple if tupled elements.
-                  ; In this case the args are also tupled.
-                                     link)
-                (right []))]                                ; top iframes without dependency don't need a formula
-    ; If we're refocusing to :blank, do we need to whack the ctx?
-    (assert ctx)
-    (mlet [route (context/build-route' +args ctx link)]     ; what if two routes?
-      ; (mapcat #(with-route % ctx) routes)
-      (assert ctx)
-      (with-route route ctx))))
+  (let [target-a (hyperfiddle.fiddle/read-path (:link/path link))]
+    (mlet [ctx (context/refocus+ ctx target-a)
+           args (context/build-args+ ctx link)
+           ?route (context/build-route+ args ctx link)]
+      (with-route ?route ctx))))
 
 (defn data-from-link [link ctx]                             ; todo rename
   {:pre [link ctx]}

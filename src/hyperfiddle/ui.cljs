@@ -2,7 +2,7 @@
   (:require-macros [hyperfiddle.ui :refer [-build-fiddle]])
   (:require
     [cats.core :as cats :refer [fmap >>=]]
-    [cats.monad.either :as either]
+    [cats.monad.either :as either :refer [branch]]
     [clojure.core.match :refer [match match*]]
     [clojure.string :as string]
     [contrib.ct :refer [unwrap]]
@@ -210,11 +210,11 @@ User renderers should not be exposed to the reaction."
           (if-let [[fiddle-ident args] ?route]
             (->> (concat #_class #_[fiddle-ident] args)
                  (map pr-str) (interpose " ") (apply str))))
-        (validated-route-tooltip-props [r+?route link-ref ctx props] ; link is for validation
+        (validated-route-tooltip-props [+?route link ctx props] ; link is for validation
           ; this is a fine place to eval, put error message in the tooltip prop
           ; each prop might have special rules about his default, for example :visible is default true,
           ; does this get handled here?
-          (let [+route (>>= @r+?route #(routing/validated-route+ (:link/fiddle @link-ref) % ctx))
+          (let [+route (>>= +?route #(routing/validated-route+ (:link/fiddle link) % ctx))
                 errors (->> [+route] (filter either/left?) (map cats/extract) (into #{}))
                 ?route (unwrap (constantly nil) +route)]
             (-> props
@@ -223,7 +223,7 @@ User renderers should not be exposed to the reaction."
                                    (if-not (empty? errors)
                                      [:warning (pprint-str errors)]
                                      (if (:hyperfiddle.ui/debug-tooltips ctx)
-                                       [nil (link-tooltip @link-ref ?route ctx)]
+                                       [nil (link-tooltip link ?route ctx)]
                                        existing-tooltip))))
                 (update :class css (when-not (empty? errors) "invalid")))))
         (disabled? [link-ref ctx]
@@ -236,49 +236,50 @@ User renderers should not be exposed to the reaction."
             nil))]
   (defn ui-from-link [link-ref ctx & [props ?label]]
     {:pre [link-ref (r/reactive? link-ref)]}
-    (let [visual-ctx ctx
-          [ctx r+?route] (context/refocus' ctx link-ref)    ; route reaction isn't even real
-          ; This can be tuple-ctx and tuple-route.
-          style {:color nil #_(connection-color ctx (cond (hyperfiddle.ide.console-links/system-link?
-                                                            (:db/id @link-ref)) 60 :else 40))}
-          props (update props :style #(or % style))
+    ; Once this link changes, pretty much everything below here needs to recompute
+    ; Reactions are unlikely to be faster than render-tree-pruning.
+    (let [link @link-ref
+          visual-ctx ctx
           has-tx-fn @(r/fmap-> link-ref :link/tx-fn blank->nil boolean)
-          is-iframe @(r/fmap->> link-ref :link/class (some #{:hf/iframe}))]
+          is-iframe @(r/fmap->> link-ref :link/class (some #{:hf/iframe}))
+          +route-and-ctx (context/refocus-to-link+ ctx link)
+          +route (fmap second +route-and-ctx)
+          ?ctx (branch +route-and-ctx (constantly nil) first)]
+      ;(assert ?ctx "not sure what there is that can be done")
       (cond
         (and has-tx-fn @(r/fmap-> link-ref :link/fiddle nil?))
         (let [props (-> props
                         (update :class css "hyperfiddle")
-                        (update :disabled #(or % (disabled? link-ref ctx))))]
-          [effect-cmp link-ref ctx props @(r/track prompt link-ref ?label)])
+                        (update :disabled #(or % (disabled? link-ref ?ctx))))]
+          [effect-cmp link-ref ?ctx props @(r/track prompt link-ref ?label)])
 
         (or has-tx-fn (and is-iframe (:iframe-as-popover props)))
-        (let [props (-> @(r/track validated-route-tooltip-props r+?route link-ref ctx props)
+        (let [props (-> (validated-route-tooltip-props +route link ?ctx props)
                         (dissoc :iframe-as-popover)
                         (update :class css "hyperfiddle")   ; should this be in popover-cmp? unify with semantic css
-                        (update :disabled #(or % (disabled? link-ref ctx))))
+                        (update :disabled #(or % (disabled? link-ref ?ctx))))
               label @(r/track prompt link-ref ?label)]
-          [popover-cmp link-ref ctx visual-ctx props label])
+          [popover-cmp link-ref ?ctx visual-ctx props label])
 
         is-iframe
-        [stale/loading (stale/can-be-loading? ctx)
-         (fmap #(route/assoc-frag % (:frag props)) @r+?route) ; what is this frag noise?
-         (fn [e] [(ui-error/error-comp ctx) e])
+        [stale/loading (stale/can-be-loading? visual-ctx)          ; was just ctx before
+         (fmap #(route/assoc-frag % (:frag props)) +route) ; what is this frag noise?
+         (fn [e] [(ui-error/error-comp ?ctx) e])
          (fn [route]
            (let [iframe (or (::custom-iframe props) iframe-cmp)]
-             [iframe ctx (-> props                          ; flagged - :class
+             [iframe ?ctx (-> props                          ; flagged - :class
                              (assoc :route route)
                              (dissoc props ::custom-iframe)
                              (update :class css (->> @(r/fmap :link/class link-ref)
                                                      (string/join " ")
                                                      css-slugify)))]))]
 
-        :else (let [props @(r/track validated-route-tooltip-props r+?route link-ref ctx props)]
+        :else (let [props (validated-route-tooltip-props +route link ?ctx props)]
                 [tooltip (tooltip-props (:tooltip props))
                  (let [props (dissoc props :tooltip)]
                    ; what about class - flagged
                    ; No eav, the route is the same info
-                   [anchor ctx props @(r/track prompt link-ref ?label)])])
-        ))))
+                   [anchor ?ctx props @(r/track prompt link-ref ?label)])])))))
 
 (defn ^:export link "Relation level link renderer. Works in forms and lists but not tables.
   path should be optional, for disambiguation only. Naked can be hard-linked in markdown?

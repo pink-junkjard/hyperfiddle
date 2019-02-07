@@ -1,8 +1,8 @@
 (ns hypercrud.browser.context
   (:require
     [cats.core :refer [mlet return =<< fmap]]
-    [cats.monad.either :as either :refer [left right]]
-    [contrib.ct :refer [unwrap]]
+    [cats.monad.either :as either :refer [left right either?]]
+    [contrib.ct :refer [unwrap maybe maybe->either]]
     [contrib.data :refer [ancestry-common ancestry-divergence]]
     [contrib.datomic]
     [contrib.eval :as eval]
@@ -189,7 +189,6 @@
 
 (defn schemas "Dumb setup method, separates context from :peer and helps with tests etc"
   [ctx r-schemas]
-  {:post [#_(do (println (count @(:hypercrud.browser/schemas %))) true)]}
   (assoc ctx :hypercrud.browser/schemas r-schemas))
 
 (defn hydrate-attribute [ctx ident & ?more-path]
@@ -429,9 +428,9 @@
 (defn row "Row does not set E. E is the parent, not the child, and row is analogous to :ref :many child."
   [ctx & [k]]
   {:pre [(s/assert :hypercrud/context ctx)
-         (s/assert ::result-path-segment k)
          #_(not (coll? k))]
    :post [(s/assert :hypercrud/context %)]}
+  (s/assert ::result-path-segment k)
   (as-> ctx ctx
         ; What if k is not the canonical key? db/id vs identity, etc
         (update ctx :hypercrud.browser/result-path (fnil conj []) k)
@@ -678,8 +677,7 @@
   [ctx relative-path]
   {:pre [(s/assert :hypercrud/context ctx)
          (:hypercrud.browser/result ctx)]
-   :post [(s/assert :hypercrud/context %)
-          #_(do (println "Field relpath: " relative-path " eav: " (pr-str @(:hypercrud.browser/eav %))) true)]}
+   :post [(s/assert :hypercrud/context %)]}
   ; Is this legacy compat?
   (reduce (fn [ctx p]
             (cond
@@ -769,18 +767,19 @@
 (defn unwind [ctx n]
   ((apply comp (repeat n :hypercrud.browser/parent)) ctx))
 
-(defn refocus-in-element
+(defn refocus-in-element+
   [ctx a]
   {:pre [(:hypercrud.browser/element ctx)]
-   :post [#_(let [[_ aa _] @(:hypercrud.browser/eav %)] (= a aa))]}
+   :post [(s/assert either? %)
+          #_(let [[_ aa _] @(:hypercrud.browser/eav %)] (= a aa))]}
   (cond
     (contrib.datomic/unique? @(:hypercrud.browser/schema ctx) a :db.unique/identity)
     (if (qfind-level? ctx)
-      ctx                                                   ; [nil :dustingetz.tutorial/blog [:dustingetz.post/slug :hehehe]]
-      (unwind ctx 1))
+      (right ctx)                                           ; [nil :dustingetz.tutorial/blog [:dustingetz.post/slug :hehehe]]
+      (right (unwind ctx 1)))
 
     (let [[_ aa _] @(:hypercrud.browser/eav ctx)] (= aa a))
-    ctx
+    (right ctx)
 
     :else
     (let [current-path (:hypercrud.browser/pull-path ctx)
@@ -809,12 +808,14 @@
                     ; FOR LINK REFOCUS ONLY, the prent entity ctx is correct
                     chosen-path
                     (conj (vec chosen-path) a))]
-          (focus common-ancestor-ctx (ancestry-divergence foo current-path)))
+          (right
+            (focus common-ancestor-ctx (ancestry-divergence foo current-path))))
 
-        ; No solution found. This is a constraint failure and asserts upstack.
-        nil))))
+        ; No solution found.
+        ; Sparse resultset, or possibly a constraint failure (userland asked for something impossible?)
+        (left (str "unable to satisfy link at: " a))))))
 
-(defn refocus "From view, find the closest satisfactory ctx accounting for cardinality. e.g. as in
+(defn refocus+ "From view, find the closest satisfactory ctx accounting for cardinality. e.g. as in
   !link(:new-intent-naive :hf/remove). Caller believes that the deps are satisfied (right stuff is in scope).
   todo unify with refocus'.
   This is ALWAYS focusing a link.
@@ -825,23 +826,23 @@
   and handles :identity differently, now."
   [ctx a']
   {:pre [ctx #_a']                                          ; disable assert for backwards compat until all links have a
-   :post [%]}
+   ; nil return is allowed, does this return either?
+   :post [(s/assert either? %)]}
   (cond
+    (not a')                                                ; backwards compat with Dec 2018 link/path
+    (right ctx)
+
     (= a' (@(:hypercrud.browser/fiddle ctx) :fiddle/ident))
     ; if no element, we already there (depth = 0)
-    (unwind ctx (pull-depth ctx))
+    (right (unwind ctx (pull-depth ctx)))
 
     (:hypercrud.browser/element ctx)
-    (refocus-in-element ctx a')
+    (refocus-in-element+ ctx a')
 
     (let [qfind @(:hypercrud.browser/qfind ctx)]
       (and (#{FindRel FindTuple} (type qfind))
            (= 1 (count (datascript.parser/find-elements qfind)))))
-    (refocus-in-element (element ctx 0) a')
-
-    #_#_:else
-    (do (timbre/warn "element-level links aren't well defined for tupled qfind: " @(:hypercrud.browser/qfind ctx))
-        nil)
+    (refocus-in-element+ (element ctx 0) a')
 
     :else
     ; This never happens in autogrids, only in custom views.
@@ -849,7 +850,7 @@
     ; If the custom view is a FindRel-N, then this needs to tuple all the way up.
     ; It is probably not what they want. They should make an element ctx and place
     ; each link individually. This hack probably never needs to get fixed.
-    (refocus-in-element (element ctx 0) a')))
+    (refocus-in-element+ (element ctx 0) a')))
 
 (defn id->tempid+ [route ctx]
   (let [invert-id (fn [id uri]
@@ -921,12 +922,10 @@
   (defn build-args+ "Params are EAV-typed (uncolored)"
     [ctx                                                    ;There is a ctx per argument if we are element-level tuple.
      {:keys [:link/fiddle :link/tx-fn] :as link}]
-
+    {:post [(s/assert either? %)]}
     ; if at element level, zip with the find-elements, so do this N times.
     ; That assumes the target query is a query of one arg. If it takes N args, we can apply as tuple.
-    ; If they misalign thats an error.
-    ; Return the tuple of args.
-
+    ; If they misalign thats an error. Return the tuple of args.
     (mlet [formula-ctx-closure (if-let [formula-str (contrib.string/blank->nil (:link/formula link))]
                                  (eval-string!+ (str "(fn [ctx] \n" formula-str "\n)"))
                                  (either/right (constantly (constantly nil))))
@@ -943,48 +942,37 @@
         ; !link[⬅︎ Slack Storm](:dustingetz.storm/view)
         (if arg [arg])))))
 
-(defn ^:export build-route' "There may not be a route! Fiddle is sometimes optional" ; build-route+
-  [+args ctx {:keys [:link/fiddle :link/tx-fn] :as link}]
-  {:pre [ctx]}
-  (if (and (not fiddle) tx-fn)
-    (mlet [args +args]
-      ; :hf/remove doesn't have one by default, :hf/new does, both can be customized
-      (return nil))
-    (mlet [args +args                                       ; part of error chain
-           fiddle-id (if fiddle
-                       (right (:fiddle/ident fiddle))
-                       (left {:message ":link/fiddle required" :data {:link link}}))
-           ; Why must we reverse into tempids? For the URL, of course.
-           :let [colored-args (mapv (partial tag-v-with-color ctx) args)] ; this ctx is refocused to some eav
-           route (id->tempid+ (hyperfiddle.route/canonicalize fiddle-id colored-args) ctx)
-           route (hyperfiddle.route/validate-route+ route)]
-      (return route))))
+(defn ^:export build-route+ "There may not be a route! Fiddle is sometimes optional" ; build-route+
+  [args ctx {:keys [:link/fiddle :link/tx-fn] :as link}]
+  {:pre [ctx]
+   :post [(s/assert either? %)]}
+  (mlet [fiddle-id (if fiddle
+                     (right (:fiddle/ident fiddle))
+                     (left {:message ":link/fiddle required" :data {:link link}}))
+         ; Why must we reverse into tempids? For the URL, of course.
+         :let [colored-args (mapv (partial tag-v-with-color ctx) args)] ; this ctx is refocused to some eav
+         route (id->tempid+ (hyperfiddle.route/canonicalize fiddle-id colored-args) ctx)
+         route (hyperfiddle.route/validate-route+ route)]
+    (return route)))
 
-(defn refocus' "focus a link ctx, accounting for link/formula which occludes the natural eav"
-  ; Can return tuple-ctx
-  [ctx link-ref]
-  {:pre [(s/assert :hypercrud/context ctx)
-         (s/assert r/reactive? link-ref)]
-   :post [(s/assert (s/cat :ctx :hypercrud/context :route r/reactive?) %)]}
-  (let [[_ a _] @(:hypercrud.browser/eav ctx)
-        target-a @(r/fmap (r/comp hyperfiddle.fiddle/read-path :link/path) link-ref)
-        ctx (if target-a                                    ; compat
-              (refocus ctx target-a)                        ; TODO: this must return tuple
-              ctx)
-        ; when focusing a LINK, handle :identity differently
-        +args @(r/fmap->> link-ref (build-args+ ctx))       ; tuple
-
-        ; EAV sugar is not interested in tuple case, that txfn is way off happy path
-        [v' & vs] (->> +args (contrib.ct/unwrap (constantly nil)))
-        ctx (assoc ctx :hypercrud.browser/eav (r/apply stable-eav-v
-                                                       [(:hypercrud.browser/eav ctx)
-                                                        (r/track identity v')]))
-        ; Route gets to choose how to interpret the tuple-ctx.
-        ; If the target-fiddle has one input, build N routes (tuple-ctx dimension).
-        ; If the target-fiddle dimension matches tuple dimension, build one route.
-        ; Otherwise, error.
-        r+?route (r/fmap->> link-ref (build-route' +args ctx))]
-    [ctx r+?route]))
+(defn refocus-to-link+ "focus a link ctx, accounting for link/formula which occludes the natural eav"
+  [ctx {:keys [:link/fiddle :link/tx-fn :link/path] :as link}]
+  {:pre [(s/assert :hypercrud/context ctx)]
+   :post [(s/assert either? %)]
+   #_#_:post [(s/assert (s/cat :ctx :hypercrud/context :route r/reactive?) %)]}
+  (let [target-a (hyperfiddle.fiddle/read-path path)]
+    (mlet [ctx (refocus+ ctx target-a)
+           [v' & vs :as args] (build-args+ ctx link)
+           ; :hf/remove doesn't have route by default, :hf/new does, both can be customized
+           ?route (if (and (not fiddle) tx-fn)
+                    (right nil)
+                    (build-route+ args ctx link))
+           ; EAV sugar is not interested in tuple case, that txfn is way off happy path
+           :let [ctx (assoc ctx :hypercrud.browser/eav (r/apply stable-eav-v
+                                                                [(:hypercrud.browser/eav ctx)
+                                                                 (r/track identity v')]))]]
+      (right
+        [ctx ?route]))))
 
 (defn tempid! "unstable"
   ([ctx]
