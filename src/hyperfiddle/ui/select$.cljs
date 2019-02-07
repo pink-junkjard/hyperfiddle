@@ -97,10 +97,10 @@
       ; anchor is always a pull context, never a qfind context. To see this is true, consider that you can't
       ; pick a tuple then write it into a database. You can only write through entities.
       (context/qfind-level? anchor-ctx)
-      [select-error-cmp (str "Select requires attribute ctx, eav: " (context/eav anchor-ctx))]
+      [select-error-cmp (str "No attribute in scope. eav: " (context/eav anchor-ctx))]
 
       (and (:value anchor-props) (not (contains? (set options) (:value anchor-props))))
-      [select-error-cmp (str "Select value: " (:value anchor-props) " not seen in options")]
+      [select-error-cmp (str "Value not seen in options: " (:value anchor-props))]
 
       (#{FindColl FindScalar} target-qfind-type)
       (let [options-props (into anchor-props (select-keys target-props [:on-click]))
