@@ -28,13 +28,13 @@
     attr))
 
 (defn semantic-docstring [ctx & [doc-override]]
-  (let [[e a v] @(:hypercrud.browser/eav ctx)
+  (let [[_ a _] (context/eav ctx)
         attr (context/hydrate-attribute ctx a)
         typedoc (some->> @(r/fmap attribute-schema-human attr)
                          (interpose " ") (apply str))
         help-md (blank->nil
                   ; Use path over a because it could have flattened the nesting and attr is ambiguous
-                  (str (if typedoc (str "`" (pr-str (:hypercrud.browser/pull-path ctx)) " " typedoc "`\n\n")) ; markdown needs double line-break
+                  (str (if typedoc (str "`" a " " typedoc "`\n\n")) ; markdown needs double line-break
                        (or doc-override (some-> @(r/cursor attr [:db/doc]) blank->nil))
                        ))]
     help-md))
