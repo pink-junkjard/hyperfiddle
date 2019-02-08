@@ -7,542 +7,660 @@
 ; Don't forget the fiddle ontology
 
 (def fiddles
-   {:dustingetz/gender-shirtsize
-    [{:fiddle/ident :dustingetz/gender-shirtsize
-      :fiddle/type :query
-      :fiddle/query
-      (pr-str
-         '[:find
-           [(pull ?e [:dustingetz.reg/email
-                      :dustingetz.reg/name
-                      {:dustingetz.reg/gender [:db/ident]}
-                      {:dustingetz.reg/shirt-size [:db/ident]}
-                      :db/id])
-            ...]
-           :where
-           [?e :dustingetz.reg/email]])}
-     [{:db/id 17592186046196,
-       :dustingetz.reg/email "dustin@example.com",
-       :dustingetz.reg/name "Dustin Getz",
-       :dustingetz.reg/gender {:db/ident :dustingetz.gender/male},
-       :dustingetz.reg/shirt-size {:db/ident :dustingetz.shirt-size/mens-large}}
-      {:db/id 17592186046763,
-       :dustingetz.reg/email "bob@example.com",
-       :dustingetz.reg/gender {:db/ident :dustingetz.gender/male},
-       :dustingetz.reg/shirt-size {:db/ident :dustingetz.shirt-size/mens-large}}
-      #_{:db/id 17592186046764, :dustingetz.reg/email "charlie@example.com", :dustingetz.reg/gender {:db/ident :dustingetz.gender/male}}
-      #_{:db/id 17592186046317,
-         :dustingetz.reg/email "alice@example.com",
-         :dustingetz.reg/name "Alice",
-         :dustingetz.reg/gender {:db/ident :dustingetz.gender/female},
-         :dustingetz.reg/shirt-size {:db/ident :dustingetz.shirt-size/womens-medium}}
-      #_{:db/id 17592186046765,
-         :dustingetz.reg/email "elizabeth@example.com",
-         :dustingetz.reg/gender {:db/ident :dustingetz.gender/female},
-         :dustingetz.reg/shirt-size {:db/ident :dustingetz.shirt-size/womens-medium}}]]
-
-    :tutorial.race/submission
-    [{:fiddle/css
-      ".display-mode-user div.field.attribute {\n  display: flex;\n}\n\n.display-mode-user div.field.attribute > :first-child {\n  flex: 0 1 8em !important;\n  display: inline;\n  padding-right: 1em;\n  text-align: right;\n}\n\n.display-mode-user div.field.attribute > :not(:first-child) {\n  flex: 1 1;\n}",
-      :fiddle/pull
-      "[:db/id \n :dustingetz.reg/email\n :dustingetz.reg/name\n :dustingetz.reg/age\n :dustingetz.reg/birthdate\n {:dustingetz.reg/gender [:db/ident]}\n {:dustingetz.reg/shirt-size [:db/ident]}]",
-      :fiddle/ident :tutorial.race/submission,
-      :fiddle/renderer
-      "(let [{:keys [:hypercrud.browser/fiddle]} ctx]\n  [:div.container-fluid props\n   [hyperfiddle.ui/markdown (:fiddle/markdown @fiddle) ctx]])",
-      :hyperfiddle/owners
-      [#uuid "acd054a8-4e36-4d6c-a9ec-95bdc47f0d39"],
-      :db/id 17592186046198,
-      :fiddle/type :entity,
-      :fiddle/links
-      [{:db/id 17592186046199,
-        :link/class [:hf/iframe],
-        :link/fiddle
-        {:db/id 17592186046200,
-         :fiddle/ident :tutorial.race/genders,
-         :fiddle/query
-         "[:find\n [(pull ?e [:db/ident]) ...]\n :where\n [?e :db/ident ?i]\n [(namespace ?i) ?ns]\n [(ground \"dustingetz.gender\") ?ns]]",
-         :fiddle/type :query},
-        :link/rel :hf/iframe}
-       {:db/id 17592186046201,
-        :link/class [:hf/iframe],
-        :link/fiddle
-        {:db/id 17592186046202,
-         :fiddle/ident :tutorial.race/shirt-sizes,
-         :fiddle/query
-         "[:find\n [(pull ?e [:db/ident {:dustingetz.reg/gender [:db/ident]}]) ...]\n :in $ ?gender\n :where\n [?e :db/ident ?i]\n [?e :dustingetz.reg/gender ?gender]\n [(namespace ?i) ?ns]\n [(ground \"dustingetz.shirt-size\") ?ns]]",
-         :fiddle/type :query},
-        :link/path ":dustingetz.reg/gender",
-        :link/rel :hf/iframe}],
-      :fiddle/markdown
-      "### Registrant's submission\n\n!field[](:dustingetz.reg/email)\n!field[](:dustingetz.reg/name)\n!field[](:dustingetz.reg/age)\n!field[](:dustingetz.reg/birthdate)\n!field[](:dustingetz.reg/gender){options=\"tutorial.race/genders\" option-label=\":db/ident\"}\n\nWould you like a tee-shirt with that?\n\n!field[](:dustingetz.reg/shirt-size){options=\"tutorial.race/shirt-sizes\" option-label=\":db/ident\"}\n\n!block[Shirt-size options react to gender ☝️]{.alert .alert-info}"}
-     {:db/id 17592186046196,
+  {:dustingetz/gender-shirtsize
+   [{:fiddle/ident :dustingetz/gender-shirtsize
+     :fiddle/type :query
+     :fiddle/query
+     (pr-str
+       '[:find
+         [(pull ?e [:dustingetz.reg/email
+                    :dustingetz.reg/name
+                    {:dustingetz.reg/gender [:db/ident]}
+                    {:dustingetz.reg/shirt-size [:db/ident]}
+                    :db/id])
+          ...]
+         :where
+         [?e :dustingetz.reg/email]])}
+    [{:db/id 17592186046196,
       :dustingetz.reg/email "dustin@example.com",
       :dustingetz.reg/name "Dustin Getz",
-      :dustingetz.reg/age 102,
-      :dustingetz.reg/birthdate #inst "2018-09-13T00:00:00.000-00:00",
       :dustingetz.reg/gender {:db/ident :dustingetz.gender/male},
-      :dustingetz.reg/shirt-size {:db/ident :dustingetz.shirt-size/mens-large}}]
+      :dustingetz.reg/shirt-size {:db/ident :dustingetz.shirt-size/mens-large}}
+     {:db/id 17592186046763,
+      :dustingetz.reg/email "bob@example.com",
+      :dustingetz.reg/gender {:db/ident :dustingetz.gender/male},
+      :dustingetz.reg/shirt-size {:db/ident :dustingetz.shirt-size/mens-large}}
+     #_{:db/id 17592186046764, :dustingetz.reg/email "charlie@example.com", :dustingetz.reg/gender {:db/ident :dustingetz.gender/male}}
+     #_{:db/id 17592186046317,
+        :dustingetz.reg/email "alice@example.com",
+        :dustingetz.reg/name "Alice",
+        :dustingetz.reg/gender {:db/ident :dustingetz.gender/female},
+        :dustingetz.reg/shirt-size {:db/ident :dustingetz.shirt-size/womens-medium}}
+     #_{:db/id 17592186046765,
+        :dustingetz.reg/email "elizabeth@example.com",
+        :dustingetz.reg/gender {:db/ident :dustingetz.gender/female},
+        :dustingetz.reg/shirt-size {:db/ident :dustingetz.shirt-size/womens-medium}}]]
 
-    :tutorial.race/genders
-    [[{:db/ident :dustingetz.gender/male} {:db/ident :dustingetz.gender/female}]
-     {:db/id 17592186046200,
-      :fiddle/ident :tutorial.race/genders,
-      :fiddle/query
-      "[:find\n [(pull ?e [:db/ident]) ...]\n :where\n [?e :db/ident ?i]\n [(namespace ?i) ?ns]\n [(ground \"dustingetz.gender\") ?ns]]",
-      :fiddle/type :query,
-      :hyperfiddle/owners
-      [#uuid "acd054a8-4e36-4d6c-a9ec-95bdc47f0d39"]}]
+   :tutorial.race/submission
+   [{:fiddle/css
+     ".display-mode-user div.field.attribute {\n  display: flex;\n}\n\n.display-mode-user div.field.attribute > :first-child {\n  flex: 0 1 8em !important;\n  display: inline;\n  padding-right: 1em;\n  text-align: right;\n}\n\n.display-mode-user div.field.attribute > :not(:first-child) {\n  flex: 1 1;\n}",
+     :fiddle/pull
+     "[:db/id \n :dustingetz.reg/email\n :dustingetz.reg/name\n :dustingetz.reg/age\n :dustingetz.reg/birthdate\n {:dustingetz.reg/gender [:db/ident]}\n {:dustingetz.reg/shirt-size [:db/ident]}]",
+     :fiddle/ident :tutorial.race/submission,
+     :fiddle/renderer
+     "(let [{:keys [:hypercrud.browser/fiddle]} ctx]\n  [:div.container-fluid props\n   [hyperfiddle.ui/markdown (:fiddle/markdown @fiddle) ctx]])",
+     :hyperfiddle/owners
+     [#uuid "acd054a8-4e36-4d6c-a9ec-95bdc47f0d39"],
+     :db/id 17592186046198,
+     :fiddle/type :entity,
+     :fiddle/links
+     [{:db/id 17592186046199,
+       :link/class [:hf/iframe],
+       :link/fiddle
+       {:db/id 17592186046200,
+        :fiddle/ident :tutorial.race/genders,
+        :fiddle/query
+        "[:find\n [(pull ?e [:db/ident]) ...]\n :where\n [?e :db/ident ?i]\n [(namespace ?i) ?ns]\n [(ground \"dustingetz.gender\") ?ns]]",
+        :fiddle/type :query},
+       :link/rel :hf/iframe}
+      {:db/id 17592186046201,
+       :link/class [:hf/iframe],
+       :link/fiddle
+       {:db/id 17592186046202,
+        :fiddle/ident :tutorial.race/shirt-sizes,
+        :fiddle/query
+        "[:find\n [(pull ?e [:db/ident {:dustingetz.reg/gender [:db/ident]}]) ...]\n :in $ ?gender\n :where\n [?e :db/ident ?i]\n [?e :dustingetz.reg/gender ?gender]\n [(namespace ?i) ?ns]\n [(ground \"dustingetz.shirt-size\") ?ns]]",
+        :fiddle/type :query},
+       :link/path ":dustingetz.reg/gender",
+       :link/rel :hf/iframe}],
+     :fiddle/markdown
+     "### Registrant's submission\n\n!field[](:dustingetz.reg/email)\n!field[](:dustingetz.reg/name)\n!field[](:dustingetz.reg/age)\n!field[](:dustingetz.reg/birthdate)\n!field[](:dustingetz.reg/gender){options=\"tutorial.race/genders\" option-label=\":db/ident\"}\n\nWould you like a tee-shirt with that?\n\n!field[](:dustingetz.reg/shirt-size){options=\"tutorial.race/shirt-sizes\" option-label=\":db/ident\"}\n\n!block[Shirt-size options react to gender ☝️]{.alert .alert-info}"}
+    {:db/id 17592186046196,
+     :dustingetz.reg/email "dustin@example.com",
+     :dustingetz.reg/name "Dustin Getz",
+     :dustingetz.reg/age 102,
+     :dustingetz.reg/birthdate #inst "2018-09-13T00:00:00.000-00:00",
+     :dustingetz.reg/gender {:db/ident :dustingetz.gender/male},
+     :dustingetz.reg/shirt-size {:db/ident :dustingetz.shirt-size/mens-large}}]
 
-    :tutorial.race/shirt-sizes
-    [{:db/id 17592186046202,
-      :fiddle/ident :tutorial.race/shirt-sizes,
-      :fiddle/links
-      [{:db/id 17592186046318,
-        :link/class [:hf/iframe],
-        :link/fiddle
-        {:db/id 17592186046200,
-         :fiddle/ident :tutorial.race/genders,
-         :fiddle/query
-         "[:find\n [(pull ?e [:db/ident]) ...]\n :where\n [?e :db/ident ?i]\n [(namespace ?i) ?ns]\n [(ground \"dustingetz.gender\") ?ns]]",
-         :fiddle/type :query},
-        :link/path ":dustingetz.reg/gender",
-        :link/rel :hf/iframe}],
-      :fiddle/query
-      "[:find\n [(pull ?e [:db/ident {:dustingetz.reg/gender [:db/ident]}]) ...]\n :in $ ?gender\n :where\n [?e :db/ident ?i]\n [?e :dustingetz.reg/gender ?gender]\n [(namespace ?i) ?ns]\n [(ground \"dustingetz.shirt-size\") ?ns]]",
-      :fiddle/renderer
-      "(let [{:keys [:hypercrud.browser/fiddle]} ctx]\n  [:div props\n   [hyperfiddle.ui/markdown (:fiddle/markdown @fiddle) ctx]\n   [hyperfiddle.ui/table \n    (fn [ctx]\n      [[hyperfiddle.ui/field [:db/ident] ctx hyperfiddle.ui/hyper-control]\n       [hyperfiddle.ui/field [:dustingetz.reg/gender] ctx hyperfiddle.ui/hyper-control\n        {:options :tutorial.race/genders}]]) \n    ctx]])",
-      :fiddle/type :query,
-      :hyperfiddle/owners
-      [#uuid "acd054a8-4e36-4d6c-a9ec-95bdc47f0d39"]}
-     [{:db/ident :dustingetz.shirt-size/womens-medium, :dustingetz.reg/gender {:db/ident :dustingetz.gender/female}}
-      {:db/ident :dustingetz.shirt-size/womens-small, :dustingetz.reg/gender {:db/ident :dustingetz.gender/female}}
-      {:db/ident :dustingetz.shirt-size/womens-large, :dustingetz.reg/gender {:db/ident :dustingetz.gender/female}}]]
+   :tutorial.race/genders
+   [[{:db/ident :dustingetz.gender/male} {:db/ident :dustingetz.gender/female}]
+    {:db/id 17592186046200,
+     :fiddle/ident :tutorial.race/genders,
+     :fiddle/query
+     "[:find\n [(pull ?e [:db/ident]) ...]\n :where\n [?e :db/ident ?i]\n [(namespace ?i) ?ns]\n [(ground \"dustingetz.gender\") ?ns]]",
+     :fiddle/type :query,
+     :hyperfiddle/owners
+     [#uuid "acd054a8-4e36-4d6c-a9ec-95bdc47f0d39"]}]
 
-    :dustingetz.tutorial/blog
-    [{:fiddle/cljs-ns
-      "(defmethod hyperfiddle.api/txfn :user/new-post [_ e a v ctx]\n  [[:db/add v :dustingetz.post/published-date (js/Date.)]])\n\n(defn render-dd [e ctx]\n  (hyperfiddle.ui/link \n   :dustingetz.tutorial/view-post\n   (hypercrud.browser.context/row ctx (:dustingetz.post/slug e))\n   (:dustingetz.post/title e)))\n\n(defn render-dt [e]\n  (or (some-> e \n        :dustingetz.post/published-date\n        (.toLocaleDateString \"en-US\")) \n      \"–\"))",
-      :fiddle/css
-      "dt { \n  font-weight: unset; \n  width: 5em; \n}",
-      :fiddle/ident :dustingetz.tutorial/blog,
-      :fiddle/renderer
-      "(let [{:keys [:hypercrud.browser/fiddle]} ctx]\n  [:div.container props\n   [hyperfiddle.ui/markdown (:fiddle/markdown @fiddle) ctx]\n   (->> val\n     (sort-by :dustingetz.post/published-date)\n     (map (fn [[e]]\n            [:<> {:key (str (:db/id e))}\n             [:dt [user/render-dt e]]  \n             [:dd [user/render-dd e ctx]]]))\n     (into [:dl]))])",
-      :hyperfiddle/owners
-      [#uuid "acd054a8-4e36-4d6c-a9ec-95bdc47f0d39"],
-      :db/id 17592186047369,
-      :fiddle/type :query,
-      :fiddle/links
-      [{:db/id 17592186047370,
-        :link/fiddle
-        {:db/id 17592186047371,
-         :fiddle/ident :dustingetz.tutorial/view-post,
-         :fiddle/type :entity},
-        :link/path ":dustingetz.post/slug",
-        :link/rel :hf/self}
-       {:db/id 17592186047372,
-        :link/class [:hf/new],
-        :link/fiddle
-        {:db/id 17592186047373,
-         :fiddle/ident
-         :dustingetz.tutorial.blog/new-post,
-         :fiddle/type :entity},
-        :link/path ":dustingetz.post/slug",
-        :link/rel :hf/new,
-        :link/tx-fn ":user/new-post"}],
-      :fiddle/query
-      "[:find\n (pull ?e [:dustingetz.post/published-date\n           :dustingetz.post/title\n           :dustingetz.post/slug\n           :db/id])\n :where\n [?e :dustingetz.post/slug]]"}
-     [[{:db/id 17592186047105,
-        :dustingetz.post/published-date #inst "2018-11-21T00:00:00.000-00:00",
-        :dustingetz.post/title "large strings and high churn attrs blow out indexes",
-        :dustingetz.post/slug :large-strings-and-high-churn-attrs-blow-out-indexes}]
-      [{:db/id 17592186047142,
-        :dustingetz.post/published-date #inst "2018-11-22T15:57:34.277-00:00",
-        :dustingetz.post/title "automatic CRUD links",
-        :dustingetz.post/slug :automatic-CRUD-links}]]]
+   :tutorial.race/shirt-sizes
+   [{:db/id 17592186046202,
+     :fiddle/ident :tutorial.race/shirt-sizes,
+     :fiddle/links
+     [{:db/id 17592186046318,
+       :link/class [:hf/iframe],
+       :link/fiddle
+       {:db/id 17592186046200,
+        :fiddle/ident :tutorial.race/genders,
+        :fiddle/query
+        "[:find\n [(pull ?e [:db/ident]) ...]\n :where\n [?e :db/ident ?i]\n [(namespace ?i) ?ns]\n [(ground \"dustingetz.gender\") ?ns]]",
+        :fiddle/type :query},
+       :link/path ":dustingetz.reg/gender",
+       :link/rel :hf/iframe}],
+     :fiddle/query
+     "[:find\n [(pull ?e [:db/ident {:dustingetz.reg/gender [:db/ident]}]) ...]\n :in $ ?gender\n :where\n [?e :db/ident ?i]\n [?e :dustingetz.reg/gender ?gender]\n [(namespace ?i) ?ns]\n [(ground \"dustingetz.shirt-size\") ?ns]]",
+     :fiddle/renderer
+     "(let [{:keys [:hypercrud.browser/fiddle]} ctx]\n  [:div props\n   [hyperfiddle.ui/markdown (:fiddle/markdown @fiddle) ctx]\n   [hyperfiddle.ui/table \n    (fn [ctx]\n      [[hyperfiddle.ui/field [:db/ident] ctx hyperfiddle.ui/hyper-control]\n       [hyperfiddle.ui/field [:dustingetz.reg/gender] ctx hyperfiddle.ui/hyper-control\n        {:options :tutorial.race/genders}]]) \n    ctx]])",
+     :fiddle/type :query,
+     :hyperfiddle/owners
+     [#uuid "acd054a8-4e36-4d6c-a9ec-95bdc47f0d39"]}
+    [{:db/ident :dustingetz.shirt-size/womens-medium, :dustingetz.reg/gender {:db/ident :dustingetz.gender/female}}
+     {:db/ident :dustingetz.shirt-size/womens-small, :dustingetz.reg/gender {:db/ident :dustingetz.gender/female}}
+     {:db/ident :dustingetz.shirt-size/womens-large, :dustingetz.reg/gender {:db/ident :dustingetz.gender/female}}]]
 
-    :hfnet.tank/index
-    [{:db/id 17592186045830,
-      :fiddle/css
-      "table { width: 100%; }\n.p { max-width: 35em; }\n\nfigcaption.figure-caption { /* FIXME WHEN LANDS */\n  text-align: left;\n  font-size: 1.5em;\n}\n\nfigure img {\n  border: 1px solid lightgray;\n}\n\n.highlight { \n  background-color: #ffa; \n}",
-      :fiddle/ident :hfnet.tank/index,
-      :fiddle/markdown
-      "!block{style=\"margin-bottom: 2em;\"}\n\n# Hyperfiddle Tank\n\nThis is a pastebin like environment for learning Hyperfiddle. \n\n1. Please namespace :idents with your username\n1. Schema changes are allowed\n1. To make a fiddle interactive, change !span[tank]{.i}.hyperfiddle.net to !span[demo]{.i}.hyperfiddle.net \n\n!block{style=\"margin-bottom: 2em;\"}\n\n### Showcase\n* [:clojurians](//demo.hyperfiddle.net/:clojurians/)\n* [:seattle/neighborhoods](//demo.hyperfiddle.net/:seattle!neighborhoods/)\n* [gender-shirtsize](//demo.hyperfiddle.net/:dustingetz!gender-shirtsize/)\n* [:tutorial.blog](//demo.hyperfiddle.net/:tutorial.blog/)\n* [markdown-pipeline](//demo.hyperfiddle.net/:dustingetz!markdown-pipeline/#:hf.src!markdown)\n\n!block{style=\"margin-bottom: 2em;\"}\n",
-      :fiddle/query
-      "[:find \n (pull ?e [:db/id :fiddle/ident])\n (max ?tx)\n ?entrypoint\n :where\n [?e :fiddle/ident]  \n [(hyperfiddle.query/entrypoint-fiddle? $ ?e) ?entrypoint]\n (not [?e :dustingetz.post/hidden true])\n [?e _ _ ?tx]]",
-      :fiddle/renderer
-      "(let [show-all (reagent.core/atom false)\n      needle (reagent.core/atom \"\")\n      regex? (reagent.core/atom false)]\n  (fn [val ctx props]\n    (let [[err re] (try [nil (re-pattern @needle)]\n                     (catch :default e\n                       [e #\"\"]))]\n      [:main.container props\n       [hyperfiddle.ui/markdown (-> ctx :hypercrud.browser/fiddle deref :fiddle/markdown) ctx]\n       [:h3 \"Recently modified fiddles\"]\n       #_[contrib.ui/easy-checkbox-boolean \"Show all fiddles? \" show-all]\n       [:div.form-group {:class (when (and @regex? err) \"has-error\")}\n        #_[:label.col-sm-2.control-label {:for \"hyperfiddle/entry-point-needle\"} \"Filter\"]\n        [:input.col-sm-10.form-control\n         {:id \"hyperfiddle/entry-point-needle\"\n          :style {:display \"inline-block\"} ; bootstrap styles are half imported, wonky hacks\n          :type \"text\"\n          :on-change #(reset! needle (.. % -target -value))\n          :auto-complete \"off\"\n          #_#_:auto-focus true  ; page sroll pos gets lost, otherwise this is great\n          :placeholder \"filter\"}]\n        #_[:span.col-sm-3\n           [contrib.ui/easy-checkbox-boolean \"Regex? \" regex?]]]\n       (when (and @regex? err) [:span (ex-message err)])\n\n       [:hr]\n\n       [:div.scroll-wrapper\n        [:table.table-hover\n         [:tbody\n          (->> @(:hypercrud.browser/data ctx)\n               #_((if @show-all identity (partial filter #(-> % :fiddle/ident namespace nil?))))\n               (filter (fn [[fiddle tx]]\n                         (let [s (str (:fiddle/ident fiddle))]\n                           (if @regex?\n                             (re-seq re s)\n                             (cuerdas.core/includes? s @needle)))))\n               (sort (fn [[a b] [a' b']]\n                       (if (= b b') \n                         (compare (clojure.string/replace (str (:fiddle/ident a)) #\"/\" \".\")\n                                  (clojure.string/replace (str (:fiddle/ident a')) #\"/\" \".\"))\n                         (> b b'))\n                       ))\n               (map (fn [[fiddle tx is-entrypoint]]\n                      [:tr {:key (str (hash (:fiddle/ident fiddle)))}\n                       [:td\n                        (if is-entrypoint\n                          [hyperfiddle.ui/anchor ctx {:route [(:fiddle/ident fiddle)]} (str (:fiddle/ident fiddle))]\n                          (str (:fiddle/ident fiddle)))\n                        ]]))\n               (doall))]]]])))",
-      :fiddle/type :query,
-      :hyperfiddle/owners
-      [#uuid "acd054a8-4e36-4d6c-a9ec-95bdc47f0d39"]}
-     [[{:db/id 17592186045419, :fiddle/ident :karl.hardenstine/fiddles} 13194139534712 true]
-      [{:db/id 17592186045426, :fiddle/ident :khardenstine/fiddles} 13194139534711 true]
-      [{:db/id 17592186047604, :fiddle/ident :bdevel/post-show} 13194139536499 false]
-      [{:db/id 17592186047615, :fiddle/ident :dustingetz/datomic-pull-tx} 13194139536512 true]
-      [{:db/id 17592186047618, :fiddle/ident :fsbl0/app} 13194139536533 true]
-      [{:db/id 17592186047663, :fiddle/ident :dustingetz/datomic-find-specs} 13194139536562 true]]]
+   :dustingetz.tutorial/blog
+   [{:fiddle/cljs-ns
+     "(defmethod hyperfiddle.api/txfn :user/new-post [_ e a v ctx]\n  [[:db/add v :dustingetz.post/published-date (js/Date.)]])\n\n(defn render-dd [e ctx]\n  (hyperfiddle.ui/link \n   :dustingetz.tutorial/view-post\n   (hypercrud.browser.context/row ctx (:dustingetz.post/slug e))\n   (:dustingetz.post/title e)))\n\n(defn render-dt [e]\n  (or (some-> e \n        :dustingetz.post/published-date\n        (.toLocaleDateString \"en-US\")) \n      \"–\"))",
+     :fiddle/css
+     "dt { \n  font-weight: unset; \n  width: 5em; \n}",
+     :fiddle/ident :dustingetz.tutorial/blog,
+     :fiddle/renderer
+     "(let [{:keys [:hypercrud.browser/fiddle]} ctx]\n  [:div.container props\n   [hyperfiddle.ui/markdown (:fiddle/markdown @fiddle) ctx]\n   (->> val\n     (sort-by :dustingetz.post/published-date)\n     (map (fn [[e]]\n            [:<> {:key (str (:db/id e))}\n             [:dt [user/render-dt e]]  \n             [:dd [user/render-dd e ctx]]]))\n     (into [:dl]))])",
+     :hyperfiddle/owners
+     [#uuid "acd054a8-4e36-4d6c-a9ec-95bdc47f0d39"],
+     :db/id 17592186047369,
+     :fiddle/type :query,
+     :fiddle/links
+     [{:db/id 17592186047370,
+       :link/fiddle
+       {:db/id 17592186047371,
+        :fiddle/ident :dustingetz.tutorial/view-post,
+        :fiddle/type :entity},
+       :link/path ":dustingetz.post/slug",
+       :link/rel :hf/self}
+      {:db/id 17592186047372,
+       :link/class [:hf/new],
+       :link/fiddle
+       {:db/id 17592186047373,
+        :fiddle/ident
+        :dustingetz.tutorial.blog/new-post,
+        :fiddle/type :entity},
+       :link/path ":dustingetz.post/slug",
+       :link/rel :hf/new,
+       :link/tx-fn ":user/new-post"}],
+     :fiddle/query
+     "[:find\n (pull ?e [:dustingetz.post/published-date\n           :dustingetz.post/title\n           :dustingetz.post/slug\n           :db/id])\n :where\n [?e :dustingetz.post/slug]]"}
+    [[{:db/id 17592186047105,
+       :dustingetz.post/published-date #inst "2018-11-21T00:00:00.000-00:00",
+       :dustingetz.post/title "large strings and high churn attrs blow out indexes",
+       :dustingetz.post/slug :large-strings-and-high-churn-attrs-blow-out-indexes}]
+     [{:db/id 17592186047142,
+       :dustingetz.post/published-date #inst "2018-11-22T15:57:34.277-00:00",
+       :dustingetz.post/title "automatic CRUD links",
+       :dustingetz.post/slug :automatic-CRUD-links}]]]
 
-    :hyperfiddle/ide
-    [{:db/id 17592186061847,
-      :fiddle/renderer
-      "hyperfiddle.ide.fiddles.fiddle-src/fiddle-src-renderer",
-      :fiddle/links
-      [{:db/id 17592186061848,
-        :link/class [:hf/remove],
-        :link/rel :hf/remove}
-       {:db/id 17592186061849,
-        :link/class [:hf/remove],
-        :link/path ":fiddle/links",
-        :link/rel :hf/remove}
-       {:db/id 17592186061850,
-        :link/class [:hf/iframe],
-        :link/fiddle
-        {:db/id 17592186045605,
-         :fiddle/ident
-         :hyperfiddle.ide/fiddle-options,
-         :fiddle/query
-         "[:find (pull ?link [:db/id :fiddle/ident])\n :where (or [?link :fiddle/ident] [?link :fiddle/type])]",
-         :fiddle/type :query},
-        :link/rel :hf/iframe}
-       {:db/id 17592186061851,
-        :link/class [:hf/new],
-        :link/fiddle
-        {:db/id 17592186056398,
-         :fiddle/ident :hyperfiddle.ide/new-fiddle,
-         :fiddle/type :entity},
-        :link/path ":link/fiddle",
-        :link/rel :hf/affix}
-       {:db/id 17592186061852,
-        :link/class [:hf/new],
-        :link/fiddle
-        {:db/id 17592186058175,
-         :fiddle/ident :hyperfiddle.ide/new-link,
-         :fiddle/type :entity},
-        :link/path ":fiddle/links",
-        :link/rel :hf/affix}],
-      :fiddle/type :entity,
-      :fiddle/pull
-      "; synchronized with hyperfiddle.fiddle/browser-pull\n[:db/id\n :fiddle/css\n :fiddle/ident\n {:fiddle/links [:db/id\n                 :link/class\n                 {:link/fiddle [:db/id\n                                :fiddle/ident               ; routing\n                                :fiddle/query               ; validation\n                                :fiddle/type                ; validation\n                                ]}\n                 :link/formula\n                 :link/path\n                 :link/rel\n                 :link/tx-fn]}\n :fiddle/markdown\n :fiddle/pull\n :fiddle/pull-database\n :fiddle/query\n :fiddle/cljs-ns\n :fiddle/renderer\n :fiddle/type\n :fiddle/hydrate-result-as-fiddle\n *                                                          ; For hyperblog, so we can access :hyperblog.post/title etc from the fiddle renderer\n ]",
-      :fiddle/css
-      "table.hyperfiddle.-fiddle-links { table-layout: fixed; }\ntable.-fiddle-links th.-hypercrud-browser-path--fiddle-links { width: 60px; }\n\ntable.-fiddle-links td.-hypercrud-browser-path--fiddle-links--link-fiddle { display: flex; }\ntable.hyperfiddle.-fiddle-links td.field.-link-fiddle > select { flex: 0 1 80% !important; } /* line up :new */\n",
-      :fiddle/ident :hyperfiddle/ide,
-      :hyperfiddle/owners [#uuid "acd054a8-4e36-4d6c-a9ec-95bdc47f0d39"]
-      :hyperfiddle/starred true}
+   :hfnet.tank/index
+   [{:db/id 17592186045830,
+     :fiddle/css
+     "table { width: 100%; }\n.p { max-width: 35em; }\n\nfigcaption.figure-caption { /* FIXME WHEN LANDS */\n  text-align: left;\n  font-size: 1.5em;\n}\n\nfigure img {\n  border: 1px solid lightgray;\n}\n\n.highlight { \n  background-color: #ffa; \n}",
+     :fiddle/ident :hfnet.tank/index,
+     :fiddle/markdown
+     "!block{style=\"margin-bottom: 2em;\"}\n\n# Hyperfiddle Tank\n\nThis is a pastebin like environment for learning Hyperfiddle. \n\n1. Please namespace :idents with your username\n1. Schema changes are allowed\n1. To make a fiddle interactive, change !span[tank]{.i}.hyperfiddle.net to !span[demo]{.i}.hyperfiddle.net \n\n!block{style=\"margin-bottom: 2em;\"}\n\n### Showcase\n* [:clojurians](//demo.hyperfiddle.net/:clojurians/)\n* [:seattle/neighborhoods](//demo.hyperfiddle.net/:seattle!neighborhoods/)\n* [gender-shirtsize](//demo.hyperfiddle.net/:dustingetz!gender-shirtsize/)\n* [:tutorial.blog](//demo.hyperfiddle.net/:tutorial.blog/)\n* [markdown-pipeline](//demo.hyperfiddle.net/:dustingetz!markdown-pipeline/#:hf.src!markdown)\n\n!block{style=\"margin-bottom: 2em;\"}\n",
+     :fiddle/query
+     "[:find \n (pull ?e [:db/id :fiddle/ident])\n (max ?tx)\n ?entrypoint\n :where\n [?e :fiddle/ident]  \n [(hyperfiddle.query/entrypoint-fiddle? $ ?e) ?entrypoint]\n (not [?e :dustingetz.post/hidden true])\n [?e _ _ ?tx]]",
+     :fiddle/renderer
+     "(let [show-all (reagent.core/atom false)\n      needle (reagent.core/atom \"\")\n      regex? (reagent.core/atom false)]\n  (fn [val ctx props]\n    (let [[err re] (try [nil (re-pattern @needle)]\n                     (catch :default e\n                       [e #\"\"]))]\n      [:main.container props\n       [hyperfiddle.ui/markdown (-> ctx :hypercrud.browser/fiddle deref :fiddle/markdown) ctx]\n       [:h3 \"Recently modified fiddles\"]\n       #_[contrib.ui/easy-checkbox-boolean \"Show all fiddles? \" show-all]\n       [:div.form-group {:class (when (and @regex? err) \"has-error\")}\n        #_[:label.col-sm-2.control-label {:for \"hyperfiddle/entry-point-needle\"} \"Filter\"]\n        [:input.col-sm-10.form-control\n         {:id \"hyperfiddle/entry-point-needle\"\n          :style {:display \"inline-block\"} ; bootstrap styles are half imported, wonky hacks\n          :type \"text\"\n          :on-change #(reset! needle (.. % -target -value))\n          :auto-complete \"off\"\n          #_#_:auto-focus true  ; page sroll pos gets lost, otherwise this is great\n          :placeholder \"filter\"}]\n        #_[:span.col-sm-3\n           [contrib.ui/easy-checkbox-boolean \"Regex? \" regex?]]]\n       (when (and @regex? err) [:span (ex-message err)])\n\n       [:hr]\n\n       [:div.scroll-wrapper\n        [:table.table-hover\n         [:tbody\n          (->> @(:hypercrud.browser/data ctx)\n               #_((if @show-all identity (partial filter #(-> % :fiddle/ident namespace nil?))))\n               (filter (fn [[fiddle tx]]\n                         (let [s (str (:fiddle/ident fiddle))]\n                           (if @regex?\n                             (re-seq re s)\n                             (cuerdas.core/includes? s @needle)))))\n               (sort (fn [[a b] [a' b']]\n                       (if (= b b') \n                         (compare (clojure.string/replace (str (:fiddle/ident a)) #\"/\" \".\")\n                                  (clojure.string/replace (str (:fiddle/ident a')) #\"/\" \".\"))\n                         (> b b'))\n                       ))\n               (map (fn [[fiddle tx is-entrypoint]]\n                      [:tr {:key (str (hash (:fiddle/ident fiddle)))}\n                       [:td\n                        (if is-entrypoint\n                          [hyperfiddle.ui/anchor ctx {:route [(:fiddle/ident fiddle)]} (str (:fiddle/ident fiddle))]\n                          (str (:fiddle/ident fiddle)))\n                        ]]))\n               (doall))]]]])))",
+     :fiddle/type :query,
+     :hyperfiddle/owners
+     [#uuid "acd054a8-4e36-4d6c-a9ec-95bdc47f0d39"]}
+    [[{:db/id 17592186045419, :fiddle/ident :karl.hardenstine/fiddles} 13194139534712 true]
+     [{:db/id 17592186045426, :fiddle/ident :khardenstine/fiddles} 13194139534711 true]
+     [{:db/id 17592186047604, :fiddle/ident :bdevel/post-show} 13194139536499 false]
+     [{:db/id 17592186047615, :fiddle/ident :dustingetz/datomic-pull-tx} 13194139536512 true]
+     [{:db/id 17592186047618, :fiddle/ident :fsbl0/app} 13194139536533 true]
+     [{:db/id 17592186047663, :fiddle/ident :dustingetz/datomic-find-specs} 13194139536562 true]]]
 
-     {:db/id 17592186061847,
-      :fiddle/renderer "hyperfiddle.ide.fiddles.fiddle-src/fiddle-src-renderer",
-      :fiddle/links
-      [{:db/id 17592186061848, :link/class [:hf/remove], :link/rel :hf/remove}
-       {:db/id 17592186061849, :link/class [:hf/remove], :link/path ":fiddle/links", :link/rel :hf/remove}
-       {:db/id 17592186061850,
-        :link/class [:hf/iframe],
-        :link/fiddle
-        {:db/id 17592186045605,
-         :fiddle/ident :hyperfiddle.ide/fiddle-options,
-         :fiddle/query "[:find (pull ?link [:db/id :fiddle/ident])\n :where (or [?link :fiddle/ident] [?link :fiddle/type])]",
-         :fiddle/type :query},
-        :link/rel :hf/iframe}
-       {:db/id 17592186061851,
-        :link/class [:hf/new],
-        :link/fiddle {:db/id 17592186056398, :fiddle/ident :hyperfiddle.ide/new-fiddle, :fiddle/type :entity},
-        :link/path ":link/fiddle",
-        :link/rel :hf/affix}
-       {:db/id 17592186061852,
-        :link/class [:hf/new],
-        :link/fiddle {:db/id 17592186058175, :fiddle/ident :hyperfiddle.ide/new-link, :fiddle/type :entity},
-        :link/path ":fiddle/links",
-        :link/rel :hf/affix}],
-      :fiddle/type :entity,
-      :fiddle/pull
-      "; synchronized with hyperfiddle.fiddle/browser-pull\n[:db/id\n :fiddle/css\n :fiddle/ident\n {:fiddle/links [:db/id\n                 :link/class\n                 {:link/fiddle [:db/id\n                                :fiddle/ident               ; routing\n                                :fiddle/query               ; validation\n                                :fiddle/type                ; validation\n                                ]}\n                 :link/formula\n                 :link/path\n                 :link/rel\n                 :link/tx-fn]}\n :fiddle/markdown\n :fiddle/pull\n :fiddle/pull-database\n :fiddle/query\n :fiddle/cljs-ns\n :fiddle/renderer\n :fiddle/type\n :fiddle/hydrate-result-as-fiddle\n *                                                          ; For hyperblog, so we can access :hyperblog.post/title etc from the fiddle renderer\n ]",
-      :fiddle/css
-      "table.hyperfiddle.-fiddle-links { table-layout: fixed; }\ntable.-fiddle-links th.-hypercrud-browser-path--fiddle-links { width: 60px; }\n\ntable.-fiddle-links td.-hypercrud-browser-path--fiddle-links--link-fiddle { display: flex; }\ntable.hyperfiddle.-fiddle-links td.field.-link-fiddle > select { flex: 0 1 80% !important; } /* line up :new */\n",
-      :fiddle/ident :hyperfiddle/ide,
-      :hyperfiddle/owners [#uuid "acd054a8-4e36-4d6c-a9ec-95bdc47f0d39"]
-      :hyperfiddle/starred true}
-     ]
+   :hyperfiddle/ide
+   [{:db/id 17592186061847,
+     :fiddle/renderer
+     "hyperfiddle.ide.fiddles.fiddle-src/fiddle-src-renderer",
+     :fiddle/links
+     [{:db/id 17592186061848,
+       :link/class [:hf/remove],
+       :link/rel :hf/remove}
+      {:db/id 17592186061849,
+       :link/class [:hf/remove],
+       :link/path ":fiddle/links",
+       :link/rel :hf/remove}
+      {:db/id 17592186061850,
+       :link/class [:hf/iframe],
+       :link/fiddle
+       {:db/id 17592186045605,
+        :fiddle/ident
+        :hyperfiddle.ide/fiddle-options,
+        :fiddle/query
+        "[:find (pull ?link [:db/id :fiddle/ident])\n :where (or [?link :fiddle/ident] [?link :fiddle/type])]",
+        :fiddle/type :query},
+       :link/rel :hf/iframe}
+      {:db/id 17592186061851,
+       :link/class [:hf/new],
+       :link/fiddle
+       {:db/id 17592186056398,
+        :fiddle/ident :hyperfiddle.ide/new-fiddle,
+        :fiddle/type :entity},
+       :link/path ":link/fiddle",
+       :link/rel :hf/affix}
+      {:db/id 17592186061852,
+       :link/class [:hf/new],
+       :link/fiddle
+       {:db/id 17592186058175,
+        :fiddle/ident :hyperfiddle.ide/new-link,
+        :fiddle/type :entity},
+       :link/path ":fiddle/links",
+       :link/rel :hf/affix}],
+     :fiddle/type :entity,
+     :fiddle/pull
+     "; synchronized with hyperfiddle.fiddle/browser-pull\n[:db/id\n :fiddle/css\n :fiddle/ident\n {:fiddle/links [:db/id\n                 :link/class\n                 {:link/fiddle [:db/id\n                                :fiddle/ident               ; routing\n                                :fiddle/query               ; validation\n                                :fiddle/type                ; validation\n                                ]}\n                 :link/formula\n                 :link/path\n                 :link/rel\n                 :link/tx-fn]}\n :fiddle/markdown\n :fiddle/pull\n :fiddle/pull-database\n :fiddle/query\n :fiddle/cljs-ns\n :fiddle/renderer\n :fiddle/type\n :fiddle/hydrate-result-as-fiddle\n *                                                          ; For hyperblog, so we can access :hyperblog.post/title etc from the fiddle renderer\n ]",
+     :fiddle/css
+     "table.hyperfiddle.-fiddle-links { table-layout: fixed; }\ntable.-fiddle-links th.-hypercrud-browser-path--fiddle-links { width: 60px; }\n\ntable.-fiddle-links td.-hypercrud-browser-path--fiddle-links--link-fiddle { display: flex; }\ntable.hyperfiddle.-fiddle-links td.field.-link-fiddle > select { flex: 0 1 80% !important; } /* line up :new */\n",
+     :fiddle/ident :hyperfiddle/ide,
+     :hyperfiddle/owners [#uuid "acd054a8-4e36-4d6c-a9ec-95bdc47f0d39"]
+     :hyperfiddle/starred true}
+
+    {:db/id 17592186061847,
+     :fiddle/renderer "hyperfiddle.ide.fiddles.fiddle-src/fiddle-src-renderer",
+     :fiddle/links
+     [{:db/id 17592186061848, :link/class [:hf/remove], :link/rel :hf/remove}
+      {:db/id 17592186061849, :link/class [:hf/remove], :link/path ":fiddle/links", :link/rel :hf/remove}
+      {:db/id 17592186061850,
+       :link/class [:hf/iframe],
+       :link/fiddle
+       {:db/id 17592186045605,
+        :fiddle/ident :hyperfiddle.ide/fiddle-options,
+        :fiddle/query "[:find (pull ?link [:db/id :fiddle/ident])\n :where (or [?link :fiddle/ident] [?link :fiddle/type])]",
+        :fiddle/type :query},
+       :link/rel :hf/iframe}
+      {:db/id 17592186061851,
+       :link/class [:hf/new],
+       :link/fiddle {:db/id 17592186056398, :fiddle/ident :hyperfiddle.ide/new-fiddle, :fiddle/type :entity},
+       :link/path ":link/fiddle",
+       :link/rel :hf/affix}
+      {:db/id 17592186061852,
+       :link/class [:hf/new],
+       :link/fiddle {:db/id 17592186058175, :fiddle/ident :hyperfiddle.ide/new-link, :fiddle/type :entity},
+       :link/path ":fiddle/links",
+       :link/rel :hf/affix}],
+     :fiddle/type :entity,
+     :fiddle/pull
+     "; synchronized with hyperfiddle.fiddle/browser-pull\n[:db/id\n :fiddle/css\n :fiddle/ident\n {:fiddle/links [:db/id\n                 :link/class\n                 {:link/fiddle [:db/id\n                                :fiddle/ident               ; routing\n                                :fiddle/query               ; validation\n                                :fiddle/type                ; validation\n                                ]}\n                 :link/formula\n                 :link/path\n                 :link/rel\n                 :link/tx-fn]}\n :fiddle/markdown\n :fiddle/pull\n :fiddle/pull-database\n :fiddle/query\n :fiddle/cljs-ns\n :fiddle/renderer\n :fiddle/type\n :fiddle/hydrate-result-as-fiddle\n *                                                          ; For hyperblog, so we can access :hyperblog.post/title etc from the fiddle renderer\n ]",
+     :fiddle/css
+     "table.hyperfiddle.-fiddle-links { table-layout: fixed; }\ntable.-fiddle-links th.-hypercrud-browser-path--fiddle-links { width: 60px; }\n\ntable.-fiddle-links td.-hypercrud-browser-path--fiddle-links--link-fiddle { display: flex; }\ntable.hyperfiddle.-fiddle-links td.field.-link-fiddle > select { flex: 0 1 80% !important; } /* line up :new */\n",
+     :fiddle/ident :hyperfiddle/ide,
+     :hyperfiddle/owners [#uuid "acd054a8-4e36-4d6c-a9ec-95bdc47f0d39"]
+     :hyperfiddle/starred true}
+    ]
 
 
-    :seattle/neighborhoods
-    [{:db/id 17592186045743,
-      :fiddle/ident :seattle/neighborhoods,
-      :fiddle/links
-      [{:db/id 17592186045747,
-        :link/class [:hf/iframe],
-        :link/fiddle
-        {:db/id 17592186045750,
-         :fiddle/ident :seattle/districts,
-         :fiddle/query
-         "[:find \n [(pull ?e [:district/name :db/id]) ...]\n :where \n [?e :district/name]]",
-         :fiddle/type :query},
-        :link/path ":seattle/neighborhoods",
-        :link/rel :hf/iframe}
-       {:db/id 17592186045752,
-        :link/class [:hf/new],
-        :link/fiddle
-        {:db/id 17592186045754,
-         :fiddle/ident :seattle/neighborhood-new,
-         :fiddle/type :entity},
-        :link/path ":seattle/neighborhoods",
-        :link/rel :hf/new}
-       {:db/id 17592186045756,
-        :link/fiddle
-        {:db/id 17592186045758,
-         :fiddle/ident :seattle/neighborhood-edit,
-         :fiddle/type :entity},
-        :link/path ":seattle/neighborhoods",
-        :link/rel :hf/self}
-       {:db/id 17592186045760,
-        :link/fiddle
-        {:db/id 17592186045762,
-         :fiddle/ident :seattle/district,
-         :fiddle/type :entity},
-        :link/path ":district/region",
-        :link/rel :hf/self}],
-      :fiddle/query
-      "[:find \n [(pull ?e [:neighborhood/name \n            {:neighborhood/district \n             [:db/id \n              :district/name\n              {:district/region \n               [:db/ident]}]}\n            :db/id\n            :hyperfiddle/owners]) ...]\n :where \n [?e :neighborhood/name ?name]\n [(< ?name \"C\")]]",
-      :fiddle/renderer
-      "(let [{:keys [:hypercrud.browser/fiddle]} ctx]\n  [:div.container-fluid props\n   [hyperfiddle.ui/markdown (:fiddle/markdown @fiddle) ctx]\n   [hyperfiddle.ui/table\n    (fn [ctx] \n      [(hyperfiddle.ui/field [:neighborhood/name] ctx hyperfiddle.ui/hyper-control)\n       (hyperfiddle.ui/field [:neighborhood/district] ctx hyperfiddle.ui/hyper-control\n                             {:options :seattle/districts\n                              :option-label :district/name})\n       (hyperfiddle.ui/field [:neighborhood/district :district/region] ctx \n                             hyperfiddle.ui/hyper-control)\n       (hyperfiddle.ui/field [:db/id] ctx hyperfiddle.ui/hyper-control)])\n    ctx]])",
-      :fiddle/type :query,
-      :hyperfiddle/owners
-      [#uuid "acd054a8-4e36-4d6c-a9ec-95bdc47f0d39"]}
+   :seattle/neighborhoods
+   [{:db/id 17592186045743,
+     :fiddle/ident :seattle/neighborhoods,
+     :fiddle/links
+     [{:db/id 17592186045747,
+       :link/class [:hf/iframe],
+       :link/fiddle
+       {:db/id 17592186045750,
+        :fiddle/ident :seattle/districts,
+        :fiddle/query
+        "[:find \n [(pull ?e [:district/name :db/id]) ...]\n :where \n [?e :district/name]]",
+        :fiddle/type :query},
+       :link/path ":seattle/neighborhoods",
+       :link/rel :hf/iframe}
+      {:db/id 17592186045752,
+       :link/class [:hf/new],
+       :link/fiddle
+       {:db/id 17592186045754,
+        :fiddle/ident :seattle/neighborhood-new,
+        :fiddle/type :entity},
+       :link/path ":seattle/neighborhoods",
+       :link/rel :hf/new}
+      {:db/id 17592186045756,
+       :link/fiddle
+       {:db/id 17592186045758,
+        :fiddle/ident :seattle/neighborhood-edit,
+        :fiddle/type :entity},
+       :link/path ":seattle/neighborhoods",
+       :link/rel :hf/self}
+      {:db/id 17592186045760,
+       :link/fiddle
+       {:db/id 17592186045762,
+        :fiddle/ident :seattle/district,
+        :fiddle/type :entity},
+       :link/path ":district/region",
+       :link/rel :hf/self}],
+     :fiddle/query
+     "[:find \n [(pull ?e [:neighborhood/name \n            {:neighborhood/district \n             [:db/id \n              :district/name\n              {:district/region \n               [:db/ident]}]}\n            :db/id\n            :hyperfiddle/owners]) ...]\n :where \n [?e :neighborhood/name ?name]\n [(< ?name \"C\")]]",
+     :fiddle/renderer
+     "(let [{:keys [:hypercrud.browser/fiddle]} ctx]\n  [:div.container-fluid props\n   [hyperfiddle.ui/markdown (:fiddle/markdown @fiddle) ctx]\n   [hyperfiddle.ui/table\n    (fn [ctx] \n      [(hyperfiddle.ui/field [:neighborhood/name] ctx hyperfiddle.ui/hyper-control)\n       (hyperfiddle.ui/field [:neighborhood/district] ctx hyperfiddle.ui/hyper-control\n                             {:options :seattle/districts\n                              :option-label :district/name})\n       (hyperfiddle.ui/field [:neighborhood/district :district/region] ctx \n                             hyperfiddle.ui/hyper-control)\n       (hyperfiddle.ui/field [:db/id] ctx hyperfiddle.ui/hyper-control)])\n    ctx]])",
+     :fiddle/type :query,
+     :hyperfiddle/owners
+     [#uuid "acd054a8-4e36-4d6c-a9ec-95bdc47f0d39"]}
 
-     [{:db/id 17592186045522,
-       :neighborhood/name "Admiral (West Seattle)",
-       :neighborhood/district {:db/id 17592186045521, :district/name "Southwest", :district/region {:db/ident :region/sw}}}
-      nil                                                   ; sneaky nil, can happen in sparse cases (this one is injected manually)
-      {:db/id 17592186045524,
-       :neighborhood/name "Alki",
-       :neighborhood/district {:db/id 17592186045521, :district/name "Southwest", :district/region {:db/ident :region/sw}}}
-      {:db/id 17592186045528,
-       :neighborhood/name "Belltown",
-       :neighborhood/district {:db/id 17592186045527, :district/name "Downtown", :district/region {:db/ident :region/w}}}
-      {:db/id 17592186045564,
-       :neighborhood/name "Broadview",
-       :neighborhood/district {:db/id 17592186045563, :district/name "Northwest", :district/region {:db/ident :region/sw}}}
-      {:db/id 17592186045551,
-       :neighborhood/name "Beacon Hill",
-       :neighborhood/district {:db/id 17592186045530, :district/name "Greater Duwamish", :district/region {:db/ident :region/s}}}
+    [{:db/id 17592186045522,
+      :neighborhood/name "Admiral (West Seattle)",
+      :neighborhood/district {:db/id 17592186045521, :district/name "Southwest", :district/region {:db/ident :region/sw}}}
+     nil                                                   ; sneaky nil, can happen in sparse cases (this one is injected manually)
+     {:db/id 17592186045524,
+      :neighborhood/name "Alki",
+      :neighborhood/district {:db/id 17592186045521, :district/name "Southwest", :district/region {:db/ident :region/sw}}}
+     {:db/id 17592186045528,
+      :neighborhood/name "Belltown",
+      :neighborhood/district {:db/id 17592186045527, :district/name "Downtown", :district/region {:db/ident :region/w}}}
+     {:db/id 17592186045564,
+      :neighborhood/name "Broadview",
+      :neighborhood/district {:db/id 17592186045563, :district/name "Northwest", :district/region {:db/ident :region/sw}}}
+     {:db/id 17592186045551,
+      :neighborhood/name "Beacon Hill",
+      :neighborhood/district {:db/id 17592186045530, :district/name "Greater Duwamish", :district/region {:db/ident :region/s}}}
+     {:db/id 17592186045536,
+      :neighborhood/name "Ballard",
+      :neighborhood/district {:db/id 17592186045535, :district/name "Ballard", :district/region {:db/ident :region/nw}}}]]
+
+   :seattle/districts
+   [{:db/id 17592186045750,
+     :fiddle/ident :seattle/districts,
+     :fiddle/query
+     "[:find \n [(pull ?e [:district/name :db/id]) ...]\n :where \n [?e :district/name]]",
+     :fiddle/type :query,
+     :hyperfiddle/owners
+     [#uuid "acd054a8-4e36-4d6c-a9ec-95bdc47f0d39"]}
+    [{:db/id 17592186045538, :district/name "Northeast"}
+     {:db/id 17592186045570, :district/name "Central"}
+     {:db/id 17592186045643, :district/name "North"}
+     {:db/id 17592186045518, :district/name "East"}
+     {:db/id 17592186045521, :district/name "Southwest"}
+     {:db/id 17592186045586, :district/name "Delridge"}
+     {:db/id 17592186045620, :district/name "Magnolia/Queen Anne"}
+     {:db/id 17592186045557, :district/name "Southeast"}
+     {:db/id 17592186045527, :district/name "Downtown"}
+     {:db/id 17592186045530, :district/name "Greater Duwamish"}
+     {:db/id 17592186045594, :district/name "Lake Union"}
+     {:db/id 17592186045563, :district/name "Northwest"}
+     {:db/id 17592186045535, :district/name "Ballard"}]]
+
+   :dustingetz.seattle/communities
+   [{:db/id 17592186047478,
+     :fiddle/css
+     ".hyperfiddle-user table.hyperfiddle { \n  table-layout: fixed; \n}\n\n.hyperfiddle-user th.hyperfiddle.attribute {\n  width: 60px;\n}\n\n.hyperfiddle-user th.hyperfiddle.attribute.-community-neighborhood {\n  width: unset;\n}",
+     :fiddle/ident :dustingetz.seattle/communities,
+     :fiddle/links
+     [{:db/id 17592186047481,
+       :link/class [:hf/iframe],
+       :link/fiddle
+       {:db/id 17592186045750,
+        :fiddle/ident :seattle/districts,
+        :fiddle/query
+        "[:find \n [(pull ?e [:district/name :db/id]) ...]\n :where \n [?e :district/name]]",
+        :fiddle/type :query},
+       :link/path ":district/region"}],
+     :fiddle/query
+     "[:find \n [(pull ?e [*\n            \n            {:community/type [:db/ident]\n             :community/orgtype [:db/ident]\n             :community/neighborhood \n             [:neighborhood/name \n              {:neighborhood/district \n               [:db/id \n                :district/name\n                {:district/region \n                 [:db/ident]}]}\n              :db/id\n              :hyperfiddle/owners]}])\n  ...]\n :where \n [?e :community/name ?name]\n [(< ?name \"B\")]]\n\n",
+     :fiddle/type :query,
+     :hyperfiddle/owners
+     [#uuid "acd054a8-4e36-4d6c-a9ec-95bdc47f0d39"]}
+    [{:db/id 17592186045537,
+      :community/name "At Large in Ballard",
+      :community/url "http://blog.seattlepi.com/ballard/",
+      :community/neighborhood
       {:db/id 17592186045536,
        :neighborhood/name "Ballard",
-       :neighborhood/district {:db/id 17592186045535, :district/name "Ballard", :district/region {:db/ident :region/nw}}}]]
+       :neighborhood/district {:db/id 17592186045535, :district/name "Ballard", :district/region {:db/ident :region/nw}}},
+      :community/category ["human interest" "news"],
+      :community/orgtype {:db/ident :community.orgtype/commercial},
+      :community/type [{:db/ident :community.type/blog}]}
+     {:db/id 17592186045523,
+      :community/name "Admiral Neighborhood Association",
+      :community/url "http://groups.yahoo.com/group/AdmiralNeighborhood/",
+      :community/neighborhood
+      {:db/id 17592186045522,
+       :neighborhood/name "Admiral (West Seattle)",
+       :neighborhood/district {:db/id 17592186045521, :district/name "Southwest", :district/region {:db/ident :region/sw}}},
+      :community/category ["neighborhood association"],
+      :community/orgtype {:db/ident :community.orgtype/community},
+      :community/type [{:db/ident :community.type/email-list}]}
+     {:db/id 17592186045540,
+      :community/name "Aurora Seattle",
+      :community/url "http://www.auroraseattle.com/",
+      :community/neighborhood
+      {:db/id 17592186045539,
+       :neighborhood/name "Regional Sites",
+       :neighborhood/district {:db/id 17592186045538, :district/name "Northeast", :district/region {:db/ident :region/ne}}},
+      :community/category ["news" "planning" "traffic"],
+      :community/orgtype {:db/ident :community.orgtype/community},
+      :community/type [{:db/ident :community.type/blog}]}
+     {:db/id 17592186045525,
+      :community/name "Alki News",
+      :community/url "http://groups.yahoo.com/group/alkibeachcommunity/",
+      :community/neighborhood
+      {:db/id 17592186045524,
+       :neighborhood/name "Alki",
+       :neighborhood/district {:db/id 17592186045521, :district/name "Southwest", :district/region {:db/ident :region/sw}}},
+      :community/category ["members of the Alki Community Council and residents of the Alki Beach neighborhood"],
+      :community/orgtype {:db/ident :community.orgtype/community},
+      :community/type [{:db/ident :community.type/email-list}]}
+     {:db/id 17592186045526,
+      :community/name "Alki News/Alki Community Council",
+      :community/url "http://alkinews.wordpress.com/",
+      :community/neighborhood
+      {:db/id 17592186045524,
+       :neighborhood/name "Alki",
+       :neighborhood/district {:db/id 17592186045521, :district/name "Southwest", :district/region {:db/ident :region/sw}}},
+      :community/category ["council meetings" "news"],
+      :community/orgtype {:db/ident :community.orgtype/community},
+      :community/type [{:db/ident :community.type/blog}]}
+     {:db/id 17592186045529,
+      :community/name "All About Belltown",
+      :community/url "http://www.belltown.org/",
+      :community/neighborhood
+      {:db/id 17592186045528,
+       :neighborhood/name "Belltown",
+       :neighborhood/district {:db/id 17592186045527, :district/name "Downtown", :district/region {:db/ident :region/w}}},
+      :community/category ["community council"],
+      :community/orgtype {:db/ident :community.orgtype/community},
+      :community/type [{:db/ident :community.type/website}]}
+     {:db/id 17592186045532,
+      :community/name "All About South Park",
+      :community/url "http://www.allaboutsouthpark.com/",
+      :community/neighborhood
+      {:db/id 17592186045531,
+       :neighborhood/name "South Park",
+       :neighborhood/district {:db/id 17592186045530, :district/name "Greater Duwamish", :district/region {:db/ident :region/s}}},
+      :community/category ["neighborhood info"],
+      :community/orgtype {:db/ident :community.orgtype/community},
+      :community/type [{:db/ident :community.type/website}]}
+     {:db/id 17592186045534,
+      :community/name "ArtsWest",
+      :community/url "http://www.artswest.org/?q=node/28",
+      :community/neighborhood
+      {:db/id 17592186045533,
+       :neighborhood/name "West Seattle",
+       :neighborhood/district {:db/id 17592186045521, :district/name "Southwest", :district/region {:db/ident :region/sw}}},
+      :community/category ["arts"],
+      :community/orgtype {:db/ident :community.orgtype/community},
+      :community/type [{:db/ident :community.type/website}]}
+     {:db/id 17592186045520,
+      :community/name "15th Ave Community",
+      :community/url "http://groups.yahoo.com/group/15thAve_Community/",
+      :community/neighborhood
+      {:db/id 17592186045519,
+       :neighborhood/name "Capitol Hill",
+       :neighborhood/district {:db/id 17592186045518, :district/name "East", :district/region {:db/ident :region/e}}},
+      :community/category ["15th avenue residents"],
+      :community/orgtype {:db/ident :community.orgtype/community},
+      :community/type [{:db/ident :community.type/email-list}]}]]
 
-    :seattle/districts
-    [{:db/id 17592186045750,
-      :fiddle/ident :seattle/districts,
-      :fiddle/query
-      "[:find \n [(pull ?e [:district/name :db/id]) ...]\n :where \n [?e :district/name]]",
-      :fiddle/type :query,
-      :hyperfiddle/owners
-      [#uuid "acd054a8-4e36-4d6c-a9ec-95bdc47f0d39"]}
-     [{:db/id 17592186045538, :district/name "Northeast"}
-      {:db/id 17592186045570, :district/name "Central"}
-      {:db/id 17592186045643, :district/name "North"}
-      {:db/id 17592186045518, :district/name "East"}
-      {:db/id 17592186045521, :district/name "Southwest"}
-      {:db/id 17592186045586, :district/name "Delridge"}
-      {:db/id 17592186045620, :district/name "Magnolia/Queen Anne"}
-      {:db/id 17592186045557, :district/name "Southeast"}
-      {:db/id 17592186045527, :district/name "Downtown"}
-      {:db/id 17592186045530, :district/name "Greater Duwamish"}
-      {:db/id 17592186045594, :district/name "Lake Union"}
-      {:db/id 17592186045563, :district/name "Northwest"}
-      {:db/id 17592186045535, :district/name "Ballard"}]]
+   :dustingetz/counter
+   [{:fiddle/cljs-ns
+     "(defmethod hyperfiddle.api/txfn :user/inc [_ e a v ctx]\n  [[:db.fn/cas e a v (inc v)]])",
+     :fiddle/ident :dustingetz/counter,
+     :fiddle/renderer
+     "(let [{:keys [:hypercrud.browser/fiddle]} ctx]\n  [:div.container-fluid props\n   [hyperfiddle.ui/markdown (:fiddle/markdown @fiddle) ctx]\n   [hyperfiddle.ui/result val ctx {}]\n   [:hr]\n   [:label \"Age: \" (:dustingetz.reg/age val)]\n   [:p]\n\n   ; Right way to transact, needs some work\n   [hyperfiddle.ui/link :user/inc ctx \"inc\"]\n\n   ; Wrong way to transact\n   #_[:button\n      {:on-click\n       #(->> (let [n (:dustingetz.reg/age val)\n                   e [:dustingetz.reg/email \"dustin@example.com\"]]\n               [[:db.fn/cas e :dustingetz.reg/age n (inc n)]])\n             (hyperfiddle.ui.util/with-tx! ctx \"$\"))}\n      \"Inc!\"]])",
+     :hyperfiddle/owners
+     [#uuid "acd054a8-4e36-4d6c-a9ec-95bdc47f0d39"],
+     :db/id 17592186046889,
+     :fiddle/type :query,
+     :fiddle/links
+     [{:db/id 17592186047243,
+       :link/path ":dustingetz.reg/age",
+       :link/rel :hf/rel,
+       :link/tx-fn ":user/inc"}],
+     :fiddle/markdown
+     "### :dustingetz/counter\n\nExample of incrementing a value in Datomic (Make sure auto-transact is on!)\n",
+     :fiddle/query
+     "[:find\n (pull ?e [:db/id \n           :dustingetz.reg/email \n           :dustingetz.reg/age]) \n .\n :where\n [?e :dustingetz.reg/email \"dustin@example.com\"]]"}
 
-    :dustingetz.seattle/communities
-    [{:db/id 17592186047478,
-      :fiddle/css
-      ".hyperfiddle-user table.hyperfiddle { \n  table-layout: fixed; \n}\n\n.hyperfiddle-user th.hyperfiddle.attribute {\n  width: 60px;\n}\n\n.hyperfiddle-user th.hyperfiddle.attribute.-community-neighborhood {\n  width: unset;\n}",
-      :fiddle/ident :dustingetz.seattle/communities,
-      :fiddle/links
-      [{:db/id 17592186047481,
-        :link/class [:hf/iframe],
-        :link/fiddle
-        {:db/id 17592186045750,
-         :fiddle/ident :seattle/districts,
-         :fiddle/query
-         "[:find \n [(pull ?e [:district/name :db/id]) ...]\n :where \n [?e :district/name]]",
-         :fiddle/type :query},
-        :link/path ":district/region"}],
-      :fiddle/query
-      "[:find \n [(pull ?e [*\n            \n            {:community/type [:db/ident]\n             :community/orgtype [:db/ident]\n             :community/neighborhood \n             [:neighborhood/name \n              {:neighborhood/district \n               [:db/id \n                :district/name\n                {:district/region \n                 [:db/ident]}]}\n              :db/id\n              :hyperfiddle/owners]}])\n  ...]\n :where \n [?e :community/name ?name]\n [(< ?name \"B\")]]\n\n",
-      :fiddle/type :query,
-      :hyperfiddle/owners
-      [#uuid "acd054a8-4e36-4d6c-a9ec-95bdc47f0d39"]}
-     [{:db/id 17592186045537,
-       :community/name "At Large in Ballard",
-       :community/url "http://blog.seattlepi.com/ballard/",
-       :community/neighborhood
-       {:db/id 17592186045536,
-        :neighborhood/name "Ballard",
-        :neighborhood/district {:db/id 17592186045535, :district/name "Ballard", :district/region {:db/ident :region/nw}}},
-       :community/category ["human interest" "news"],
-       :community/orgtype {:db/ident :community.orgtype/commercial},
-       :community/type [{:db/ident :community.type/blog}]}
-      {:db/id 17592186045523,
-       :community/name "Admiral Neighborhood Association",
-       :community/url "http://groups.yahoo.com/group/AdmiralNeighborhood/",
-       :community/neighborhood
-       {:db/id 17592186045522,
-        :neighborhood/name "Admiral (West Seattle)",
-        :neighborhood/district {:db/id 17592186045521, :district/name "Southwest", :district/region {:db/ident :region/sw}}},
-       :community/category ["neighborhood association"],
-       :community/orgtype {:db/ident :community.orgtype/community},
-       :community/type [{:db/ident :community.type/email-list}]}
-      {:db/id 17592186045540,
-       :community/name "Aurora Seattle",
-       :community/url "http://www.auroraseattle.com/",
-       :community/neighborhood
-       {:db/id 17592186045539,
-        :neighborhood/name "Regional Sites",
-        :neighborhood/district {:db/id 17592186045538, :district/name "Northeast", :district/region {:db/ident :region/ne}}},
-       :community/category ["news" "planning" "traffic"],
-       :community/orgtype {:db/ident :community.orgtype/community},
-       :community/type [{:db/ident :community.type/blog}]}
-      {:db/id 17592186045525,
-       :community/name "Alki News",
-       :community/url "http://groups.yahoo.com/group/alkibeachcommunity/",
-       :community/neighborhood
-       {:db/id 17592186045524,
-        :neighborhood/name "Alki",
-        :neighborhood/district {:db/id 17592186045521, :district/name "Southwest", :district/region {:db/ident :region/sw}}},
-       :community/category ["members of the Alki Community Council and residents of the Alki Beach neighborhood"],
-       :community/orgtype {:db/ident :community.orgtype/community},
-       :community/type [{:db/ident :community.type/email-list}]}
-      {:db/id 17592186045526,
-       :community/name "Alki News/Alki Community Council",
-       :community/url "http://alkinews.wordpress.com/",
-       :community/neighborhood
-       {:db/id 17592186045524,
-        :neighborhood/name "Alki",
-        :neighborhood/district {:db/id 17592186045521, :district/name "Southwest", :district/region {:db/ident :region/sw}}},
-       :community/category ["council meetings" "news"],
-       :community/orgtype {:db/ident :community.orgtype/community},
-       :community/type [{:db/ident :community.type/blog}]}
-      {:db/id 17592186045529,
-       :community/name "All About Belltown",
-       :community/url "http://www.belltown.org/",
-       :community/neighborhood
-       {:db/id 17592186045528,
-        :neighborhood/name "Belltown",
-        :neighborhood/district {:db/id 17592186045527, :district/name "Downtown", :district/region {:db/ident :region/w}}},
-       :community/category ["community council"],
-       :community/orgtype {:db/ident :community.orgtype/community},
-       :community/type [{:db/ident :community.type/website}]}
-      {:db/id 17592186045532,
-       :community/name "All About South Park",
-       :community/url "http://www.allaboutsouthpark.com/",
-       :community/neighborhood
-       {:db/id 17592186045531,
-        :neighborhood/name "South Park",
-        :neighborhood/district {:db/id 17592186045530, :district/name "Greater Duwamish", :district/region {:db/ident :region/s}}},
-       :community/category ["neighborhood info"],
-       :community/orgtype {:db/ident :community.orgtype/community},
-       :community/type [{:db/ident :community.type/website}]}
-      {:db/id 17592186045534,
-       :community/name "ArtsWest",
-       :community/url "http://www.artswest.org/?q=node/28",
-       :community/neighborhood
-       {:db/id 17592186045533,
-        :neighborhood/name "West Seattle",
-        :neighborhood/district {:db/id 17592186045521, :district/name "Southwest", :district/region {:db/ident :region/sw}}},
-       :community/category ["arts"],
-       :community/orgtype {:db/ident :community.orgtype/community},
-       :community/type [{:db/ident :community.type/website}]}
-      {:db/id 17592186045520,
-       :community/name "15th Ave Community",
-       :community/url "http://groups.yahoo.com/group/15thAve_Community/",
-       :community/neighborhood
-       {:db/id 17592186045519,
-        :neighborhood/name "Capitol Hill",
-        :neighborhood/district {:db/id 17592186045518, :district/name "East", :district/region {:db/ident :region/e}}},
-       :community/category ["15th avenue residents"],
-       :community/orgtype {:db/ident :community.orgtype/community},
-       :community/type [{:db/ident :community.type/email-list}]}]]
+    {:db/id 17592186046196, :dustingetz.reg/email "dustin@example.com", :dustingetz.reg/age 102}]
 
-    :dustingetz/counter
-    [{:fiddle/cljs-ns
-      "(defmethod hyperfiddle.api/txfn :user/inc [_ e a v ctx]\n  [[:db.fn/cas e a v (inc v)]])",
-      :fiddle/ident :dustingetz/counter,
-      :fiddle/renderer
-      "(let [{:keys [:hypercrud.browser/fiddle]} ctx]\n  [:div.container-fluid props\n   [hyperfiddle.ui/markdown (:fiddle/markdown @fiddle) ctx]\n   [hyperfiddle.ui/result val ctx {}]\n   [:hr]\n   [:label \"Age: \" (:dustingetz.reg/age val)]\n   [:p]\n\n   ; Right way to transact, needs some work\n   [hyperfiddle.ui/link :user/inc ctx \"inc\"]\n\n   ; Wrong way to transact\n   #_[:button\n      {:on-click\n       #(->> (let [n (:dustingetz.reg/age val)\n                   e [:dustingetz.reg/email \"dustin@example.com\"]]\n               [[:db.fn/cas e :dustingetz.reg/age n (inc n)]])\n             (hyperfiddle.ui.util/with-tx! ctx \"$\"))}\n      \"Inc!\"]])",
-      :hyperfiddle/owners
-      [#uuid "acd054a8-4e36-4d6c-a9ec-95bdc47f0d39"],
-      :db/id 17592186046889,
-      :fiddle/type :query,
-      :fiddle/links
-      [{:db/id 17592186047243,
-        :link/path ":dustingetz.reg/age",
-        :link/rel :hf/rel,
-        :link/tx-fn ":user/inc"}],
-      :fiddle/markdown
-      "### :dustingetz/counter\n\nExample of incrementing a value in Datomic (Make sure auto-transact is on!)\n",
-      :fiddle/query
-      "[:find\n (pull ?e [:db/id \n           :dustingetz.reg/email \n           :dustingetz.reg/age]) \n .\n :where\n [?e :dustingetz.reg/email \"dustin@example.com\"]]"}
+   :dustingetz/slack-storm
+   [{:fiddle/cljs-ns
+     "(defn render-post-link [ctx [post _ :as row]]\n  (hyperfiddle.ui/link\n    :dustingetz.storm/view\n    (hypercrud.browser.context/row ctx (contrib.reactive/track identity row))\n    (contrib.string/or-str (:dustingetz.post/title post) \"–\")))",
+     :fiddle/css
+     ".-util-slack-parser { margin-top: 2em; }\n.soup + .CodeMirror { height: 10em; }\n\ndt { \n  width: 10em; \n  text-align: right;\n  font-weight: 400;\n}",
+     :fiddle/ident :dustingetz/slack-storm,
+     :fiddle/renderer
+     "(let [{:keys [:hypercrud.browser/fiddle]} ctx]\n  [:main.container props\n   [hyperfiddle.ui/markdown (:fiddle/markdown @fiddle) ctx]\n   [:h3 [hyperfiddle.ui/link :dustingetz.storm/new-storm ctx \"new storm\"]]\n   [:p]\n   [:p \"Recent storms\"]\n   [:p]\n   (->> val\n        (sort-by second) reverse      ;(sort-by (comp #(compare %2 %1) second))\n        (map (fn [[post _ :as row]]\n               [:<> {:key (str (:db/id post))}\n                [:dt (:dustingetz.storm/channel post) ]\n                [:dd [user/render-post-link ctx row]]]))\n        (into [:dl]))])",
+     :hyperfiddle/owners
+     [#uuid "5b0dd2d7-24a4-4122-bd8e-168817f2e0e7"],
+     :db/id 17592186046327,
+     :fiddle/type :query,
+     :fiddle/links
+     [{:db/id 17592186047088,
+       :link/fiddle
+       {:db/id 17592186047002,
+        :fiddle/ident :dustingetz.storm/view,
+        :fiddle/type :entity},
+       :link/path ":dustingetz.post/slug",
+       :link/rel :hf/rel}
+      {:db/id 17592186047120,
+       :link/fiddle
+       {:db/id 17592186047089,
+        :fiddle/ident :dustingetz.storm/new-storm,
+        :fiddle/type :entity},
+       :link/formula
+       "(constantly (hyperfiddle.api/tempid-detached \"$\" ctx))",
+       :link/path ":dustingetz/slack-storm",
+       :link/rel :hf/self}],
+     :fiddle/markdown
+     "# Slack Storm\n\n!span[Create documentation from Slack logs]{.lead}",
+     :hyperfiddle/starred true,
+     :fiddle/query
+     "[:find\n (pull ?e [:db/id\n           :dustingetz.post/title\n           :dustingetz.post/slug\n           :dustingetz.storm/channel\n           :dustingetz.post/published-date])\n (max ?tx)\n :where\n [?e :dustingetz.slack-converter/raw-source _ ?tx]\n (not [?e :dustingetz.post/hidden true])\n #_[?e :hyperfiddle/owners]] ; owned by me?"}
 
-     {:db/id 17592186046196, :dustingetz.reg/email "dustin@example.com", :dustingetz.reg/age 102}]
+    [[{:db/id 17592186047000,
+       :dustingetz.post/title "is js/console.log syntax future proof?",
+       :dustingetz.post/slug :asdf,
+       :dustingetz.storm/channel "#clojurescript",
+       :dustingetz.post/published-date #inst "2018-11-19T00:00:00.000-00:00"}
+      13194139535895]
+     [{:db/id 17592186047105,
+       :dustingetz.post/title "large strings and high churn attrs blow out indexes",
+       :dustingetz.storm/channel "#datomic",
+       :dustingetz.post/published-date #inst "2018-11-21T00:00:00.000-00:00"}
+      13194139536000]]]
 
-    :dustingetz/slack-storm
-    [{:fiddle/cljs-ns
-      "(defn render-post-link [ctx [post _ :as row]]\n  (hyperfiddle.ui/link\n    :dustingetz.storm/view\n    (hypercrud.browser.context/row ctx (contrib.reactive/track identity row))\n    (contrib.string/or-str (:dustingetz.post/title post) \"–\")))",
-      :fiddle/css
-      ".-util-slack-parser { margin-top: 2em; }\n.soup + .CodeMirror { height: 10em; }\n\ndt { \n  width: 10em; \n  text-align: right;\n  font-weight: 400;\n}",
-      :fiddle/ident :dustingetz/slack-storm,
-      :fiddle/renderer
-      "(let [{:keys [:hypercrud.browser/fiddle]} ctx]\n  [:main.container props\n   [hyperfiddle.ui/markdown (:fiddle/markdown @fiddle) ctx]\n   [:h3 [hyperfiddle.ui/link :dustingetz.storm/new-storm ctx \"new storm\"]]\n   [:p]\n   [:p \"Recent storms\"]\n   [:p]\n   (->> val\n        (sort-by second) reverse      ;(sort-by (comp #(compare %2 %1) second))\n        (map (fn [[post _ :as row]]\n               [:<> {:key (str (:db/id post))}\n                [:dt (:dustingetz.storm/channel post) ]\n                [:dd [user/render-post-link ctx row]]]))\n        (into [:dl]))])",
-      :hyperfiddle/owners
-      [#uuid "5b0dd2d7-24a4-4122-bd8e-168817f2e0e7"],
-      :db/id 17592186046327,
-      :fiddle/type :query,
-      :fiddle/links
-      [{:db/id 17592186047088,
-        :link/fiddle
-        {:db/id 17592186047002,
-         :fiddle/ident :dustingetz.storm/view,
-         :fiddle/type :entity},
-        :link/path ":dustingetz.post/slug",
-        :link/rel :hf/rel}
-       {:db/id 17592186047120,
-        :link/fiddle
-        {:db/id 17592186047089,
-         :fiddle/ident :dustingetz.storm/new-storm,
-         :fiddle/type :entity},
-        :link/formula
-        "(constantly (hyperfiddle.api/tempid-detached \"$\" ctx))",
-        :link/path ":dustingetz/slack-storm",
-        :link/rel :hf/self}],
-      :fiddle/markdown
-      "# Slack Storm\n\n!span[Create documentation from Slack logs]{.lead}",
-      :hyperfiddle/starred true,
-      :fiddle/query
-      "[:find\n (pull ?e [:db/id\n           :dustingetz.post/title\n           :dustingetz.post/slug\n           :dustingetz.storm/channel\n           :dustingetz.post/published-date])\n (max ?tx)\n :where\n [?e :dustingetz.slack-converter/raw-source _ ?tx]\n (not [?e :dustingetz.post/hidden true])\n #_[?e :hyperfiddle/owners]] ; owned by me?"}
+   :cookbook/markdown-table
+   [{:db/id 17592186046741,
+     :fiddle/ident :cookbook/markdown-table,
+     :fiddle/markdown
+     "### table with body renderers\n\ntable:\n:::\n!field(:task/completed) \n!field[hyperfiddle.ui.controls/tristate-boolean](:task/completed)\n!field[hyperfiddle.ui.controls/edn](:task/completed)\n!field[(comp str identity)](:task/title)\n:::",
+     :fiddle/query
+     "[:find \n [(pull ?e [:db/id \n           :task/title \n           :task/completed]) ...] \n :where\n [?e :task/title]]",
+     :fiddle/renderer
+     "(let [{:keys [:hypercrud.browser/fiddle]} ctx]\n  [:div.container-fluid props\n   [hyperfiddle.ui/markdown (:fiddle/markdown @fiddle) ctx]])",
+     :fiddle/type :query,
+     :hyperfiddle/owners
+     [#uuid "acd054a8-4e36-4d6c-a9ec-95bdc47f0d39"]}
+    [{:db/id 17592186046744, :task/title "Feed baby", :task/completed true}
+     {:db/id 17592186046745, :task/title "Mow the lawn"}
+     {:db/id 17592186046746, :task/title "Do the dishes", :task/completed true}]]
 
-     [[{:db/id 17592186047000,
-        :dustingetz.post/title "is js/console.log syntax future proof?",
-        :dustingetz.post/slug :asdf,
-        :dustingetz.storm/channel "#clojurescript",
-        :dustingetz.post/published-date #inst "2018-11-19T00:00:00.000-00:00"}
-       13194139535895]
-      [{:db/id 17592186047105,
-        :dustingetz.post/title "large strings and high churn attrs blow out indexes",
-        :dustingetz.storm/channel "#datomic",
-        :dustingetz.post/published-date #inst "2018-11-21T00:00:00.000-00:00"}
-       13194139536000]]]
+   :dustingetz.test/findcoll-ident-cardinality-many
+   [{:db/id 17592186047485,
+     :fiddle/ident :dustingetz/issue-868,
+     :fiddle/query
+     "[:find\n [(pull ?e [:db/id #_{:db/cardinality [:db/ident]}])  ...]\n :where\n [:db.part/db :db.install/attribute ?e]\n [?e :db/cardinality :db.cardinality/many]]",
+     :fiddle/type :query,
+     :hyperfiddle/owners
+     [#uuid "acd054a8-4e36-4d6c-a9ec-95bdc47f0d39"]}
+    [{:db/ident :db.install/partition}
+     {:db/ident :db.install/valueType}
+     {:db/ident :db.install/attribute}
+     {:db/ident :db.install/function}
+     {:db/ident :db.excise/attrs}
+     {:db/ident :db.alter/attribute}
+     {:db/ident :fiddle/links}
+     {:db/ident :link/class}
+     {:db/ident :hyperfiddle/owners}
+     {:db/ident :community/category}
+     {:db/ident :community/type}
+     {:db/ident :dustingetz.nav/children}
+     {:db/ident :dustingetz.post/related}]]
 
-    :cookbook/markdown-table
-    [{:db/id 17592186046741,
-      :fiddle/ident :cookbook/markdown-table,
-      :fiddle/markdown
-      "### table with body renderers\n\ntable:\n:::\n!field(:task/completed) \n!field[hyperfiddle.ui.controls/tristate-boolean](:task/completed)\n!field[hyperfiddle.ui.controls/edn](:task/completed)\n!field[(comp str identity)](:task/title)\n:::",
-      :fiddle/query
-      "[:find \n [(pull ?e [:db/id \n           :task/title \n           :task/completed]) ...] \n :where\n [?e :task/title]]",
-      :fiddle/renderer
-      "(let [{:keys [:hypercrud.browser/fiddle]} ctx]\n  [:div.container-fluid props\n   [hyperfiddle.ui/markdown (:fiddle/markdown @fiddle) ctx]])",
-      :fiddle/type :query,
-      :hyperfiddle/owners
-      [#uuid "acd054a8-4e36-4d6c-a9ec-95bdc47f0d39"]}
-     [{:db/id 17592186046744, :task/title "Feed baby", :task/completed true}
-      {:db/id 17592186046745, :task/title "Mow the lawn"}
-      {:db/id 17592186046746, :task/title "Do the dishes", :task/completed true}]]
-    }
+   :dustingetz.test/schema-ident-findcoll
+   [{:db/id 17592186045743,
+     :fiddle/ident :seattle/neighborhoods,
+     :fiddle/links
+     [{:db/id 17592186045747,
+       :link/class [:hf/iframe],
+       :link/fiddle
+       {:db/id 17592186045750,
+        :fiddle/ident :seattle/districts,
+        :fiddle/query
+        "[:find \n [(pull ?e [:district/name :db/id]) ...]\n :where \n [?e :district/name]]",
+        :fiddle/type :query},
+       :link/path ":seattle/neighborhoods"}
+      {:db/id 17592186045752,
+       :link/class [:hf/new],
+       :link/fiddle
+       {:db/id 17592186045754,
+        :fiddle/ident :seattle/neighborhood-new,
+        :fiddle/type :entity},
+       :link/path ":neighborhood/name"}
+      {:db/id 17592186045756,
+       :link/fiddle
+       {:db/id 17592186045758,
+        :fiddle/ident :seattle/neighborhood-edit,
+        :fiddle/type :entity},
+       :link/path ":neighborhood/name"}
+      {:db/id 17592186045760,
+       :link/fiddle
+       {:db/id 17592186045762,
+        :fiddle/ident :seattle/district,
+        :fiddle/type :entity},
+       :link/path ":district/region"}],
+     :fiddle/query
+     "[:find\n [(pull ?e [:db/ident]) ...]\n :where\n [:db.part/db :db.install/attribute ?e]]",
+     :fiddle/renderer
+     "(let [{:keys [:hypercrud.browser/fiddle]} ctx]\n  [:div.container-fluid props\n   [hyperfiddle.ui/markdown (:fiddle/markdown @fiddle) ctx]\n   [hyperfiddle.ui/table\n    (fn [ctx] \n      [(hyperfiddle.ui/field [:neighborhood/name] ctx hyperfiddle.ui/hyper-control)\n       (hyperfiddle.ui/field [:neighborhood/district] ctx hyperfiddle.ui/hyper-control\n                             {:options :seattle/districts\n                              :option-label :district/name})\n       (hyperfiddle.ui/field [:neighborhood/district :district/region] ctx \n                             hyperfiddle.ui/hyper-control)\n       #_(hyperfiddle.ui/field [:db/id] ctx hyperfiddle.ui/hyper-control)])\n    ctx]])",
+     :fiddle/type :query,
+     :hyperfiddle/owners
+     [#uuid "acd054a8-4e36-4d6c-a9ec-95bdc47f0d39"]}
+    [{:db/ident :db.sys/partiallyIndexed}
+     {:db/ident :db.sys/reId}
+     {:db/ident :db/ident}
+     {:db/ident :db.install/partition}
+     {:db/ident :db.install/valueType}
+     {:db/ident :db.install/attribute}
+     {:db/ident :db.install/function}
+     {:db/ident :db/excise}
+     {:db/ident :db.excise/attrs}
+     {:db/ident :db.excise/beforeT}
+     {:db/ident :db.excise/before}
+     {:db/ident :db.alter/attribute}
+     {:db/ident :fressian/tag}
+     {:db/ident :db/valueType}
+     {:db/ident :db/cardinality}
+     {:db/ident :db/unique}
+     {:db/ident :db/isComponent}
+     {:db/ident :db/index}
+     {:db/ident :db/noHistory}
+     {:db/ident :db/lang}
+     {:db/ident :db/code}
+     {:db/ident :db/txInstant}
+     {:db/ident :db/fulltext}
+     {:db/ident :db/fn}
+     {:db/ident :db/doc}
+     {:db/ident :attribute/ident}
+     {:db/ident :attribute/renderer}
+     {:db/ident :fiddle/cljs-ns}
+     {:db/ident :fiddle/css}
+     {:db/ident :fiddle/hydrate-result-as-fiddle}
+     {:db/ident :fiddle/ident}
+     {:db/ident :fiddle/links}
+     {:db/ident :fiddle/markdown}
+     {:db/ident :fiddle/pull}
+     {:db/ident :fiddle/pull-database}
+     {:db/ident :fiddle/query}
+     {:db/ident :fiddle/renderer}
+     {:db/ident :zzz.fiddle/request}
+     {:db/ident :fiddle/type}
+     {:db/ident :link/class}
+     {:db/ident :link/fiddle}
+     {:db/ident :link/formula}
+     {:db/ident :link/path}
+     {:db/ident :link/rel}
+     {:db/ident :link/tx-fn}
+     {:db/ident :hyperfiddle/owners}
+     {:db/ident :community/name}
+     {:db/ident :community/url}
+     {:db/ident :community/neighborhood}
+     {:db/ident :community/category} {:db/ident :community/orgtype}
+     {:db/ident :community/type} {:db/ident :neighborhood/name} {:db/ident :neighborhood/district}
+     {:db/ident :district/name} {:db/ident :district/region} {:db/ident :helloworld/email}
+     {:db/ident :dustingetz.reg/email} {:db/ident :dustingetz.reg/name} {:db/ident :dustingetz.reg/age}
+     {:db/ident :dustingetz.reg/birthdate} {:db/ident :dustingetz.reg/gender} {:db/ident :dustingetz.reg/shirt-size} {:db/ident :dustingetz.post/title} {:db/ident :dustingetz.post/sort-index} {:db/ident :dustingetz.post/published} {:db/ident :dustingetz.post/hidden} {:db/ident :dustingetz.post/draft-placeholder} {:db/ident :dustingetz.nav/children} {:db/ident :dustingetz.post/related} {:db/ident :dustingetz.post/published-date} {:db/ident :dustingetz.task/completed} {:db/ident :dustingetz.task/title} {:db/ident :dustingetz.slack-converter/raw-source} {:db/ident :dustingetz/next} {:db/ident :dustingetz/prev} {:db/ident :dustingetz.storm/ident} {:db/ident :dustingetz.post/slug} {:db/ident :dustingetz.storm/channel} {:db/ident :dustingetz.streaker/weight} {:db/ident :dustingetz.streaker/date} {:db/ident :dustingetz.streaker/miles-ran} {:db/ident :dustingetz.streaker/comment} {:db/ident :dustingetz.streaker/mood} {:db/ident :dustingetz.streaker/teatotal} {:db/ident :dustingetz.streaker/eating} {:db/ident :dustingetz.streaker/pt} {:db/ident :dustingetz.streaker/gym} {:db/ident :dustingetz.streaker/yoga} {:db/ident :dustingetz.streaker.lifting/bench-1rm} {:db/ident :dustingetz.streaker.lifting/squat-1rm} {:db/ident :dustingetz.streaker/food-log} {:db/ident :didier/team-name} {:db/ident :dustingetz/foo} {:db/ident :dustingetz/foo1} {:db/ident :fiddle/uuid} {:db/ident :hyperfiddle/starred} {:db/ident :dustingetz.gist/src-clojure} {:db/ident :dustingetz.task/parent}
+     ]
+    ]
+   }
    )
 
 

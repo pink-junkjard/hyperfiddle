@@ -973,29 +973,111 @@
                (context/row [[:dustingetz.post/slug :automatic-CRUD-links]])
                #_(context/element 0)                        ; Specifically no element
                ))
-  (def r-link (hyperfiddle.data/select ctx :hf/new))
-  (is (= (mlet [[ctx r+route] (context/refocus-to-link+ ctx @r-link)]
+  (def link @(hyperfiddle.data/select ctx :hf/new))
+  (is (= (mlet [[ctx route] (context/refocus-to-link+ ctx link)]
            (context/eav ctx))
          [nil :dustingetz.tutorial/blog "479925454"]))
-  (is (= (mlet [[ctx r+route] (context/refocus-to-link+ ctx r-link)]
-           @r+route)
+  (is (= (mlet [[ctx route] (context/refocus-to-link+ ctx link)]
+           (return route))
          ; This works because refocus hardcodes element 0, which it turns out is almost always
          ; what the custom renderer wants.
-         (right [:dustingetz.tutorial.blog/new-post [#entity["$" "479925454"]]]))))
-
-
-
-(testing "refocus link from scalar qfind, identity focused from result ctx (infer element)"
+         (right [:dustingetz.tutorial.blog/new-post [#entity["$" "479925454"]]])))
   )
-(testing "refocus link from scalar qfind, identity focused from element ctx")
 
-(deftest links
+(deftest schema-bug-part-1
+  (testing "works"
+    (def ctx (mock-fiddle! :dustingetz.test/schema-ident-findcoll))
+    (is (= (let [ctx (context/row ctx :db.sys/partiallyIndexed)]
+             (context/data ctx))
+           #:db{:ident :db.sys/partiallyIndexed}))
+    (is (= (let [ctx (context/row ctx :db.sys/partiallyIndexed)]
+             (context/eav ctx))
+           [nil :seattle/neighborhoods :db.sys/partiallyIndexed]))
+    (is (= (let [ctx (context/row ctx :db.sys/partiallyIndexed)]
+             (context/row-key ctx (context/data ctx)))
+           :db.sys/partiallyIndexed))
+    (is (= (let [ctx (context/row ctx :db.sys/partiallyIndexed)]
+             (context/row-key-v ctx (context/data ctx)))
+           :db.sys/partiallyIndexed))
+
+    (is (= (let [ctx (context/row ctx :db.sys/partiallyIndexed)
+                 ctx (context/element ctx 0)]
+             (context/eav ctx))
+           [nil :seattle/neighborhoods :db.sys/partiallyIndexed]))
+    (is (= (let [ctx (context/row ctx :db.sys/partiallyIndexed)
+                 ctx (context/element ctx 0)]
+             (context/data ctx))
+           #:db{:ident :db.sys/partiallyIndexed}))
+
+    (is (= (count (for [[_ ctx] (context/spread-rows ctx)]
+                    nil))
+           99))))
+
+(deftest findcoll-ident-card-many
+  (is (-> (let [ctx (mock-fiddle! :dustingetz.test/findcoll-ident-cardinality-many)]
+            (for [[_ ctx] (context/spread-rows ctx)]
+              (context/data ctx)))
+          count (> 0)))
+
+  )
+
+;(deftest schema-but-part-2
+;  (testing "Crashes on the fifth row which is :db.install/valueType"
+;    (let [ctx (mock-fiddle! :dustingetz.test/schema-ident-findcoll)]
+;      (->> (for [[_ ctx] (drop 1 (context/spread-rows ctx))]
+;             (try
+;               (context/data ctx)
+;               [(:hypercrud.browser/result-path ctx)
+;                nil
+;                #_@(r/cursor (:hypercrud.browser/result-index ctx) (:hypercrud.browser/result-path ctx))]
+;               (catch Exception e
+;                 [
+;                  (:hypercrud.browser/result-path ctx)
+;                  e
+;                  #_@(r/cursor (:hypercrud.browser/result-index ctx) (:hypercrud.browser/result-path ctx))
+;                  ])))
+;           (filter second)
+;           doall))
+;    )
+;
+;  (testing "I dont know why this crashes"
+;    (def ctx (mock-fiddle! :dustingetz.test/schema-ident-findcoll))
+;    (is (= (let [ctx (context/row ctx :db.install/valueType)]
+;             (context/data ctx))
+;           #:db{:ident :db.sys/partiallyIndexed}))
+;    (is (= (let [ctx (context/row ctx :db.install/valueType)]
+;             (context/eav ctx))
+;           [nil :seattle/neighborhoods :db.sys/partiallyIndexed]))
+;    (is (= (let [ctx (context/row ctx :db.install/valueType)]
+;             (context/row-key ctx (context/data ctx)))
+;           :db.install/valueType))
+;    (is (= (let [ctx (context/row ctx :db.install/valueType)]
+;             (context/row-key-v ctx (context/data ctx)))
+;           :db.install/valueType))
+;
+;    (for [[_ ctx] (context/spread-rows ctx)]
+;      (context/eav ctx))
+;
+;
+;
+;    (for [[_ ctx] (context/spread-rows ctx)
+;          [_ ctx] (context/spread-elements ctx)]
+;      (context/data ctx))
+;
+;    ))
+
+(deftest links111
+  ;(testing "refocus link from scalar qfind, identity focused from result ctx (infer element)"
+  ;  (is true))
+  ;(testing "refocus link from scalar qfind, identity focused from element ctx"
+  ;  (is true))
+
   (testing "race shirt-sizes iframe"
-    (def ctx (mock-fiddle! :tutorial.race/submission))
-    (is (-> @(hyperfiddle.data/select-many ctx :dustingetz.reg/gender)
-            first :link/fiddle :fiddle/ident (= :tutorial.race/shirt-sizes)))
-    ;(println @(hyperfiddle.data/select-many ctx :tutorial.race/submission))
-    (is (= 2 (count @(hyperfiddle.data/select-many ctx :hf/iframe))))
+    (let [ctx (mock-fiddle! :tutorial.race/submission)]
+      (is (-> @(hyperfiddle.data/select-many ctx :dustingetz.reg/gender)
+              first :link/fiddle :fiddle/ident (= :tutorial.race/shirt-sizes)))
+      ;(println @(hyperfiddle.data/select-many ctx :tutorial.race/submission))
+      (is (= 2 (count @(hyperfiddle.data/select-many ctx :hf/iframe)))))
     )
 
   (testing "seattle neighborhood districts iframe"
@@ -1013,7 +1095,7 @@
 
     (def ctx (mock-fiddle! :seattle/neighborhoods))
     (is @(:hypercrud.browser/link-index ctx))
-    (is (context/links-at (:hypercrud.browser/link-index ctx) #{}))
+    (is @(context/links-at (:hypercrud.browser/link-index ctx) #{}))
     (is @(context/links-in-dimension-r ctx #{}))
     )
   )
@@ -1035,12 +1117,12 @@
     (is (= (context/eav ctx)
            [nil :cookbook/markdown-table 17592186046744]))
     #_(is (= (for [ctx [(context/row ctx 17592186046744)]
-                 [_ ctx] (context/spread-elements ctx)
-                 [_ ctx] (context/spread-attributes ctx)]
-             (context/eav ctx))
-           [[nil :db/id nil]
-            [nil :cookbook/markdown-table nil]
-            [nil :cookbook/markdown-table nil]]))
+                   [_ ctx] (context/spread-elements ctx)
+                   [_ ctx] (context/spread-attributes ctx)]
+               (context/eav ctx))
+             [[nil :db/id nil]
+              [nil :cookbook/markdown-table nil]
+              [nil :cookbook/markdown-table nil]]))
     ))
 
 (deftest txfn

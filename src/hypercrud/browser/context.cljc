@@ -371,20 +371,22 @@
           {:keys [:hypercrud.browser/element
                   :hypercrud.browser/result
                   :hypercrud.browser/result-index
-                  :hypercrud.browser/result-path]} ctx
-          ; Compare pullpath to resultpath? How do we know to do an index lookup vs return the table?
-          ; if pullpath has an a but resultpath doesn't have a corresponding row, return the set.
-          ; Count the dimension of the pullpath and compare to the count of the resultpath?
-          ; Or inspect resultpath - if the last thing is an attr and it's :many, then we are awaiting a rowkey
-          k (last result-path)
-          is-awaiting-rowkey (and (keyword? k)
-                                  (= :db.cardinality/many (contrib.datomic/cardinality-loose
-                                                            @(:hypercrud.browser/schema ctx) k)))]
-      (if result-path                                       ; hax, still tangled. Can be exact without guesswork
-        (if is-awaiting-rowkey
-          @result                                           ; We hang on to sets as we descend
-          @(r/cursor result-index result-path))
-        @result))))
+                  :hypercrud.browser/result-path]} ctx]
+      (cond
+        (qfind-level? ctx)
+        (if result-path
+          @(r/cursor result-index result-path)
+          @result)
+
+        :else
+        (let [k (last result-path)
+              is-awaiting-rowkey (and (keyword? k)
+                                      (= :db.cardinality/many (contrib.datomic/cardinality-loose
+                                                                @(:hypercrud.browser/schema ctx) k)))]
+          (if is-awaiting-rowkey
+            @result                                         ; We hang on to sets as we descend
+            @(r/cursor result-index result-path))))
+      )))
 
 ; It's just easier to end the reaction earlier
 (defn v! "returns scalar | identity | lookupref | nil."     ; never a fallback v
