@@ -161,26 +161,30 @@
       :db.type/ref any?                                     ;  todo
       :db.type/string string?
       :db.type/uri is-uri?
-      :db.type/uuid uuid?)))
+      :db.type/uuid uuid?
+      nil (do
+            (taoensso.timbre/warn "unknown valueType: " a)  ; :domain/_databases
+            (constantly true)))))
 
 (let [parse-string (fn [value-pred s]
                      (let [v (reader/read-edn-string! s)]
                        (assert (every? value-pred v))
                        v))]
   (defn ^:export edn-many [val ctx & [props]]
-    ; Links aren't handled, we need to isolate individual values for that
-    (let [[_ a _] @(:hypercrud.browser/eav ctx)
-          val (set (if (contrib.datomic/valueType? @(:hypercrud.browser/schema ctx) a :db.type/ref)
-                     (map (r/partial context/smart-entity-identifier ctx) val)
-                     val))
-          props (-> (assoc props
-                      :value val
-                      :mode "clojure"
-                      :on-change (with-entity-change! ctx)))]
-      [debounced props contrib.ui/validated-cmp (r/partial parse-string (value-validator ctx)) pprint-str
-       (case (:hyperfiddle.ui/layout ctx :hyperfiddle.ui.layout/block)
-         :hyperfiddle.ui.layout/block contrib.ui/code
-         :hyperfiddle.ui.layout/table contrib.ui/code-inline-block)])))
+    [:div.hyperfiddle-input-group
+     ; Links aren't handled, we need to isolate individual values for that
+     (let [[_ a _] @(:hypercrud.browser/eav ctx)
+           val (set (if (contrib.datomic/valueType? @(:hypercrud.browser/schema ctx) a :db.type/ref)
+                      (map (r/partial context/smart-entity-identifier ctx) val)
+                      val))
+           props (-> (assoc props
+                       :value val
+                       :mode "clojure"
+                       :on-change (with-entity-change! ctx)))]
+       [debounced props contrib.ui/validated-cmp (r/partial parse-string (value-validator ctx)) pprint-str
+        (case (:hyperfiddle.ui/layout ctx :hyperfiddle.ui.layout/block)
+          :hyperfiddle.ui.layout/block contrib.ui/code
+          :hyperfiddle.ui.layout/table contrib.ui/code-inline-block)])]))
 
 (let [parse-string (fn [value-pred s]
                      (let [v (reader/read-edn-string! s)]
