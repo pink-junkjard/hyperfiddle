@@ -11,7 +11,7 @@
     [contrib.uri :refer [is-uri?]]
     [datascript.parser :refer [FindRel FindColl FindTuple FindScalar Variable Aggregate Pull]]
     [hypercrud.browser.context :as context]
-    [hyperfiddle.data :as data]
+    [hyperfiddle.data]
     [hyperfiddle.runtime :as runtime]
     #_[hyperfiddle.ui]
     [hyperfiddle.ui.docstring :refer [semantic-docstring]]
