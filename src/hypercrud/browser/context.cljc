@@ -70,6 +70,15 @@
 (s/def :hypercrud.browser/schema r/reactive?)
 (s/def :hypercrud.browser/pull-path (s/coll-of keyword? :kind vector?))
 
+(defn valid? [{:keys [:hypercrud.browser/qfind
+                      :hypercrud.browser/fiddle] :as ctx}]
+  (let [{:keys [:fiddle/type]} @fiddle]
+    (cond
+      (= type :blank) true
+      (not qfind) (taoensso.timbre/warn "invalid qfind: " (pr-str (:hypercrud.browser/qfind ctx)))
+      (:hypercrud.browser/qfind-invalid-attrs ctx) (taoensso.timbre/warn "invalid attrs: " (pr-str (:hypercrud.browser/qfind-invalid-attrs ctx)))
+      :else true)))
+
 (defn clean [ctx]
   ; Keeps the :peer which owns the schemas
   (dissoc ctx
