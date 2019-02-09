@@ -38,10 +38,6 @@
 (defn parser-type [element]
   (parser-types (type element)))
 
-(defn consistent-relation-key "Key that the dbval has, but unstable in views with a branch"
-  [v]
-  (or (smart-lookup-ref-no-tempids v) v))
-
 (defprotocol SchemaIndexedNormalized
   ; Implement this interface in both peer and Hypercrud client
   (-attr [this a k])
