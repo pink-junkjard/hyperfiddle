@@ -206,3 +206,6 @@
 
 (defn assoc-if [m k v]
   (conj m (if v [k v])))
+
+(defn unqualify [qualified-kw]
+  (keyword (name qualified-kw)))
