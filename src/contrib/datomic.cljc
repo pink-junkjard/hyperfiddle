@@ -11,7 +11,7 @@
 (defn tempid? [id]
   (string? id))
 
-(defn identity-segment? [attr-spec]                         ; need schema for :identity
+(defn identity-segment? [schema attr-spec]                         ; need schema for :identity
   ; Not necessarily a keyword
   ; But accepts pull-shapes, so doesn't have to be the full attr spec
   (contains? #{:db/id :db/ident} attr-spec))
@@ -182,13 +182,13 @@
 
 (defn pull-traverse "Manufacture superset of possible link paths
   Collapses {:reg/gender [:db/ident :db/id]} into :reg/gender"
-  ([pull-shape] (pull-traverse pull-shape (constantly true) []))
-  ([pull-shape pred] (pull-traverse pull-shape pred []))
-  ([pull-shape pred path] ; private, internal path accumulator, like a zipper (loop recur would hide this)
+  ([schema pull-shape] (pull-traverse schema pull-shape (constantly true) []))
+  ([schema pull-shape pred] (pull-traverse schema pull-shape pred []))
+  ([schema pull-shape pred path] ; private, internal path accumulator, like a zipper (loop recur would hide this)
    (->> pull-shape
         (mapcat (fn [attr-spec]
                   (cond
-                    (identity-segment? attr-spec)           ; todo needs schema
+                    (identity-segment? schema attr-spec)           ; todo needs schema
                     [[]]                                    ; blank path means the element
 
                     (keyword? attr-spec)                    ; scalars, never refs
@@ -204,7 +204,8 @@
                                                ; Collapse pulled identity into parent from link's perspective
                                                ; :unique :identity should too todo
                                                (pull-traverse
-                                                 (remove identity-segment? children) ; Address entities by :ref
+                                                 schema
+                                                 (remove #(identity-segment? schema %) children) ; Address entities by :ref
                                                  pred
                                                  path))))))
                          distinct))))
@@ -222,7 +223,7 @@
         (cardinality? schema a :db.cardinality/one))))
 
 #_(defn downtree-pullpaths [schema pullshape]
-  (pull-traverse pullshape (partial ref-one? schema)))
+  (pull-traverse schema pullshape (partial ref-one? schema)))
 
 (defn pullpath-unwind-while "Find oldest ancestor matching pred.
   Hint: Pred probably closes over schema."
@@ -249,7 +250,7 @@
   (let [pred #(cardinality? schema % :db.cardinality/one) #_(ref-one? schema)
         ancestor-path (pullpath-unwind-while pred pullpath)
         ancestor-pull (pullshape-get-in root-pullshape ancestor-path)]
-    (pull-traverse ancestor-pull pred)))
+    (pull-traverse schema ancestor-pull pred)))
 
 (defn reachable-attrs [schema root-pullshape pullpath]
   {:pre [#_(satisfies? SchemaIndexedNormalized schema)]}
@@ -261,7 +262,7 @@
   ; derivative oriented, ignores spread
   {:pre [schema]}
   (condp = (type e)
-    Pull (pull-traverse (pull-enclosure schema (pull-shape pull-pattern) collection))
+    Pull (pull-traverse schema (pull-enclosure schema (pull-shape pull-pattern) collection))
     Variable [[]]
     Aggregate [[]]))
 
@@ -341,7 +342,7 @@
     ::Variable []
     ::Aggregate []
     ::Pull (let [{{pull-pattern :value} :pattern} element]
-             (->> (pull-traverse (pull-shape pull-pattern))
+             (->> (pull-traverse schema (pull-shape pull-pattern))
                   (remove empty?)
                   (map last)
                   (map (juxt identity #(attr schema %)))

@@ -184,21 +184,21 @@
 
 (deftest form-traverse-
   []
-  (is (= (pull-traverse [:db/ident])
-         (pull-traverse [:db/id])
-         (pull-traverse [:db/id :db/ident])
+  (is (= (pull-traverse fixtures.ctx/schema [:db/ident])
+         (pull-traverse fixtures.ctx/schema [:db/id])
+         (pull-traverse fixtures.ctx/schema [:db/id :db/ident])
          '([])))
 
-  (is (= (pull-traverse [:reg/gender])
-         (pull-traverse [{:reg/gender [:db/ident]}])
-         (pull-traverse [{:reg/gender [:db/id]}])
-         (pull-traverse [{:reg/gender [:db/id :db/ident]}])
-         (pull-traverse [{:reg/gender []}])
+  (is (= (pull-traverse fixtures.ctx/schema [:reg/gender])
+         (pull-traverse fixtures.ctx/schema [{:reg/gender [:db/ident]}])
+         (pull-traverse fixtures.ctx/schema [{:reg/gender [:db/id]}])
+         (pull-traverse fixtures.ctx/schema [{:reg/gender [:db/id :db/ident]}])
+         (pull-traverse fixtures.ctx/schema [{:reg/gender []}])
          '([:reg/gender])))
 
 
 
-  (is (= (pull-traverse [:reg/gender
+  (is (= (pull-traverse fixtures.ctx/schema [:reg/gender
                          :db/id                             ; In place order
                          {:reg/shirt-size [:db/ident
                                            :reg/gender
