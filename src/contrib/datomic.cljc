@@ -40,7 +40,6 @@
 
 (defprotocol SchemaIndexedNormalized
   ; Implement this interface in both peer and Hypercrud client
-  (-attr [this a k])
   (-repr-portable-hack [this])
   (attr [this a])
   (cardinality [this a])
@@ -57,42 +56,44 @@
   {:pre [(-> (name a) (subs 0 1) (= "_"))]}
   (keyword (namespace a) (-> (name a) (subs 1))))
 
+(defn make-reverse-attr [schema a]
+  ; unique scalars can't be pulled in reverse
+  ; unique ref doesn't imply that _no other attr_ points to the entityvalue
+  ; isComponent implies a 1-1 relationship, so the reverse of an isComponent attr will be cardinality-one
+  {:db/ident a
+   :db/valueType :db.type/ref
+   :db/cardinality (if (isComponent schema (attr-unreverse a))
+                     :db.cardinality/one
+                     :db.cardinality/many)})
+
+; :db/id is currently addressable (e.g. user wants to render that column)
+(def dbid {:db/ident :db/id
+           :db/cardinality :db.cardinality/one
+           :db/valueType :db.type/long})
+
 (deftype Schema [schema-pulledtree schema-by-attr]
   SchemaIndexedNormalized
   (-repr-portable-hack [this] (str "#schema " (pr-str schema-pulledtree)))
   (attr [this a]
     (s/assert keyword? a)
-    (-> (schema-by-attr a)
-        (contrib.data/update-existing :db/valueType smart-lookup-ref-no-tempids)
-        (contrib.data/update-existing :db/cardinality smart-lookup-ref-no-tempids)
-        (contrib.data/update-existing :db/isComponent smart-lookup-ref-no-tempids)
-        (contrib.data/update-existing :db/unique smart-lookup-ref-no-tempids)))
-  (-attr [this a k]                                         ; Todo assert attribute is found.
-    #_(s/assert keyword? a)                                 ; def real assert currenetly failing
-    #_(s/assert keyword? k)
-    (let [v (smart-lookup-ref-no-tempids
-              (get-in schema-by-attr [a k]))]
-      #_(s/assert keyword? v)
-      v))
-  (valueType [this a] (-attr this a :db/valueType))
-  (cardinality [this a] (-attr this a :db/cardinality))
-  (isComponent [this a] (-attr this a :db/isComponent))
-  (unique [this a] (-attr this a :db/unique))
+    (let [is-reverse-nav (-> (name a) (subs 0 1) (= "_"))]
+      (cond
+        (= a :db/id) dbid
+        is-reverse-nav (make-reverse-attr this a)
+        :else
+        (-> (schema-by-attr a)
+            (contrib.data/update-existing :db/valueType smart-lookup-ref-no-tempids)
+            (contrib.data/update-existing :db/cardinality smart-lookup-ref-no-tempids)
+            (contrib.data/update-existing :db/isComponent smart-lookup-ref-no-tempids)
+            (contrib.data/update-existing :db/unique smart-lookup-ref-no-tempids)))))
+  (valueType [this a] (get (attr this a) :db/valueType))
+  (cardinality [this a] (get (attr this a) :db/cardinality))
+  (isComponent [this a] (get (attr this a) :db/isComponent))
+  (unique [this a] (get (attr this a) :db/unique))
   (unique? [this a k] (= k (unique this a)))
   (valueType? [this a k] (= k (valueType this a)))
   (cardinality? [this a k] (= k (cardinality this a)))
-  (cardinality-loose [this a]
-    (s/assert keyword? a)
-    (let [is-reverse-nav (-> (name a) (subs 0 1) (= "_"))]
-      (cond
-        (= a :db/id) :db.cardinality/one                    ; :db/id is currently addressable (e.g. user wants to render that column)
-        ; unique scalars can't be pulled in reverse
-        ; unique ref doesn't imply that _no other attr_ points to the entityvalue
-        ; isComponent implies a 1-1 relationship, so the reverse of an isComponent attr will be cardinality-one
-        is-reverse-nav (if (isComponent this (attr-unreverse a))
-                         :db.cardinality/one
-                         :db.cardinality/many)
-        :else (cardinality this a))))
+  (cardinality-loose [this a] (cardinality this a))
   (ref? [this k] (valueType? this k :db.type/ref))
 
   #?@(:clj

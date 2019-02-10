@@ -299,6 +299,15 @@
     (is (= (contrib.datomic/find-identity-attr fixtures.hfhf/schema {:a 1}) nil))
     (is (= (contrib.datomic/find-identity-attr fixtures.hfhf/schema nil) nil))
     )
+
+  (testing "reverse navigation"
+    (is (contrib.datomic/attr fixtures.hfhf/schema :link/_fiddle))
+    (is (= (contrib.datomic/valueType fixtures.hfhf/schema :link/_fiddle) :db.type/ref))
+    (is (= (contrib.datomic/attr fixtures.hfhf/schema :link/_fiddle)
+           #:db{:ident :link/_fiddle, :valueType :db.type/ref, :cardinality :db.cardinality/many}))
+    (is (= (contrib.datomic/cardinality fixtures.hfhf/schema :link/_fiddle) :db.cardinality/many))
+    (is (= (contrib.datomic/cardinality fixtures.hfhf/schema :fiddle/_links) :db.cardinality/one))
+    )
   )
 
 
