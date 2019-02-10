@@ -227,7 +227,7 @@
   [f? pullpath]
   #_(drop-while f? (reverse pullpath))
   (loop [[a & as :as here] (reverse pullpath)]              ; pullpath is guaranteed to align with pullshape
-    (if (f? a)
+    (if (and a (f? a))
       (recur as)
       here)))
 
