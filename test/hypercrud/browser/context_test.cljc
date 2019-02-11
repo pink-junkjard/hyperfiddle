@@ -1127,8 +1127,19 @@
               [nil :cookbook/markdown-table nil]]))
     ))
 
+(deftest findrel-with-nested-many
+  (testing "aaa"
+    (let [ctx (mock-fiddle! :dustingetz.seattle/communities2)]
+      (for [[_ ctx] (context/spread-rows ctx)
+            [_ ctx] (context/spread-elements ctx)]
+        (let [ctx (context/attribute ctx :community/type)]
+          (for [[_ ctx] (context/spread-rows ctx)]
+            (context/row ctx (context/row-key ctx {:db/id 42})))))))
+  )
+
 (deftest ide-domain-databases
   (testing "yaaa"
+    ; issue could be isComponent, or multiple maps in the pull
     (def ctx (mock-fiddle! fixtures.domains/schemas
                            fixtures.domains/fiddles
                            :hyperfiddle.ide/domain))

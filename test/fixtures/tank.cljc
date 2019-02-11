@@ -660,6 +660,19 @@
      {:db/ident :dustingetz.reg/birthdate} {:db/ident :dustingetz.reg/gender} {:db/ident :dustingetz.reg/shirt-size} {:db/ident :dustingetz.post/title} {:db/ident :dustingetz.post/sort-index} {:db/ident :dustingetz.post/published} {:db/ident :dustingetz.post/hidden} {:db/ident :dustingetz.post/draft-placeholder} {:db/ident :dustingetz.nav/children} {:db/ident :dustingetz.post/related} {:db/ident :dustingetz.post/published-date} {:db/ident :dustingetz.task/completed} {:db/ident :dustingetz.task/title} {:db/ident :dustingetz.slack-converter/raw-source} {:db/ident :dustingetz/next} {:db/ident :dustingetz/prev} {:db/ident :dustingetz.storm/ident} {:db/ident :dustingetz.post/slug} {:db/ident :dustingetz.storm/channel} {:db/ident :dustingetz.streaker/weight} {:db/ident :dustingetz.streaker/date} {:db/ident :dustingetz.streaker/miles-ran} {:db/ident :dustingetz.streaker/comment} {:db/ident :dustingetz.streaker/mood} {:db/ident :dustingetz.streaker/teatotal} {:db/ident :dustingetz.streaker/eating} {:db/ident :dustingetz.streaker/pt} {:db/ident :dustingetz.streaker/gym} {:db/ident :dustingetz.streaker/yoga} {:db/ident :dustingetz.streaker.lifting/bench-1rm} {:db/ident :dustingetz.streaker.lifting/squat-1rm} {:db/ident :dustingetz.streaker/food-log} {:db/ident :didier/team-name} {:db/ident :dustingetz/foo} {:db/ident :dustingetz/foo1} {:db/ident :fiddle/uuid} {:db/ident :hyperfiddle/starred} {:db/ident :dustingetz.gist/src-clojure} {:db/ident :dustingetz.task/parent}
      ]
     ]
+   :dustingetz.seattle/communities2
+   [{:db/id 17592186047512,
+     :fiddle/ident :dustingetz.seattle/communities2,
+     :fiddle/query
+     "[:find\n (pull ?e [:db/id *])\n :where\n [?e :community/name ?name]\n [(< ?name \"A\")]]",
+     :fiddle/type :query}
+    [[{:db/id 17592186045520,
+       :community/name "15th Ave Community",
+       :community/url "http://groups.yahoo.com/group/15thAve_Community/",
+       :community/neighborhood {:db/id 17592186045519},
+       :community/category ["15th avenue residents"],
+       :community/orgtype {:db/id 17592186045432},
+       :community/type [{:db/id 17592186045436}]}]]]
    }
    )
 

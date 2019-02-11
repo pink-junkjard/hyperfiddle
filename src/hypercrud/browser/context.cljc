@@ -228,18 +228,24 @@
 
 (declare element-head)
 (declare spread-elements)
+(declare qfind-level?)
 
 (defn row-key "Properly accounts for elements/schema"       ; does it return nil, or a v?
   [{qfind :hypercrud.browser/qfind :as ctx} row]
   ; This keyfn is very tricky, read https://github.com/hyperfiddle/hyperfiddle/issues/341
   #_(let [qfind (contrib.datomic/qfind-collapse-findrel-1 @qfind row)])
-  (condp some [(type @qfind)]
-    #{FindColl FindScalar}
-    (key-scalar (element-head ctx 0) row)
-    #{FindRel FindTuple}
-    (vec                                                    ; Tupled elements have tupled keys, except FindRel-1.
-      (for [[i ctx] (spread-elements ctx element-head)]     ; Data is not focused yet, must sidestep that logic
-        (key-scalar ctx (get row i))))))
+  (cond
+    (qfind-level? ctx)
+    (condp some [(type @qfind)]
+      #{FindColl FindScalar}
+      (key-scalar (element-head ctx 0) row)
+      #{FindRel FindTuple}
+      (vec                                                    ; Tupled elements have tupled keys, except FindRel-1.
+        (for [[i ctx] (spread-elements ctx element-head)]     ; Data is not focused yet, must sidestep that logic
+          (key-scalar ctx (get row i)))))
+
+    :else
+    (key-scalar ctx row)))
 
 (def ^:export ^:legacy row-keyfn row-key)
 (def ^:export ^:legacy key-row row-key)
@@ -463,6 +469,7 @@
   Accounts for row order and handles client sorting."
   [ctx & [sort-fn]]
   {:pre [(:hypercrud.browser/qfind ctx)]}
+  (s/assert :hypercrud/context ctx)
   (let [ctx (assoc ctx :hypercrud.browser/head-sentinel false) ; hack
         sort-fn (or sort-fn identity)]
     (cond                                                   ; fiddle | nested attr (otherwise already spread)
@@ -491,7 +498,8 @@
           (let [?k (row-key ctx @r-ordered-result)]
             [[?k ctx]])))
 
-      ; where is the cardinality test
+      ; where is the cardinality test? can elide, assume :many if they called spread-rows down here.
+      ; Better also be past qfind level and into a pull
       (> (depth ctx) 0)                                     ; nested attr
       (let [r-ordered-result (data ctx)]                    ; remember row order; this is broken check order
         (for [[?k k] (->> (sort-fn r-ordered-result)
