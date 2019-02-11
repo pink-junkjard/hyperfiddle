@@ -985,16 +985,6 @@
       (right
         [ctx ?route]))))
 
-(defn tempid! "unstable"
-  ([ctx]
-    ; :blank can assume $; otherwise user should specify a qfind
-   (let [dbname (or (dbname ctx) "$")]
-     (tempid! dbname ctx)))
-  ([dbname ctx]                                             ; deprecated arity, i think
-   @(r/fmap->> (runtime/state (:peer ctx) [::runtime/partitions])
-               (hypercrud.util.branch/branch-val (uri dbname ctx) (:branch ctx))
-               hash str)))
-
 (defn- fix-param [ctx param]
   (if (instance? ThinEntity param)
     ; I think it already has the correct identity and tempid is already accounted
@@ -1035,9 +1025,16 @@
   ; recurse all the way up the path? just data + parent-data is relative not fully qualified, which is not unique
   ; is this just eav?
   (->> (map pr-str (eav ctx))
-       (cons "tempid")
-       (clojure.string/join "-"))
-  #_(-> (str (:hypercrud.browser/pull-path ctx) "."
-             (hash-ctx-data (:hypercrud.browser/parent ctx)) "."
-             (hash-ctx-data ctx))
-        hash str))
+       (cons "hyperfiddle.tempid")
+       (clojure.string/join "-")))
+
+(defn tempid! "unstable"
+  ([ctx]
+    ; :blank can assume $; otherwise user should specify a qfind
+    ; ^ is old comment and can't this be removed now?
+   (tempid! (or (dbname ctx) "$") ctx))
+  ([dbname ctx]
+    ; Use hash of current dbval, which changes with each edit
+   @(r/fmap->> (runtime/state (:peer ctx) [::runtime/partitions])
+               (hypercrud.util.branch/branch-val (uri dbname ctx) (:branch ctx))
+               (str "hyperfiddle.tempid-"))))

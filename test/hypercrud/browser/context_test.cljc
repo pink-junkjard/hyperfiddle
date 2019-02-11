@@ -936,10 +936,10 @@
       (is (= (mlet [[ctx r+route] (context/refocus-to-link+ ctx link)]
                (context/eav ctx))
              ; should it be [nil nil "479925454"] from the txfn perspective?
-             [nil :dustingetz.tutorial/blog "479925454"]))
+             [nil :dustingetz.tutorial/blog "hyperfiddle.tempid--2017569654"]))
       (is (= (mlet [[ctx +route] (context/refocus-to-link+ ctx link)]
                (return +route))
-             (right [:dustingetz.tutorial.blog/new-post [#entity["$" "479925454"]]]))))
+             (right [:dustingetz.tutorial.blog/new-post [#entity["$" "hyperfiddle.tempid--2017569654"]]]))))
     )
 
   (testing "iframe at double nested attr"
@@ -978,12 +978,12 @@
   (def link @(hyperfiddle.data/select ctx :hf/new))
   (is (= (mlet [[ctx route] (context/refocus-to-link+ ctx link)]
            (context/eav ctx))
-         [nil :dustingetz.tutorial/blog "479925454"]))
+         [nil :dustingetz.tutorial/blog "hyperfiddle.tempid--2017569654"]))
   (is (= (mlet [[ctx route] (context/refocus-to-link+ ctx link)]
            (return route))
          ; This works because refocus hardcodes element 0, which it turns out is almost always
          ; what the custom renderer wants.
-         (right [:dustingetz.tutorial.blog/new-post [#entity["$" "479925454"]]])))
+         (right [:dustingetz.tutorial.blog/new-post [#entity["$" "hyperfiddle.tempid--2017569654"]]])))
   )
 
 (deftest schema-bug-part-1

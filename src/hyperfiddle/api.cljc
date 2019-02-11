@@ -17,9 +17,9 @@
 
 (defn ^:export tempid! [ctx]
   ; This is buggy. We want Collections and Sets to inspect the stage for unique generation?
-  (if (= 0 (hypercrud.browser.context/pull-depth ctx))
+  (if (hypercrud.browser.context/qfind-level? ctx)
     (hypercrud.browser.context/tempid! ctx)
-    (hypercrud.browser.context/tempid ctx)))
+    (hypercrud.browser.context/tempid! ctx)))               ; ???
 
 (defmulti txfn (fn [user-txfn e a v ctx] user-txfn))
 
