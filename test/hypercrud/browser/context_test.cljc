@@ -1,11 +1,12 @@
 (ns hypercrud.browser.context-test
   (:require
     [cats.core :refer [mlet return fmap extract]]
-    [cats.monad.either :refer [left right]]
+    [cats.monad.either :refer [left right left? right?]]
     [clojure.test :refer [deftest is testing]]
     [contrib.reactive :as r]
     [contrib.ct :refer [unwrap]]
     [fixtures.tank]
+    [fixtures.domains]
     [hyperfiddle.core]                                      ; avoid cycle hyperfiddle.api
     [hyperfiddle.data]
     [hyperfiddle.fiddle]
@@ -26,13 +27,14 @@
 (defn mock-fiddle! "This has some subtle differences around tempid handling - this mock
   has no information about tempids at all, so these tests do not exercise tempid paths which
   can subtly influence keyfns possibly other things."
-  [ident]
-  (let [[fiddle result] (-> fixtures.tank/fiddles ident)]
-    (-> {:hypercrud.browser/route nil
-         :peer (mock-peer)}
-        (context/schemas (r/pure fixtures.tank/schemas))
-        (context/fiddle (r/pure fiddle))
-        (context/result (r/pure result)))))
+  ([ident] (mock-fiddle! fixtures.tank/schemas fixtures.tank/fiddles ident))
+  ([schemas fiddles ident]
+   (let [[fiddle result] (-> fiddles ident)]
+     (-> {:hypercrud.browser/route nil
+          :peer (mock-peer)}
+         (context/schemas (r/pure schemas))
+         (context/fiddle (r/pure fiddle))
+         (context/result (r/pure result))))))
 
 (deftest primitives
   []
@@ -1124,6 +1126,16 @@
               [nil :cookbook/markdown-table nil]
               [nil :cookbook/markdown-table nil]]))
     ))
+
+(deftest ide-domain-databases
+  (testing "yaaa"
+    (def ctx (mock-fiddle! fixtures.domains/schemas
+                           fixtures.domains/fiddles
+                           :hyperfiddle.ide/domain))
+    (def +ctx (context/refocus+ ctx :domain/databases))
+    (is (left? +ctx))
+    #_(= (context/eav ctx) [17592186046196 :dustingetz.reg/age 102]))
+  )
 
 (deftest txfn
   []
