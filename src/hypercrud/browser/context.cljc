@@ -346,7 +346,7 @@
   ([ctx a]                                                  ; eav order of init issues, ::eav depends on this in :many
    {:pre [(> (depth ctx) 0)]}
    (assert (not (:hypercrud.browser/head-sentinel ctx)) "this whole flag is trouble, not sure if this assert is strictly necessary")
-   (case (contrib.datomic/cardinality-loose @(:hypercrud.browser/schema ctx) a)
+   (case (contrib.datomic/cardinality @(:hypercrud.browser/schema ctx) a)
 
      :db.cardinality/one
      ctx
@@ -396,7 +396,7 @@
         :else
         (let [k (last result-path)
               is-awaiting-rowkey (and (keyword? k)
-                                      (= :db.cardinality/many (contrib.datomic/cardinality-loose
+                                      (= :db.cardinality/many (contrib.datomic/cardinality
                                                                 @(:hypercrud.browser/schema ctx) k)))]
           (if is-awaiting-rowkey
             @result                                         ; We hang on to sets as we descend
@@ -644,7 +644,7 @@
                 :hypercrud.browser/qfind]} ctx]
 
     ; Schema aliases can crash here https://github.com/hyperfiddle/hyperfiddle.net/issues/182
-    #_(if-not (contrib.datomic/cardinality-loose @(:hypercrud.browser/schema ctx) a')
+    #_(if-not (contrib.datomic/cardinality @(:hypercrud.browser/schema ctx) a')
       ctx)
     (as->
       ctx ctx
@@ -660,7 +660,7 @@
               (index-result ctx a')))
       ; V is for formulas, E is for security and on-change. V becomes E. E is nil if we don't know identity.
       (assoc ctx :hypercrud.browser/eav                     ; insufficent stability on r-?v? fixme
-                 (case (contrib.datomic/cardinality-loose @(:hypercrud.browser/schema ctx) a')
+                 (case (contrib.datomic/cardinality @(:hypercrud.browser/schema ctx) a')
                    :db.cardinality/many (r/fmap-> (:hypercrud.browser/eav ctx) (stable-eav-a a')) ; dont have v yet
                    :db.cardinality/one (r/fmap-> (:hypercrud.browser/eav ctx) (stable-eav-av a' (v! ctx)))))
 

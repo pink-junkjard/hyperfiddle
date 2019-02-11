@@ -87,7 +87,7 @@
   (let [element @(:hypercrud.browser/element ctx)
         [_ a _] (context/eav ctx)                           ; what about fiddle-level
         value-type (some-> (:hypercrud.browser/schema ctx) deref (contrib.datomic/valueType a)) ; put protocol on ctx to remove guard
-        cardinality (some-> (:hypercrud.browser/schema ctx) deref (contrib.datomic/cardinality-loose a))
+        cardinality (some-> (:hypercrud.browser/schema ctx) deref (contrib.datomic/cardinality a))
         element-type (contrib.datomic/parser-type element)]
     (match* [(unqualify element-type) (unqualify value-type) (unqualify cardinality)]
       [:variable _ _] controls/string
@@ -173,7 +173,7 @@
                  (string/join "/"))]
            (when (> (hypercrud.browser.context/pull-depth ctx) 0) ; differentiate pull from fiddle-ident
              [(contrib.datomic/valueType @(:hypercrud.browser/schema ctx) a)
-              (contrib.datomic/cardinality-loose @(:hypercrud.browser/schema ctx) a)
+              (contrib.datomic/cardinality @(:hypercrud.browser/schema ctx) a)
               (if (contrib.datomic/isComponent @(:hypercrud.browser/schema ctx) a) :component)])
            (:hypercrud.browser/pull-path ctx))              ; pullpath is legacy, remove from css todo
          (map css-slugify)
@@ -395,7 +395,7 @@ User renderers should not be exposed to the reaction."
   {:pre [(s/assert :hypercrud/context ctx)]}
   (let [[_ a _] @(:hypercrud.browser/eav ctx)]
     ; detect top and do fiddle-level here, instead of in columns?
-    (match* [(contrib.datomic/cardinality-loose @(:hypercrud.browser/schema ctx) a)] ; this is parent - not focused?
+    (match* [(contrib.datomic/cardinality @(:hypercrud.browser/schema ctx) a)] ; this is parent - not focused?
       [:db.cardinality/one] [form columns val ctx props]
       [:db.cardinality/many] [table columns ctx props]
       [_] [:pre (pr-str a)])))

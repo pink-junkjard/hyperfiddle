@@ -16,7 +16,7 @@
    (let [[_ a v] @(:hypercrud.browser/eav ctx)
          o (if (not= :db.type/ref (contrib.datomic/valueType @(:hypercrud.browser/schema ctx) a))
              v                                              ;(get entity a)      ; scalar
-             (case (contrib.datomic/cardinality-loose @(:hypercrud.browser/schema ctx) a) ; backwards refs good here? lol
+             (case (contrib.datomic/cardinality @(:hypercrud.browser/schema ctx) a) ; backwards refs good here? lol
                :db.cardinality/one v                        ;(context/smart-entity-identifier ctx (get entity a))
                :db.cardinality/many (map (partial context/smart-entity-identifier ctx) vorvs)))]
      (entity-change->tx ctx o vorvs)))

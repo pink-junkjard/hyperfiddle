@@ -45,7 +45,6 @@
   (attr [this a])
   (cardinality [this a])
   (cardinality? [this a k])
-  (cardinality-loose [this a])
   (isComponent [this a])                                   ; follows Datomic naming case conventions
   (valueType [this a])
   (valueType? [this a k])
@@ -94,7 +93,6 @@
   (unique? [this a k] (= k (unique this a)))
   (valueType? [this a k] (= k (valueType this a)))
   (cardinality? [this a k] (= k (cardinality this a)))
-  (cardinality-loose [this a] (cardinality this a))
   (ref? [this k] (valueType? this k :db.type/ref))
 
   #?@(:clj
