@@ -122,6 +122,8 @@
                        is-ref (and a (contrib.datomic/ref? schema a))]
                    (condp some (:link/class link)
                      #{:hf/new :hf/affix} (cond
+                                            ; Need to know what context we in.
+                                            ; Identity can be parent-child ref.
                                             is-identity ":zero" ; hack to draw as popover
                                             is-ref ":db/add"
                                             :else ":zero")  ; nil a, or qfind-level

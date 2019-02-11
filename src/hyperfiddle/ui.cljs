@@ -117,7 +117,7 @@
   [val ctx & [props]]
   {:post [%]}
   (or (attr-renderer-control val ctx props)
-      (let [[_ a _] @(:hypercrud.browser/eav ctx)
+      (let [[_ a _] (context/eav ctx)
             children (contrib.datomic/pull-level (hypercrud.browser.context/pull-enclosure-here ctx))]
         (cond                                               ; Duplicate options test to avoid circular dependency in controls/ref
           (:options props)
@@ -135,7 +135,9 @@
           (seq children)
           (let [ctx (dissoc ctx ::layout)]
             [:div                                           ; wrapper div: https://github.com/hyperfiddle/hyperfiddle/issues/541
-             [pull val ctx props]
+             (controls/hf-new val ctx)
+             (controls/hf-remove val ctx)
+             [pull val ctx props]                           ; account for hf/new at parent ref e.g. :community/neighborhood
              [iframe-field-default val ctx props]])
 
           :else

@@ -27,14 +27,19 @@
      [:label.hyperfiddle label-props label (if help-md [:sup "†"])])])
 
 (declare hf-new)
+(declare hf-remove)
 
-(defn identity-label [_ {:keys [:hypercrud.browser/element] :as ctx}
-                      & [props]]
+(defn identity-label [_ {:keys [:hypercrud.browser/element] :as ctx} & [props]]
   {:pre [element (:hypercrud.browser/schema ctx) (not (context/qfind-level? ctx))]}
   (let [[_ a _] (context/eav ctx)]
     [:<>
      (label-with-docs (name a) (semantic-docstring ctx) props)
-     (hf-new _ ctx)]))
+     (if (:hypercrud.browser/head-sentinel ctx)
+       ; Tables want hf-new in header
+       ; Forms do not, they render it in the cell
+       (hf-new _ ctx))
+     ; hf/remove handled by body
+     #_(hf-remove val ctx)]))
 
 (defn element-label [_ {:keys [:hypercrud.browser/element] :as ctx} & [props]]
   {:pre [(context/qfind-level? ctx) element (:hypercrud.browser/schema ctx)]}
@@ -48,9 +53,12 @@
 (defn ref-label [_ ctx & [props]]
   (let [[_ a _] (context/eav ctx)
         label (name a)]
+    ; top-level ref should get it though?
     [:<>
      (label-with-docs label (semantic-docstring ctx) props)
-     #_(hf-new _ ctx)]))
+     #_(if (= 1 (context/pull-depth ctx))
+       ; :community/neighborhood gets new-neighborhood? NO
+       (hf-new _ ctx))]))
 
 (defn id-prompt [ctx val]
   ; pr-str here to disambiguate `"tempid"` from `17592186046396` and `:gender/male`
@@ -64,6 +72,7 @@
     [hyperfiddle.ui/ui-from-link r-link ctx]))
 
 (defn hf-remove [val ctx]
+  ; (if-not (:hypercrud.browser/head-sentinel ctx))
   (if val
     (for [[k r-link] (hyperfiddle.data/spread-links-here ctx :hf/remove)]
       ^{:key k}
@@ -128,7 +137,8 @@
 (defn ^:export id-or-ident [val ctx & [props]]
   [:div.hyperfiddle-input-group
    (entity-links val ctx)
-   (if-not (context/underlying-tempid ctx val)
+   (hf-new val ctx)
+   (if-not (context/underlying-tempid ctx (context/e ctx))  ; val can be part of lookup ref scalar
      (hf-remove val ctx))])
 
 (defn ^:export instant [val ctx & [props]]

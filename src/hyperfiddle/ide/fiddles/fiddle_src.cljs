@@ -65,7 +65,7 @@
            (field [:link/class] ctx link-control)
            (field [:link/tx-fn] ctx link-control)
            #_(field [:link/formula] ctx link-control)
-           (field [] ctx empty-renderer)]))
+           (field [] ctx empty-renderer)]))                 ; why does [:db/id] crash here?
       ctx
       props]]))
 

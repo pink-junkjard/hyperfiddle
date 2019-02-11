@@ -259,7 +259,7 @@
 (defn stable-eav-av "v becomes e. In top cases, this is nil->nil; only Pulls have defined E.
   ?v' can be nil - sparse results."
   [[_ _ ?v] a' ?v']
-  {:pre [a']}
+  ;{:pre [a']} ; failurecase can be nil a'
   [?v a' ?v'])
 
 (defn stable-eav-a [[_ _ v] a']
@@ -441,6 +441,10 @@
   ; Context internals use ::eav. I think.
   (let [ctx (-infer-implicit-element ctx)]
     @(:hypercrud.browser/eav ctx)))
+
+(defn e [ctx]
+  (let [[e _ _] (eav ctx)]
+    e))
 
 (defn row "Row does not set E. E is the parent, not the child, and row is analogous to :ref :many child."
   [ctx & [k]]
@@ -662,7 +666,9 @@
       (assoc ctx :hypercrud.browser/eav                     ; insufficent stability on r-?v? fixme
                  (case (contrib.datomic/cardinality @(:hypercrud.browser/schema ctx) a')
                    :db.cardinality/many (r/fmap-> (:hypercrud.browser/eav ctx) (stable-eav-a a')) ; dont have v yet
-                   :db.cardinality/one (r/fmap-> (:hypercrud.browser/eav ctx) (stable-eav-av a' (v! ctx)))))
+                   :db.cardinality/one (r/fmap-> (:hypercrud.browser/eav ctx) (stable-eav-av a' (v! ctx)))
+                   ; Gracefully fail but still render.
+                   nil (r/fmap-> (:hypercrud.browser/eav ctx) (stable-eav-av nil nil))))
 
       ; in :hf/new :identity case, E can be nil but we are about to have a tempid in the E
       ; It is not our job here to focus that. I dont think we can set the E to the tempid in that case.
