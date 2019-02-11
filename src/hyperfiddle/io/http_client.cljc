@@ -1,6 +1,5 @@
 (ns hyperfiddle.io.http-client
   (:require
-    [bidi.bidi :as bidi]
     [contrib.base-64-url-safe :as base-64-url-safe]
     [contrib.ednish :as ednish]
     [contrib.reader :as reader]
@@ -11,7 +10,7 @@
     #?(:cljs [kvlt.middleware.params])
     [hypercrud.transit :as transit]
     [hypercrud.types.Err :as Err]
-    [hyperfiddle.io.routes :as routes]
+    [hyperfiddle.domain :as domain]
     [promesa.core :as p]
     [taoensso.timbre :as timbre]))
 
@@ -94,15 +93,15 @@
       (fn [_ get-total-time]
         (timbre/debug "Request succeeded" (str "[" @req-hash "]") "total time:" (get-total-time))))))
 
-(defn global-basis! [service-uri build & [jwt]]
-  (-> {:url (str service-uri (bidi/path-for (routes/build build) :global-basis))
+(defn global-basis! [domain & [jwt]]
+  (-> {:url (domain/api-url-for domain :global-basis)
        :accept :application/transit+json :as :auto
        :method :get}
       (http-request! jwt)
       (p/then :body)))
 
-(defn hydrate-requests! [service-uri build local-basis staged-branches requests & [jwt]]
-  (let [req {:url (str service-uri (bidi/path-for (routes/build build) :hydrate-requests :local-basis (ednish/encode-uri local-basis))) ; serialize kvseq
+(defn hydrate-requests! [domain local-basis staged-branches requests & [jwt]]
+  (let [req {:url (domain/api-url-for domain :hydrate-requests :local-basis (ednish/encode-uri local-basis)) ; serialize kvseq
              :accept :application/transit+json :as :auto
              :method :post                                  ; hydrate-requests always has a POST body, though it has a basis and is cachable
              :form {:staged-branches staged-branches :request requests}
@@ -113,16 +112,16 @@
                   (assert (= (count requests) (count (:pulled-trees body))) "Server contract violation; mismatched counts")
                   body)))))
 
-(defn hydrate-route! [service-uri build local-basis route branch stage & [jwt]]
+(defn hydrate-route! [domain local-basis route branch stage & [jwt]]
   (let [stage (->> stage
                    (remove (comp empty? second))
                    (into {}))]
-    (-> (merge {:url (str service-uri (bidi/path-for (routes/build build) :hydrate-route
-                                                     :local-basis (ednish/encode-uri local-basis)
-                                                     ; todo this needs work
-                                                     #_#_:encoded-route (subs (foundation/route-encode rt route) 1) ; includes "/"
-                                                     :encoded-route (base-64-url-safe/encode (pr-str route))
-                                                     :branch (ednish/encode-uri branch)))
+    (-> (merge {:url (domain/api-url-for domain :hydrate-route
+                                         :local-basis (ednish/encode-uri local-basis)
+                                         ; todo this needs work
+                                         #_#_:encoded-route (subs (foundation/route-encode rt route) 1) ; includes "/"
+                                         :encoded-route (base-64-url-safe/encode (pr-str route))
+                                         :branch (ednish/encode-uri branch))
                 :accept :application/transit+json :as :auto}
                (if (empty? stage)
                  {:method :get}                             ; Try to hit CDN
@@ -132,27 +131,27 @@
         (http-request! jwt)
         (p/then :body))))
 
-(defn local-basis! [service-uri build global-basis route & [jwt]]
-  (-> {:url (str service-uri (bidi/path-for (routes/build build) :local-basis
-                                            :global-basis (ednish/encode-uri global-basis)
-                                            ; todo this needs work
-                                            #_#_:encoded-route (subs (foundation/route-encode rt route) 1) ; includes "/"
-                                            :encoded-route (base-64-url-safe/encode (pr-str route))))
+(defn local-basis! [domain global-basis route & [jwt]]
+  (-> {:url (domain/api-url-for domain :local-basis
+                                :global-basis (ednish/encode-uri global-basis)
+                                ; todo this needs work
+                                #_#_:encoded-route (subs (foundation/route-encode rt route) 1) ; includes "/"
+                                :encoded-route (base-64-url-safe/encode (pr-str route)))
        :accept :application/transit+json :as :auto
        :method :get}
       (http-request! jwt)
       (p/then :body)))
 
-(defn sync! [service-uri build dbnames & [jwt]]
-  (-> {:url (str service-uri (bidi/path-for (routes/build build) :sync))
+(defn sync! [domain dbnames & [jwt]]
+  (-> {:url (domain/api-url-for domain :sync)
        :accept :application/transit+json :as :auto
        :method :post :form dbnames
        :content-type :application/transit+json}
       (http-request! jwt)
       (p/then :body)))
 
-(defn transact! [service-uri build tx-groups & [jwt]]
-  (-> {:url (str service-uri (bidi/path-for (routes/build build) :transact))
+(defn transact! [domain tx-groups & [jwt]]
+  (-> {:url (domain/api-url-for domain :transact)
        :accept :application/transit+json :as :auto
        :method :post :form tx-groups
        :content-type :application/transit+json}

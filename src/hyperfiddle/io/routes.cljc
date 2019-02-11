@@ -1,37 +1,37 @@
 (ns hyperfiddle.io.routes)
 
 
-(def api
-  {"global-basis" {:get :global-basis
-                   #".+" :404
-                   true :405}
+(defn api [route-ns]
+  {"global-basis" {:get (keyword route-ns "global-basis")
+                   #".+" (keyword route-ns "404")
+                   true (keyword route-ns "405")}
 
-   ["hydrate-requests/" [#"[^/]*" :local-basis]] {:post :hydrate-requests
-                                                  #".+" :404
-                                                  true :405}
+   ["hydrate-requests/" [#"[^/]*" :local-basis]] {:post (keyword route-ns "hydrate-requests")
+                                                  #".+" (keyword route-ns "404")
+                                                  true (keyword route-ns "405")}
 
    ["hydrate-route/" [#"[^/]*" :local-basis] "/" [#"[^/]*" :branch] "/" [#".*" :encoded-route]]
-   {:get :hydrate-route
-    :post :hydrate-route
-    true :405}
+   {:get (keyword route-ns "hydrate-route")
+    :post (keyword route-ns "hydrate-route")
+    true (keyword route-ns "405")}
 
    ["local-basis/" [#"[^/]*" :global-basis] "/" [#".*" :encoded-route]]
-   {:get :local-basis
-    :post :local-basis
-    true :405}
+   {:get (keyword route-ns "local-basis")
+    :post (keyword route-ns "local-basis")
+    true (keyword route-ns "405")}
 
-   "sync" {:post :sync
-           #".+" :404
-           true :405}
+   "sync" {:post (keyword route-ns "sync")
+           #".+" (keyword route-ns "404")
+           true (keyword route-ns "405")}
 
-   "transact" {:post :transact
-               #".+" :404
-               true :405}
+   "transact" {:post (keyword route-ns "transact")
+               #".+" (keyword route-ns "404")
+               true (keyword route-ns "405")}
 
-   true :404})
+   true (keyword route-ns "404")})
 
 (defn build [build]
-  ["/" {"api/" {(str build "/") api
+  ["/" {"api/" {(str build "/") (api nil)
                 [[#"[^/]*" :build] "/"] {true :force-refresh}
                 true :404}
         "auth0" {:get :auth0-redirect
