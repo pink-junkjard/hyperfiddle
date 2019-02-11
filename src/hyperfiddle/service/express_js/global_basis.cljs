@@ -7,13 +7,13 @@
     [hyperfiddle.service.http :as http-service :refer [handle-route]]))
 
 
-(deftype IOImpl [domain service-uri build jwt ?subject]
+(deftype IOImpl [domain jwt ?subject]
   io/IO
   (global-basis [io]
     (global-basis io domain))
 
   (sync [io dbnames]
-    (http-client/sync! service-uri build dbnames jwt)))
+    (http-client/sync! domain dbnames jwt)))
 
 (defmethod handle-route :global-basis [handler env req res]
   (platform->express-req-handler env (partial http-service/global-basis-handler ->IOImpl) req res))

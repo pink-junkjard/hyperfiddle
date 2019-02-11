@@ -21,8 +21,8 @@
   {:status (or (:hyperfiddle.io/http-status-code (ex-data e)) 500)
    :body (->Err #?(:cljs (ex-message e) :clj (.getMessage e)))})
 
-(defn global-basis-handler [->IO & {:keys [build domain service-uri user-id jwt]}]
-  (-> (->IO domain service-uri build jwt user-id)
+(defn global-basis-handler [->IO & {:keys [domain user-id jwt]}]
+  (-> (->IO domain jwt user-id)
       (io/global-basis)
       (p/then (fn [global-basis]
                 {:status 200
@@ -32,7 +32,7 @@
                  (timbre/error e)
                  (e->platform-response e)))))
 
-(defn local-basis-handler [->IO & {:keys [build domain service-uri route-params user-id jwt]}]
+(defn local-basis-handler [->IO & {:keys [domain route-params user-id jwt]}]
   (try
     (let [global-basis (ednish/decode-uri (:global-basis route-params)) ; todo this can throw
           route (-> (:encoded-route route-params) base-64-url-safe/decode read-edn-string!)
@@ -42,7 +42,7 @@
               (route/validate-route+ route)
               (fn [e] (throw (ex-info "Invalid encoded-route" {:route route :hyperfiddle.io/http-status-code 400} e)))
               (constantly nil))]
-      (-> (->IO domain service-uri build jwt user-id)
+      (-> (->IO domain jwt user-id)
           (io/local-basis global-basis route)
           (p/then (fn [local-basis]
                     {:status 200
@@ -55,9 +55,9 @@
       (timbre/error e)
       (p/resolved (e->platform-response e)))))
 
-(defn hydrate-route-handler [->IO & {:keys [build domain service-uri route-params user-id jwt] stage :request-body}]
+(defn hydrate-route-handler [->IO & {:keys [domain route-params user-id jwt] stage :request-body}]
   (try
-    (let [io (->IO domain service-uri build jwt user-id)
+    (let [io (->IO domain jwt user-id)
           local-basis (ednish/decode-uri (:local-basis route-params)) ; todo this decoding can throw
           route (-> (:encoded-route route-params) base-64-url-safe/decode read-edn-string!)
           ; todo this needs work, decoding should happen after the domain is hydrated

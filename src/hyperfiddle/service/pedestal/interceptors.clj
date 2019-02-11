@@ -1,16 +1,13 @@
 (ns hyperfiddle.service.pedestal.interceptors
   (:require
-    [bidi.bidi :as bidi]
     [clojure.core.async :refer [chan >!!]]
     [clojure.string :as string]
     [cognitect.transit :as transit]
-    [contrib.uri :refer [->URI]]
     [hypercrud.transit :as hc-t]
     [hypercrud.types.Err :refer [->Err]]
     [hyperfiddle.domain :as domain]
-    [hyperfiddle.io.core :as io]
-    [hyperfiddle.io.routes :as routes]
     [hyperfiddle.service.cookie :as cookie]
+    [hyperfiddle.service.domain :as service-domain]
     [hyperfiddle.service.http :refer [handle-route]]
     [hyperfiddle.service.jwt :as jwt]
     [io.pedestal.http :as pedestal-http]
@@ -33,9 +30,7 @@
 
 (defn platform->pedestal-req-handler [env platform-req-handler req]
   (platform-req-handler
-    :build (:BUILD env)
     :domain (:domain req)
-    :service-uri (->URI (str (name (:scheme req)) "://" (:server-name req)))
     :route-params (:route-params req)
     :request-body (:body-params req)
     :jwt (:jwt req)
@@ -124,7 +119,7 @@
    :enter (fn [context]
             (let [channel (chan)]
               (p/branch
-                (domain-for-fqdn (get-in context [:request :server-name]))
+                (domain-for-fqdn (name (get-in context [:request :scheme])) (get-in context [:request :server-name]))
                 (fn [domain]
                   (>!! channel (assoc-in context [:request :domain] domain)))
                 (fn [e]
@@ -172,11 +167,11 @@
                   :else (-> (terminate context)
                             (assoc :response {:status 400 :body (->Err "Conflicting cookies and auth bearer")}))))))})
 
-(defn build-router [env]
-  (let [routes (routes/build (:BUILD env))]
-    (fn [req]
-      (let [path (:path-info req)
-            request-method (:request-method req)
-            {:keys [handler route-params]} (bidi/match-route routes path :request-method request-method)]
-        (timbre/debug "router:" (pr-str handler) (pr-str request-method) (pr-str path))
-        (handle-route handler env (assoc-in req [:route-params] route-params))))))
+(defn build-router [env] (fn [req] (service-domain/route (:domain req) env req)))
+
+(defmethod service-domain/route :default [domain env req]
+  (let [path (:path-info req)
+        request-method (:request-method req)
+        {:keys [handler route-params]} (domain/api-match-path domain path :request-method request-method)]
+    (timbre/debug "router:" (pr-str handler) (pr-str request-method) (pr-str path))
+    (handle-route handler env (assoc-in req [:route-params] route-params))))

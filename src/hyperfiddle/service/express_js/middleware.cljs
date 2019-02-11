@@ -1,14 +1,12 @@
 (ns hyperfiddle.service.express-js.middleware
   (:require
-    [bidi.bidi :as bidi]
-    [contrib.uri :refer [->URI]]
     [contrib.uuid :refer [read-uuid]]
     [goog.object :as object]
     [hypercrud.transit :as transit]
     [hypercrud.types.Err :refer [->Err]]
     [hyperfiddle.domain :as domain]
-    [hyperfiddle.io.routes :as routes]
     [hyperfiddle.service.cookie :as cookie]
+    [hyperfiddle.service.domain :as service-domain]
     [hyperfiddle.service.http :as http-service :refer [handle-route]]
     [hyperfiddle.service.jwt :as jwt]
     [promesa.core :as p]
@@ -32,9 +30,7 @@
 
 (defn platform->express-req-handler [env platform-req-handler req res]
   (-> (platform-req-handler
-        :build (:BUILD env)
         :domain (object/get req "domain")
-        :service-uri (->URI (str (.-protocol req) "://" (.-hostname req)))
         :route-params (object/get req "route-params")
         :request-body (some-> req .-body hack-buggy-express-body-text-parser transit/decode)
         :jwt (object/get req "jwt")
@@ -44,7 +40,7 @@
 (defn domain [domain-for-fqdn]
   (fn [req res next]
     (p/branch
-      (domain-for-fqdn (.-hostname req))
+      (domain-for-fqdn (.-protocol req) (.-hostname req))
       (fn [domain]
         (object/set req "domain" domain)
         (next))
@@ -78,12 +74,12 @@
                             ; todo flesh out a real session expiration page
                             "text/html" #(.send res "Session expired, please refresh and login")}))))))))
 
-(defn build-router [env]
-  (let [routes (routes/build (:BUILD env))]
-    (fn [req res]
-      (let [path (.-path req)
-            request-method (keyword (.toLowerCase (.-method req)))
-            {:keys [handler route-params]} (bidi/match-route routes path :request-method request-method)]
-        (timbre/debug "router:" (pr-str handler) (pr-str request-method) (pr-str path))
-        (object/set req "route-params" route-params)
-        (handle-route handler env req res route-params)))))
+(defn build-router [env] (fn [req res] (service-domain/route (object/get req "domain") env req res)))
+
+(defmethod service-domain/route :default [domain env req res]
+  (let [path (.-path req)
+        request-method (keyword (.toLowerCase (.-method req)))
+        {:keys [handler route-params]} (domain/api-match-path domain path :request-method request-method)]
+    (timbre/debug "router:" (pr-str handler) (pr-str request-method) (pr-str path))
+    (object/set req "route-params" route-params)
+    (handle-route handler env req res route-params)))

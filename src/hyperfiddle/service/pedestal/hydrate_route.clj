@@ -9,7 +9,7 @@
     [promesa.core :as p]))
 
 
-(deftype IOImpl [domain service-uri build jwt ?subject]
+(deftype IOImpl [domain jwt ?subject]
   io/IO
   (hydrate-route [io local-basis route branch stage]
     (p/do* (hydrate-route domain local-basis route branch stage ?subject)))

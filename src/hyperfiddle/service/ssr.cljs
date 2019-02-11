@@ -28,22 +28,22 @@
     [taoensso.timbre :as timbre]))
 
 
-(deftype IOImpl [service-uri build ?jwt]
+(deftype IOImpl [domain ?jwt]
   io/IO
   (global-basis [io]
-    (http-client/global-basis! service-uri build ?jwt))
+    (http-client/global-basis! domain ?jwt))
 
   (local-basis [io global-basis route]
     (p/resolved (local-basis/local-basis io global-basis route)))
 
   (hydrate-requests [io local-basis staged-branches requests]
-    (http-client/hydrate-requests! service-uri build local-basis staged-branches requests ?jwt))
+    (http-client/hydrate-requests! domain local-basis staged-branches requests ?jwt))
 
   (hydrate-route [io local-basis route branch stage]
-    (http-client/hydrate-route! service-uri build local-basis route branch stage ?jwt))
+    (http-client/hydrate-route! domain local-basis route branch stage ?jwt))
 
   (sync [io dbnames]
-    (http-client/sync! service-uri build dbnames ?jwt)))
+    (http-client/sync! domain dbnames ?jwt)))
 
 (deftype RT [domain io state-atom root-reducer]
   runtime/State
@@ -108,7 +108,7 @@
          [:script {:id "preamble" :src (str resource-base "/preamble.js")}]
          [:script {:id "main" :src (str resource-base "/main.js")}]])]]))
 
-(defn bootstrap-html-cmp [env service-uri domain io path user-id]
+(defn bootstrap-html-cmp [env domain io path user-id]
   (let [build (:BUILD env)
         initial-state {::runtime/user-id user-id}
         rt (->RT domain io (r/atom (reducers/root-reducer initial-state nil)) reducers/root-reducer)
@@ -132,9 +132,7 @@
         (p/then (constantly 200))
         (p/catch #(or (:hyperfiddle.io/http-status-code (ex-data %)) 500))
         (p/then (fn [http-status-code]
-                  (let [client-params {:build build
-                                       :service-uri service-uri
-                                       :sentry {:dsn (:SENTRY_DSN env)
+                  (let [client-params {:sentry {:dsn (:SENTRY_DSN env)
                                                 :environment (:SENTRY_ENV env)
                                                 :release (:BUILD env)}}]
                     {:http-status-code http-status-code

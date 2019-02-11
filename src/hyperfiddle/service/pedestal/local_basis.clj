@@ -7,7 +7,7 @@
     [promesa.core :as p]))
 
 
-(deftype IO [domain service-uri build jwt ?subject]
+(deftype IO [domain jwt ?subject]
   io/IO
   (local-basis [io global-basis route]
     (p/resolved (local-basis/local-basis io global-basis route))))

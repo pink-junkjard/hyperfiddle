@@ -14,9 +14,8 @@
         path (.-path req)
         redirect #(.redirect res %)
         next (fn []
-               (let [service-uri (->URI (str (.-protocol req) "://" (.-hostname req)))
-                     io (ssr/->IOImpl service-uri (:BUILD env) (object/get req "jwt"))]
-                 (-> (ssr/bootstrap-html-cmp env service-uri domain io path user-id)
+               (let [io (ssr/->IOImpl domain (object/get req "jwt"))]
+                 (-> (ssr/bootstrap-html-cmp env domain io path user-id)
                      (p/then (fn [{:keys [http-status-code component]}]
                                (doto res
                                  (.status http-status-code)
