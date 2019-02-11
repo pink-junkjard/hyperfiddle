@@ -2,6 +2,7 @@
   (:refer-clojure :exclude [boolean keyword long])
   (:require
     [cats.monad.either :refer [branch]]
+    [contrib.data :refer [unqualify]]
     [contrib.pprint :refer [pprint-str]]
     [contrib.reactive :as r]
     [contrib.reader :as reader]
@@ -25,14 +26,31 @@
    (let [label-props (select-keys props [:on-click :class])] ; https://github.com/hyperfiddle/hyperfiddle/issues/511
      [:label.hyperfiddle label-props label (if help-md [:sup "†"])])])
 
-(defn identity-label [_ ctx & [props]]
-  {:pre [(:hypercrud.browser/element ctx)
-         (:hypercrud.browser/schema ctx)]}
-  (let [[_ a _] @(:hypercrud.browser/eav ctx)]
+(declare hf-new)
+
+(defn identity-label [_ {:keys [:hypercrud.browser/element] :as ctx}
+                      & [props]]
+  {:pre [element (:hypercrud.browser/schema ctx) (not (context/qfind-level? ctx))]}
+  (let [[_ a _] (context/eav ctx)]
     [:<>
-     (label-with-docs a (semantic-docstring ctx) props)
-     (for [[k rv] (hyperfiddle.data/spread-links-here ctx :hf/new)]
-       [hyperfiddle.ui/ui-from-link rv ctx props])]))
+     (label-with-docs (name a) (semantic-docstring ctx) props)
+     (hf-new _ ctx)]))
+
+(defn element-label [_ {:keys [:hypercrud.browser/element] :as ctx} & [props]]
+  {:pre [(context/qfind-level? ctx) element (:hypercrud.browser/schema ctx)]}
+  (let [label (case (unqualify (contrib.datomic/parser-type element))
+                :pull nil                                   ; ???
+                :variable (get-in element [:variable :symbol])
+                :aggregate (str (cons (get-in element [:fn :symbol])
+                                      (map (comp second first) (:args element)))))]
+    (label-with-docs label (semantic-docstring ctx) props)))
+
+(defn ref-label [_ ctx & [props]]
+  (let [[_ a _] (context/eav ctx)
+        label (name a)]
+    [:<>
+     (label-with-docs label (semantic-docstring ctx) props)
+     #_(hf-new _ ctx)]))
 
 (defn id-prompt [ctx val]
   ; pr-str here to disambiguate `"tempid"` from `17592186046396` and `:gender/male`

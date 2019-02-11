@@ -27,16 +27,17 @@
         nil                                                 ; This is an entity but you didn't pull any identity - error?
         )))
 
-(def parser-types {FindRel ::FindRel
-                   FindColl ::FindColl
-                   FindTuple ::FindTuple
-                   FindScalar ::FindScalar
-                   Pull ::Pull
-                   Variable ::Variable
-                   Aggregate ::Aggregate})
+(def parser-types {FindRel ::find-rel
+                   FindColl ::find-coll
+                   FindTuple ::find-tuple
+                   FindScalar ::find-scalar
+                   Pull ::pull
+                   Variable ::variable
+                   Aggregate ::aggregate})
 
-(defn parser-type [element]
-  (parser-types (type element)))
+(defn parser-type "element or qfind" [?p]
+  (parser-types (if ?p
+                  (type ?p))))
 
 (defprotocol SchemaIndexedNormalized
   ; Implement this interface in both peer and Hypercrud client
@@ -336,9 +337,9 @@
 
 (defn validate-element [schema element _]
   (case (parser-type element)
-    ::Variable []
-    ::Aggregate []
-    ::Pull (let [{{pull-pattern :value} :pattern} element]
+    ::variable []
+    ::aggregate []
+    ::pull (let [{{pull-pattern :value} :pattern} element]
              (->> (pull-traverse schema (pull-shape pull-pattern))
                   (remove empty?)
                   (map last)

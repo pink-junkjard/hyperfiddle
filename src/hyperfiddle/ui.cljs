@@ -7,6 +7,7 @@
     [clojure.string :as string]
     [contrib.ct :refer [unwrap]]
     [contrib.css :refer [css css-slugify]]
+    [contrib.data :refer [unqualify]]
     [contrib.eval :as eval]
     [contrib.pprint :refer [pprint-str]]
     [contrib.reactive :as r]
@@ -28,7 +29,7 @@
     [hyperfiddle.runtime]
     [hyperfiddle.security.client :as security]
     [hyperfiddle.ui.api]
-    [hyperfiddle.ui.controls :as controls :refer [label-with-docs identity-label magic-new]]
+    [hyperfiddle.ui.controls :as controls :refer [label-with-docs identity-label ref-label element-label magic-new]]
     [hyperfiddle.ui.docstring :refer [semantic-docstring]]
     [hyperfiddle.ui.iframe :refer [iframe-cmp]]
     [hyperfiddle.ui.popover :refer [effect-cmp popover-cmp]]
@@ -46,7 +47,7 @@
                              (fn [e] (throw e))
                              (fn [f] (into [f] args))))]
   (defn attr-renderer-control [val ctx & [props]]
-    (let [[_ a _] @(:hypercrud.browser/eav ctx)]
+    (let [[_ a _] (context/eav ctx)]
       ; The only way to stabilize this is for this type signature to become a react class.
       (when-let [user-f (-> @(r/cursor (:hypercrud.browser/attr-renderers ctx) [a])
                             blank->nil)]
@@ -80,28 +81,26 @@
     #_[:pre "iframe-field-default"]
     [field [] ctx entity-links-iframe props]))
 
-(let [Pull Pull
-      Variable Variable
-      Aggregate Aggregate]
-  (defn control "this is a function, which returns component"
-    [val ctx & [props]]                                     ; returns Func[(ref, props, ctx) => DOM]
-    {:pre [ctx]}
-    (let [element @(:hypercrud.browser/element ctx)
-          [_ a _] @(:hypercrud.browser/eav ctx)             ; what about fiddle-level
-          value-type (some-> (:hypercrud.browser/schema ctx) deref (contrib.datomic/valueType a)) ; put protocol on ctx to remove guard
-          cardinality (some-> (:hypercrud.browser/schema ctx) deref (contrib.datomic/cardinality-loose a))]
-      (match* [(type element) value-type cardinality]
-        [Variable _ _] controls/string
-        [Aggregate _ _] controls/string
-        [Pull :db.type/boolean :db.cardinality/one] controls/boolean
-        [Pull :db.type/keyword :db.cardinality/one] controls/keyword
-        [Pull :db.type/string :db.cardinality/one] controls/string
-        [Pull :db.type/long :db.cardinality/one] controls/long
-        [Pull :db.type/instant :db.cardinality/one] controls/instant
-        [Pull :db.type/ref :db.cardinality/one] controls/ref
-        [Pull :db.type/ref :db.cardinality/many] controls/ref-many
-        [_ _ :db.cardinality/one] controls/edn
-        [_ _ :db.cardinality/many] controls/edn-many))))
+(defn control "this is a function, which returns component"
+  [val ctx & [props]]                                       ; returns Func[(ref, props, ctx) => DOM]
+  {:pre [ctx]}
+  (let [element @(:hypercrud.browser/element ctx)
+        [_ a _] (context/eav ctx)                           ; what about fiddle-level
+        value-type (some-> (:hypercrud.browser/schema ctx) deref (contrib.datomic/valueType a)) ; put protocol on ctx to remove guard
+        cardinality (some-> (:hypercrud.browser/schema ctx) deref (contrib.datomic/cardinality-loose a))
+        element-type (contrib.datomic/parser-type element)]
+    (match* [(unqualify element-type) (unqualify value-type) (unqualify cardinality)]
+      [:variable _ _] controls/string
+      [:aggregate _ _] controls/string
+      [:pull :boolean :one] controls/boolean
+      [:pull :keyword :one] controls/keyword
+      [:pull :string :one] controls/string
+      [:pull :long :one] controls/long
+      [:pull :instant :one] controls/instant
+      [:pull :ref :one] controls/ref
+      [:pull :ref :many] controls/ref-many
+      [_ _ :one] controls/edn
+      [_ _ :many] controls/edn-many)))
 
 (defn identity-widget? "ctx is for schema and :tempid-lookup"
   [ctx a]
@@ -143,26 +142,20 @@
           [(control val ctx props) val ctx props]))))
 
 (defn ^:export hyper-label [_ ctx & [props]]
-  ; core.match scope hacks
-  (let [Pull Pull
-        Variable Variable
-        Aggregate Aggregate
-        element (:hypercrud.browser/element ctx)
-        element-type (some-> element deref type)
+  (let [?element (:hypercrud.browser/element ctx)
+        element-type (if ?element (contrib.datomic/parser-type @?element))
         i (:hypercrud.browser/element-index ctx)
-        [_ a _] @(:hypercrud.browser/eav ctx)
+        [_ a _] (context/eav ctx)
         attr (and a (contrib.datomic/attr @(:hypercrud.browser/schema ctx) a))]
-    (match* [i element-type a attr]                         ; has-child-fields @(r/fmap-> (:hypercrud.browser/field ctx) ::field/children nil? not)
+    (match* [i (unqualify element-type) a attr]             ; has-child-fields @(r/fmap-> (:hypercrud.browser/field ctx) ::field/children nil? not)
       [_ nil _ _] nil                                       ; e.g. !field[js/user.hyperblog-post-link]()
-      [_ Pull :db/id _] (identity-label _ ctx props)        ; fixme, is this even in play?
-      [_ Pull :db/ident _] (identity-label _ ctx props)
-      [_ Pull _ {:db/unique :db.unique/identity}] (identity-label _ ctx props)
-      [i Pull nil _] (label-with-docs (get-in element [:variable :symbol]) (semantic-docstring ctx) props)
-      [_ Pull aa _] (label-with-docs (name aa) (semantic-docstring ctx) props)
-      [_ Variable _ _] (label-with-docs (get-in element [:variable :symbol]) (semantic-docstring ctx) props)
-      [_ Aggregate _ _] (let [label (str (cons (get-in element [:fn :symbol])
-                                           (map (comp second first) (:args element))))]
-                      (label-with-docs label (semantic-docstring ctx) props)))))
+      [_ :pull :db/id _] (identity-label _ ctx props)
+      [_ :pull :db/ident _] (identity-label _ ctx props)
+      [_ :pull _ {:db/unique :db.unique/identity}] (identity-label _ ctx props)
+      [i :pull nil _] (element-label _ ctx props)
+      [_ :pull aa _] (ref-label _ ctx props)
+      [_ :variable _ _] (element-label _ ctx props)
+      [_ :aggregate _ _] (element-label _ ctx props))))
 
 
 (defn ^:export semantic-css "Works at all levels: attr, element and fiddle."
