@@ -3,11 +3,12 @@
     [clojure.spec.alpha :as s]
     [clojure.pprint]
     [contrib.reactive :as r]
+    [clojure.string :as string]
     [hypercrud.browser.context :as context]
     [hypercrud.browser.field :as field]
-    [hypercrud.types.DbName :refer [->DbName]]
     [hyperfiddle.domain :as domain]
     [hyperfiddle.fiddle :as fiddle]
+    [hyperfiddle.ide.domain :as ide-domain]
     [hyperfiddle.runtime :as runtime]
     [hyperfiddle.ui :refer [anchor field hyper-control link table]]
     [re-com.tabs :refer [horizontal-tabs]]))
@@ -22,9 +23,11 @@
   (->> (runtime/domain (:peer ctx))
        domain/databases
        keys
+       (filter #(string/starts-with? % ide-domain/app-dbname-prefix))
+       (map #(subs % 5))
        sort
        (map (fn [dbname]
-              (let [props {:route [:hyperfiddle.ide/schema [(->DbName dbname)]]
+              (let [props {:route [:hyperfiddle.ide/schema [dbname]]
                            #_#_:target "_blank"}]
                 ^{:key dbname}
                 [anchor ctx props dbname])))

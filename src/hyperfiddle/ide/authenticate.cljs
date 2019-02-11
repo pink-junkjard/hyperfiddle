@@ -1,7 +1,6 @@
 (ns hyperfiddle.ide.authenticate
   (:require
     ["oauth/lib/oauth2" :refer [OAuth2]]
-    [bidi.bidi :as bidi]
     [cats.core :refer [mlet return]]
     [cats.labs.promise]
     [contrib.base-64-url-safe :as base64-url-safe]
@@ -10,7 +9,6 @@
     [hypercrud.types.EntityRequest :refer [map->EntityRequest]]
     [hyperfiddle.domain :as domain]
     [hyperfiddle.io.core :as io]
-    [hyperfiddle.io.routes :as routes]
     [hyperfiddle.service.cookie :as cookie]
     [hyperfiddle.service.jwt :as jwt]
     [promesa.core :as p]))
@@ -26,8 +24,8 @@
         customHeaders nil]
     (OAuth2. clientID clientSecret baseSite authorizationUrl tokenUrl customHeaders)))
 
-(defn fetch-id-token [env service-uri oauth-authorization-code]
-  (let [redirect-uri (str service-uri (bidi/path-for (routes/build (:BUILD env)) :auth0-redirect))]
+(defn fetch-id-token [env domain oauth-authorization-code]
+  (let [redirect-uri (domain/api-url-for domain :auth0-redirect)]
     (p/promise (fn [resolve! reject!]
                  (.getOAuthAccessToken
                    (oauth2 env) oauth-authorization-code #js {"grant_type" "authorization_code"
@@ -35,8 +33,8 @@
                    (fn [e access_token refresh_token params]
                      (if e (reject! e) (resolve! (object/get params "id_token")))))))))
 
-(defn login [env service-uri io oauth-authorization-code]
-  (mlet [encoded-id-token (fetch-id-token env service-uri oauth-authorization-code)
+(defn login [env domain io oauth-authorization-code]
+  (mlet [encoded-id-token (fetch-id-token env domain oauth-authorization-code)
          id-token ((jwt/build-verifier (:AUTH0_CLIENT_SECRET env) (str (:AUTH0_DOMAIN env) "/")) encoded-id-token)
          basis (io/sync io #{"$users"})
          user-record (->> (map->EntityRequest {:e [:user/sub (:sub id-token)]

@@ -9,8 +9,8 @@
     [hypercrud.util.branch :as branch]
     [hyperfiddle.actions :as actions]
     [hyperfiddle.domain :as domain]
-    [hyperfiddle.domains.ednish :as ednish]
     [hyperfiddle.foundation :as foundation]
+    [hyperfiddle.ide.domain :as ide-domain]
     [hyperfiddle.ide.preview.io :refer [->IOImpl]]
     [hyperfiddle.ide.preview.runtime :refer [->Runtime]]
     [hyperfiddle.ide.preview.state :refer [->FAtom]]
@@ -114,14 +114,16 @@
 
 (defn- to [parent-state user-state]
   (let [user-state (-> (update user-state ::runtime/partitions dissoc nil)
+                       (dissoc ::runtime/user-id)
                        (reducers/root-reducer nil))]
     (assoc parent-state ::runtime/user-state user-state)))
 
 (defn- from [ide-branch parent-state]
-  (let [nil-partition (-> (get-in parent-state [::runtime/partitions ide-branch ])
+  (let [nil-partition (-> (get-in parent-state [::runtime/partitions ide-branch])
                           (select-keys [:route :stage])
                           (update :stage (fn [stage] {'hyperfiddle.domain/fiddle-database (get stage "$")})))]
     (-> (::runtime/user-state parent-state)
+        (assoc ::runtime/user-id (::runtime/user-id parent-state))
         (assoc-in [::runtime/partitions nil] nil-partition)
         (reducers/root-reducer nil))))
 
@@ -129,8 +131,11 @@
   (let []
     (fn [user-domain-record ctx props]
       (either/branch
-        (ednish/build+ user-domain-record)
-        (fn [e] [:h2 "user-domain misconfigured :("])       ; todo
+        (ide-domain/build-user+ (runtime/domain (:peer ctx)) user-domain-record)
+        (fn [e]
+          [:div
+           [:pre (js/pprint-str user-domain-record)]
+           [foundation/error-cmp e]])
         (fn [user-domain]
           (let [ide-branch (:branch ctx)
                 user-route (let [[_ [fiddle-lookup-ref & datomic-args] service-args encoded-fragment] @(runtime/state (:peer ctx) [::runtime/partitions ide-branch :route])]
@@ -141,8 +146,6 @@
                                (when-not (hyperfiddle.ide/parse-ide-fragment encoded-fragment)
                                  encoded-fragment)))
                 user-state (->FAtom (runtime/state (:peer ctx)) to (r/partial from ide-branch))
-                user-io (let [build (.-build (runtime/io (:peer ctx))) ; getting the build this way is hacky
-                              service-uri (:hyperfiddle.ide/app-fqdn (runtime/domain (:peer ctx)))]
-                          (->IOImpl user-domain service-uri build))
+                user-io (->IOImpl user-domain)
                 user-runtime (->Runtime user-domain user-io user-state reducers/root-reducer)]
             [with-rt user-runtime user-route (build-user-branch ide-branch)]))))))
