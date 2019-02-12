@@ -267,7 +267,7 @@ User renderers should not be exposed to the reaction."
      [Head nil (dissoc ctx :hypercrud.browser/data) props]
      (let [props (as-> props props
                        (update props :disabled #(or % (not @(r/track writable-entity? ctx))))
-                       (update props :is-invalid #(or % (context/leaf-invalid? ctx)))
+                       (cond-> props (context/leaf-invalid? ctx) (assoc props :is-invalid true))
                        (update props :class css (if (:disabled props) "disabled")))]
        [Body @(:hypercrud.browser/data ctx) ctx props])]
     (when (= '* (last relative-path))                       ; :hypercrud.browser/path
@@ -290,7 +290,7 @@ User renderers should not be exposed to the reaction."
                 :style {:border-color (connection-color ctx)}}
            (let [props (as-> props props
                              (update props :disabled #(or % (not @(r/track writable-entity? ctx))))
-                             (update props :is-invalid #(or % (context/leaf-invalid? ctx)))
+                             (cond-> props (context/leaf-invalid? ctx) (assoc props :is-invalid true))
                              (update props :class css (if (:disabled props) "disabled")))]
              [Body @(:hypercrud.browser/data ctx) ctx props])]))
 
