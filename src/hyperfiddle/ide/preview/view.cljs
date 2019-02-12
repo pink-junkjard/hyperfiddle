@@ -6,6 +6,7 @@
     [contrib.reactive :as r]
     [contrib.ui]
     [hypercrud.browser.base :as base]
+    [hypercrud.ui.error :as error-cmps]
     [hypercrud.util.branch :as branch]
     [hyperfiddle.actions :as actions]
     [hyperfiddle.domain :as domain]
@@ -14,13 +15,15 @@
     [hyperfiddle.ide.preview.io :refer [->IOImpl]]
     [hyperfiddle.ide.preview.runtime :refer [->Runtime]]
     [hyperfiddle.ide.preview.state :refer [->FAtom]]
+    [hyperfiddle.project :as project]
     [hyperfiddle.reducers :as reducers]
     [hyperfiddle.route :as route]
     [hyperfiddle.runtime :as runtime]
     [hyperfiddle.ui.iframe :refer [iframe-cmp]]
     [hyperfiddle.ui.loading :refer [loading-page]]
     [reagent.core :as reagent]
-    [promesa.core :as p]))
+    [promesa.core :as p]
+    [taoensso.timbre :as timbre]))
 
 
 (defn build-user-branch [ide-branch] (branch/encode-branch-child ide-branch "user"))
@@ -73,13 +76,24 @@
                        :hyperfiddle.ui/debug-tooltips true
                        :hypercrud.ui/display-mode display-mode
                        :hyperfiddle.ui.iframe/on-click (r/partial frame-on-click rt)}]
-              [iframe-cmp ctx
-               {:route route
-                :class (css "hyperfiddle-user"
-                            "hyperfiddle-ide"
-                            "hf-live"
-                            (when @alt-key "alt")
-                            (some-> @display-mode name (->> (str "display-mode-"))))}]))])
+              (let [code+ (project/eval-domain-code!+ @(runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :project :project/code]))]
+                [:<>
+                 (when (either/left? code+)
+                   (let [e @code+]
+                     (timbre/error e)
+                     (let [href (domain/url-encode (runtime/domain (:peer ctx)) [:hyperfiddle.ide/env])
+                           message (or (some-> (ex-cause e) ex-message) (ex-message e))]
+                       [:h6 {:style {:text-align "center" :background-color "lightpink" :margin 0 :padding "0.5em 0"}}
+                        "Exception evaluating " [:a {:href href} [:code ":domain/code"]] ": " message])))
+                 [:style {:dangerouslySetInnerHTML {:__html @(runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :project :project/css])}}]
+                 ^{:key "user-iframe"}
+                 [iframe-cmp ctx
+                  {:route route
+                   :class (css "hyperfiddle-user"
+                               "hyperfiddle-ide"
+                               "hf-live"
+                               (when @alt-key "alt")
+                               (some-> @display-mode name (->> (str "display-mode-"))))}]])))])
 
        :component-did-mount
        (fn [this]
@@ -133,9 +147,9 @@
       (either/branch
         (ide-domain/build-user+ (runtime/domain (:peer ctx)) user-domain-record)
         (fn [e]
-          [:div
-           [:pre (js/pprint-str user-domain-record)]
-           [foundation/error-cmp e]])
+          [:div.result.col-sm
+           [:h2 "Domain misconfigured"]                     ; todo improve me
+           [error-cmps/error-block e]])
         (fn [user-domain]
           (let [ide-branch (:branch ctx)
                 user-route (let [[_ [fiddle-lookup-ref & datomic-args] service-args encoded-fragment] @(runtime/state (:peer ctx) [::runtime/partitions ide-branch :route])]

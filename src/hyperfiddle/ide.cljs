@@ -2,18 +2,11 @@
   (:require
     [cats.monad.either :as either]
     [contrib.base-64-url-safe :as base64-url-safe]
-    [contrib.css :refer [css]]
     [contrib.ednish :as ednish]
     [contrib.pprint :as pprint]
-    [contrib.reactive :as r]
     [contrib.reader :as reader]
     [hyperfiddle.domain :as domain]
-    [hyperfiddle.io.routes :as routes]
-    [hyperfiddle.project :as project]
     [hyperfiddle.runtime :as runtime]
-    [hyperfiddle.ui :as ui]
-    [hyperfiddle.ui.iframe :refer [iframe-cmp]]
-    [taoensso.timbre :as timbre]
 
     ; pull in the entire ide app for reference from user-land
     [hyperfiddle.ide.fiddles.fiddle-src]
@@ -45,19 +38,3 @@
     [contrib.ui/code (assoc props                           ; Class ends up not on the codemirror, todo
                        :value s
                        :read-only true)]))
-
-(defn user-view [ctx]
-  #_(let [code-str (assert false "todo build new peer")
-          code+ (project/eval-domain-code!+ code-str)]
-      [:<>
-       (when (either/left? code+)
-         (let [e @code+]
-           (timbre/error e)
-           (let [href (domain/url-encode (runtime/domain (:peer ctx)) [:hyperfiddle.ide/domain [[:domain/ident (-> (runtime/domain (:peer ctx)) domain/ident)]]])
-                 message (if-let [cause-message (some-> e ex-cause ex-message)]
-                           cause-message
-                           (ex-message e))]
-             [:h6 {:style {:text-align "center" :background-color "lightpink" :margin 0 :padding "0.5em 0"}}
-              "Exception evaluating " [:a {:href href} [:code ":domain/code"]] ": " message])))
-       ^{:key "user-iframe"}
-       [user-iframe ctx]]))
