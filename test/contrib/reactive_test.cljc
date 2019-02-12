@@ -1,5 +1,6 @@
 (ns contrib.reactive-test
   (:require
+    [cats.monad.either :as either]
     [clojure.test :refer [deftest is]]
     [contrib.reactive :as r]))
 
@@ -41,3 +42,14 @@
 
   (let [reactive-inc (r/atom (fn [a] (fn [b] (+ a b))))]
     (is (= 3 @(r/fapply reactive-inc (r/atom 1) (r/atom 2))))))
+
+(deftest test-apply-inner-r []
+  (let [state (r/atom (either/right 1))
+        before @@(r/apply-inner-r state)]
+    (is (= 1 @before))
+    (reset! state (either/right 2))
+    (let [after @@(r/apply-inner-r state)]
+      #?(:cljs                                              ; clj implementation not yet implemented
+         (is (= before after)))
+      #?(:cljs                                              ; clj implementation not yet implemented
+         (is (= 2 @before @after))))))

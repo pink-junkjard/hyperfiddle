@@ -9,8 +9,8 @@
     (case cardinality
       :db.cardinality/one
       (cond-> []
-        o (conj [:db/retract id a o])
-        n (conj [:db/add id a n]))
+        (some? o) (conj [:db/retract id a o])
+        (some? n) (conj [:db/add id a n]))
 
       :db.cardinality/many
       (let [o (set o)
