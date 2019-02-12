@@ -49,25 +49,26 @@
            attr-renderers (project/hydrate-attr-renderers aux-io local-basis branch staged-branches)
            project (project/hydrate-project-record aux-io local-basis branch staged-branches)]
       (let [db-with-lookup (atom {})
-            get-secure-db-with+ (hydrate-requests/build-get-secure-db-with+ domain staged-branches db-with-lookup local-basis)
-            initial-state (reduce (fn [state [branch v]]
-                                    (assoc-in state [::runtime/partitions branch :stage] v))
-                                  {::runtime/user-id ?subject
-                                   ; should this be constructed with reducers?
-                                   ; why dont we need to preheat the tempid lookups here for parent branches?
-                                   ::runtime/partitions {branch {:attr-renderers attr-renderers
-                                                                 :local-basis local-basis
-                                                                 :project project ; todo this is needed once total, not once per partition
-                                                                 :route route
-                                                                 :schemas schemas}}}
-                                  stage)
-            state-atom (r/atom (reducers/root-reducer initial-state nil))
-            rt (->RT domain db-with-lookup get-secure-db-with+ state-atom ?subject)]
+            get-secure-db-with+ (hydrate-requests/build-get-secure-db-with+ domain staged-branches db-with-lookup local-basis)]
         (perf/time (fn [get-total-time] (timbre/debug "Hydrate-route::d/with" "total time: " (get-total-time)))
                    ; must d/with at the beginning otherwise tempid reversal breaks
                    (doseq [[branch-ident branch-content] stage
                            [dbname _] branch-content]
                      (get-secure-db-with+ dbname branch-ident)))
-        (perf/time (fn [get-total-time] (timbre/debug "Hydrate-route::request-fn" "total time: " (get-total-time)))
-                   (doall (browser-request/request-from-route route {:branch branch :peer rt})))
-        (select-keys @(runtime/state rt [::runtime/partitions branch]) [:local-basis :attr-renderers :project :ptm :schemas :tempid-lookups])))))
+        (let [initial-state (reduce (fn [state [branch v]]
+                                      (assoc-in state [::runtime/partitions branch :stage] v))
+                                    {::runtime/user-id ?subject
+                                     ; should this be constructed with reducers?
+                                     ; why dont we need to preheat the tempid lookups here for parent branches?
+                                     ::runtime/partitions {branch {:attr-renderers attr-renderers
+                                                                   :local-basis local-basis
+                                                                   :project project ; todo this is needed once total, not once per partition
+                                                                   :route route
+                                                                   :schemas schemas
+                                                                   :tempid-lookups (hydrate-requests/extract-tempid-lookups db-with-lookup branch)}}}
+                                    stage)
+              state-atom (r/atom (reducers/root-reducer initial-state nil))
+              rt (->RT domain db-with-lookup get-secure-db-with+ state-atom ?subject)]
+          (perf/time (fn [get-total-time] (timbre/debug "Hydrate-route::request-fn" "total time: " (get-total-time)))
+                     (doall (browser-request/request-from-route route {:branch branch :peer rt})))
+          (select-keys @(runtime/state rt [::runtime/partitions branch]) [:local-basis :attr-renderers :project :ptm :schemas :tempid-lookups]))))))
