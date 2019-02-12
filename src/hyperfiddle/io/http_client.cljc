@@ -113,6 +113,7 @@
                   body)))))
 
 (defn hydrate-route! [domain local-basis route branch stage & [jwt]]
+  {:pre [domain local-basis route]}
   (let [stage (->> stage
                    (remove (comp empty? second))
                    (into {}))]
