@@ -36,18 +36,17 @@
 
 (defn error-block-with-stage [ctx e & [props]]
   (let [selected-dbname (r/atom nil)]
-    (fn [ctx e & [props]]
+    (fn [e & [props]]
       [:<>
        [error-block e props]
-       (when (:branch ctx)
-         [staging/cmp (runtime/domain (:peer ctx)) selected-dbname ctx])])))
+       [staging/cmp (runtime/domain (:peer ctx)) selected-dbname ctx]])))
 
 (defn error-comp [ctx]
-  ; :find-element :attribute :value
   (cond
     (:hypercrud.ui/error ctx) ((:hypercrud.ui/error ctx) ctx)
 
     (> (count (:hypercrud.browser/path ctx)) 0) error-inline
 
-    ; browser including inline true links
-    :else (r/partial error-block-with-stage ctx)))
+    (some? (:branch ctx)) (r/partial error-block-with-stage ctx)
+
+    :else error-block))
