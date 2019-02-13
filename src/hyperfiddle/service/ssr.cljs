@@ -91,7 +91,7 @@
       [:meta {:charset "UTF-8"}]
       [:script {:id "build" :type "text/plain" :dangerouslySetInnerHTML {:__html build}}]]
      [:body
-      [:div {:id "root" :dangerouslySetInnerHTML {:__html (root-html-str rt)}}]
+      [:div {:id (or (:html-root-id (runtime/domain rt)) "root") :dangerouslySetInnerHTML {:__html (root-html-str rt)}}]
       (when analytics
         [:div {:dangerouslySetInnerHTML {:__html analytics}}])
       (when-not (-> (runtime/domain rt) domain/environment :domain/disable-javascript)
