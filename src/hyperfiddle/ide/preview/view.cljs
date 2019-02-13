@@ -51,8 +51,8 @@
     (reagent/create-class
       {:reagent-render
        (fn [rt route user-branch]
-         [:div.result.col-sm
-          [:div.url-toolbar
+         [:<>
+          [:div.preview-toolbar
            ; todo animation
            [:button {:class "refresh" :on-click #(refresh! rt user-branch) :disabled @is-refreshing} "↻"]
            [contrib.ui/text
@@ -85,15 +85,14 @@
                            message (or (some-> (ex-cause e) ex-message) (ex-message e))]
                        [:h6 {:style {:text-align "center" :background-color "lightpink" :margin 0 :padding "0.5em 0"}}
                         "Exception evaluating " [:a {:href href} [:code ":domain/code"]] ": " message])))
-                 [:style {:dangerouslySetInnerHTML {:__html @(runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :project :project/css])}}]
-                 ^{:key "user-iframe"}
-                 [iframe-cmp ctx
-                  {:route route
-                   :class (css "hyperfiddle-user"
-                               "hyperfiddle-ide"
-                               "hf-live"
-                               (when @alt-key "alt")
-                               (some-> @display-mode name (->> (str "display-mode-"))))}]])))])
+                 [:div#root (when @alt-key {:style {:cursor "pointer"}})
+                  [:style {:dangerouslySetInnerHTML {:__html @(runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :project :project/css])}}]
+                  ^{:key "user-iframe"}
+                  [iframe-cmp ctx
+                   {:route route
+                    :class (css "hyperfiddle-user"
+                                "hyperfiddle-ide"
+                                (some-> @display-mode name (->> (str "display-mode-"))))}]]])))])
 
        :component-did-mount
        (fn [this]
@@ -144,22 +143,23 @@
 (defn view-cmp [user-domain-record ctx props]
   (let []
     (fn [user-domain-record ctx props]
-      (either/branch
-        (ide-domain/build-user+ (runtime/domain (:peer ctx)) user-domain-record)
-        (fn [e]
-          [:div.result.col-sm
-           [:h2 "Domain misconfigured"]                     ; todo improve me
-           [error-cmps/error-block e]])
-        (fn [user-domain]
-          (let [ide-branch (:branch ctx)
-                user-route (let [[_ [fiddle-lookup-ref & datomic-args] service-args encoded-fragment] @(runtime/state (:peer ctx) [::runtime/partitions ide-branch :route])]
-                             (route/canonicalize
-                               (base/legacy-lookup-ref->fiddle-ident fiddle-lookup-ref)
-                               (vec datomic-args)
-                               service-args
-                               (when-not (hyperfiddle.ide/parse-ide-fragment encoded-fragment)
-                                 encoded-fragment)))
-                user-state (->FAtom (runtime/state (:peer ctx)) to (r/partial from ide-branch))
-                user-io (->IOImpl user-domain)
-                user-runtime (->Runtime user-domain user-io user-state reducers/root-reducer)]
-            [with-rt user-runtime user-route (build-user-branch ide-branch)]))))))
+      [:div (select-keys props [:class])
+       (either/branch
+         (ide-domain/build-user+ (runtime/domain (:peer ctx)) user-domain-record)
+         (fn [e]
+           [:<>
+            [:h2 "Domain misconfigured"]                    ; todo improve me
+            [error-cmps/error-block e]])
+         (fn [user-domain]
+           (let [ide-branch (:branch ctx)
+                 user-route (let [[_ [fiddle-lookup-ref & datomic-args] service-args encoded-fragment] @(runtime/state (:peer ctx) [::runtime/partitions ide-branch :route])]
+                              (route/canonicalize
+                                (base/legacy-lookup-ref->fiddle-ident fiddle-lookup-ref)
+                                (vec datomic-args)
+                                service-args
+                                (when-not (hyperfiddle.ide/parse-ide-fragment encoded-fragment)
+                                  encoded-fragment)))
+                 user-state (->FAtom (runtime/state (:peer ctx)) to (r/partial from ide-branch))
+                 user-io (->IOImpl user-domain)
+                 user-runtime (->Runtime user-domain user-io user-state reducers/root-reducer)]
+             [with-rt user-runtime user-route (build-user-branch ide-branch)])))])))

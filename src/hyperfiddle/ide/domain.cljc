@@ -44,7 +44,8 @@
         true {:get :ssr
               true :405}}])
 
-(defrecord IdeDomain [ident fiddle-database databases environment home-route service-uri build user-domain-record]
+(defrecord IdeDomain [ident fiddle-database databases environment home-route service-uri build user-domain-record
+                      html-root-id]
   domain/Domain
   (ident [domain] ident)
   (fiddle-database [domain] fiddle-database)
@@ -97,7 +98,9 @@
            :home-route home-route
            :service-uri service-uri
            :build build
-           :user-domain-record user-datomic-record}
+           :user-domain-record user-datomic-record
+           :html-root-id "ide-root"
+           }
           map->IdeDomain
           with-serializer))))
 
