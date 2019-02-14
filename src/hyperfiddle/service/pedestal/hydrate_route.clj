@@ -12,7 +12,7 @@
 (deftype IOImpl [domain jwt ?subject]
   io/IO
   (hydrate-route [io local-basis route branch stage]
-    (p/do* (hydrate-route domain local-basis route branch stage ?subject)))
+    (hydrate-route domain local-basis route branch stage ?subject))
 
   (sync [io dbnames]
     (p/do* (sync domain dbnames))))
