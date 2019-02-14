@@ -1,6 +1,7 @@
 (ns hyperfiddle.ide.preview.view
   (:require
     [cats.monad.either :as either]
+    [clojure.string :as string]
     [contrib.cljs-platform :refer [code-for-browser]]
     [contrib.css :refer [css]]
     [contrib.reactive :as r]
@@ -126,7 +127,7 @@
        })))
 
 (defn- to [parent-state user-state]
-  (let [user-state (-> (update user-state ::runtime/partitions dissoc nil)
+  (let [user-state (-> (update user-state ::runtime/partitions dissoc nil) ; nil branch is readonly to users
                        (dissoc ::runtime/user-id)
                        (reducers/root-reducer nil))]
     (assoc parent-state ::runtime/user-state user-state)))
@@ -134,7 +135,14 @@
 (defn- from [ide-branch parent-state]
   (let [nil-partition (-> (get-in parent-state [::runtime/partitions ide-branch])
                           (select-keys [:route :stage])
-                          (update :stage (fn [stage] {'hyperfiddle.domain/fiddle-database (get stage "$")})))]
+                          (update :stage (fn [stage]
+                                           (reduce-kv
+                                             (fn [acc dbname stage-val]
+                                               (if (string/starts-with? dbname ide-domain/app-dbname-prefix)
+                                                 (assoc acc (subs dbname (count ide-domain/app-dbname-prefix)) stage-val)
+                                                 acc))
+                                             {'hyperfiddle.domain/fiddle-database (get stage "$")}
+                                             stage))))]
     (-> (::runtime/user-state parent-state)
         (assoc ::runtime/user-id (::runtime/user-id parent-state))
         (assoc-in [::runtime/partitions nil] nil-partition)
