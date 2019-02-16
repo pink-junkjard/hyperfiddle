@@ -38,7 +38,8 @@
                           (constantly true)
                           (fn [writes-allowed?] (or (not writes-allowed?) (empty? @stage))))]
           [:button {:disabled disabled?
-                    :style (if disabled? {:pointer-events "none"})
+                    :style (cond-> {:background-color (connection-color @selected-dbname)}
+                             disabled? (assoc :pointer-events "none"))
                     :on-click (fn []
                                 (let [action (actions/manual-transact-db! (:peer ctx) @selected-dbname)]
                                   (runtime/dispatch! (:peer ctx) action)))}
