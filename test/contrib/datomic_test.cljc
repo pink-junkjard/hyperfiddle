@@ -4,6 +4,7 @@
     [contrib.datomic :refer [pull-shape tree-derivative pull-enclosure pull-level
                              pull-traverse pull-union normalize-result
                              validate-qfind-attrs]]
+    [contrib.datomic2 :refer []]
     [contrib.ct]
     [contrib.try$]
     [fixtures.ctx]
@@ -323,14 +324,14 @@
            '(:fiddle/links)))
 
 
-    (is (= (contrib.datomic/reachable-pullpaths fixtures.hfhf/schema pull-fiddle [:fiddle/links :link/fiddle])
+    (is (= (contrib.datomic2/reachable-pullpaths fixtures.hfhf/schema pull-fiddle [:fiddle/links :link/fiddle])
            '([] [:link/fiddle])))
 
 
-    (is (= (contrib.datomic/reachable-pullpaths fixtures.hfhf/schema pull-fiddle [:fiddle/links])
+    (is (= (contrib.datomic2/reachable-pullpaths fixtures.hfhf/schema pull-fiddle [:fiddle/links])
            '([] [:link/fiddle])))
 
-    (is (= (contrib.datomic/reachable-attrs fixtures.hfhf/schema pull-fiddle [:fiddle/links])
+    (is (= (contrib.datomic2/reachable-attrs fixtures.hfhf/schema pull-fiddle [:fiddle/links])
            '(nil :link/fiddle)))
     ))
 

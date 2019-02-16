@@ -5,6 +5,7 @@
     [contrib.ct :refer [unwrap maybe maybe->either]]
     [contrib.data :refer [ancestry-common ancestry-divergence]]
     [contrib.datomic]
+    [contrib.datomic2]
     [contrib.eval :as eval]
     [contrib.reactive :as r]
     [contrib.reader]
@@ -775,7 +776,7 @@
             ; if pullpath is [], add fiddle-ident. Or if EAV a is not a keyword.
             ; EAV A may already be the fiddle-ident, or if its an int, use fiddle-ident too.
             ; reachable link locations, not just attrs.
-            as (contrib.datomic/reachable-attrs ?schema (contrib.datomic/pull-shape pull-pattern) ?pullpath)
+            as (contrib.datomic2/reachable-attrs ?schema (contrib.datomic/pull-shape pull-pattern) ?pullpath)
             links (->> as
                        ; Places within reach
                        (mapcat (fn [a]
@@ -812,7 +813,7 @@
           ;   me->mother ; me->sister->mother ; closest ctx is selected
           ; What if there is more than one?  me->sister->mother; me->father->mother
           ; Ambiguous, how did we even select this link? Probably need full datascript query language.
-          path-solutions (->> (contrib.datomic/reachable-pullpaths
+          path-solutions (->> (contrib.datomic2/reachable-pullpaths
                                 @(:hypercrud.browser/schema ctx)
                                 @(:hypercrud.browser/root-pull-enclosure ctx)
                                 current-path)

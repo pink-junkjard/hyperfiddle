@@ -239,21 +239,6 @@
 (defn pullshape-get-in [pullshape as]
   (reduce pullshape-get pullshape as))
 
-(defn reachable-pullpaths [schema root-pullshape pullpath]
-  ; Include the one we are at now? There is an off by one in here
-  {:pre [schema #_(satisfies? SchemaIndexedNormalized schema)]}
-  ; txfn can be on scalar and it is harmless to allow this.
-  (let [pred #(cardinality? schema % :db.cardinality/one) #_(ref-one? schema)
-        ancestor-path (pullpath-unwind-while pred pullpath)
-        ancestor-pull (pullshape-get-in root-pullshape ancestor-path)]
-    (pull-traverse schema ancestor-pull pred)))
-
-(defn reachable-attrs [schema root-pullshape pullpath]
-  {:pre [#_(satisfies? SchemaIndexedNormalized schema)]}
-  (->> (reachable-pullpaths schema root-pullshape pullpath)
-       (map last)
-       (remove nil?)))
-
 (defn element-spread [schema {{pull-pattern :value} :pattern :as e} collection]
   ; derivative oriented, ignores spread
   {:pre [schema]}
