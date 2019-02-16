@@ -42,20 +42,12 @@
           [:pre (.-stack e)]]])]))
 
 #?(:cljs
-   (defn ^:deprecated staging [ctx & [child]]
-     ; this is only writable because the browser's state impl uses reagent cursors all the way to the top
-     (let [selected-dbname (runtime/state (:peer ctx) [:staging/selected-uri])]
-       (fn [ctx & [child]]
-         (timbre/warn "hyperfiddle.foundation/staging has been deprecated and will be removed")
-         [staging/cmp (runtime/domain (:peer ctx)) selected-dbname ctx child]))))
-
-#?(:cljs
    (defn- error-cmp-with-stage [ctx e]
      (let [selected-dbname (r/atom nil)]
        (fn [ctx e]
          [:<>
           [error-cmp e]
-          [staging/cmp (runtime/domain (:peer ctx)) selected-dbname ctx]]))))
+          [staging/editor-cmp selected-dbname ctx]]))))
 
 #?(:cljs
    (defn view [ctx]

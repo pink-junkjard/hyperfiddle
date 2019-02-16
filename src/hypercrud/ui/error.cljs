@@ -4,7 +4,6 @@
     [contrib.reactive :as r]
     [contrib.ui :refer [markdown]]
     [hypercrud.types.Err :as Err]
-    [hyperfiddle.runtime :as runtime]
     [hyperfiddle.ui.staging :as staging]))
 
 
@@ -39,7 +38,7 @@
     (fn [e & [props]]
       [:<>
        [error-block e props]
-       [staging/cmp (runtime/domain (:peer ctx)) selected-dbname ctx]])))
+       [staging/editor-cmp selected-dbname ctx]])))
 
 (defn error-comp [ctx]
   (cond

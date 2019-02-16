@@ -1,22 +1,27 @@
 (ns hyperfiddle.ui.staging
   (:require
     [cats.monad.either :as either]
+    [clojure.string :as string]
+    [contrib.css :refer [css]]
     [contrib.pprint :refer [pprint-datoms-str]]
     [contrib.reactive :as r]
     [contrib.reader :refer [read-edn-string!]]
     [contrib.ui :refer [code debounced easy-checkbox validated-cmp]]
     [contrib.ui.tooltip :refer [tooltip]]
+    [hypercrud.ui.connection-color :refer [connection-color]]
     [hyperfiddle.actions :as actions]
     [hyperfiddle.domain :as domain]
     [hyperfiddle.runtime :as runtime]
     [hyperfiddle.security.client :as security]
+    [re-com.core :as re-com]
     [re-com.tabs]))
 
 
 (letfn [(toggle-auto-transact! [ctx selected-dbname]
           (runtime/dispatch! (:peer ctx) [:toggle-auto-transact @selected-dbname]))]
-  (defn ^:export stage-ui-buttons [domain selected-dbname stage ctx]
-    (let [writes-allowed?+ (let [hf-db (domain/database domain @selected-dbname)
+  (defn ^:export stage-ui-buttons [selected-dbname ctx]
+    (let [stage (runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :stage @selected-dbname])
+          writes-allowed?+ (let [hf-db (domain/database (runtime/domain (:peer ctx)) @selected-dbname)
                                  subject @(runtime/state (:peer ctx) [::runtime/user-id])]
                              (security/subject-can-transact? hf-db subject))
           anonymous? (nil? @(runtime/state (:peer ctx) [::runtime/user-id]))]
@@ -78,23 +83,68 @@
     selected-dbname
     (first tab-ids)))
 
-(defn ^:export cmp [domain selected-dbname ctx & [child]]
+(defn ^:export editor-cmp [selected-dbname ctx & children]
   (let [dirty-dbs (->> @(runtime/state (:peer ctx) [::runtime/partitions nil :stage])
                        (remove (comp empty? second))
                        (map first)
                        set)
-        tabs-definition (->> (domain/databases domain)
+        tabs-definition (->> (runtime/domain (:peer ctx))
+                             domain/databases
                              keys
                              sort
                              (mapv (fn [dbname]
                                      {:id dbname
-                                      :label [:span {:class (when (contains? dirty-dbs dbname) "stage-dirty")} dbname]})))
-        stage (runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :stage @selected-dbname])]
-    [:<>
+                                      :label [:span
+                                              {:style {:border-color (connection-color dbname)}
+                                               :class (when (contains? dirty-dbs dbname) "stage-dirty")}
+                                              dbname]})))]
+    [:div.hyperfiddle-staging-editor-cmp
      [re-com.tabs/horizontal-tabs
       :model (r/fmap-> selected-dbname (default-tab-model (mapv :id tabs-definition)))
       :tabs tabs-definition
       :on-change (r/partial reset! selected-dbname)]
-     [staging-control ctx selected-dbname]
-     (when child
-       [child domain selected-dbname stage ctx])]))
+     (into [:div.tab-content {:style {:border-color (connection-color @selected-dbname)}}
+            [staging-control ctx selected-dbname]]
+           children)]))
+
+(defn- tooltip-content [ctx]
+  [:div {:style {:text-align "left"}}
+   [hyperfiddle.ui/markdown
+    (->> (runtime/domain (:peer ctx))
+         domain/databases
+         keys
+         sort
+         (map (fn [dbname]
+                (let [prefix (if @(runtime/state (:peer ctx) [::runtime/auto-transact dbname])
+                               "- [x] "
+                               "- [ ] ")]
+                  (str prefix dbname))))
+         (string/join "\n")
+         (str "##### Auto-transact:\n\n"))
+    {:hyperfiddle.ui.markdown-extensions/unp true}]])
+
+(defn ^:export popover-button [ctx]
+  (let [show-tooltip (r/atom false)
+        show-stage (r/atom false)
+        selected-dbname (runtime/state (:peer ctx) [:staging/selected-uri])]
+    (fn [ctx]
+      [:div.hyperfiddle-staging-popover-button
+       [re-com/popover-tooltip
+        :showing? (r/atom (and @show-tooltip (not @show-stage)))
+        :label [tooltip-content ctx]
+        :anchor [re-com/popover-anchor-wrapper
+                 :showing? show-stage
+                 :position :below-center
+                 :anchor (let [stage-is-dirty (not @(r/fmap empty? (runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :stage])))]
+                           [:button {:on-click #(reset! show-stage true)
+                                     :on-mouse-over #(do (reset! show-tooltip true) nil)
+                                     :on-mouse-out #(do (reset! show-tooltip false) nil)
+                                     :class (cond-> "hyperfiddle btn-default"
+                                              stage-is-dirty (css "stage-dirty"))}
+                            "stage▾"])
+                 :popover [re-com/popover-content-wrapper
+                           :no-clip? true?
+                           :body [:div.hyperfiddle-popover-body
+                                  [editor-cmp selected-dbname ctx
+                                   [stage-ui-buttons selected-dbname ctx]
+                                   [:button.close-popover {:on-click #(reset! show-stage false)} "close"]]]]]]])))
