@@ -200,7 +200,7 @@ User renderers should not be exposed to the reaction."
     {:pre [link-ref (r/reactive? link-ref)]}
     (let [visual-ctx ctx
           [ctx r+?route] (context/refocus' ctx link-ref)
-          style {:color nil #_(connection-color ctx (cond (hyperfiddle.ide.console-links/system-link? (:db/id @link-ref)) 60 :else 40))}
+          style {:color nil #_(connection-color (context/dbname ctx) (cond (hyperfiddle.ide.console-links/system-link? (:db/id @link-ref)) 60 :else 40))}
           props (update props :style #(or % style))
           has-tx-fn @(r/fmap-> link-ref :link/tx-fn blank->nil boolean)
           is-iframe @(r/fmap->> link-ref :link/class (some #{:hf/iframe}))]
@@ -263,7 +263,7 @@ User renderers should not be exposed to the reaction."
   [relative-path ctx Body Head props]
   (with-meta
     [:div {:class (css "field" (:class props))
-           :style {:border-color (connection-color ctx)}}
+           :style {:border-color (connection-color (context/dbname ctx))}}
      [Head nil (dissoc ctx :hypercrud.browser/data) props]
      (let [props (as-> props props
                        (update props :disabled #(or % (not @(r/track writable-entity? ctx))))
@@ -281,13 +281,13 @@ User renderers should not be exposed to the reaction."
   ; Presence of data to detect head vs body? Kind of dumb
   (case (if (:hypercrud.browser/data ctx) :body :head)      ; this is ugly and not uniform with form-field NOTE: NO DEREF ON THIS NIL CHECK
     :head [:th {:class (css "field" (:class props))         ; hoist
-                :style {:background-color (connection-color ctx)}}
+                :style {:background-color (connection-color (context/dbname ctx))}}
            [Head nil ctx (-> props
                              (update :class css (when (sort/sortable? ctx) "sortable") (some-> (sort/sort-direction relative-path ctx) name))
                              (assoc :on-click (r/partial sort/toggle-sort! relative-path ctx)))]]
     ; Field omits [] but table does not, because we use it to specifically draw repeating anchors with a field renderer.
     :body [:td {:class (css "field" (:class props))
-                :style {:border-color (connection-color ctx)}}
+                :style {:border-color (connection-color (context/dbname ctx))}}
            (let [props (as-> props props
                              (update props :disabled #(or % (not @(r/track writable-entity? ctx))))
                              (cond-> props (context/leaf-invalid? ctx) (assoc :is-invalid true))

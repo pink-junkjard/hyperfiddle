@@ -1,7 +1,6 @@
 (ns hypercrud.ui.connection-color
   (:require
-    [cuerdas.core :as str]
-    [hypercrud.browser.context :as context]))
+    [cuerdas.core :as str]))
 
 
 ; http://martin.ankerl.com/2009/12/09/how-to-create-random-colors-programmatically/
@@ -15,12 +14,11 @@
 (defn hsl [h s l]
   (str/format "hsl(%s, %s%, %s%)" h s l))
 
-(defn connection-color [ctx & [l]]
-  (let [dbname (context/dbname ctx)]
-    (condp = dbname
-      nil no-conn
-      ;(get-in ctx [:hypercrud.browser/domain :domain/fiddle-database :database/uri]) root-conn
-      (hsl (* 360 (mod (+ seed (* (hash dbname) golden-ratio)) 1))
-           55  #_"Too bright hurts the eyes"
-           (or l 70)) #_"Medium gray (50) can be read on white and black backgrounds"
-      )))
+(defn connection-color [dbname & [l]]
+  (condp = dbname
+    nil no-conn
+    ;(get-in ctx [:hypercrud.browser/domain :domain/fiddle-database :database/uri]) root-conn
+    (hsl (* 360 (mod (+ seed (* (hash dbname) golden-ratio)) 1))
+         55  #_"Too bright hurts the eyes"
+         (or l 70)) #_"Medium gray (50) can be read on white and black backgrounds"
+    ))
