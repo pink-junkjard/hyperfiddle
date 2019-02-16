@@ -1,13 +1,13 @@
 (ns hyperfiddle.ide.fiddles.topnav
   (:require
-    [clojure.string :as string]
     [contrib.reactive :as r]
     [contrib.ui.tooltip :refer [tooltip]]
     [hyperfiddle.data]
     [hyperfiddle.domain :as domain]
     [hyperfiddle.runtime :as runtime]
     [hyperfiddle.security.client :as security]
-    [hyperfiddle.ui :as ui]))
+    [hyperfiddle.ui :as ui]
+    [hyperfiddle.ui.staging :as staging]))
 
 
 (defn any-loading? [peer]
@@ -39,25 +39,7 @@
 
    [:div.right-nav {:key "right-nav"}                       ; CAREFUL; this key prevents popover flickering
     [loading-spinner ctx]
-    (let [tooltip [:div {:style {:text-align "left"}}
-                   [ui/markdown
-                    (->> (runtime/domain (:peer ctx))
-                         domain/databases
-                         keys
-                         sort
-                         (map (fn [dbname]
-                                (let [prefix (if @(runtime/state (:peer ctx) [::runtime/auto-transact dbname])
-                                               "- [x] "
-                                               "- [ ] ")]
-                                  (str prefix dbname))))
-                         (string/join "\n")
-                         (str "##### Auto-transact:\n\n"))
-                    {:hyperfiddle.ui.markdown-extensions/unp true}]]
-          props {:tooltip [nil tooltip]
-                 :class (when-not @(r/fmap empty? (runtime/state (:peer ctx) [::runtime/partitions nil :stage]))
-                          "stage-dirty")
-                 :iframe-as-popover true}]
-      [ui/link :stage ctx "stage" props])
+    [staging/popover-button ctx]
     (ui/link :new-fiddle ctx "new" (let [disabled? (not (security/can-create? ctx)) ; we explicitly know the context here is $
                                          anonymous? (nil? @(runtime/state (:peer ctx) [::runtime/user-id]))]
                                      {:disabled disabled?

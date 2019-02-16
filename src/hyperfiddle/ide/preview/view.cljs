@@ -22,12 +22,12 @@
     [hyperfiddle.runtime :as runtime]
     [hyperfiddle.ui.iframe :refer [iframe-cmp]]
     [hyperfiddle.ui.loading :refer [loading-page]]
+    [hyperfiddle.ui.staging :as staging]
+    [re-com.core :as re-com]
     [reagent.core :as reagent]
     [promesa.core :as p]
     [taoensso.timbre :as timbre]))
 
-
-(defn build-user-branch [ide-branch] (branch/encode-branch-child ide-branch "user"))
 
 (def keypress (code-for-browser (js/keypress.Listener. js/document.body)))
 
@@ -40,43 +40,64 @@
         (.stopPropagation event)
         (js/window.open (domain/url-encode (runtime/domain rt) route) "_blank")))))
 
-(defn with-rt [& args]
+(defn ide-branch-reference [rt ide-branch]
+  (-> @(runtime/state rt [::runtime/partitions ide-branch])
+      (select-keys [:stage :local-basis])))
+
+(defn with-rt [rt route ide-branch]
   (let [initial-render (r/atom true)
         is-refreshing (r/atom true)
+        is-hovering-refresh-button (r/atom false)
         alt-key (r/atom false)
         display-mode (r/atom :hypercrud.browser.browser-ui/user)
-        refresh! (fn [rt user-branch]
+        user-branch (branch/encode-branch-child ide-branch "user")
+        ; specifically deref and re-wrap this ref on mount because we are tracking deviation from this value
+        staleness (r/atom (ide-branch-reference rt ide-branch))
+        is-stale? (fn [] (not= @staleness (ide-branch-reference rt ide-branch)))
+        refresh! (fn []
+                   (reset! staleness (ide-branch-reference rt ide-branch))
                    (reset! is-refreshing true)
                    (-> (actions/hydrate-partition rt user-branch (partial runtime/dispatch! rt) (fn [] @(runtime/state rt)))
                        (p/finally (fn [] (reset! is-refreshing false)))))]
     (reagent/create-class
       {:reagent-render
-       (fn [rt route user-branch]
-         [:<>
-          [:div.preview-toolbar
-           ; todo animation
-           [:button {:class "refresh" :on-click #(refresh! rt user-branch) :disabled @is-refreshing} "↻"]
-           [contrib.ui/text
-            {:value (domain/url-encode (runtime/domain rt) route)
-             :disabled true
-             :class "url"
-             :on-change (fn [s] (println s))}]
-           (into [:span]
-                 (->> [{:label "edn" :tooltip "What the API client sees" :value :hypercrud.browser.browser-ui/api}
-                       {:label "data" :tooltip "Ignore :fiddle/renderer" :value :hypercrud.browser.browser-ui/xray}
-                       {:label "view" :tooltip "Use :fiddle/renderer" :value :hypercrud.browser.browser-ui/user}]
-                      (map (fn [props]
-                             [contrib.ui/radio-with-label
-                              (assoc props
-                                :checked (= (:value props) @display-mode)
-                                :on-change (r/partial reset! display-mode))]))))]
-          (if @initial-render
-            [loading-page]
-            (let [ctx {:peer rt
-                       :branch user-branch
-                       :hyperfiddle.ui/debug-tooltips true
-                       :hypercrud.ui/display-mode display-mode
-                       :hyperfiddle.ui.iframe/on-click (r/partial frame-on-click rt)}]
+       (fn [rt route ide-branch]
+         (let [ctx {:peer rt
+                    :branch user-branch
+                    :hyperfiddle.ui/debug-tooltips true
+                    :hypercrud.ui/display-mode display-mode
+                    :hyperfiddle.ui.iframe/on-click (r/partial frame-on-click rt)}]
+           [:<>
+            (let [stale @(r/track is-stale?)]
+              [:div.preview-toolbar (when stale {:class "stale"})
+               ; todo animation
+               [:button {:class "refresh" :on-click #(refresh!)
+                         :disabled @is-refreshing
+                         :on-mouse-over #(do (reset! is-hovering-refresh-button true) nil)
+                         :on-mouse-out #(do (reset! is-hovering-refresh-button false) nil)}
+                [re-com/popover-tooltip
+                 :showing? (r/atom (and @is-hovering-refresh-button (not @is-refreshing)))
+                 :anchor "↻"
+                 :label (if stale
+                          "Currently stale, refresh to see changes (or press alt+enter)"
+                          "Refresh preview to see changes")]]
+               [contrib.ui/text
+                {:value (domain/url-encode (runtime/domain rt) route)
+                 :disabled true
+                 :class "url"
+                 :on-change (fn [s] (println s))}]
+               (into [:span]
+                     (->> [{:label "edn" :tooltip "What the API client sees" :value :hypercrud.browser.browser-ui/api}
+                           {:label "data" :tooltip "Ignore :fiddle/renderer" :value :hypercrud.browser.browser-ui/xray}
+                           {:label "view" :tooltip "Use :fiddle/renderer" :value :hypercrud.browser.browser-ui/user}]
+                          (map (fn [props]
+                                 [contrib.ui/radio-with-label
+                                  (assoc props
+                                    :checked (= (:value props) @display-mode)
+                                    :on-change (r/partial reset! display-mode))]))))
+               [staging/popover-button ctx]])
+            (if @initial-render
+              [loading-page]
               (let [code+ (project/eval-domain-code!+ @(runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :project :project/code]))]
                 [:<>
                  (when (either/left? code+)
@@ -93,20 +114,22 @@
                    {:route route
                     :class (css "hyperfiddle-user"
                                 "hyperfiddle-ide"
-                                (some-> @display-mode name (->> (str "display-mode-"))))}]]])))])
+                                (some-> @display-mode name (->> (str "display-mode-"))))}]]]))]))
 
        :component-did-mount
        (fn [this]
-         (let [[_ rt route user-branch] (reagent/argv this)]
-           (.simple-combo keypress "ctrl `" (fn []
-                                              (swap! display-mode #(if (not= :hypercrud.browser.browser-ui/user %)
-                                                                     :hypercrud.browser.browser-ui/user
-                                                                     :hypercrud.browser.browser-ui/xray))))
-
-           (.register-combo keypress #js {"keys" "alt"
-                                          "prevent_repeat" true
-                                          "on_keydown" #(reset! alt-key true)
-                                          "on_keyup" #(reset! alt-key false)})
+         (let [[_ rt route ide-branch] (reagent/argv this)]
+           (.register-many keypress (clj->js [{"keys" "alt"
+                                               "prevent_repeat" true
+                                               "on_keydown" #(reset! alt-key true)
+                                               "on_keyup" #(reset! alt-key false)}
+                                              {"keys" "alt enter"
+                                               "on_keydown" #(refresh!)}
+                                              {"keys" "ctrl `"
+                                               "on_keydown" (fn []
+                                                              (swap! display-mode #(if (not= :hypercrud.browser.browser-ui/user %)
+                                                                                     :hypercrud.browser.browser-ui/user
+                                                                                     :hypercrud.browser.browser-ui/xray)))}]))
 
            (-> (foundation/bootstrap-data2 rt foundation/LEVEL-NONE foundation/LEVEL-HYDRATE-PAGE route user-branch nil)
                (p/finally (fn []
@@ -115,7 +138,7 @@
 
        :component-did-update
        (fn [this [_ _ prev-route _]]
-         (let [[_ rt next-route user-branch] (reagent/argv this)]
+         (let [[_ rt next-route ide-branch] (reagent/argv this)]
            (when-not (= prev-route next-route)
              (reset! is-refreshing true)
              (-> (foundation/bootstrap-data2 rt foundation/LEVEL-GLOBAL-BASIS foundation/LEVEL-HYDRATE-PAGE next-route user-branch nil)
@@ -170,4 +193,4 @@
                  user-state (->FAtom (runtime/state (:peer ctx)) to (r/partial from ide-branch))
                  user-io (->IOImpl user-domain)
                  user-runtime (->Runtime user-domain user-io user-state reducers/root-reducer)]
-             [with-rt user-runtime user-route (build-user-branch ide-branch)])))])))
+             [with-rt user-runtime user-route ide-branch])))])))
