@@ -42,8 +42,6 @@
 
 (defn error-comp [ctx]
   (cond
-    (:hypercrud.ui/error ctx) ((:hypercrud.ui/error ctx) ctx)
-
     (> (count (:hypercrud.browser/path ctx)) 0) error-inline
 
     (some? (:branch ctx)) (r/partial error-block-with-stage ctx)

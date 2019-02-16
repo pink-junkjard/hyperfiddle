@@ -37,7 +37,6 @@
 
 (defn clean [ctx]
   (dissoc ctx
-          :hypercrud.ui/error
           :hyperfiddle.ui/layout
 
           :hypercrud.browser/data
