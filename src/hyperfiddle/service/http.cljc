@@ -90,7 +90,7 @@
       (p/resolved (e->platform-response e)))))
 
 (defn ssr-auth-hack [domain user-id path redirect next]
-  (if (and (= "demo" (domain/ident domain))
+  (if (and (= "demo" (:app-domain-ident domain))
            (nil? user-id)
            (not (string/starts-with? path "/:hyperfiddle.ide!please-login/")))
     ; todo this logic should be injected into demo domain record
