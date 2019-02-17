@@ -290,9 +290,6 @@
                    (disj nil))]                             ; Preserve set type
     [idents link]))
 
-(defn -indexed-links-at [links]
-  (map link-identifiers links))
-
 (defn depth [ctx]
   (count (:hypercrud.browser/result-path ctx)))
 
