@@ -137,8 +137,8 @@
   (is (= (xorxs :a #{})
          (xorxs #{:a})
          #{:a}))
-  (is (= nil
-         (xorxs nil)))
+  (is (= (xorxs nil) nil))
+  (is (= (xorxs nil #{}) #{}))
   )
 
 (def result (->> (iterate inc 0)

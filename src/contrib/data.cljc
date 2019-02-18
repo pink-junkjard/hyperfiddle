@@ -138,7 +138,7 @@
   (cond (vector? xorxs) xorxs
         (set? xorxs) xorxs
         (seq? xorxs) xorxs
-        (nil? xorxs) nil
+        (nil? xorxs) zero
         :else-single-value-or-map ((fnil conj []) zero xorxs)))
 
 (defn group-by-pred [f? xs]
