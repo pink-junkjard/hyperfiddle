@@ -444,6 +444,21 @@
   (let [[e _ _] (eav ctx)]
     e))
 
+(defn a [ctx]
+  (let [[_ a _] (eav ctx)]
+    a))
+
+(defn identity? [ctx a]                                     ; might not be same a when checking children
+  (let [[e _ _] (eav ctx)                                   ; Wrong in child case
+        attr (and a (:hypercrud.browser/schema ctx) @(:hypercrud.browser/schema ctx)
+                  (contrib.datomic/attr @(:hypercrud.browser/schema ctx) a))]
+    (cond
+      (= :db/id a) true?
+      ; For first time entity creation only, use e.g. keyword editor to set the identity
+      (= :db/ident a) (not (underlying-tempid ctx e))
+      (= :db.unique/identity (:db/unique attr)) (not (underlying-tempid ctx e))
+      :else false)))
+
 (defn row "Row does not set E. E is the parent, not the child, and row is analogous to :ref :many child."
   [ctx & [k]]
   {:pre [(s/assert :hypercrud/context ctx)
@@ -614,12 +629,12 @@
 
 (defn -infer-implicit-element "auto-focus single elements - legacy field path compat"
   [ctx]
-  (let [qfind @(:hypercrud.browser/qfind ctx)]
+  (let [?qfind (some-> ctx :hypercrud.browser/qfind deref)]
     (cond
       (:hypercrud.browser/element ctx)
       ctx
 
-      (#{FindColl FindScalar} (type qfind))
+      (#{FindColl FindScalar} (if ?qfind (type ?qfind)))
       (element ctx 0)
 
       ; Can't infer this because the result index is not the right shape
@@ -697,7 +712,7 @@
 (defn focus "Unwind or go deeper, to where we need to be, within same dimension.
     Throws if you focus a higher dimension.
     This is about navigation through pulledtrees which is why it is path-oriented."
-  [ctx relative-path]
+  [ctx relative-path]                                       ; fq path?
   {:pre [(s/assert :hypercrud/context ctx)
          (:hypercrud.browser/result ctx)]
    :post [(s/assert :hypercrud/context %)]}
@@ -769,11 +784,7 @@
         ?pullpath (:hypercrud.browser/pull-path ctx)]
     (if-not (and ?element ?schema ?pullpath)
       @(links-at (:hypercrud.browser/link-index ctx) criterias)
-      (let [pull-pattern (get-in ?element [:pattern :value])
-            ; if pullpath is [], add fiddle-ident. Or if EAV a is not a keyword.
-            ; EAV A may already be the fiddle-ident, or if its an int, use fiddle-ident too.
-            ; reachable link locations, not just attrs.
-            as (contrib.datomic2/reachable-attrs ?schema (contrib.datomic/pull-shape pull-pattern) ?pullpath)
+      (let [as (contrib.datomic2/reachable-attrs ctx)       ; scan for anything reachable ?
             links (->> as
                        ; Places within reach
                        (mapcat (fn [a]
@@ -810,10 +821,7 @@
           ;   me->mother ; me->sister->mother ; closest ctx is selected
           ; What if there is more than one?  me->sister->mother; me->father->mother
           ; Ambiguous, how did we even select this link? Probably need full datascript query language.
-          path-solutions (->> (contrib.datomic2/reachable-pullpaths
-                                @(:hypercrud.browser/schema ctx)
-                                @(:hypercrud.browser/root-pull-enclosure ctx)
-                                current-path)
+          path-solutions (->> (contrib.datomic2/reachable-pullpaths ctx)
                               ; xs is like '([] [:dustingetz.reg/gender] [:dustingetz.reg/shirt-size])
                               (filter #(some (partial = a) %)))]
       ; In tuple cases (off happy path) there might not be a solution. Can be fixed by tupling all the way up.
