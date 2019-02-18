@@ -448,6 +448,10 @@
   (let [[_ a _] (eav ctx)]
     a))
 
+(defn v [ctx]
+  (let [[_ _ v] (eav ctx)]
+    v))
+
 (defn identity? [ctx a]                                     ; might not be same a when checking children
   (let [[e _ _] (eav ctx)                                   ; Wrong in child case
         attr (and a (:hypercrud.browser/schema ctx) @(:hypercrud.browser/schema ctx)
