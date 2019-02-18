@@ -110,30 +110,25 @@
 
 (defn bootstrap-html-cmp [env domain io path user-id]
   (let [build (:BUILD env)
-        initial-state {::runtime/user-id user-id}
+        initial-state {::runtime/auto-transact (data/map-values
+                                                 (fn [hf-db]
+                                                   false
+                                                   #_(either/branch
+                                                       (security/subject-can-transact? hf-db user-id)
+                                                       (constantly false)
+                                                       identity))
+                                                 (domain/databases domain))
+                       ::runtime/user-id user-id}
         rt (->RT domain io (r/atom (reducers/root-reducer initial-state nil)) reducers/root-reducer)
         static-resources (:STATIC_RESOURCES env)
         analytics (when (and (:ANALYTICS env) (contains? #{"www" "hyperfiddle"} (domain/ident (runtime/domain rt))))
                     analytics)
         load-level foundation/LEVEL-HYDRATE-PAGE]
     (-> (foundation/bootstrap-data rt foundation/LEVEL-NONE load-level path @(runtime/state rt [::runtime/global-basis]))
-        (p/then (fn []
-                  (let [subject @(runtime/state rt [::runtime/user-id])]
-                    (->> (domain/databases (runtime/domain rt))
-                         (data/map-values (fn [hf-db]
-                                            false
-                                            #_(either/branch
-                                              (security/subject-can-transact? hf-db subject)
-                                              (constantly false)
-                                              identity)))
-                         (into {})
-                         (vector :set-auto-transact)
-                         (runtime/dispatch! rt)))))
-        (p/then (constantly 200))
         (p/catch #(or (:hyperfiddle.io/http-status-code (ex-data %)) 500))
         (p/then (fn [http-status-code]
                   (let [client-params {:sentry {:dsn (:SENTRY_DSN env)
                                                 :environment (:SENTRY_ENV env)
                                                 :release (:BUILD env)}}]
-                    {:http-status-code http-status-code
+                    {:http-status-code (or http-status-code 200)
                      :component [full-html build static-resources analytics rt client-params]}))))))
