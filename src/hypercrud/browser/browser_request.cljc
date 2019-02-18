@@ -71,6 +71,19 @@
      ; UnsupportedOperationException: Can only recur from tail position
      (request-attr-level ctx)]))
 
+; Spread across the resultset
+; Create the links at each slot
+; Index this by result-path
+; index links by result-path
+; [ctx route] (context/link slot :hf/iframe)
+
+
+; Spread the slots
+; at each slot foreach link Does the link match the slot?
+; Accumulate a map of slot->#{links} (links is a sub index? {#{corcs}->link}
+; At any slot it is very easy to know what the links are
+; Very easy to refocus to another slot to get that link
+
 (defn requests [ctx]
   ; More efficient to drive from links. But to do this, we need to refocus
   ; from the top, multiplying out for all possible dependencies.
