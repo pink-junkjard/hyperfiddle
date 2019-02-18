@@ -1,9 +1,11 @@
 (ns hyperfiddle.ide.fiddles.topnav
   (:require
+    [clojure.string :as string]
     [contrib.reactive :as r]
     [contrib.ui.tooltip :refer [tooltip]]
     [hyperfiddle.data]
     [hyperfiddle.domain :as domain]
+    [hyperfiddle.ide.domain :as ide-domain]
     [hyperfiddle.runtime :as runtime]
     [hyperfiddle.security.client :as security]
     [hyperfiddle.ui :as ui]
@@ -39,7 +41,10 @@
 
    [:div.right-nav {:key "right-nav"}                       ; CAREFUL; this key prevents popover flickering
     [loading-spinner ctx]
-    [staging/popover-button ctx]
+    [staging/popover-button (:peer ctx) (:branch ctx)
+     (->> (:peer ctx) runtime/domain domain/databases keys
+          (filter #(string/starts-with? % ide-domain/app-dbname-prefix))
+          (map (fn [%] {:id % :label (subs % (count ide-domain/app-dbname-prefix))})))]
     (ui/link :new-fiddle ctx "new" (let [disabled? (not (security/can-create? ctx)) ; we explicitly know the context here is $
                                          anonymous? (nil? @(runtime/state (:peer ctx) [::runtime/user-id]))]
                                      {:disabled disabled?
@@ -68,5 +73,3 @@
             hack-login-renderer
             renderer')]
     [f value ctx props]))
-
-(def ^:deprecated stage-ui-buttons hyperfiddle.ui.staging/stage-ui-buttons)
