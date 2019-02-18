@@ -89,11 +89,15 @@
       (-> {:ident (:domain/ident ide-datomic-record)
            :fiddle-database (:domain/fiddle-database ide-datomic-record)
            :databases (-> (->> (:domain/databases user-datomic-record)
-                               (map (fn [db] (update db :domain.database/name #(str app-dbname-prefix %))))
-                               (concat (:domain/databases ide-datomic-record))
+                               (map (fn [db]
+                                      (-> db
+                                          (assoc-in [:domain.database/record :auto-transact] false)
+                                          (update :domain.database/name #(str app-dbname-prefix %)))))
+                               (concat (->> (:domain/databases ide-datomic-record)
+                                            (map #(assoc-in % [:domain.database/record :auto-transact] true))))
                                (map (juxt :domain.database/name :domain.database/record))
                                (into {}))
-                          (assoc "$" (:domain/fiddle-database user-datomic-record)))
+                          (assoc "$" (assoc (:domain/fiddle-database user-datomic-record) :auto-transact false)))
            :environment environment
            :home-route home-route
            :service-uri service-uri
