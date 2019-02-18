@@ -21,20 +21,18 @@
 (defn attribute-schema-human [attr]
   ((juxt
      #_:db/ident
-     #(some-> % :db/valueType :db/ident name)
-     #(some-> % :db/cardinality :db/ident name)
+     #(some-> % :db/valueType name)
+     #(some-> % :db/cardinality name)
      #(some-> % :db/isComponent (if :component) name)
-     #(some-> % :db/unique :db/ident name))
+     #(some-> % :db/unique name))
     attr))
 
 (defn semantic-docstring [ctx & [doc-override]]
   (let [[_ a _] (context/eav ctx)
-        attr (context/hydrate-attribute ctx a)
-        typedoc (some->> @(r/fmap attribute-schema-human attr)
-                         (interpose " ") (apply str))
+        attr (contrib.datomic/attr @(:hypercrud.browser/schema ctx) a)
+        typedoc (some->> (attribute-schema-human attr) (interpose " ") (apply str))
         help-md (blank->nil
                   ; Use path over a because it could have flattened the nesting and attr is ambiguous
                   (str (if typedoc (str "`" a " " typedoc "`\n\n")) ; markdown needs double line-break
-                       (or doc-override (some-> @(r/cursor attr [:db/doc]) blank->nil))
-                       ))]
+                       (or doc-override (-> attr :db/doc blank->nil))))]
     help-md))
