@@ -86,9 +86,9 @@
 
 (defn ^:export editor-cmp
   ([selected-dbname ctx]
-    [editor-cmp selected-dbname (:peer ctx) (:branch ctx)
-     (->> (runtime/domain (:peer ctx)) domain/databases keys
-          (map (fn [%] {:id % :label %})))])
+   [editor-cmp selected-dbname (:peer ctx) (:branch ctx)
+    (->> (runtime/domain (:peer ctx)) domain/databases keys
+         (map (fn [%] {:id % :label %})))])
   ([selected-dbname rt branch dbname-labels & children]
    (let [dirty-dbs (->> @(runtime/state rt [::runtime/partitions nil :stage])
                         (remove (comp empty? second))
