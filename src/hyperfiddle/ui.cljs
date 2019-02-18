@@ -24,7 +24,6 @@
     [hypercrud.ui.stale :as stale]
     [hyperfiddle.data :as data]
     [hyperfiddle.domain]
-    [hyperfiddle.ide.console-links]
     [hyperfiddle.route :as route]
     [hyperfiddle.runtime]
     [hyperfiddle.security.client :as security]
@@ -102,17 +101,6 @@
       [_ _ :one] controls/edn
       [_ _ :many] controls/edn-many)))
 
-(defn identity-widget? "ctx is for schema and :tempid-lookup"
-  [ctx a]
-  (let [[e _ _] (context/eav ctx)                           ; Wrong in child case
-        attr (and a (contrib.datomic/attr @(:hypercrud.browser/schema ctx) a))]
-    (match* [a attr]
-      [:db/id _] true
-      ; For first time entity creation only, use e.g. keyword editor to set the identity
-      [:db/ident _] (not (context/underlying-tempid ctx e))
-      [_ {:db/unique :db.unique/identity}] (not (context/underlying-tempid ctx e))
-      [_ _] false)))
-
 (defn ^:export hyper-control "Val is for userland field renderers, our builtin controls use ctx and ignore val."
   [val ctx & [props]]
   {:post [%]}
@@ -123,20 +111,18 @@
           (:options props)
           [(control val ctx props) val ctx props]
 
-          (identity-widget? ctx a)
+          (context/identity? ctx a)
           [controls/id-or-ident val ctx props]
 
           ; flatten useless nesting
           (and (seq children)
-               (every? (partial identity-widget? ctx) children))
+               (every? (partial context/identity? ctx) children))
           (let [W (control val ctx props)]
             [W val ctx props])
 
           (seq children)
           (let [ctx (dissoc ctx ::layout)]
             [:div                                           ; wrapper div: https://github.com/hyperfiddle/hyperfiddle/issues/541
-             (controls/hf-new val ctx)
-             (controls/hf-remove val ctx)
              [pull val ctx props]                           ; account for hf/new at parent ref e.g. :community/neighborhood
              [iframe-field-default val ctx props]])
 
@@ -395,11 +381,16 @@ User renderers should not be exposed to the reaction."
 (defn pull "handles any datomic result that isn't a relation, recursively"
   [val ctx & [props]]
   {:pre [(s/assert :hypercrud/context ctx)]}
-  (let [[_ a _] @(:hypercrud.browser/eav ctx)]
+  (let [[_ a _] (context/eav ctx)]
     ; detect top and do fiddle-level here, instead of in columns?
     (match* [(contrib.datomic/cardinality @(:hypercrud.browser/schema ctx) a)] ; this is parent - not focused?
-      [:db.cardinality/one] [form columns val ctx props]
-      [:db.cardinality/many] [table columns ctx props]
+      [:db.cardinality/one] [:<>
+                             (controls/hf-new val ctx)
+                             (controls/hf-remove val ctx)
+                             [form columns val ctx props]]
+      [:db.cardinality/many] [:<>
+                              (controls/hf-new val ctx)
+                              [table columns ctx props]]
       [_] [:pre (pr-str a)])))
 
 (defn table-product [ctx props]

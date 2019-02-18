@@ -823,12 +823,11 @@
           ; Ambiguous, how did we even select this link? Probably need full datascript query language.
           path-solutions (->> (contrib.datomic2/reachable-pullpaths ctx)
                               ; xs is like '([] [:dustingetz.reg/gender] [:dustingetz.reg/shirt-size])
-                              (filter #(some (partial = a) %)))]
+                              (filter #(= a (last %))))]
       ; In tuple cases (off happy path) there might not be a solution. Can be fixed by tupling all the way up.
       (if (seq path-solutions)                              ; found at least one solution
         ; Warn if more than one solution? Diamonds are fine, but some are parallel solns
         (let [chosen-path (->> path-solutions
-                               (map (partial take-while (partial not= a)))
                                (sort-by count)              ; choose the shortest path, if ambiguous could be a problem
                                first)                       ; nil/empty means unwind to nop
               common-ancestor-path (ancestry-common current-path chosen-path)
@@ -836,9 +835,9 @@
               common-ancestor-ctx (unwind ctx unwind-offset)
 
               foo (if (contrib.datomic/unique? @(:hypercrud.browser/schema ctx) a :db.unique/identity)
-                    ; FOR LINK REFOCUS ONLY, the prent entity ctx is correct
-                    chosen-path
-                    (conj (vec chosen-path) a))]
+                    ; FOR LINK REFOCUS ONLY, the parent entity ctx is correct
+                    (butlast chosen-path)
+                    chosen-path)]
           (right
             (focus common-ancestor-ctx (ancestry-divergence foo current-path))))
 

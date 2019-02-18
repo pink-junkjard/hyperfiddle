@@ -5,8 +5,8 @@
     [clojure.test :refer [deftest is testing]]
     [contrib.reactive :as r]
     [contrib.ct :refer [unwrap]]
-    [fixtures.tank]
     [fixtures.domains]
+    [fixtures.tank]
     [hyperfiddle.core]                                      ; avoid cycle hyperfiddle.api
     [hyperfiddle.data]
     [hyperfiddle.fiddle]
@@ -601,13 +601,16 @@
   (def ctx (mock-fiddle! :dustingetz/slack-storm))
 
   (testing ""
-    (doall
-      (for [[_ ctx] (context/spread-rows ctx)
-            [_ ctx] (context/spread-elements ctx)
-            #_#_[_ ctx] (context/spread-attributes ctx)]
-        #_(context/data ctx)
-        (context/eav ctx)
-        )))
+    (is (= (for [[_ ctx] (context/spread-rows ctx)
+                 [_ ctx] (context/spread-elements ctx)
+                 #_#_[_ ctx] (context/spread-attributes ctx)]
+             #_(context/data ctx)
+             (context/eav ctx)
+             )
+           [[nil :dustingetz/slack-storm [:dustingetz.post/slug :asdf]]
+            [nil :dustingetz/slack-storm 13194139535895]
+            [nil :dustingetz/slack-storm 17592186047105]
+            [nil :dustingetz/slack-storm 13194139536000]])))
 
   #_(testing "smart identity should prefer identity attrs to db/id"
       (is (= (for [[_ ctx] (context/spread-rows ctx)
@@ -635,110 +638,109 @@
               ]))
       )
 
-  (testing "FindRel tuple at element level"
-    (testing "addressing rowtuple by tupled rowkey"
-      (is (= (let [ctx (mock-fiddle! :dustingetz/slack-storm)]
-               (for [ctx [(context/row ctx [[:dustingetz.post/slug :asdf] 13194139535895])]]
-                 (context/data ctx)))
-             [[{:db/id 17592186047000,
-                :dustingetz.post/title "is js/console.log syntax future proof?",
-                :dustingetz.post/slug :asdf,
-                :dustingetz.storm/channel "#clojurescript",
-                :dustingetz.post/published-date #inst"2018-11-19T00:00:00.000-00:00"}
-               13194139535895]])))
+  (testing "addressing rowtuple by tupled rowkey"
+    (is (= (let [ctx (mock-fiddle! :dustingetz/slack-storm)]
+             (for [ctx [(context/row ctx [[:dustingetz.post/slug :asdf] 13194139535895])]]
+               (context/data ctx)))
+           [[{:db/id 17592186047000,
+              :dustingetz.post/title "is js/console.log syntax future proof?",
+              :dustingetz.post/slug :asdf,
+              :dustingetz.storm/channel "#clojurescript",
+              :dustingetz.post/published-date #inst"2018-11-19T00:00:00.000-00:00"}
+             13194139535895]])))
 
-    (testing "extract tuples"
-      (is (= (let [ctx (mock-fiddle! :dustingetz/slack-storm)]
-               (for [[_ ctx] (context/spread-rows ctx)]
-                 (context/data ctx)))
-             [[{:db/id 17592186047000,
-                :dustingetz.post/title "is js/console.log syntax future proof?",
-                :dustingetz.post/slug :asdf,
-                :dustingetz.storm/channel "#clojurescript",
-                :dustingetz.post/published-date #inst"2018-11-19T00:00:00.000-00:00"}
-               13194139535895]
-              [{:db/id 17592186047105,
-                :dustingetz.post/title "large strings and high churn attrs blow out indexes",
-                :dustingetz.storm/channel "#datomic",
-                :dustingetz.post/published-date #inst"2018-11-21T00:00:00.000-00:00"}
-               13194139536000]])))
+  (testing "extract tuples"
+    (is (= (let [ctx (mock-fiddle! :dustingetz/slack-storm)]
+             (for [[_ ctx] (context/spread-rows ctx)]
+               (context/data ctx)))
+           [[{:db/id 17592186047000,
+              :dustingetz.post/title "is js/console.log syntax future proof?",
+              :dustingetz.post/slug :asdf,
+              :dustingetz.storm/channel "#clojurescript",
+              :dustingetz.post/published-date #inst"2018-11-19T00:00:00.000-00:00"}
+             13194139535895]
+            [{:db/id 17592186047105,
+              :dustingetz.post/title "large strings and high churn attrs blow out indexes",
+              :dustingetz.storm/channel "#datomic",
+              :dustingetz.post/published-date #inst"2018-11-21T00:00:00.000-00:00"}
+             13194139536000]])))
 
-    (testing "flatten to elements"
-      (is (= (let [ctx (mock-fiddle! :dustingetz/slack-storm)]
-               (for [[_ ctx] (context/spread-rows ctx)
-                     [_ ctx] (context/spread-elements ctx)]
-                 (context/data ctx)))
-             [{:db/id 17592186047000,
-               :dustingetz.post/title "is js/console.log syntax future proof?",
-               :dustingetz.post/slug :asdf,
-               :dustingetz.storm/channel "#clojurescript",
-               :dustingetz.post/published-date #inst"2018-11-19T00:00:00.000-00:00"}
-              13194139535895
-              {:db/id 17592186047105,
-               :dustingetz.post/title "large strings and high churn attrs blow out indexes",
-               :dustingetz.storm/channel "#datomic",
-               :dustingetz.post/published-date #inst"2018-11-21T00:00:00.000-00:00"}
-              13194139536000])))
+  (testing "flatten to elements"
+    (is (= (let [ctx (mock-fiddle! :dustingetz/slack-storm)]
+             (for [[_ ctx] (context/spread-rows ctx)
+                   [_ ctx] (context/spread-elements ctx)]
+               (context/data ctx)))
+           [{:db/id 17592186047000,
+             :dustingetz.post/title "is js/console.log syntax future proof?",
+             :dustingetz.post/slug :asdf,
+             :dustingetz.storm/channel "#clojurescript",
+             :dustingetz.post/published-date #inst"2018-11-19T00:00:00.000-00:00"}
+            13194139535895
+            {:db/id 17592186047105,
+             :dustingetz.post/title "large strings and high churn attrs blow out indexes",
+             :dustingetz.storm/channel "#datomic",
+             :dustingetz.post/published-date #inst"2018-11-21T00:00:00.000-00:00"}
+            13194139536000])))
 
-    (testing "rowkey then all elements"
-      (is (= (let [ctx (mock-fiddle! :dustingetz/slack-storm)]
-               (for [ctx [(context/row ctx [[:dustingetz.post/slug :asdf] 13194139535895])]
-                     [_ ctx] (context/spread-elements ctx)]
-                 (context/data ctx)))
-             [{:db/id 17592186047000,
-               :dustingetz.post/title "is js/console.log syntax future proof?",
-               :dustingetz.post/slug :asdf,
-               :dustingetz.storm/channel "#clojurescript",
-               :dustingetz.post/published-date #inst"2018-11-19T00:00:00.000-00:00"}
-              13194139535895])))
+  (testing "rowkey then all elements"
+    (is (= (let [ctx (mock-fiddle! :dustingetz/slack-storm)]
+             (for [ctx [(context/row ctx [[:dustingetz.post/slug :asdf] 13194139535895])]
+                   [_ ctx] (context/spread-elements ctx)]
+               (context/data ctx)))
+           [{:db/id 17592186047000,
+             :dustingetz.post/title "is js/console.log syntax future proof?",
+             :dustingetz.post/slug :asdf,
+             :dustingetz.storm/channel "#clojurescript",
+             :dustingetz.post/published-date #inst"2018-11-19T00:00:00.000-00:00"}
+            13194139535895])))
 
-    (testing "rowkey then single elements"
-      (is (let [ctx (mock-fiddle! :dustingetz/slack-storm)
-                ctx (context/row ctx [[:dustingetz.post/slug :asdf] 13194139535895])]
-            (is (= (context/eav ctx) [nil :dustingetz/slack-storm nil])) ; could potentially set v to the rowkey here
-            (is (= (context/data (context/element ctx 0))
-                   {:db/id 17592186047000,
-                    :dustingetz.post/title "is js/console.log syntax future proof?",
-                    :dustingetz.post/slug :asdf,
-                    :dustingetz.storm/channel "#clojurescript",
-                    :dustingetz.post/published-date #inst "2018-11-19T00:00:00.000-00:00"}))
-            (is (= (context/data (context/element ctx 1)) 13194139535895)))))
+  (testing "rowkey then single elements"
+    (is (let [ctx (mock-fiddle! :dustingetz/slack-storm)
+              ctx (context/row ctx [[:dustingetz.post/slug :asdf] 13194139535895])]
+          (is (= (context/eav ctx) [nil :dustingetz/slack-storm nil])) ; could potentially set v to the rowkey here
+          (is (= (context/data (context/element ctx 0))
+                 {:db/id 17592186047000,
+                  :dustingetz.post/title "is js/console.log syntax future proof?",
+                  :dustingetz.post/slug :asdf,
+                  :dustingetz.storm/channel "#clojurescript",
+                  :dustingetz.post/published-date #inst "2018-11-19T00:00:00.000-00:00"}))
+          (is (= (context/data (context/element ctx 1)) 13194139535895)))))
 
-    (testing "element level does set value, it is not ambigous due to set semantics in FindRel"
-      (is (let [ctx (mock-fiddle! :dustingetz/slack-storm)
-                ctx (context/row ctx [[:dustingetz.post/slug :asdf] 13194139535895])]
-            (is (= (context/eav ctx) [nil :dustingetz/slack-storm nil])) ; could potentially set v to the rowkey here
-            ; Originally thought:
-            ; Can't set v to [:dustingetz.post/slug :asdf] because A is ambiguous.
-            ; Can't set v to 5895 because A is ambiguous.
-            ; NO, wrong.
-            ; Arguably this is NOT ambiguous due to set semantics. The same entity can't be pulled twice in a find relation.
-            (is (= (context/eav (context/element ctx 0)) [nil :dustingetz/slack-storm [:dustingetz.post/slug :asdf]]))
-            (is (= (context/eav (context/element ctx 1)) [nil :dustingetz/slack-storm 13194139535895])))))
+  (testing "element level does set value, it is not ambigous due to set semantics in FindRel"
+    (is (let [ctx (mock-fiddle! :dustingetz/slack-storm)
+              ctx (context/row ctx [[:dustingetz.post/slug :asdf] 13194139535895])]
+          (is (= (context/eav ctx) [nil :dustingetz/slack-storm nil])) ; could potentially set v to the rowkey here
+          ; Originally thought:
+          ; Can't set v to [:dustingetz.post/slug :asdf] because A is ambiguous.
+          ; Can't set v to 5895 because A is ambiguous.
+          ; NO, wrong.
+          ; Arguably this is NOT ambiguous due to set semantics. The same entity can't be pulled twice in a find relation.
+          (is (= (context/eav (context/element ctx 0)) [nil :dustingetz/slack-storm [:dustingetz.post/slug :asdf]]))
+          (is (= (context/eav (context/element ctx 1)) [nil :dustingetz/slack-storm 13194139535895])))))
 
-    (testing "key all the way and then attributes"
-      (let [ctx (mock-fiddle! :dustingetz/slack-storm)
-            ctx (context/row ctx [[:dustingetz.post/slug :asdf] 13194139535895])
-            ctx (context/element ctx 0)]
-        (is (= (context/eav ctx) [nil :dustingetz/slack-storm [:dustingetz.post/slug :asdf]]))
-        (is (= (context/data ctx)
-               {:db/id 17592186047000,
-                :dustingetz.post/title "is js/console.log syntax future proof?",
-                :dustingetz.post/slug :asdf,
-                :dustingetz.storm/channel "#clojurescript",
-                :dustingetz.post/published-date #inst "2018-11-19T00:00:00.000-00:00"}))
-        (let [ctx (context/attribute ctx :dustingetz.post/title)]
-          (is (= (context/data ctx) "is js/console.log syntax future proof?"))
-          (is (= (context/eav ctx) [[:dustingetz.post/slug :asdf] :dustingetz.post/title "is js/console.log syntax future proof?"])))
+  (testing "key all the way and then attributes"
+    (let [ctx (mock-fiddle! :dustingetz/slack-storm)
+          ctx (context/row ctx [[:dustingetz.post/slug :asdf] 13194139535895])
+          ctx (context/element ctx 0)]
+      (is (= (context/eav ctx) [nil :dustingetz/slack-storm [:dustingetz.post/slug :asdf]]))
+      (is (= (context/data ctx)
+             {:db/id 17592186047000,
+              :dustingetz.post/title "is js/console.log syntax future proof?",
+              :dustingetz.post/slug :asdf,
+              :dustingetz.storm/channel "#clojurescript",
+              :dustingetz.post/published-date #inst "2018-11-19T00:00:00.000-00:00"}))
+      (let [ctx (context/attribute ctx :dustingetz.post/title)]
+        (is (= (context/data ctx) "is js/console.log syntax future proof?"))
+        (is (= (context/eav ctx) [[:dustingetz.post/slug :asdf] :dustingetz.post/title "is js/console.log syntax future proof?"])))
 
-        (is (= (for [[_ ctx] (context/spread-attributes ctx)]
-                 (context/eav ctx))
-               [[[:dustingetz.post/slug :asdf] :db/id 17592186047000]
-                [[:dustingetz.post/slug :asdf] :dustingetz.post/title "is js/console.log syntax future proof?"]
-                [[:dustingetz.post/slug :asdf] :dustingetz.post/slug :asdf]
-                [[:dustingetz.post/slug :asdf] :dustingetz.storm/channel "#clojurescript"]
-                [[:dustingetz.post/slug :asdf] :dustingetz.post/published-date #inst"2018-11-19T00:00:00.000-00:00"]]))))
-    )
+      (is (= (for [[_ ctx] (context/spread-attributes ctx)]
+               (context/eav ctx))
+             [[[:dustingetz.post/slug :asdf] :db/id 17592186047000]
+              [[:dustingetz.post/slug :asdf] :dustingetz.post/title "is js/console.log syntax future proof?"]
+              [[:dustingetz.post/slug :asdf] :dustingetz.post/slug :asdf]
+              [[:dustingetz.post/slug :asdf] :dustingetz.storm/channel "#clojurescript"]
+              [[:dustingetz.post/slug :asdf] :dustingetz.post/published-date #inst"2018-11-19T00:00:00.000-00:00"]]))))
+
 
   (testing "FindRel tuple at attr level")
 
@@ -891,8 +893,10 @@
            [17592186047370 17592186047372]))
     (is (= (->> (hyperfiddle.data/spread-links-here ctx) (map (comp :link/path deref second)))
            [":dustingetz.post/slug" ":dustingetz.post/slug"]))
+
     (is (= (->> (hyperfiddle.data/spread-links-here ctx :hf/new) (map (comp :link/path deref second)))
            [":dustingetz.post/slug"]))
+
     (is (= (->> (hyperfiddle.data/spread-links-here ctx :dustingetz.tutorial/view-post)
                 (map (comp :link/path deref second)))
            [":dustingetz.post/slug"]))
@@ -916,15 +920,20 @@
             :link/tx-fn ":user/new-post",
             :link/formula "(constantly (hyperfiddle.api/tempid! ctx))"})))
 
+
+  )
+
+(deftest more-link-stuff
   (testing ":identity link refocus v is lookup-ref"
     (def ctx (-> (mock-fiddle! :dustingetz.tutorial/blog)
                  (context/row [[:dustingetz.post/slug :automatic-CRUD-links]])
                  (context/element 0)
                  (context/attribute :dustingetz.post/slug)))
-    (def r-link (->> (hyperfiddle.data/select-here+ ctx :dustingetz.tutorial/view-post) (unwrap (constantly nil))))
+    (def r-link (->> (hyperfiddle.data/select-here+ ctx :dustingetz.tutorial/view-post) (unwrap #(throw (ex-info % {})))))
     (is (= (mlet [[ctx ?route] (context/refocus-to-link+ ctx @r-link)]
              (context/eav ctx))
-           [nil :dustingetz.tutorial/blog [:dustingetz.post/slug :automatic-CRUD-links]])))
+           [nil :dustingetz.tutorial/blog [:dustingetz.post/slug :automatic-CRUD-links]]))
+    )
 
   (testing ":identity :hf/new formula evaluates to tempid"
     (def ctx (-> (mock-fiddle! :dustingetz.tutorial/blog)   ; FindRel
@@ -1164,6 +1173,73 @@
   ; There isn't, this adds parent-child rel whichj we don't have! Why are we here.
 
   )
+
+(deftest refocusing-complicated
+  (def ctx (mock-fiddle! fixtures.domains/schemas fixtures.domains/fiddles :hyperfiddle.ide/domain))
+
+  (testing "from :many with a row, refocus to self"
+    (is (= (-> ctx
+               (context/attribute :domain/databases)
+               (context/row 17592186046511)
+               (context/eav))
+           (-> ctx
+               (context/attribute :domain/databases)
+               (context/row 17592186046511)
+               (context/refocus+ :domain/databases)
+               extract
+               (context/eav))
+           [[:domain/ident "hyperfiddle"] :domain/databases 17592186046511]
+           )))
+
+  (testing "from :many with a row, refocus to self :db/id, and then back up"
+    ; The link is not at :db/id, it is at the equivalent parent ref
+    (is (= (-> (mock-fiddle! fixtures.domains/schemas fixtures.domains/fiddles :hyperfiddle.ide/domain)
+               (context/attribute :domain/databases)
+               (context/row 17592186046511)
+               (context/attribute :db/id)
+               (contrib.datomic2/reachable-pullpaths))
+           [[:db/id]
+            [:domain/ident]
+            [:domain/environment]
+            [:domain/disable-javascript]
+            [:domain/home-route]
+            [:domain/code]
+            [:domain/css]
+            [:domain/databases]
+            [:domain/databases :db/id]
+            [:domain/databases :domain.database/name]
+            [:domain/databases :domain.database/record]
+            [:domain/databases :domain.database/record :db/id]
+            [:domain/databases :domain.database/record :database/uri]
+            #_[:domain/databases :domain.database/record :database/write-security]
+            #_[:domain/databases :domain.database/record :database/write-security :db/id]
+            [:domain/databases :domain.database/record :database.custom-security/server]
+            [:domain/fiddle-database]
+            [:domain/fiddle-database :db/id]
+            [:domain/fiddle-database :database.custom-security/server]]))
+
+    (is (= (-> (mock-fiddle! fixtures.domains/schemas fixtures.domains/fiddles :hyperfiddle.ide/domain)
+               (context/attribute :domain/databases)
+               (context/row 17592186046511)
+               (context/attribute :db/id)
+               (context/refocus+ :domain/databases))
+           ))
+
+    (def ctx (mock-fiddle! fixtures.domains/schemas fixtures.domains/fiddles :hyperfiddle.ide/domain))
+    (is (= (-> ctx
+               (context/attribute :domain/databases)
+               (context/row 17592186046511)
+               (context/eav))
+           (-> ctx
+               (context/attribute :domain/databases)
+               (context/row 17592186046511)
+               (context/attribute :db/id)
+               (context/refocus+ :domain/databases)         ; refocusing too far up by one (due to db/id i think)
+               extract
+               (context/eav))
+           [[:domain/ident "hyperfiddle"] :domain/databases 17592186046511]
+           ))
+    ))
 
 #_(deftest deps-satisfied-1
     []

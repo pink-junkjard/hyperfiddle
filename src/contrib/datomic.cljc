@@ -184,7 +184,7 @@
    (->> pull-shape
         (mapcat (fn [attr-spec]
                   (cond
-                    (identity-segment? schema attr-spec)           ; todo needs schema
+                    #_#_(identity-segment? schema attr-spec)           ; todo needs schema
                     [[]]                                    ; blank path means the element
 
                     (keyword? attr-spec)                    ; scalars, never refs
@@ -201,7 +201,7 @@
                                                ; :unique :identity should too todo
                                                (pull-traverse
                                                  schema
-                                                 (remove #(identity-segment? schema %) children) ; Address entities by :ref
+                                                 children #_(remove #(identity-segment? schema %) children) ; Address entities by :ref
                                                  pred
                                                  path))))))
                          distinct))))
@@ -217,9 +217,6 @@
    {:pre [#_(satisfies? SchemaIndexedNormalized schema)]}
    (and (valueType? schema a :db.type/ref)
         (cardinality? schema a :db.cardinality/one))))
-
-#_(defn downtree-pullpaths [schema pullshape]
-  (pull-traverse schema pullshape (partial ref-one? schema)))
 
 (defn pullpath-unwind-while "Find oldest ancestor matching pred.
   Hint: Pred probably closes over schema."

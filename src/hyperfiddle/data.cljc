@@ -43,14 +43,26 @@
   (->> (select+ ctx ?corcs)
        (unwrap (constantly (r/pure nil)))))
 
+(defn select-many-here' [ctx & [?corcs]]
+  (let [cs (contrib.data/xorxs ?corcs #{})
+        [_ a _] @(:hypercrud.browser/eav ctx)]
+    ; links "here" means all possible links that apply. Can be lots of things!
+    ; :db/id and :db/ident sys links
+    ; :db/id and :db/ident parent attr links are good here too
+    ; and attr tagged :db.unique/identity
+    (concat
+      @(select-many ctx (conj cs a))
+      (if (and (context/identity? ctx a)                    ; Parent links apply here too!
+               (not (context/qfind-level? ctx)))
+        (let [ctx (context/unwind ctx 1)
+              [_ a _] @(:hypercrud.browser/eav ctx)]
+          @(select-many ctx (conj cs a)))))))
+
 (defn ^:export select-many-here "reactive" ; collapses if eav is part of corcs
   [ctx & [?corcs]]
   {:pre [(s/assert :hypercrud/context ctx)]
    :post [(r/reactive? %)]}
-  (let [[_ a _] @(:hypercrud.browser/eav ctx)]
-    (-> (contrib.data/xorxs ?corcs #{})
-        (conj a)
-        (->> (select-many ctx)))))
+  (r/track select-many-here' ctx ?corcs))
 
 (defn ^:export select-here+ [ctx & [?corcs]]
   {:pre [(s/assert :hypercrud/context ctx)]
