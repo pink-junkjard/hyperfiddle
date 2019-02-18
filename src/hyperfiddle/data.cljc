@@ -87,6 +87,6 @@
   (->> (select-many-here ctx ?corcs)
        (r/unsequence :db/id)))
 
-(defn spread-links-in-dimension [ctx & [?corcs]]
+(defn spread-links-in-dimension [ctx & [?corcs]]            ; rename: layer
   (->> (select-many ctx ?corcs)
        (r/unsequence :db/id)))
