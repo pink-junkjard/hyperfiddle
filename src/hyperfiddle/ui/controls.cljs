@@ -138,7 +138,7 @@
   [:div.hyperfiddle-input-group
    (entity-links val ctx)
    ; http://tank.hyperfiddle.site/:dustingetz!gender-shirtsize/
-   #_(hf-new val ctx)                                         ; in table context, only a ref if this attr is ref.
+   #_(hf-new val ctx)                                       ; in table context, only a ref if this attr is ref.
    (if-not (context/underlying-tempid ctx (context/e ctx))  ; val can be part of lookup ref scalar
      (hf-remove val ctx))])
 

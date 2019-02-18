@@ -64,20 +64,22 @@
 (declare fiddle-xray)
 
 (defn entity-links-iframe [val ctx & [props]]
-  ; Remove links that are also available at our ancestors. A clever way to
-  ; word this is: Are we cardinality one? Then it was available above us.
+  ; Remove links that are also available at our ancestors.
+  ; http://hyperfiddle.hyperfiddle.site/:hyperfiddle.ide!domain/~entity('$domains',(:domain!ident,'hyperfiddle'))
+  ; http://tank.hyperfiddle.site/:tutorial.race!submission/~entity('$',(:dustingetz.reg!email,'bob@example.com'))
+  ; http://tank.hyperfiddle.site/:dustingetz.seattle!communities/
   (if (or (= (context/depth ctx) 0)
           (and (> (context/depth ctx) 0)
                (let [[_ a _] (context/eav ctx)]
                  (not (contrib.datomic/ref-one? @(:hypercrud.browser/schema ctx) a)))))
     [:<>
+     ; keep flip flopping. is it here, or in dimension ??
      (for [[k r-link] (hyperfiddle.data/spread-links-in-dimension ctx :hf/iframe)]
        ^{:key k}
        [ui-from-link r-link ctx props])]))
 
 (defn iframe-field-default [val ctx props]
   (let [props (-> props (dissoc :class) (assoc :label-fn (r/constantly nil) #_[:div "nested pull iframes"]))]
-    #_[:pre "iframe-field-default"]
     [field [] ctx entity-links-iframe props]))
 
 (defn control "this is a function, which returns component"
@@ -388,8 +390,10 @@ User renderers should not be exposed to the reaction."
                              (controls/hf-new val ctx)
                              (controls/hf-remove val ctx)
                              [form columns val ctx props]]
+
+      ; http://hyperfiddle.hyperfiddle.site/:hyperfiddle.ide!domain/~entity('$domains',(:domain!ident,'hyperfiddle'))
       [:db.cardinality/many] [:<>
-                              (controls/hf-new val ctx)
+                              #_(controls/hf-new val ctx)   ; table db/id will handle this
                               [table columns ctx props]]
       [_] [:pre (pr-str a)])))
 
