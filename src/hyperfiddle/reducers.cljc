@@ -161,18 +161,10 @@
     :set-user-id (first args)
     user-id))
 
-(defn selected-uri-reducer [uri action & args]
-  (case action
-    :select-uri (first args)
-    uri))
-
 (def reducer-map {:hyperfiddle.runtime/fatal-error fatal-error-reducer
                   :hyperfiddle.runtime/global-basis global-basis-reducer
                   :hyperfiddle.runtime/partitions partitions-reducer
                   :hyperfiddle.runtime/auto-transact auto-transact-reducer
-                  :hyperfiddle.runtime/user-id user-id-reducer
-
-                  ; user
-                  :staging/selected-uri selected-uri-reducer})
+                  :hyperfiddle.runtime/user-id user-id-reducer})
 
 (def root-reducer (state/combine-reducers reducer-map))
