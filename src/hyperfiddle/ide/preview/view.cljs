@@ -81,11 +81,12 @@
                  :label (if stale
                           "Currently stale, refresh to see changes (or press alt+enter)"
                           "Refresh preview to see changes")]]
-               [contrib.ui/text
-                {:value (domain/url-encode (runtime/domain rt) route)
-                 :disabled true
-                 :class "url"
-                 :on-change (fn [s] (println s))}]
+               [:span.url]
+               #_[contrib.ui/text
+                  {:value (domain/url-encode (runtime/domain rt) route)
+                   :disabled true
+                   :class "url"
+                   :on-change (fn [s] (println s))}]
                (into [:span]
                      (->> [{:label "edn" :tooltip "What the API client sees" :value :hypercrud.browser.browser-ui/api}
                            {:label "data" :tooltip "Ignore :fiddle/renderer" :value :hypercrud.browser.browser-ui/xray}
