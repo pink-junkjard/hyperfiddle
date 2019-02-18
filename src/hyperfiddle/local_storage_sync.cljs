@@ -78,7 +78,7 @@
                  (assoc acc k (cond
                                 (false? ssr-v) false        ; ssr false trumps local storage
                                 (some? ls-v) ls-v           ; user may have opted in to auto-tx
-                                :else ssr-v                 ; no ide (likely alias so no visible staging area), trust ssr
+                                :else ssr-v                 ; trust ssr
                                 ))))
              {}
              ssr))
