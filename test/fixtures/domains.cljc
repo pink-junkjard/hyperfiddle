@@ -13,7 +13,7 @@
       "[:db/id\n :domain/ident\n :domain/environment\n :domain/aliases\n :domain/disable-javascript\n :domain/home-route\n #_ :domain/router\n :domain/code\n :domain/css\n {:domain/databases [:db/id \n                     :domain.database/name \n                     {:domain.database/record [:db/id \n                                               :database/uri\n                                               #_#_#_:hyperfiddle/owners\n                                               {:database/write-security [:db/ident]}\n                                               :database.custom-security/client\n                                               :database.custom-security/server]}]}\n {:domain/fiddle-database [:db/id \n                           #_#_#_#_:database/uri\n                           :hyperfiddle/owners\n                           {:database/write-security [:db/ident]}\n                           :database.custom-security/client\n                           :database.custom-security/server]}\n :hyperfiddle/owners]",
       :fiddle/ident :hyperfiddle.ide/domain,
       :fiddle/renderer
-      "(let [ctx (update ctx :hypercrud.browser/result (partial contrib.reactive/fmap hyperfiddle.foundation/shadow-domain))]\n  [:div props\n   [:h3 \"Environment: \" [hyperfiddle.ui/value [:domain/ident] ctx #(str %)]]\n   [hyperfiddle.ui/field [:domain/ident] ctx hyperfiddle.ide.fiddles.domain/domain-ident-renderer]\n   [hyperfiddle.ui/field [:hyperfiddle/owners] ctx hyperfiddle.ui/hyper-control]\n   [hyperfiddle.ui/field [:domain/databases] ctx\n    (fn [val ctx props]\n      [hyperfiddle.ui/table\n       (fn [ctx]\n         [[hyperfiddle.ui/field [:db/id] ctx (fn [val ctx props]\n                                               (hyperfiddle.ui/link :remove-database ctx \"remove\"))]\n          [hyperfiddle.ui/field [:domain.database/name] ctx hyperfiddle.ui/hyper-control]\n          [hyperfiddle.ui/field [:domain.database/record :database/uri] ctx hyperfiddle.ui/hyper-control]])\n       ctx])]\n   [hyperfiddle.ui/field [:domain/fiddle-database] ctx hyperfiddle.ui/hyper-control {:options :database-options\n                                                                                     :option-label (comp :database/uri first)}]\n   [hyperfiddle.ui/field [:domain/aliases] ctx hyperfiddle.ui/hyper-control]\n   [hyperfiddle.ui/field [:domain/disable-javascript] ctx hyperfiddle.ui/hyper-control]\n   [hyperfiddle.ui/field [:domain/home-route] ctx hyperfiddle.ui/hyper-control]\n   [hyperfiddle.ui/field [:domain/environment] ctx hyperfiddle.ui/hyper-control]\n   [:p \"Source code concerns. todo migrate into fiddle-database\"]\n   [hyperfiddle.ui/field [:domain/code] ctx hyperfiddle.ui/hyper-control]\n   [hyperfiddle.ui/field [:domain/css] ctx hyperfiddle.ui/hyper-control]\n   [:p \"Attribute renderers. todo migrate into fiddle-database\"]\n   [hyperfiddle.ui/browse :attribute-renderers ctx]])",
+      "(let [ctx (update ctx :hypercrud.browser/result (partial contrib.reactive/fmap hyperfiddle.foundation/shadow-domain))]\n  [:div props\n   [:h3 \"Environment: \" [hyperfiddle.ui/value [:domain/ident] ctx #(str %)]]\n   [hyperfiddle.ui/field [:domain/ident] ctx hyperfiddle.ide.fiddles.domain/domain-ident-renderer]\n   [hyperfiddle.ui/field [:hyperfiddle/owners] ctx hyperfiddle.ui/hyper-control]\n   [hyperfiddle.ui/field [:domain/databases] ctx\n    (fn [val ctx props]\n      [hyperfiddle.ui/table\n       (fn [ctx]\n         [[hyperfiddle.ui/field [:db/id] ctx \n           (fn [val ctx props]\n             (hyperfiddle.ui/link #{:domain/databases :hf/remove} ctx \"remove\"))]\n          [hyperfiddle.ui/field [:domain.database/name] ctx hyperfiddle.ui/hyper-control]\n          [hyperfiddle.ui/field [:domain.database/record :database/uri] ctx hyperfiddle.ui/hyper-control]])\n       ctx])]\n   [hyperfiddle.ui/field [:domain/fiddle-database] ctx hyperfiddle.ui/hyper-control {:options :database-options\n                                                                                     :option-label (comp :database/uri first)}]\n   [hyperfiddle.ui/field [:domain/aliases] ctx hyperfiddle.ui/hyper-control]\n   [hyperfiddle.ui/field [:domain/disable-javascript] ctx hyperfiddle.ui/hyper-control]\n   [hyperfiddle.ui/field [:domain/home-route] ctx hyperfiddle.ui/hyper-control]\n   [hyperfiddle.ui/field [:domain/environment] ctx hyperfiddle.ui/hyper-control]\n   [:p \"Source code concerns. todo migrate into fiddle-database\"]\n   [hyperfiddle.ui/field [:domain/code] ctx hyperfiddle.ui/hyper-control]\n   [hyperfiddle.ui/field [:domain/css] ctx hyperfiddle.ui/hyper-control]\n   [:p \"Attribute renderers. todo migrate into fiddle-database\"]\n   [hyperfiddle.ui/browse :attribute-renderers ctx]])",
       :db/doc "Databases, DNS, API keys, etc",
       :db/id 17592186045564,
       :fiddle/type :entity,
@@ -30,17 +30,17 @@
         :link/path ":hyperfiddle.ide/domain"}
        {:db/id 17592186061562,
         :link/class [:hf/remove],
-        :link/path ":domain/ident"}
+        :link/path "$domains :domain/ident"}
        {:db/id 17592186061564,
-        :link/class [:remove-database :hf/remove],
-        :link/path ":domain/databases"}
+        :link/class [:hf/remove],
+        :link/path "$domains :domain/databases"}
        {:db/id 17592186061567,
         :link/class [:hf/new],
         :link/fiddle
         {:db/id 17592186061548,
          :fiddle/ident :domain.databases/add,
          :fiddle/type :entity},
-        :link/path ":domain/databases"}
+        :link/path "$domains :domain/databases"}
        {:db/id 17592186061770,
         :link/class [:database-options :hf/iframe],
         :link/fiddle
@@ -111,4 +111,28 @@
        {:db/ident :link/tx-fn, :db/valueType {:db/ident :db.type/string}, :db/cardinality {:db/ident :db.cardinality/one}, :db/doc "Optional CLJS function which generates a Datomic transaction value. Turns the link into a button which calls the :tx-fn and stages the result. If there is a :link/fiddle, the link will render as a popover and the tx-fn will be called with the popover form's value when it stages. Some rels provide a default tx-fn which you can override. TODO: clean this up."})
     ))
 
-(def schemas {"$domains" schema})
+(def schemas
+   {"$domains" schema
+    "$" (contrib.datomic/indexed-schema
+           [{:db/ident :attribute/ident, :db/valueType {:db/ident :db.type/keyword}, :db/cardinality {:db/ident :db.cardinality/one}, :db/unique {:db/ident :db.unique/identity}, :db/doc "FK to schema, they can't be directly on $ schema because attribute renderers are a \"source code\" concern. TODO: move these off domain and into the fiddle repo."}
+            {:db/ident :attribute/renderer, :db/valueType {:db/ident :db.type/string}, :db/cardinality {:db/ident :db.cardinality/one}, :db/doc "Default attribute renderer, a CLJS var like `hyperfiddle.ui.controls/code`."}
+            {:db/ident :fiddle/cljs-ns, :db/valueType {:db/ident :db.type/string}, :db/cardinality {:db/ident :db.cardinality/one}, :db/doc "ClojureScript `user` namespace, available in :fiddle/renderer.\n\nWarning: No `(ns foo (:require ...))` yet, for now it is always called `user`."}
+            {:db/ident :fiddle/css, :db/valueType {:db/ident :db.type/string}, :db/cardinality {:db/ident :db.cardinality/one}, :db/doc "Fiddle CSS. \n\nWarning: CSS is not scoped, please write targetted CSS"}
+            {:db/ident :fiddle/hydrate-result-as-fiddle, :db/valueType {:db/ident :db.type/boolean}, :db/cardinality {:db/ident :db.cardinality/one}, :db/doc "Experimental. When set, data-sync will interpret this fiddle's arguments as a fiddle, which is a recursion mechanic."}
+            {:db/ident :fiddle/ident, :db/valueType {:db/ident :db.type/keyword}, :db/cardinality {:db/ident :db.cardinality/one}, :db/unique {:db/ident :db.unique/identity}, :db/doc "Fiddle identifier used in fiddle URLs.\n\nWarning: changing this breaks fiddle URLs."}
+            {:db/ident :fiddle/links, :db/valueType {:db/ident :db.type/ref}, :db/cardinality {:db/ident :db.cardinality/many}, :db/isComponent true, :db/doc "Links to other fiddles. Like HTML there are anchors, buttons, and iframes."}
+            {:db/ident :fiddle/markdown, :db/valueType {:db/ident :db.type/string}, :db/cardinality {:db/ident :db.cardinality/one}, :db/doc "Optional, your :fiddle/renderer may render this."}
+            {:db/ident :fiddle/pull, :db/valueType {:db/ident :db.type/string}, :db/cardinality {:db/ident :db.cardinality/one}, :db/doc "Datomic pull expression for the entity addressed by the URL"}
+            {:db/ident :fiddle/pull-database, :db/valueType {:db/ident :db.type/string}, :db/cardinality {:db/ident :db.cardinality/one}, :db/doc "Argument to `datomic.api/pull`, defaults to $"}
+            {:db/ident :fiddle/query, :db/valueType {:db/ident :db.type/string}, :db/cardinality {:db/ident :db.cardinality/one}, :db/doc "Datomic query datalog. \n\nWarning: no support yet for rules, d/history, d/log or other datomic API access."}
+            {:db/ident :fiddle/renderer, :db/valueType {:db/ident :db.type/string}, :db/cardinality {:db/ident :db.cardinality/one}, :db/doc "Reagent expression for the view."}
+            {:db/ident :fiddle/type, :db/valueType {:db/ident :db.type/keyword}, :db/cardinality {:db/ident :db.cardinality/one}, :db/doc "Which Datomic query API"}
+            {:db/ident :fiddle/uuid, :db/valueType {:db/ident :db.type/uuid}, :db/cardinality {:db/ident :db.cardinality/one}, :db/unique {:db/ident :db.unique/identity}, :db/doc "For creating new fiddles without needing a human to fill in an ident"}
+            {:db/ident :hyperfiddle/owners, :db/valueType {:db/ident :db.type/uuid}, :db/cardinality {:db/ident :db.cardinality/many}, :db/doc "Used in opt-in entity-level ACLs configured through hyperfiddle.net subdomains"}
+            {:db/ident :hyperfiddle/starred, :db/valueType {:db/ident :db.type/boolean}, :db/cardinality {:db/ident :db.cardinality/one}}
+            {:db/ident :link/class, :db/valueType {:db/ident :db.type/keyword}, :db/cardinality {:db/ident :db.cardinality/many}, :db/doc "Lets fiddle views select a link by name or class, like `<a class=\"\"`"}
+            {:db/ident :link/fiddle, :db/valueType {:db/ident :db.type/ref}, :db/cardinality {:db/ident :db.cardinality/one}, :db/doc "Hyperlink target (like `<a href=\"\">` or `<iframe src=\"\">`)"}
+            {:db/ident :link/formula, :db/valueType {:db/ident :db.type/string}, :db/cardinality {:db/ident :db.cardinality/one}, :db/doc "Deprecated – this is fully managed now."}
+            {:db/ident :link/path, :db/valueType {:db/ident :db.type/string}, :db/cardinality {:db/ident :db.cardinality/one}, :db/doc "Location in a Datomic result like `0 :reg/gender :db/ident`. Find-element index should only be specified for Datomic query forms that permit more than one find-element."}
+            {:db/ident :link/rel, :db/valueType {:db/ident :db.type/keyword}, :db/cardinality {:db/ident :db.cardinality/one}, :db/doc "* *:hf/rel*\n* *:hf/new*, *:hf/remove*\n* *:hf/affix*, *:hf/detach*\n* *:hf/iframe*\n* *:hf/self*"}
+            {:db/ident :link/tx-fn, :db/valueType {:db/ident :db.type/string}, :db/cardinality {:db/ident :db.cardinality/one}, :db/doc "CLJS function that turns a form submission into a Datomic transaction."}])})
