@@ -2,6 +2,7 @@
   (:require
     [contrib.data :refer [group-by-pred]]
     [clojure.spec.alpha :as s]
+    [clojure.set]
     [datascript.parser #?@(:cljs [:refer [FindRel FindColl FindTuple FindScalar Variable Aggregate Pull]])])
   #?(:clj (:import
             (datascript.parser FindRel FindColl FindTuple FindScalar Variable Aggregate Pull)
@@ -43,6 +44,7 @@
   ; Implement this interface in both peer and Hypercrud client
   (-repr-portable-hack [this])
   (attr [this a])
+  (attr? [this a corcs])
   (cardinality [this a])
   (cardinality? [this a k])
   (isComponent [this a])                                   ; follows Datomic naming case conventions
@@ -86,6 +88,11 @@
             (contrib.data/update-existing :db/cardinality smart-lookup-ref-no-tempids)
             (contrib.data/update-existing :db/isComponent smart-lookup-ref-no-tempids)
             (contrib.data/update-existing :db/unique smart-lookup-ref-no-tempids)))))
+  (attr? [this a corcs]
+    (let [haystack (into #{} (vals (attr this a)))
+          needles (contrib.data/xorxs corcs #{})]
+      ; haystack must have all the needles
+      (clojure.set/superset? haystack needles)))
   (valueType [this a] (get (attr this a) :db/valueType))
   (cardinality [this a] (get (attr this a) :db/cardinality))
   (isComponent [this a] (get (attr this a) :db/isComponent))

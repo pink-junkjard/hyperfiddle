@@ -118,9 +118,16 @@
 
           ; flatten useless nesting
           (and (seq children)
+               (= 1 (count children))
                (every? (partial context/identity? ctx) children))
-          (let [W (control val ctx props)]
-            [W val ctx props])
+          ; This if statement is needed to flatten test case: http://hyperfiddle.hyperfiddle.site/:databases/
+          ; Dude i have no idea why this if statement is necessary
+          (if (contrib.datomic/attr? @(:hypercrud.browser/schema ctx) a #{:db.type/ref :db.cardinality/many})
+            (let [W (control val ctx props)]
+              [W val ctx props])
+            (let [[a] children                              ; pick one, best if there is only one
+                  ctx (context/focus ctx [a])]
+              [controls/id-or-ident (context/data ctx) ctx props]))
 
           (seq children)
           (let [ctx (dissoc ctx ::layout)]

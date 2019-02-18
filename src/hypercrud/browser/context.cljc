@@ -201,7 +201,7 @@
   [ctx r-schemas]
   (assoc ctx :hypercrud.browser/schemas r-schemas))
 
-(defn hydrate-attribute [ctx ident & ?more-path]
+(defn ^:legacy hydrate-attribute [ctx ident & ?more-path]
   (runtime/state (:peer ctx) (concat [::runtime/partitions (:branch ctx) :schemas (uri ctx)] (cons ident ?more-path))))
 
 (defn- set-parent [ctx]
