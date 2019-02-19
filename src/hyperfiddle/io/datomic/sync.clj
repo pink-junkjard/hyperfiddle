@@ -2,7 +2,7 @@
   (:refer-clojure :exclude [sync])
   (:require
     [datomic.api :as d]
-    [hyperfiddle.domain :as domain]                         ; todo immoral/circular
+    [hyperfiddle.domain :as domain]
     [hyperfiddle.io.datomic.api :as hd]
     [taoensso.timbre :as timbre]))
 

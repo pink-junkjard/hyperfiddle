@@ -3,7 +3,7 @@
     [cats.monad.either :as either]
     [contrib.eval :as eval]
     [datomic.api :as d]
-    [hyperfiddle.domain :as domain]                         ; todo immoral/circular
+    [hyperfiddle.domain :as domain]
     [hyperfiddle.security :as security]
     [taoensso.timbre :as timbre]))
 
