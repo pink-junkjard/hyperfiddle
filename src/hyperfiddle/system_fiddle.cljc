@@ -1,4 +1,6 @@
-(ns hyperfiddle.system-fiddle)
+(ns hyperfiddle.system-fiddle
+  (:require
+    [contrib.try$ :refer [try-either]]))
 
 
 (def decoding-error
@@ -25,7 +27,8 @@
   (and (keyword? fiddle-ident) (= "hyperfiddle.system" (namespace fiddle-ident))))
 
 (defn hydrate [fiddle-ident]
-  (case fiddle-ident
-    :hyperfiddle.system/decoding-error decoding-error
-    :hyperfiddle.system/not-found not-found
-    :hyperfiddle.system/unauthorized unauthorized))
+  (try-either
+    (case fiddle-ident
+      :hyperfiddle.system/decoding-error decoding-error
+      :hyperfiddle.system/not-found not-found
+      :hyperfiddle.system/unauthorized unauthorized)))
