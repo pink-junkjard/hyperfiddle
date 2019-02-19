@@ -3,6 +3,7 @@
     [cats.core :refer [mlet return]]
     [cats.monad.either :as either]
     [contrib.ct :refer [unwrap]]
+    [contrib.data :refer [unqualify]]
     [contrib.eval]
     [contrib.reactive :as r]
     [contrib.reader]
@@ -61,13 +62,13 @@
                                                     on-change))))
                          (dissoc :disabled)                 ; Use :read-only instead to allow click to expand options
                          (update :read-only #(or % (:disabled select-props) is-no-options))
-                         (update :class #(str % (if (:disabled option-props) " disabled"))))
-        label-fn (contrib.eval/ensure-fn (:option-label select-props option-label-default))]
+                         (update :class #(str % (if (:disabled option-props) " disabled"))))]
     [:select.ui (select-keys select-props [:value :class :style :on-change :read-only :on-click]) ;(dissoc props :option-label)
      ; .ui is because options are an iframe and need the pink box
      (conj
-       (->> (hypercrud.browser.context/data ctx)
-            (mapv (juxt #(context/row-key ctx %) #(label-fn % ctx))) ; is lookup ref good yet?
+       (->> (context/data ctx)
+            (mapv (juxt #((:option-value select-props) % ctx)     ; is lookup ref good yet?
+                        #((:option-label select-props) % ctx)))
             (sort-by second)
             (map (fn [[id label]]
                    [:option (assoc option-props :key (str id) :value (str id)) label])))
@@ -82,16 +83,14 @@
         (boolean (:read-only props))                        ; legacy
         (nil? e))))
 
-(defn options-value-bridge [select-view
-                            anchor-props anchor-ctx
+(defn options-value-bridge [select-view select-props anchor-ctx
                             target-val target-ctx target-props]
   ; if select is qfind-level, is value tupled according to options qfind?
   ; if select is pull-level, is options qfind untupled?
   ; We must compare both ctxs to decide this.
-  (let [options (->> (hypercrud.browser.context/data target-ctx)
-                     (map #(context/row-key target-ctx %))) ; no fallback v, that can be a failure case if records aren't distinct.
-
-        target-qfind-type (some-> (:hypercrud.browser/qfind target-ctx) deref type)]
+  (let [value (context/v anchor-ctx) #_((:option-value select-props) (context/data anchor-ctx) anchor-ctx)
+        options (->> (context/data target-ctx)
+                     (map #((:option-value select-props) % target-ctx)))]
     (cond
       ; Select options renderer is an eav oriented control like all controls, thus the
       ; anchor is always a pull context, never a qfind context. To see this is true, consider that you can't
@@ -99,23 +98,16 @@
       (context/qfind-level? anchor-ctx)
       [select-error-cmp (str "No attribute in scope. eav: " (context/eav anchor-ctx))]
 
-      (and (:value anchor-props) (not (contains? (set options) (:value anchor-props))))
-      [select-error-cmp (str "Value not seen in options: " (:value anchor-props))]
+      (and value (not (contains? (set options) value)))
+      [select-error-cmp (str "Value not seen in options: " value)]
 
-      (#{FindColl FindScalar} target-qfind-type)
-      (let [options-props (into anchor-props (select-keys target-props [:on-click]))
-            option-props {:disabled (compute-disabled anchor-ctx anchor-props)}]
-        [select-view options-props option-props target-ctx])
-
-      ; Because of attribute-orientation, anchor-value is never tupled. Therefore the options-qfind must
-      ; always be untupled (FindColl). FindRel options are never valid, unless FindRel-1 can
-      ; theoretically collapse here. (See comment in row-key)
-      (#{FindRel FindTuple} target-qfind-type)
-      [select-error-cmp (str "Options must be FindColl, got: " (name (contrib.datomic/parser-types target-qfind-type)))]
-
-      ; A possible valid FindRel-N is when first element is Pull and remaining are aggregates, meaning
-      ; the first element is sufficient identity http://hyperfiddle.hyperfiddle.net/:database!options-list/
-      )))
+      :else
+      (let [select-props (merge {:value value
+                                 :on-change (with-entity-change! anchor-ctx)}
+                                select-props
+                                (select-keys target-props [:on-click]))
+            options-props {:disabled (compute-disabled anchor-ctx select-props)}]
+        [select-view select-props options-props target-ctx]))))
 
 (defn select "This arity should take a selector string (class) instead of Right[Reaction[Link]],
   blocked on removing path backdoor"
@@ -124,13 +116,20 @@
   (assert (:options props) "select: :options prop is required")
   (-> (mlet [options-ref (data/select+ ctx (keyword (:options props)))] ; coerce somewhere else tho
         (return
-          (let [default-props {:on-change (with-entity-change! ctx)}
-                props (-> (merge default-props props)
-                          (assoc :value (let [[_ _ v] @(:hypercrud.browser/eav ctx)]
-                                          v #_(context/underlying-tempid ctx v))))
-                props (-> (select-keys props [:class])
-                          (assoc :user-renderer (r/partial options-value-bridge select-html props ctx)))
-                ctx (assoc ctx
-                      :hypercrud.ui/display-mode (r/track identity :hypercrud.browser.browser-ui/user))]
-            [hyperfiddle.ui/ui-from-link options-ref ctx props])))
+          ; http://hyperfiddle.hyperfiddle.net/:database!options-list/
+          ; http://hyperfiddle.hyperfiddle.site/:hyperfiddle.ide!domain/~entity('$domains',(:domain!ident,'hyperfiddle'))
+          (let [select-props {:option-value (let [option-element (contrib.eval/ensure-fn (:option-element props first))]
+                                              (fn [val ctx]
+                                                ; in the case of tupled options, the userland view props must
+                                                ; indicate which element is the entity has an identity which matches the anchor eav.
+                                                (condp some [(unqualify (contrib.datomic/parser-type @(:hypercrud.browser/qfind ctx)))]
+                                                  #{:find-coll :find-scalar} (context/row-key ctx val)
+                                                  #{:find-rel :find-tuple} (option-element (context/row-key ctx val)))))
+                              :option-label (fn [val ctx]
+                                              (let [option-label (contrib.eval/ensure-fn (:option-label props option-label-default))]
+                                                (option-label val ctx)))}
+                anchor-props {:class (:class props)
+                              :user-renderer (r/partial options-value-bridge select-html select-props ctx)}
+                ctx (assoc ctx :hypercrud.ui/display-mode (r/track identity :hypercrud.browser.browser-ui/user))]
+            [hyperfiddle.ui/ui-from-link options-ref ctx anchor-props])))
       (either/branch select-error-cmp identity)))
