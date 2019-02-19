@@ -45,9 +45,10 @@
         true {:get :ssr
               true :405}}])
 
-(defrecord IdeDomain [ident fiddle-dbname databases environment home-route service-uri build user-domain-record
+(defrecord IdeDomain [basis ident fiddle-dbname databases environment home-route service-uri build user-domain-record
                       html-root-id]
   domain/Domain
+  (basis [domain] basis)
   (ident [domain] ident)
   (fiddle-dbname [domain] fiddle-dbname)
   (databases [domain] databases)
@@ -81,14 +82,15 @@
 
 (defn from-rep [rep] (-> (map->IdeDomain rep) with-serializer))
 
-(defn build+ [ide-datomic-record service-uri build user-datomic-record]
+(defn build+ [domains-basis ide-datomic-record service-uri build user-datomic-record]
   (mlet [environment (reader/read-edn-string+ (:domain/environment ide-datomic-record))
          :let [environment (assoc environment :domain/disable-javascript (:domain/disable-javascript ide-datomic-record))]
          home-route (reader/read-edn-string+ (:domain/home-route ide-datomic-record))
          home-route (route/validate-route+ home-route)
          fiddle-dbname (multi-datomic/fiddle-dbname+ ide-datomic-record)]
     (return
-      (-> {:ident (:domain/ident ide-datomic-record)
+      (-> {:basis domains-basis
+           :ident (:domain/ident ide-datomic-record)
            :fiddle-dbname fiddle-dbname
            :databases (-> (->> (:domain/databases user-datomic-record)
                                (map (fn [db]
@@ -115,8 +117,9 @@
           with-serializer))))
 
 ; shitty code duplication because we cant pass our api-routes data structure as props (no regex equality)
-(defrecord EdnishDomain [ident fiddle-dbname databases environment home-route service-uri build]
+(defrecord EdnishDomain [basis ident fiddle-dbname databases environment home-route service-uri build]
   domain/Domain
+  (basis [domain] basis)
   (ident [domain] ident)
   (fiddle-dbname [domain] fiddle-dbname)
   (databases [domain] databases)
@@ -130,11 +133,12 @@
 (defn build-user+
   ([ide-domain]
    (build-user+ ide-domain (:user-domain-record ide-domain)))
-  ([ide-domain user-domain-record]
+  ([ide-domain user-domain-record]                          ; this api is clumsy, should just use single arity (hydrate with ide) so bases are sensical
     ; shitty code duplication because we cant pass our api-routes data structure as props (no regex equality)
    (mlet [environment (reader/read-edn-string+ (:domain/environment user-domain-record))
           fiddle-dbname (multi-datomic/fiddle-dbname+ user-domain-record)
-          :let [partial-domain {:ident (:domain/ident user-domain-record)
+          :let [partial-domain {:basis (:basis ide-domain)
+                                :ident (:domain/ident user-domain-record)
                                 :fiddle-dbname fiddle-dbname
                                 :databases (->> (:domain/databases user-domain-record)
                                                 (map (juxt :domain.database/name :domain.database/record))
@@ -153,7 +157,7 @@
         (p/then (fn [[ide-domain user-domain]]
                   (if (nil? (:db/id ide-domain))
                     (p/rejected (ex-info "IDE domain not found" {:hyperfiddle.io/http-status-code 404}))
-                    (-> (build+ ide-domain service-uri build user-domain)
+                    (-> (build+ (get local-basis "$domains") ide-domain service-uri build user-domain)
                         (either/branch p/rejected p/resolved))))))))
 
 ; app-domains = #{"hyperfiddle.com"}
