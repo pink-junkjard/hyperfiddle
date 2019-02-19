@@ -56,7 +56,7 @@
           (get-secure-db-from-branch+ [{:keys [branch-ident dbname tx] :as branch}]
             (or (get @db-with-lookup branch)
                 (let [db-with+ (mlet [t (or (some-> (get local-basis dbname) exception/success)
-                                            (exception/failure (RuntimeException. (str "busted local basis: " (pr-str dbname) " not in " (pr-str local-basis)))))
+                                            (exception/failure (ex-info (str "Basis not found") {:dbname dbname :local-basis local-basis})))
                                       init-db-with (if branch-ident
                                                      (let [parent-ident (branch/decode-parent-branch branch-ident)
                                                            parent-branch (or (->> staged-branches
