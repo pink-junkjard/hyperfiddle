@@ -3,6 +3,7 @@
     [cats.core :as cats :refer [mlet]]
     [cats.monad.either :as either]
     [clojure.spec.alpha :as s]
+    [contrib.data :refer [unqualify]]
     [contrib.datomic]
     [contrib.reactive :as r]
     [hypercrud.browser.base :as base]
@@ -94,7 +95,10 @@
          [(requests-here ctx)
           (for [[_ ctx] (hypercrud.browser.context/spread-rows ctx)]
             [(requests-here ctx)
-             (for [[i ctx] (hypercrud.browser.context/spread-elements ctx)]
-               [(requests-here ctx)
-                (request-attr-level ctx)])])])
+             (for [[_ {el :hypercrud.browser/element :as ctx}] (hypercrud.browser.context/spread-elements ctx)]
+               (case (unqualify (contrib.datomic/parser-type @el))
+                 :variable [(requests-here ctx)]
+                 :aggregate [(requests-here ctx)]
+                 :pull [(requests-here ctx)
+                        (request-attr-level ctx)]))])])
        (cross-streams ctx)])))

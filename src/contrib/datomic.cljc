@@ -36,7 +36,7 @@
                    Variable ::variable
                    Aggregate ::aggregate})
 
-(defn parser-type "element or qfind" [?p]
+(defn parser-type "element or qfind" [?p]                   ; not reactive
   (parser-types (if ?p
                   (type ?p))))
 

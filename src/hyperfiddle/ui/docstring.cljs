@@ -28,11 +28,10 @@
     attr))
 
 (defn semantic-docstring [ctx & [doc-override]]
-  (let [[_ a _] (context/eav ctx)
-        attr (contrib.datomic/attr @(:hypercrud.browser/schema ctx) a)
+  (let [attr (context/attr ctx)
         typedoc (some->> (attribute-schema-human attr) (interpose " ") (apply str))
         help-md (blank->nil
                   ; Use path over a because it could have flattened the nesting and attr is ambiguous
-                  (str (if typedoc (str "`" a " " typedoc "`\n\n")) ; markdown needs double line-break
+                  (str (if typedoc (str "`" (:db/ident attr) " " typedoc "`\n\n")) ; markdown needs double line-break
                        (or doc-override (-> attr :db/doc blank->nil))))]
     help-md))

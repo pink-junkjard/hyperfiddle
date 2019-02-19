@@ -143,7 +143,7 @@
         element-type (if ?element (contrib.datomic/parser-type @?element))
         i (:hypercrud.browser/element-index ctx)
         [_ a _] (context/eav ctx)
-        attr (and a (contrib.datomic/attr @(:hypercrud.browser/schema ctx) a))]
+        attr (and a (context/attr ctx a))]
     (match* [i (unqualify element-type) a attr]             ; has-child-fields @(r/fmap-> (:hypercrud.browser/field ctx) ::field/children nil? not)
       [_ nil _ _] nil                                       ; e.g. !field[js/user.hyperblog-post-link]()
       [_ :pull :db/id _] (identity-label _ ctx props)
@@ -404,20 +404,19 @@ User renderers should not be exposed to the reaction."
                               [table columns ctx props]]
       [_] [:pre (pr-str a)])))
 
-(defn table-product [ctx props]
-  ; Don't flatten the hiccup
+(defn table-column-product "We collapse the top layer of pull into a cartesian product.
+  What we really want is grouped table headers to clarify what is going on here."
+  [ctx props]
+  ; http://hyperfiddle.hyperfiddle.site/:database!options-list/
   #_(cons (field [] ctx props))
-  (->> (for [[i ctx-e] (hypercrud.browser.context/spread-elements ctx)]
+  (->> (for [[i {el :hypercrud.browser/element :as ctx-e}] (hypercrud.browser.context/spread-elements ctx)]
          #_(cons (field [i] ctx props))
-         (for [[a ctx-a] (hypercrud.browser.context/spread-attributes ctx-e)]
-           (field [i a] ctx props)))
-       (mapcat identity)
-       doall))
-
-(defn form-product [ctx props]
-  (->> (for [[i ctx-e] (hypercrud.browser.context/spread-elements ctx)
-             [a ctx-a] (hypercrud.browser.context/spread-attributes ctx-e)]
-         (field [i a] ctx props))
+         (case (unqualify (contrib.datomic/parser-type @el))
+           :variable [(field [i] ctx props)]
+           :aggregate [(field [i] ctx props)]
+           :pull (for [[a ctx-a] (hypercrud.browser.context/spread-attributes ctx-e)]
+                   (field [i a] ctx props))))
+       (mapcat identity)                                    ; Don't flatten the hiccup
        doall))
 
 (defn ^:export result "Default result renderer. Invoked as fn, returns seq-hiccup, hiccup or
@@ -431,10 +430,10 @@ nil. call site must wrap with a Reagent component"          ; is this just hyper
         (condp some [(type @(:hypercrud.browser/qfind ctx))] ; spread-rows
 
           #{FindRel FindColl}
-          [table table-product ctx props]
+          [table table-column-product ctx props]
 
           #{FindTuple FindScalar}
-          [form form-product val ctx props])]))
+          [form table-column-product val ctx props])]))
    [iframe-field-default val ctx props]])
 
 (def ^:dynamic markdown)                                    ; this should be hf-contrib or something

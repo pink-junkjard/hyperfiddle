@@ -3,7 +3,7 @@
     [cats.core :refer [mlet return =<< fmap]]
     [cats.monad.either :as either :refer [left right either?]]
     [contrib.ct :refer [unwrap maybe maybe->either]]
-    [contrib.data :refer [ancestry-common ancestry-divergence]]
+    [contrib.data :refer [ancestry-common ancestry-divergence unqualify]]
     [contrib.datomic]
     [contrib.datomic2]
     [contrib.eval :as eval]
@@ -452,15 +452,27 @@
   (let [[_ _ v] (eav ctx)]
     v))
 
+(defn attr
+  ([ctx]
+   (attr ctx (a ctx)))
+  ([ctx a]                                                  ; explicit arity useful for inspecting children
+   (some-> (:hypercrud.browser/schema ctx) deref (contrib.datomic/attr a))))
+
+(defn attr?
+  ([ctx corcs]
+   (attr? ctx (a ctx) corcs))
+  ([ctx a corcs]
+   (some-> (:hypercrud.browser/schema ctx) deref (contrib.datomic/attr? a corcs))))
+
 (defn identity? [ctx a]                                     ; might not be same a when checking children
   (let [[e _ _] (eav ctx)                                   ; Wrong in child case
-        attr (and a (:hypercrud.browser/schema ctx) @(:hypercrud.browser/schema ctx)
-                  (contrib.datomic/attr @(:hypercrud.browser/schema ctx) a))]
+        attr (and a (attr ctx a))]
     (cond
       (= :db/id a) true?
       ; For first time entity creation only, use e.g. keyword editor to set the identity
       (= :db/ident a) (not (underlying-tempid ctx e))
-      (= :db.unique/identity (:db/unique attr)) (not (underlying-tempid ctx e))
+      (= :db.unique/identity (:db/unique attr))             ; (attr? ctx a :db.unique/identity)
+      (not (underlying-tempid ctx e))
       :else false)))
 
 (defn row "Row does not set E. E is the parent, not the child, and row is analogous to :ref :many child."
@@ -752,14 +764,16 @@
     (for [i (range (count (datascript.parser/find-elements @r-qfind)))]
       [i ((or f element) ctx i)])))
 
-(defn spread-attributes "not recursive, just one entity level"
+(defn ^:export spread-attributes "not recursive, just one entity level"
   [ctx]
-  (let [{:keys [:hypercrud.browser/element] :as ctx} (-infer-implicit-element ctx)]
-    (condp = (type @element)
-      Variable []
-      Aggregate []
-      Pull (for [k (contrib.datomic/pull-level (pull-enclosure-here ctx))]
-             [k (attribute ctx k)]))))
+  (let [{:keys [:hypercrud.browser/element] :as ctx} (-infer-implicit-element ctx)
+        el @element]
+    (case (unqualify (contrib.datomic/parser-type el))
+      ; Handle variable and aggregate above
+      :variable [#_[(get-in element [:variable :symbol]) ctx]]
+      :aggregate [#_[(get-in element [:fn :symbol]) ctx]]
+      :pull (for [k (contrib.datomic/pull-level (pull-enclosure-here ctx))]
+              [k (attribute ctx k)]))))
 
 ; var first, then can always use db/id on row. No not true – collisions! It is the [?e ?f] product which is unique
 

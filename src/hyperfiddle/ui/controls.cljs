@@ -43,11 +43,13 @@
 
 (defn element-label [_ {:keys [:hypercrud.browser/element] :as ctx} & [props]]
   {:pre [(context/qfind-level? ctx) element (:hypercrud.browser/schema ctx)]}
-  (let [label (case (unqualify (contrib.datomic/parser-type element))
-                :pull nil                                   ; ???
-                :variable (get-in element [:variable :symbol])
-                :aggregate (str (cons (get-in element [:fn :symbol])
-                                      (map (comp second first) (:args element)))))]
+  (let [el @element
+        label (case (unqualify (contrib.datomic/parser-type el))
+                ; :pull addresses the grouped double header which our grids don't ask for today
+                :pull nil
+                :variable (:symbol el)
+                :aggregate (str (cons (:symbol el)
+                                      (map (comp second first) (:args el)))))]
     (label-with-docs label (semantic-docstring ctx) props)))
 
 (defn ref-label [_ ctx & [props]]
