@@ -46,8 +46,8 @@
                  (hydrate-requests [io local-basis staged-branches requests]
                    (p/do* (hydrate-requests/hydrate-requests domain local-basis requests staged-branches ?subject))))]
     (alet [schemas (schema/hydrate-schemas aux-io domain local-basis branch staged-branches)
-           attr-renderers (project/hydrate-attr-renderers aux-io local-basis branch staged-branches)
-           project (project/hydrate-project-record aux-io local-basis branch staged-branches)]
+           attr-renderers (project/hydrate-attr-renderers aux-io domain local-basis branch staged-branches)
+           project (project/hydrate-project-record aux-io domain local-basis branch staged-branches)]
       (let [db-with-lookup (atom {})
             get-secure-db-with+ (hydrate-requests/build-get-secure-db-with+ domain staged-branches db-with-lookup local-basis)]
         (perf/time (fn [get-total-time] (timbre/debug "Hydrate-route::d/with" "total time: " (get-total-time)))

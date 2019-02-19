@@ -1,7 +1,7 @@
 (ns hyperfiddle.io.global-basis
   (:refer-clojure :exclude [compare])
   (:require
-    [cats.core :as cats :refer [mlet]]
+    [cats.core :as cats]
     [cats.labs.promise]
     [contrib.performance :as perf]
     [hyperfiddle.domain :as domain]
@@ -11,13 +11,9 @@
 
 (defn global-basis [io domain]
   (perf/time-promise
-    (mlet [sync (->> (domain/databases domain)
-                     keys
-                     (into #{'hyperfiddle.domain/fiddle-database})
-                     (io/sync io))]
-      (cats/return                                          ; Just return the sync and reconstruct which is what in local-basis
-        {:domain 0
-         :user sync}))
+    (->> (domain/databases domain) keys set
+         (io/sync io)
+         (cats/fmap #(assoc {:domain 0} :user %)))
     (fn [err get-total-time]
       (timbre/debug "global-basis failure;" "total time:" (get-total-time)))
     (fn [success get-total-time]

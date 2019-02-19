@@ -6,7 +6,7 @@
 
 (defprotocol Domain
   (ident [domain])
-  (fiddle-database [domain])
+  (fiddle-dbname [domain])
   (databases [domain])
   (environment [domain])
   (url-decode [domain s])
@@ -16,9 +16,7 @@
   )
 
 (defn database [domain dbname]
-  (if (= dbname 'hyperfiddle.domain/fiddle-database)
-    (fiddle-database domain)
-    (get (databases domain) dbname)))
+  (get (databases domain) dbname))
 
 (defn database-color [domain dbname]
   (or (:database/color (database domain dbname)) (color/color-for-name dbname)))

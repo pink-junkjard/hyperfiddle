@@ -16,8 +16,10 @@
             [hypercrud.types.DbRef :refer [->DbRef]]
             [hypercrud.types.EntityRequest :refer [->EntityRequest]]
             [hypercrud.types.QueryRequest :refer [->QueryRequest]]
+            [hyperfiddle.domain :as domain]
             [hyperfiddle.fiddle :as fiddle]
             [hyperfiddle.ide.console-links]                 ; just the parser
+            [hyperfiddle.runtime :as runtime]
             [hyperfiddle.system-fiddle :as system-fiddle])
   #?(:clj
      (:import
@@ -47,7 +49,7 @@
     (try-either
       (let [fiddle @(r/fmap first (:hypercrud.browser/route ctx))
             _ (assert fiddle "missing fiddle-id")
-            dbval (->DbRef 'hyperfiddle.domain/fiddle-database (:branch ctx))]
+            dbval (->DbRef (domain/fiddle-dbname (runtime/domain (:peer ctx))) (:branch ctx))]
         (->EntityRequest (legacy-fiddle-ident->lookup-ref fiddle) dbval fiddle/browser-pull)))))
 
 (defn validate-fiddle [fiddle]
