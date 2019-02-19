@@ -9,7 +9,7 @@
     [taoensso.timbre :as timbre]))
 
 
-(def running-ls-schema-version 4)
+(def running-ls-schema-version 5)
 
 (def ls-migrations
   {2 (fn [ls-state]                                         ; v3 removed non-nil stage from localstorage
@@ -23,6 +23,9 @@
    3 (fn [ls-state]                                         ; v4 add :last-modified
        (assert (= 3 (:version ls-state)))
        (assoc ls-state :version 4 :last-modified 0))        ; just use the epoch
+   4 (fn [ls-state]                                         ; v5 migrate uris to dbnames
+       ; just pave anything with a uri
+       (dissoc ls-state ::runtime/auto-transact ::runtime/global-basis :stage))
    })
 
 (defn- state->local-storage [state-val]
