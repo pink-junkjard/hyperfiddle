@@ -20,4 +20,5 @@
 (defn reachable-attrs [ctx]
   (->> (reachable-pullpaths ctx)
        (map last)
-       (remove nil?)))
+       (remove nil?)
+       distinct))

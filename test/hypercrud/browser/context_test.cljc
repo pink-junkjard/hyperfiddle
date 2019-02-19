@@ -1232,6 +1232,28 @@
            ))
     ))
 
+(deftest reachable-attrs
+  (is (= (-> (mock-fiddle! fixtures.domains/schemas fixtures.domains/fiddles :hyperfiddle.ide/domain)
+             (context/attribute :domain/databases)
+             (context/row 17592186046511)
+             (context/attribute :db/id)
+             (contrib.datomic2/reachable-attrs))
+         [:db/id
+          :domain/ident
+          :domain/environment
+          :domain/disable-javascript
+          :domain/home-route
+          :domain/code
+          :domain/css
+          :domain/databases
+          :domain.database/name
+          :domain.database/record
+          :database/uri
+          :database.custom-security/server
+          :domain/fiddle-database]))
+
+  )
+
 ;(deftest options-findrel-1
 ;  (is (= (-> (mock-fiddle! fixtures.domains/schemas fixtures.domains/fiddles :hyperfiddle.ide/domain)
 ;             (context/focus [:domain/fiddle-database])

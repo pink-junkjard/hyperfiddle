@@ -148,7 +148,7 @@
        (remove nil?)
        vec))
 
-(defn pull-union [& vs]
+(defn pull-union [vs]
   ; they have to be the same data-shape (schema), which if this is a valid pull, they are
   (cond
     (sequential? (first vs))
@@ -181,6 +181,7 @@
 (defn pull-enclosure "Union the requested pull-pattern-shape with the actual result shape"
   [schema shape coll]
   {:pre [schema]}
+  ; Only do this if the pull contains splat
   (apply pull-union shape (map (partial tree-derivative schema) coll)))
 
 (defn pull-traverse "Manufacture superset of possible link paths
@@ -224,15 +225,6 @@
    {:pre [#_(satisfies? SchemaIndexedNormalized schema)]}
    (and (valueType? schema a :db.type/ref)
         (cardinality? schema a :db.cardinality/one))))
-
-(defn pullpath-unwind-while "Find oldest ancestor matching pred.
-  Hint: Pred probably closes over schema."
-  [f? pullpath]
-  #_(drop-while f? (reverse pullpath))
-  (loop [[a & as :as here] (reverse pullpath)]              ; pullpath is guaranteed to align with pullshape
-    (if (and a (f? a))
-      (recur as)
-      here)))
 
 (defn pullshape-get [pullshape a]                        ; arg order is like 'get
   (-> pullshape
