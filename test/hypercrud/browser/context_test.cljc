@@ -1216,13 +1216,6 @@
             [:domain/fiddle-database]
             [:domain/fiddle-database :database/uri]]))
 
-    (is (= (-> (mock-fiddle! fixtures.domains/schemas fixtures.domains/fiddles :hyperfiddle.ide/domain)
-               (context/attribute :domain/databases)
-               (context/row 17592186046511)
-               (context/attribute :db/id)
-               (context/refocus+ :domain/databases))
-           ))
-
     (def ctx (mock-fiddle! fixtures.domains/schemas fixtures.domains/fiddles :hyperfiddle.ide/domain))
     (is (= (-> ctx
                (context/attribute :domain/databases)

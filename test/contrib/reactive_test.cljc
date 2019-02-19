@@ -32,7 +32,7 @@
          (is (= (r/fmap inc a) (r/fmap inc a))))
       (is (= 2 @(r/fmap inc a)))))
 
-  (testing "variable arity"
+  #_(testing "variable arity"
     (let [a (r/atom 1)]
       (is (= @(r/fmap + a a) 2))
       (is (= @(r/fmap + (r/pure 1) (r/pure 1)) 2))
