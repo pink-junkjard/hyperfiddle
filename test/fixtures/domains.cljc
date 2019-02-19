@@ -10,16 +10,16 @@
       :fiddle/css
       "div.hyperfiddle.ui div.hyperfiddle.field.-domain-router,\ndiv.hyperfiddle.ui div.hyperfiddle.field.-domain-environment,\ndiv.hyperfiddle.ui div.hyperfiddle.field.-domain-code,\ndiv.hyperfiddle.ui div.hyperfiddle.field.-domain-css\n{ display: block; }\n\n.hyperfiddle-ide table.hyperfiddle { table-layout: fixed; }\n.hyperfiddle-ide th.-db-id { width: 60px; }\n.hyperfiddle-ide th.-domain-database-name { width: 200px; }\n.hyperfiddle-ide td.-db-id button { padding: 0px; }\n.hyperfiddle-ide td.-database-uri > div { padding: 4px 5px; }",
       :fiddle/pull
-      "[:db/id\n :domain/ident\n :domain/environment\n :domain/aliases\n :domain/disable-javascript\n :domain/home-route\n #_ :domain/router\n :domain/code\n :domain/css\n {:domain/databases [:db/id \n                     :domain.database/name \n                     {:domain.database/record [:db/id \n                                               :database/uri\n                                               #_#_#_:hyperfiddle/owners\n                                               {:database/write-security [:db/ident]}\n                                               :database.custom-security/client\n                                               :database.custom-security/server]}]}\n {:domain/fiddle-database [:db/id \n                           #_#_#_#_:database/uri\n                           :hyperfiddle/owners\n                           {:database/write-security [:db/ident]}\n                           :database.custom-security/client\n                           :database.custom-security/server]}\n :hyperfiddle/owners]",
+      "[:db/id\n :domain/ident\n :domain/environment\n :domain/aliases\n :domain/disable-javascript\n :domain/home-route\n #_ :domain/router\n :domain/code\n :domain/css\n {:domain/databases [:db/id \n                     :domain.database/name \n                     {:domain.database/record [:db/id \n                                               :database/uri\n                                               #_#_#_:hyperfiddle/owners\n                                               {:database/write-security [:db/ident]}\n                                               :database.custom-security/client\n                                               :database.custom-security/server]}]}\n {:domain/fiddle-database [:database/uri\n                           #_#_#_#_:hyperfiddle/owners\n                           {:database/write-security [:db/ident]}\n                           :database.custom-security/client\n                           :database.custom-security/server]}\n :hyperfiddle/owners]",
       :fiddle/ident :hyperfiddle.ide/domain,
       :fiddle/renderer
-      "(let [ctx (update ctx :hypercrud.browser/result (partial contrib.reactive/fmap hyperfiddle.foundation/shadow-domain))]\n  [:div props\n   [:h3 \"Environment: \" [hyperfiddle.ui/value [:domain/ident] ctx #(str %)]]\n   [hyperfiddle.ui/field [:domain/ident] ctx hyperfiddle.ide.fiddles.domain/domain-ident-renderer]\n   [hyperfiddle.ui/field [:hyperfiddle/owners] ctx hyperfiddle.ui/hyper-control]\n   [hyperfiddle.ui/field [:domain/databases] ctx\n    (fn [val ctx props]\n      [hyperfiddle.ui/table\n       (fn [ctx]\n         [[hyperfiddle.ui/field [:db/id] ctx \n           (fn [val ctx props]\n             (hyperfiddle.ui/link #{:domain/databases :hf/remove} ctx \"remove\"))]\n          [hyperfiddle.ui/field [:domain.database/name] ctx hyperfiddle.ui/hyper-control]\n          [hyperfiddle.ui/field [:domain.database/record :database/uri] ctx hyperfiddle.ui/hyper-control]])\n       ctx])]\n   [hyperfiddle.ui/field [:domain/fiddle-database] ctx hyperfiddle.ui/hyper-control {:options :database-options\n                                                                                     :option-label (comp :database/uri first)}]\n   [hyperfiddle.ui/field [:domain/aliases] ctx hyperfiddle.ui/hyper-control]\n   [hyperfiddle.ui/field [:domain/disable-javascript] ctx hyperfiddle.ui/hyper-control]\n   [hyperfiddle.ui/field [:domain/home-route] ctx hyperfiddle.ui/hyper-control]\n   [hyperfiddle.ui/field [:domain/environment] ctx hyperfiddle.ui/hyper-control]\n   [:p \"Source code concerns. todo migrate into fiddle-database\"]\n   [hyperfiddle.ui/field [:domain/code] ctx hyperfiddle.ui/hyper-control]\n   [hyperfiddle.ui/field [:domain/css] ctx hyperfiddle.ui/hyper-control]\n   [:p \"Attribute renderers. todo migrate into fiddle-database\"]\n   [hyperfiddle.ui/browse :attribute-renderers ctx]])",
+      "(let [ctx (update ctx :hypercrud.browser/result (partial contrib.reactive/fmap hyperfiddle.foundation/shadow-domain))]\n  [:div props\n   [:h3 \"Environment: \" [hyperfiddle.ui/value [:domain/ident] ctx #(str %)]]\n   [hyperfiddle.ui/field [:domain/ident] ctx hyperfiddle.ide.fiddles.domain/domain-ident-renderer]\n   [hyperfiddle.ui/field [:hyperfiddle/owners] ctx hyperfiddle.ui/hyper-control]\n   [hyperfiddle.ui/field [:domain/databases] ctx\n    (fn [val ctx props]\n      [hyperfiddle.ui/table\n       (fn [ctx]\n         [[hyperfiddle.ui/field [:db/id] ctx \n           (fn [val ctx props]\n             (hyperfiddle.ui/link #{:domain/databases :hf/remove} ctx \"remove\"))]\n          [hyperfiddle.ui/field [:domain.database/name] ctx hyperfiddle.ui/hyper-control]\n          [hyperfiddle.ui/field [:domain.database/record :database/uri] ctx hyperfiddle.ui/hyper-control]])\n       ctx])]\n   [hyperfiddle.ui/field [:domain/fiddle-database] ctx hyperfiddle.ui/hyper-control \n    {:options :database/options-list\n     :option-label (comp :database/uri first)}]\n   [hyperfiddle.ui/field [:domain/aliases] ctx hyperfiddle.ui/hyper-control]\n   [hyperfiddle.ui/field [:domain/disable-javascript] ctx hyperfiddle.ui/hyper-control]\n   [hyperfiddle.ui/field [:domain/home-route] ctx hyperfiddle.ui/hyper-control]\n   [hyperfiddle.ui/field [:domain/environment] ctx hyperfiddle.ui/hyper-control]\n   [:p \"Source code concerns. todo migrate into fiddle-database\"]\n   [hyperfiddle.ui/field [:domain/code] ctx hyperfiddle.ui/hyper-control]\n   [hyperfiddle.ui/field [:domain/css] ctx hyperfiddle.ui/hyper-control]\n   [:p \"Attribute renderers. todo migrate into fiddle-database\"]\n   [hyperfiddle.ui/browse :hyperfiddle.ide/domain-attribute-renderers ctx]])",
       :db/doc "Databases, DNS, API keys, etc",
       :db/id 17592186045564,
       :fiddle/type :entity,
       :fiddle/links
       [{:db/id 17592186061425,
-        :link/class [:attribute-renderers :hf/iframe],
+        :link/class [:hf/iframe],
         :link/fiddle
         {:db/id 17592186060438,
          :fiddle/ident
@@ -42,12 +42,12 @@
          :fiddle/type :entity},
         :link/path "$domains :domain/databases"}
        {:db/id 17592186061770,
-        :link/class [:database-options :hf/iframe],
+        :link/class [:hf/iframe],
         :link/fiddle
         {:db/id 17592186061550,
          :fiddle/ident :database/options-list,
          :fiddle/query
-         "[:find (pull $domains ?e [:db/id :database/uri]) ?name\n :in $domains \n :where \n [$domains ?e :database/uri ?uri]\n [(str ?uri) ?suri]\n [(.substring ?suri 28) ?name]]",
+         "[:find \n (pull $domains ?e [:db/id :database/uri]) \n ?name\n :in $domains \n :where \n [$domains ?e :database/uri ?uri]\n [(str ?uri) ?suri]\n [(.substring ?suri 28) ?name]]",
          :fiddle/type :query},
         :link/path ":hyperfiddle.ide/domain"}]}
      {:db/id 17592186045517,
@@ -62,12 +62,43 @@
         :domain.database/record {:db/id 17592186046100, :database/uri #uri "datomic:free://datomic:4334/hyperfiddle-users"}}
        {:db/id 17592186046513, :domain.database/name "$", :domain.database/record {:db/id 17592186046090, :database/uri #uri "datomic:free://datomic:4334/root"}}],
       :hyperfiddle/owners [#uuid "87108fa3-e7d5-4ed5-a87a-81a6eb6e1aae" #uuid "acd054a8-4e36-4d6c-a9ec-95bdc47f0d39" #uuid "ca192cc8-4ccb-48c6-853f-6fc7dcdd1810"],
-      :domain/fiddle-database {:db/id 17592186046090},
+      :domain/fiddle-database {:database/uri #uri "datomic:free://datomic:4334/root"},
       :domain/css
       "/* Not th – that hits fiddle shortcuts */\ndiv.hyperfiddle.ui div.hyperfiddle.field.-fiddle-pull,\ndiv.hyperfiddle.ui div.hyperfiddle.field.-fiddle-query,\ndiv.hyperfiddle.ui div.hyperfiddle.field.-fiddle-cljs-ns,\ndiv.hyperfiddle.ui div.hyperfiddle.field.-fiddle-renderer,\ndiv.hyperfiddle.ui div.hyperfiddle.field.-fiddle-css,\ndiv.hyperfiddle.ui div.hyperfiddle.field.-fiddle-markdown { display: block !important; }",
       :domain/ident "hyperfiddle",
       :domain/environment
       "{:auth0 {\"hyperfiddle.net\" {:domain \"https://hypercrud.auth0.com\"\n                            :client-id \"HKjJJXteIwACAPO2y7AFtJCkuQj1y2yt\"}\n         \"hfmaster.xyz\" {:domain \"https://hypercrud-master.auth0.com\"\n                         :client-id \"IGkBUHFdxiO1uvc52B5InIvNFoGgY229\"}\n         \"hffeature.xyz\" {:domain \"https://hypercrud-master.auth0.com\"\n                          :client-id \"IGkBUHFdxiO1uvc52B5InIvNFoGgY229\"}\n         \"hyperfiddle.site\" {:domain \"https://hypercrud-dev.auth0.com\"\n                             :client-id \"FV2T2B6QDSdakM0Hg57VygzdvZctn7oj\"}\n         }}"}]
+
+    :database/options-list
+    [{:db/id 17592186061550,
+      :fiddle/query
+      "[:find \n (pull $domains ?e [:db/id :database/uri]) \n ?name\n :in $domains \n :where \n [$domains ?e :database/uri ?uri]\n [(str ?uri) ?suri]\n [(.substring ?suri 28) ?name]]",
+      :fiddle/type :query,
+      :fiddle/css
+      "table.hyperfiddle {table-layout: fixed;}",
+      :fiddle/ident :database/options-list}
+     [[{:db/id 17592186046713, :database/uri #uri "datomic:free://datomic:4334/mbrainz"} "mbrainz"]
+      [{:db/id 17592186046769, :database/uri #uri "datomic:free://172.18.0.3:4334/tank"} "34/tank"]
+      [{:db/id 17592186046090, :database/uri #uri "datomic:free://datomic:4334/root"} "root"]
+      [{:db/id 17592186046100, :database/uri #uri "datomic:free://datomic:4334/hyperfiddle-users"} "hyperfiddle-users"]
+      [{:db/id 17592186046093, :database/uri #uri "datomic:free://datomic:4334/hyperfiddle-blog-source"} "hyperfiddle-blog-source"]
+      [{:db/id 17592186046097, :database/uri #uri "datomic:free://datomic:4334/sandbox"} "sandbox"]
+      [{:db/id 17592186046639, :database/uri #uri "datomic:free://datomic:4334/tank"} "tank"]
+      [{:db/id 17592186046177, :database/uri #uri "datomic:free://datomic:4334/domains"} "domains"]
+      [{:db/id 17592186046240, :database/uri #uri "datomic:free://datomic:4334/~dustin.getz@hyperfiddle.net+beta"} "~dustin.getz@hyperfiddle.net+beta"]
+      [{:db/id 17592186046092, :database/uri #uri "datomic:free://datomic:4334/dustingetz.com"} "dustingetz.com"]
+      [{:db/id 17592186046705, :database/uri #uri "datomic:free://datomic:4334/clojurians-log"} "clojurians-log"]
+      [{:db/id 17592186046096, :database/uri #uri "datomic:free://datomic:4334/seattle"} "seattle"]
+      [{:db/id 17592186046088, :database/uri #uri "datomic:free://datomic:4334/litepay"} "litepay"]
+      [{:db/id 17592186046089, :database/uri #uri "datomic:free://datomic:4334/litepay-app"} "litepay-app"]
+      [{:db/id 17592186046104, :database/uri #uri "datomic:free://datomic:4334/~brian@yellowdig.com+1"} "~brian@yellowdig.com+1"]
+      [{:db/id 17592186046087, :database/uri #uri "datomic:free://datomic:4334/~alexandr.kozyrev@gmail.com+1"} "~alexandr.kozyrev@gmail.com+1"]
+      [{:db/id 17592186046720, :database/uri #uri "datomic:free://datomic:4334/~monstagoblin@googlemail.com+1"} "~monstagoblin@googlemail.com+1"]
+      [{:db/id 17592186046141, :database/uri #uri "datomic:free://datomic:4334/~khardenstine@gmail.com+1"} "~khardenstine@gmail.com+1"]
+      [{:db/id 17592186046143, :database/uri #uri "datomic:free://datomic:4334/~khardenstine@gmail.com+2"} "~khardenstine@gmail.com+2"]
+      [{:db/id 17592186046103, :database/uri #uri "datomic:free://datomic:4334/~dustin.getz"} "~dustin.getz"]
+      [{:db/id 17592186046462, :database/uri #uri "datomic:free://datomic:4334/~david.rolle@gmail.com+1"} "~david.rolle@gmail.com+1"]]]
+
     })
 
 (def schema

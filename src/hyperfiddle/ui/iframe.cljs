@@ -52,7 +52,10 @@
 (defn- ui-comp [ctx & [props]]                              ; user-renderer comes through here
   (let [value @(:hypercrud.browser/result ctx)              ; TODO remove this, make them ask
         props (update props :class css (auto-ui-css-class ctx))
-        view-props (select-keys props [:class :initial-tab :on-click #_:disabled]) ; https://github.com/hyperfiddle/hyperfiddle/issues/698
+
+        ; The reactdom component should filter the keys at the last second.
+        ; https://github.com/hyperfiddle/hyperfiddle/issues/698
+        view-props props #_(select-keys props [:class :initial-tab :on-click #_:disabled])
         display-mode @(:hypercrud.ui/display-mode ctx)
         error-props (-> (select-keys props [:class :on-click])
                         (update :class css "hyperfiddle-error"))]

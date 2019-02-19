@@ -920,7 +920,6 @@
             :link/tx-fn ":user/new-post",
             :link/formula "(constantly (hyperfiddle.api/tempid! ctx))"})))
 
-
   )
 
 (deftest more-link-stuff
@@ -1215,8 +1214,7 @@
             #_[:domain/databases :domain.database/record :database/write-security :db/id]
             [:domain/databases :domain.database/record :database.custom-security/server]
             [:domain/fiddle-database]
-            [:domain/fiddle-database :db/id]
-            [:domain/fiddle-database :database.custom-security/server]]))
+            [:domain/fiddle-database :database/uri]]))
 
     (is (= (-> (mock-fiddle! fixtures.domains/schemas fixtures.domains/fiddles :hyperfiddle.ide/domain)
                (context/attribute :domain/databases)
@@ -1240,6 +1238,26 @@
            [[:domain/ident "hyperfiddle"] :domain/databases 17592186046511]
            ))
     ))
+
+;(deftest options-findrel-1
+;  (is (= (-> (mock-fiddle! fixtures.domains/schemas fixtures.domains/fiddles :hyperfiddle.ide/domain)
+;             (context/focus [:domain/fiddle-database])
+;             (context/v))
+;         [:database/uri #uri"datomic:free://datomic:4334/root"]))
+;
+;  (def ctx (mock-fiddle! fixtures.domains/schemas fixtures.domains/fiddles :database/options-list))
+;  (is (= (context/row-key ctx [{:db/id 17592186046713, :database/uri #uri "datomic:free://datomic:4334/mbrainz"} "mbrainz"])
+;         [[:database/uri #uri"datomic:free://datomic:4334/mbrainz"] "mbrainz"]))
+;
+;  (is (= (-> ctx (context/row [[:database/uri #uri"datomic:free://datomic:4334/mbrainz"] "mbrainz"])
+;             (context/data))
+;         [{:db/id 17592186046713, :database/uri #uri"datomic:free://datomic:4334/mbrainz"} "mbrainz"]))
+;
+;  (is (-> (mock-fiddle! fixtures.domains/schemas fixtures.domains/fiddles :hyperfiddle.ide/domain)
+;          @(hyperfiddle.data/select-many-here :database/options-list)
+;          first :link/fiddle :fiddle/ident (= :database/options-list)))
+;
+;  )
 
 #_(deftest deps-satisfied-1
     []

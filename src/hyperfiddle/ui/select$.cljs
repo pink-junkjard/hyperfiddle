@@ -83,12 +83,24 @@
         (boolean (:read-only props))                        ; legacy
         (nil? e))))
 
-(defn options-value-bridge [select-view select-props anchor-ctx
-                            target-val target-ctx target-props]
+(defn options-value-bridge [select-view anchor-ctx
+                            target-val target-ctx props]
   ; if select is qfind-level, is value tupled according to options qfind?
   ; if select is pull-level, is options qfind untupled?
   ; We must compare both ctxs to decide this.
-  (let [value (context/v anchor-ctx) #_((:option-value select-props) (context/data anchor-ctx) anchor-ctx)
+  (let [select-props {:option-value (let [option-element (contrib.eval/ensure-fn (:option-element props first))]
+                                      (fn [val ctx]
+                                        ; in the case of tupled options, the userland view props must
+                                        ; indicate which element is the entity has an identity which matches the anchor eav.
+                                        (condp some [(unqualify (contrib.datomic/parser-type @(:hypercrud.browser/qfind ctx)))]
+                                          #{:find-coll :find-scalar} (context/row-key ctx val)
+                                          #{:find-rel :find-tuple} (option-element (context/row-key ctx val)))))
+                      :option-label (fn [val ctx]
+                                      (let [option-label (contrib.eval/ensure-fn (:option-label props option-label-default))]
+                                        (option-label val ctx)))}
+        ; The pulled v is always the select value, options must align
+        ; There is always an attribute here because all widgets are attribute-centric
+        value (context/v anchor-ctx)
         options (->> (context/data target-ctx)
                      (map #((:option-value select-props) % target-ctx)))]
     (cond
@@ -105,7 +117,7 @@
       (let [select-props (merge {:value value
                                  :on-change (with-entity-change! anchor-ctx)}
                                 select-props
-                                (select-keys target-props [:on-click]))
+                                (select-keys props [:on-click]))
             options-props {:disabled (compute-disabled anchor-ctx select-props)}]
         [select-view select-props options-props target-ctx]))))
 
@@ -118,18 +130,7 @@
         (return
           ; http://hyperfiddle.hyperfiddle.net/:database!options-list/
           ; http://hyperfiddle.hyperfiddle.site/:hyperfiddle.ide!domain/~entity('$domains',(:domain!ident,'hyperfiddle'))
-          (let [select-props {:option-value (let [option-element (contrib.eval/ensure-fn (:option-element props first))]
-                                              (fn [val ctx]
-                                                ; in the case of tupled options, the userland view props must
-                                                ; indicate which element is the entity has an identity which matches the anchor eav.
-                                                (condp some [(unqualify (contrib.datomic/parser-type @(:hypercrud.browser/qfind ctx)))]
-                                                  #{:find-coll :find-scalar} (context/row-key ctx val)
-                                                  #{:find-rel :find-tuple} (option-element (context/row-key ctx val)))))
-                              :option-label (fn [val ctx]
-                                              (let [option-label (contrib.eval/ensure-fn (:option-label props option-label-default))]
-                                                (option-label val ctx)))}
-                anchor-props {:class (:class props)
-                              :user-renderer (r/partial options-value-bridge select-html select-props ctx)}
+          (let [props (assoc props :user-renderer (r/partial options-value-bridge select-html ctx))
                 ctx (assoc ctx :hypercrud.ui/display-mode (r/track identity :hypercrud.browser.browser-ui/user))]
-            [hyperfiddle.ui/ui-from-link options-ref ctx anchor-props])))
+            [hyperfiddle.ui/ui-from-link options-ref ctx props])))
       (either/branch select-error-cmp identity)))
