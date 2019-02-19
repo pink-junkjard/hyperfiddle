@@ -52,7 +52,8 @@
                   (p/rejected (ex-info "Domain not found" {:hyperfiddle.io/http-status-code 404}))
                   (-> (mlet [environment (reader/read-edn-string+ (:domain/environment datomic-record))
                              fiddle-dbname (fiddle-dbname+ datomic-record)
-                             :let [partial-domain {:ident (:domain/ident datomic-record)
+                             :let [partial-domain {:basis (get local-basis "$domains")
+                                                   :ident (:domain/ident datomic-record)
                                                    :fiddle-dbname fiddle-dbname
                                                    :databases (->> (:domain/databases datomic-record)
                                                                    (map (juxt :domain.database/name :domain.database/record))

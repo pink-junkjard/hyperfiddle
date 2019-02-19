@@ -8,8 +8,9 @@
     [hyperfiddle.route :as route]))
 
 
-(defrecord BidiDomain [ident fiddle-dbname databases environment router service-uri build]
+(defrecord BidiDomain [basis ident fiddle-dbname databases environment router service-uri build]
   domain/Domain
+  (basis [domain] basis)
   (ident [domain] ident)
   (fiddle-dbname [domain] fiddle-dbname)
   (databases [domain] databases)

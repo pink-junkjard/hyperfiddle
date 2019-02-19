@@ -13,7 +13,7 @@
   (perf/time-promise
     (->> (domain/databases domain) keys set
          (io/sync io)
-         (cats/fmap #(assoc {:domain 0} :user %)))
+         (cats/fmap (fn [user-basis] {:domain (domain/basis domain) :user user-basis})))
     (fn [err get-total-time]
       (timbre/debug "global-basis failure;" "total time:" (get-total-time)))
     (fn [success get-total-time]
@@ -42,6 +42,6 @@
       (nil? x) -1
       (nil? y) 1
       :else (if-let [d (zero->nil (clojure.core/compare (:domain x) (:domain y)))]
-              ; compare domain first, if different, the user/ide keys might be different which is ok
+              ; compare domain first, if different, the user keys might be different which is ok
               d
               (compare-uri-maps (:user x) (:user y))))))

@@ -5,8 +5,9 @@
     [hyperfiddle.route :as route]))
 
 
-(defrecord EdnishDomain [ident fiddle-dbname databases environment home-route service-uri build]
+(defrecord EdnishDomain [basis ident fiddle-dbname databases environment home-route service-uri build]
   domain/Domain
+  (basis [domain] basis)
   (ident [domain] ident)
   (fiddle-dbname [domain] fiddle-dbname)
   (databases [domain] databases)

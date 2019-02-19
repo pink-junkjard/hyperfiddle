@@ -5,6 +5,7 @@
 
 
 (defprotocol Domain
+  (basis [domain])
   (ident [domain])
   (fiddle-dbname [domain])
   (databases [domain])
