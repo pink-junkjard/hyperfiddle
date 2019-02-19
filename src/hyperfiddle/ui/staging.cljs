@@ -8,7 +8,6 @@
     [contrib.reader :refer [read-edn-string!]]
     [contrib.ui :refer [code debounced easy-checkbox validated-cmp]]
     [contrib.ui.tooltip :refer [tooltip]]
-    [hypercrud.ui.connection-color :refer [connection-color]]
     [hyperfiddle.actions :as actions]
     [hyperfiddle.domain :as domain]
     [hyperfiddle.runtime :as runtime]
@@ -17,52 +16,56 @@
     [re-com.tabs]))
 
 
-(letfn [(toggle-auto-transact! [rt selected-dbname]
-          (runtime/dispatch! rt [:toggle-auto-transact @selected-dbname]))]
-  (defn ^:export stage-ui-buttons [selected-dbname rt branch]
-    (let [stage (runtime/state rt [::runtime/partitions branch :stage @selected-dbname])
-          writes-allowed?+ (let [hf-db (domain/database (runtime/domain rt) @selected-dbname)
-                                 subject @(runtime/state rt [::runtime/user-id])]
-                             (security/subject-can-transact? hf-db subject))
-          anonymous? (nil? @(runtime/state rt [::runtime/user-id]))]
-      [:<>
-       [tooltip (either/branch
-                  writes-allowed?+
-                  (fn [e] {:status :warning :label "Misconfigured db security"})
-                  (fn [writes-allowed?]
-                    (cond (and (not writes-allowed?) anonymous?) {:status :warning :label "Please login"}
-                          (not writes-allowed?) {:status :warning :label "Writes restricted"}
-                          (empty? @stage) {:status :warning :label "no changes"})))
-        (let [disabled? (either/branch
+(defn- default-tab-model [selected-dbname tab-ids]
+  (if (contains? (set tab-ids) selected-dbname)
+    selected-dbname
+    (first tab-ids)))
+
+(defn ^:export stage-ui-buttons [selected-dbname-ref rt branch dbname-labels]
+  (let [selected-dbname (default-tab-model @selected-dbname-ref (map :id dbname-labels))
+        stage (runtime/state rt [::runtime/partitions branch :stage selected-dbname])
+        writes-allowed?+ (let [hf-db (domain/database (runtime/domain rt) selected-dbname)
+                               subject @(runtime/state rt [::runtime/user-id])]
+                           (security/subject-can-transact? hf-db subject))
+        anonymous? (nil? @(runtime/state rt [::runtime/user-id]))]
+    [:<>
+     [tooltip (either/branch
+                writes-allowed?+
+                (fn [e] {:status :warning :label "Misconfigured db security"})
+                (fn [writes-allowed?]
+                  (cond (and (not writes-allowed?) anonymous?) {:status :warning :label "Please login"}
+                        (not writes-allowed?) {:status :warning :label "Writes restricted"}
+                        (empty? @stage) {:status :warning :label "no changes"})))
+      (let [disabled? (either/branch
+                        writes-allowed?+
+                        (constantly true)
+                        (fn [writes-allowed?] (or (not writes-allowed?) (empty? @stage))))]
+        [:button {:disabled disabled?
+                  :style (cond-> {:background-color (domain/database-color (runtime/domain rt) selected-dbname)}
+                           disabled? (assoc :pointer-events "none"))
+                  :on-click (fn []
+                              (let [action (actions/manual-transact-db! rt selected-dbname)]
+                                (runtime/dispatch! rt action)))}
+         "transact!"])]
+     " "
+     [tooltip (either/branch
+                writes-allowed?+
+                (fn [e] {:status :warning :label "Misconfigured db security"})
+                (fn [writes-allowed?]
+                  (cond (and anonymous? (not writes-allowed?)) {:status :warning :label "Please login"}
+                        (not writes-allowed?) {:status :warning :label "Writes restricted"}
+                        (not (empty? @stage)) {:status :warning :label "please transact! all changes first"})))
+      (let [is-disabled (either/branch
                           writes-allowed?+
                           (constantly true)
-                          (fn [writes-allowed?] (or (not writes-allowed?) (empty? @stage))))]
-          [:button {:disabled disabled?
-                    :style (cond-> {:background-color (connection-color @selected-dbname)}
-                             disabled? (assoc :pointer-events "none"))
-                    :on-click (fn []
-                                (let [action (actions/manual-transact-db! rt @selected-dbname)]
-                                  (runtime/dispatch! rt action)))}
-           "transact!"])]
-       " "
-       [tooltip (either/branch
-                  writes-allowed?+
-                  (fn [e] {:status :warning :label "Misconfigured db security"})
-                  (fn [writes-allowed?]
-                    (cond (and anonymous? (not writes-allowed?)) {:status :warning :label "Please login"}
-                          (not writes-allowed?) {:status :warning :label "Writes restricted"}
-                          (not (empty? @stage)) {:status :warning :label "please transact! all changes first"})))
-        (let [is-disabled (either/branch
-                            writes-allowed?+
-                            (constantly true)
-                            (fn [writes-allowed?]
-                              (or (not writes-allowed?) (not (empty? @stage)))))
-              is-auto-transact @(runtime/state rt [::runtime/auto-transact @selected-dbname])]
-          [easy-checkbox {:disabled is-disabled
-                          :style (if is-disabled {:pointer-events "none"})
-                          :checked (boolean is-auto-transact)
-                          :on-change (r/partial toggle-auto-transact! rt selected-dbname)}
-           "auto-transact"])]])))
+                          (fn [writes-allowed?]
+                            (or (not writes-allowed?) (not (empty? @stage)))))
+            is-auto-transact @(runtime/state rt [::runtime/auto-transact selected-dbname])]
+        [easy-checkbox {:disabled is-disabled
+                        :style (if is-disabled {:pointer-events "none"})
+                        :checked (boolean is-auto-transact)
+                        :on-change #(runtime/dispatch! rt [:toggle-auto-transact selected-dbname])}
+         "auto-transact"])]]))
 
 (let [parse-string (fn [s]
                      (let [v (read-edn-string! s)]
@@ -72,43 +75,41 @@
       to-string pprint-datoms-str
       on-change (fn [peer branch dbname-ref o n]
                   (runtime/dispatch! peer (actions/reset-stage-db peer branch @dbname-ref n)))]
-  (defn staging-control [rt branch dbname-ref]
-    (let [props {:value @(runtime/state rt [::runtime/partitions branch :stage @dbname-ref])
-                 :readOnly @(runtime/state rt [::runtime/auto-transact @dbname-ref])
-                 :on-change (r/partial on-change rt branch dbname-ref)}]
-      ^{:key (str @dbname-ref)}
-      [debounced props validated-cmp parse-string to-string code])))
+  (defn- tab-content [rt branch dbname-ref & children]
+    (into [:div.tab-content {:style {:border-color (domain/database-color (runtime/domain rt) @dbname-ref)}}
+           (let [props {:value @(runtime/state rt [::runtime/partitions branch :stage @dbname-ref])
+                        :readOnly @(runtime/state rt [::runtime/auto-transact @dbname-ref])
+                        :on-change (r/partial on-change rt branch dbname-ref)}]
+             ^{:key (str @dbname-ref)}
+             [debounced props validated-cmp parse-string to-string code])]
+          children)))
 
-(defn- default-tab-model [selected-dbname tab-ids]
-  (if (contains? (set tab-ids) selected-dbname)
-    selected-dbname
-    (first tab-ids)))
+(defn default-dbname-labels [rt]
+  (->> (runtime/domain rt) domain/databases keys sort
+       (map (fn [%] {:id % :label %}))))
 
 (defn ^:export editor-cmp
   ([selected-dbname ctx]
-   [editor-cmp selected-dbname (:peer ctx) (:branch ctx)
-    (->> (runtime/domain (:peer ctx)) domain/databases keys
-         (map (fn [%] {:id % :label %})))])
+   [editor-cmp selected-dbname (:peer ctx) (:branch ctx) (default-dbname-labels (:peer ctx))])
   ([selected-dbname rt branch dbname-labels & children]
    (let [dirty-dbs (->> @(runtime/state rt [::runtime/partitions nil :stage])
                         (remove (comp empty? second))
                         (map first)
                         set)
-         tabs-definition (->> (sort-by :label dbname-labels)
-                              (mapv (fn [{:keys [id] s-label :label}]
-                                      {:id id
-                                       :label [:span
-                                               {:style {:border-color (connection-color s-label)}
-                                                :class (when (contains? dirty-dbs id) "stage-dirty")}
-                                               s-label]})))]
+         tabs-definition (mapv (fn [{:keys [id] s-label :label}]
+                                 {:id id
+                                  :label [:span
+                                          {:style {:border-color (domain/database-color (runtime/domain rt) id)}
+                                           :class (when (contains? dirty-dbs id) "stage-dirty")}
+                                          s-label]})
+                               dbname-labels)
+         selected-dbname' (r/fmap-> selected-dbname (default-tab-model (mapv :id dbname-labels)))]
      [:div.hyperfiddle-staging-editor-cmp
       [re-com.tabs/horizontal-tabs
-       :model (r/fmap-> selected-dbname (default-tab-model (mapv :id tabs-definition)))
+       :model selected-dbname'
        :tabs tabs-definition
        :on-change (r/partial reset! selected-dbname)]
-      (into [:div.tab-content {:style {:border-color (connection-color @selected-dbname)}}
-             [staging-control rt branch selected-dbname]]
-            children)])))
+      (into [tab-content rt branch selected-dbname'] children)])))
 
 (defn- tooltip-content [rt dbname-labels]
   [:div {:style {:text-align "left"}}
@@ -146,5 +147,5 @@
                            :no-clip? true?
                            :body [:div.hyperfiddle-popover-body
                                   [editor-cmp selected-dbname rt branch dbname-labels
-                                   [stage-ui-buttons selected-dbname rt branch]
-                                   [:button.close-popover {:on-click #(reset! show-stage false)} "close"]]]]]]])))
+                                   [stage-ui-buttons selected-dbname rt branch dbname-labels]
+                                   [:button.close-popover {:on-click (r/partial reset! show-stage false)} "close"]]]]]]])))

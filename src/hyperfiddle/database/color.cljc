@@ -1,4 +1,4 @@
-(ns hypercrud.ui.connection-color
+(ns hyperfiddle.database.color
   (:require
     [cuerdas.core :as str]))
 
@@ -8,17 +8,12 @@
 (def golden-ratio 0.618033988749895)
 (def seed 0.3100632204946232 #_(.random js/Math))           ; i liked these colors
 
-(def no-conn "#ccc")
-(def root-conn "#777")
+(defn hsl [h s l] (str/format "hsl(%s, %s%, %s%)" h s l))
 
-(defn hsl [h s l]
-  (str/format "hsl(%s, %s%, %s%)" h s l))
-
-(defn connection-color [dbname & [l]]
+(defn color-for-name [dbname]
   (condp = dbname
-    nil no-conn
-    ;(get-in ctx [:hypercrud.browser/domain :domain/fiddle-database :database/uri]) root-conn
+    nil "#ccc"
     (hsl (* 360 (mod (+ seed (* (hash dbname) golden-ratio)) 1))
          55  #_"Too bright hurts the eyes"
-         (or l 70)) #_"Medium gray (50) can be read on white and black backgrounds"
+         70) #_"Medium gray (50) can be read on white and black backgrounds"
     ))
