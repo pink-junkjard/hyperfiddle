@@ -165,7 +165,7 @@
                                                (if (string/starts-with? dbname ide-domain/app-dbname-prefix)
                                                  (assoc acc (subs dbname (count ide-domain/app-dbname-prefix)) stage-val)
                                                  acc))
-                                             {'hyperfiddle.domain/fiddle-database (get stage "$")}
+                                             {}
                                              stage))))]
     (-> (::runtime/user-state parent-state)
         (assoc ::runtime/user-id (::runtime/user-id parent-state))

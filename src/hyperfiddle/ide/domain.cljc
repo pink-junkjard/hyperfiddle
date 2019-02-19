@@ -1,6 +1,6 @@
 (ns hyperfiddle.ide.domain
   (:require
-    [cats.core :refer [mlet return]]
+    [cats.core :as cats :refer [mlet return]]
     [cats.monad.either :as either]
     [cognitect.transit :as t]
     [contrib.reader :as reader]
@@ -45,11 +45,11 @@
         true {:get :ssr
               true :405}}])
 
-(defrecord IdeDomain [ident fiddle-database databases environment home-route service-uri build user-domain-record
+(defrecord IdeDomain [ident fiddle-dbname databases environment home-route service-uri build user-domain-record
                       html-root-id]
   domain/Domain
   (ident [domain] ident)
-  (fiddle-database [domain] fiddle-database)
+  (fiddle-dbname [domain] fiddle-dbname)
   (databases [domain] databases)
   (environment [domain] environment)
 
@@ -85,10 +85,11 @@
   (mlet [environment (reader/read-edn-string+ (:domain/environment ide-datomic-record))
          :let [environment (assoc environment :domain/disable-javascript (:domain/disable-javascript ide-datomic-record))]
          home-route (reader/read-edn-string+ (:domain/home-route ide-datomic-record))
-         home-route (route/validate-route+ home-route)]
+         home-route (route/validate-route+ home-route)
+         fiddle-dbname (multi-datomic/fiddle-dbname+ ide-datomic-record)]
     (return
       (-> {:ident (:domain/ident ide-datomic-record)
-           :fiddle-database (:domain/fiddle-database ide-datomic-record)
+           :fiddle-dbname fiddle-dbname
            :databases (-> (->> (:domain/databases user-datomic-record)
                                (map (fn [db]
                                       (-> db
@@ -114,10 +115,10 @@
           with-serializer))))
 
 ; shitty code duplication because we cant pass our api-routes data structure as props (no regex equality)
-(defrecord EdnishDomain [ident fiddle-database databases environment home-route service-uri build]
+(defrecord EdnishDomain [ident fiddle-dbname databases environment home-route service-uri build]
   domain/Domain
   (ident [domain] ident)
-  (fiddle-database [domain] fiddle-database)
+  (fiddle-dbname [domain] fiddle-dbname)
   (databases [domain] databases)
   (environment [domain] environment)
   (url-decode [domain s] (route/url-decode s home-route))
@@ -132,19 +133,18 @@
   ([ide-domain user-domain-record]
     ; shitty code duplication because we cant pass our api-routes data structure as props (no regex equality)
    (mlet [environment (reader/read-edn-string+ (:domain/environment user-domain-record))
-          :let [environment (assoc environment :domain/disable-javascript (:domain/disable-javascript user-domain-record))]
-          home-route (reader/read-edn-string+ (:domain/home-route user-domain-record))
-          home-route (route/validate-route+ home-route)]
-     (return (map->EdnishDomain
-               {:ident (:domain/ident user-domain-record)
-                :fiddle-database (:domain/fiddle-database user-domain-record)
-                :databases (->> (:domain/databases user-domain-record)
-                                (map (juxt :domain.database/name :domain.database/record))
-                                (into {}))
-                :environment environment
-                :home-route home-route
-                :service-uri (:service-uri ide-domain)
-                :build (:build ide-domain)})))))
+          fiddle-dbname (multi-datomic/fiddle-dbname+ user-domain-record)
+          :let [partial-domain {:ident (:domain/ident user-domain-record)
+                                :fiddle-dbname fiddle-dbname
+                                :databases (->> (:domain/databases user-domain-record)
+                                                (map (juxt :domain.database/name :domain.database/record))
+                                                (into {}))
+                                :environment (assoc environment :domain/disable-javascript (:domain/disable-javascript user-domain-record))
+                                :service-uri (:service-uri ide-domain)
+                                :build (:build ide-domain)}]]
+     (->> (reader/read-edn-string+ (:domain/home-route user-domain-record))
+          (cats/=<< route/validate-route+)
+          (cats/fmap (fn [home-route] (map->EdnishDomain (assoc partial-domain :home-route home-route))))))))
 
 (defn hydrate-ide-domain [io local-basis app-domain-ident service-uri build]
   (let [requests [(->EntityRequest [:domain/ident "hyperfiddle"] (->DbRef "$domains" nil) multi-datomic/domain-pull)
