@@ -10,6 +10,7 @@
     [hypercrud.types.DbRef :refer [->DbRef]]
     [hypercrud.types.EntityRequest :refer [->EntityRequest]]
     [hypercrud.types.QueryRequest :refer [->QueryRequest]]
+    [hyperfiddle.database.color :as color]
     [hyperfiddle.domain :as domain]
     [hyperfiddle.domains.multi-datomic :as multi-datomic]
     [hyperfiddle.io.core :as io]
@@ -91,10 +92,14 @@
            :databases (-> (->> (:domain/databases user-datomic-record)
                                (map (fn [db]
                                       (-> db
-                                          (assoc-in [:domain.database/record :auto-transact] false)
+                                          (update :domain.database/record assoc
+                                                  :auto-transact false
+                                                  :database/color (color/color-for-name (:domain.database/name db)))
                                           (update :domain.database/name #(str app-dbname-prefix %)))))
                                (concat (->> (:domain/databases ide-datomic-record)
-                                            (map #(assoc-in % [:domain.database/record :auto-transact] true))))
+                                            (map (fn [db] (update db :domain.database/record assoc
+                                                                  :auto-transact true
+                                                                  :database/color "#777")))))
                                (map (juxt :domain.database/name :domain.database/record))
                                (into {}))
                           (assoc "$" (assoc (:domain/fiddle-database user-datomic-record) :auto-transact false)))

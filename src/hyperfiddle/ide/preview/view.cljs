@@ -96,9 +96,7 @@
                                   (assoc props
                                     :checked (= (:value props) @display-mode)
                                     :on-change (r/partial reset! display-mode))]))))
-               [staging/popover-button rt user-branch
-                (->> (:peer ctx) runtime/domain domain/databases keys
-                     (map (fn [%] {:id (str ide-domain/app-dbname-prefix %) :label %})))]])
+               [staging/popover-button rt user-branch (staging/default-dbname-labels rt)]])
             (if @initial-render
               [loading-page]
               (let [code+ (project/eval-domain-code!+ @(runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :project :project/code]))]
