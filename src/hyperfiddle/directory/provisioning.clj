@@ -1,4 +1,4 @@
-(ns hyperfiddle.database
+(ns hyperfiddle.directory.provisioning
   (:require
     [datomic.api :as d]
     [hyperfiddle.domain :as domain]

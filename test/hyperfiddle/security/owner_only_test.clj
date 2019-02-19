@@ -1,7 +1,7 @@
 (ns hyperfiddle.security.owner-only-test
   (:require
     [clojure.test :refer [compose-fixtures deftest is use-fixtures testing]]
-    [hyperfiddle.database :as db]
+    [hyperfiddle.directory.provisioning :as dp]
     [hyperfiddle.domain :as domain]
     [hyperfiddle.integration-fixtures :as fixtures]
     [hyperfiddle.io.datomic.transact :as transact]
@@ -31,12 +31,12 @@
     (fixtures/db-fixture fixtures/test-uri #{db-owner} db-owner :schema schema :security ::security/owner-only)))
 
 (defn process-tx [domains-uri subject hf-db-uri tx]
-  (let [hf-db (-> (db/build-util-domain domains-uri)
+  (let [hf-db (-> (dp/build-util-domain domains-uri)
                   (domain/database hf-db-uri))]
     (transact/process-tx hf-db subject tx)))
 
 (defn transact! [domains-uri subject tx-groups]
-  (transact/transact! (db/build-util-domain domains-uri) subject tx-groups))
+  (transact/transact! (dp/build-util-domain domains-uri) subject tx-groups))
 
 (deftest test-merging-tx-statements []
   (let [email "asdf@example.com"]

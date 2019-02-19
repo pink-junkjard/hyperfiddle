@@ -1,6 +1,5 @@
 (ns hyperfiddle.domains.multi-datomic
   (:require
-    [bidi.bidi :as bidi]
     [cats.monad.either :as either]
     [contrib.uri :refer [->URI]]
     [hypercrud.types.DbRef :refer [->DbRef]]

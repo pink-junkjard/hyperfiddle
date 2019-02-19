@@ -2,7 +2,7 @@
   (:require
     [clojure.test :refer [join-fixtures deftest is use-fixtures testing]]
     [datomic.api :as d]
-    [hyperfiddle.database :as db]
+    [hyperfiddle.directory.provisioning :as dp]
     [hyperfiddle.domain :as domain]
     [hyperfiddle.integration-fixtures :as fixtures]
     [hyperfiddle.io.datomic.transact :as transact]
@@ -54,12 +54,12 @@
                           :custom-security {:server (str `hyperfiddle.security.domains/server)})]))
 
 (defn process-tx [domains-uri subject hf-db-uri tx]
-  (let [hf-db (-> (db/build-util-domain domains-uri)
+  (let [hf-db (-> (dp/build-util-domain domains-uri)
                   (domain/database hf-db-uri))]
     (transact/process-tx hf-db subject tx)))
 
 (defn transact! [domains-uri subject tx-groups]
-  (transact/transact! (db/build-util-domain domains-uri) subject tx-groups))
+  (transact/transact! (dp/build-util-domain domains-uri) subject tx-groups))
 
 (deftest test-schema-changes []
   (testing "installing new attribute"
