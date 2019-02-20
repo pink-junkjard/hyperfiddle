@@ -124,8 +124,6 @@
      :fiddle/css
      "dt { \n  font-weight: unset; \n  width: 5em; \n}",
      :fiddle/ident :dustingetz.tutorial/blog,
-     :fiddle/renderer
-     "(let [{:keys [:hypercrud.browser/fiddle]} ctx]\n  [:div.container props\n   [hyperfiddle.ui/markdown (:fiddle/markdown @fiddle) ctx]\n   (->> val\n     (sort-by :dustingetz.post/published-date)\n     (map (fn [[e]]\n            [:<> {:key (str (:db/id e))}\n             [:dt [user/render-dt e]]  \n             [:dd [user/render-dd e ctx]]]))\n     (into [:dl]))])",
      :hyperfiddle/owners
      [#uuid "acd054a8-4e36-4d6c-a9ec-95bdc47f0d39"],
      :db/id 17592186047369,
