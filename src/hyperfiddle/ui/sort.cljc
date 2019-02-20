@@ -15,11 +15,11 @@
     (if (and is-element-level element)                      ; fiddle-level but didn't focus an element
       (condp some [(type element)]
         #{Aggregate Variable} true
-        #{Pull} (let [[_ a _] @(:hypercrud.browser/eav ctx)]
+        #{Pull} (let [a (context/a ctx)]
                   (and
-                    (contrib.datomic/cardinality? @(:hypercrud.browser/schema ctx) a :db.cardinality/one)
+                    (context/attr? ctx a :db.cardinality/one)
                     ; ref requires more work (inspect label-prop)
-                    (not= (:db.type/ref (contrib.datomic/valueType @(:hypercrud.browser/schema ctx) a))))))
+                    (not (context/attr? ctx a :db.type/ref)))))
       ; e.g. !field[js/user.hyperblog-post-link]()
       false)))
 

@@ -37,15 +37,14 @@
        #_#_r/apply-inner-r deref))
 
 (defn ^:export select "reactive" [ctx & [?corcs]]
-  {:pre [(s/assert :hypercrud/context ctx)
-         (context/summon-schemas-grouped-by-dbname ctx)]
+  {:pre [(s/assert :hypercrud/context ctx)]
    :post [(r/reactive? %)]}
   (->> (select+ ctx ?corcs)
        (unwrap (constantly (r/pure nil)))))
 
 (defn select-many-here' [ctx & [?corcs]]
   (let [cs (contrib.data/xorxs ?corcs #{})
-        [_ a _] @(:hypercrud.browser/eav ctx)]
+        a (context/a ctx)]
     ; links "here" means all possible links that apply. Can be lots of things!
     ; :db/id and :db/ident sys links
     ; :db/id and :db/ident parent attr links are good here too
@@ -54,9 +53,8 @@
       @(select-many ctx (conj cs a))
       (if (and (context/identity? ctx a)                    ; Parent links apply here too!
                (not (context/qfind-level? ctx)))
-        (let [ctx (context/unwind ctx 1)
-              [_ a _] @(:hypercrud.browser/eav ctx)]
-          @(select-many ctx (conj cs a)))))))
+        (let [ctx (context/unwind ctx 1)]
+          @(select-many ctx (conj cs (context/a ctx))))))))
 
 (defn ^:export select-many-here "reactive" ; collapses if eav is part of corcs
   [ctx & [?corcs]]

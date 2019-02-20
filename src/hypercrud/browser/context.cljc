@@ -828,15 +828,14 @@
 (defn refocus-in-element+
   [ctx a]
   {:pre [(:hypercrud.browser/element ctx)]
-   :post [(s/assert either? %)
-          #_(let [[_ aa _] @(:hypercrud.browser/eav %)] (= a aa))]}
+   :post [(s/assert either? %)]}
   (cond
     (contrib.datomic/unique? @(:hypercrud.browser/schema ctx) a :db.unique/identity)
     (if (qfind-level? ctx)
       (right ctx)                                           ; [nil :dustingetz.tutorial/blog [:dustingetz.post/slug :hehehe]]
       (right (unwind ctx 1)))
 
-    (let [[_ aa _] @(:hypercrud.browser/eav ctx)] (= aa a))
+    (= a (a ctx))
     (right ctx)
 
     :else
@@ -936,7 +935,7 @@
 
 (defn tag-v-with-color "Tag dbids with color, at the last moment before they render into URLs"
   [ctx v]
-  (let [[e a _] @(:hypercrud.browser/eav ctx)               ; this v might be a tuple, above v is one item in tuple?
+  (let [[e a _] (eav ctx)
         is-element-level (= (pull-depth ctx) 0)]
     (cond
       (instance? ThinEntity v) v                            ; legacy compat with IDE legacy #entity formulas
@@ -986,7 +985,7 @@
            formula-fn (try-either (formula-ctx-closure ctx))
 
            ; V legacy is tuple, it should be scalar by here (tuple the ctx, not the v)
-           :let [[e a v] @(:hypercrud.browser/eav ctx)]
+           :let [[e a v] (eav ctx)]
 
            ; Documented behavior is v in, tuple out, no colors.
            arg (try-either (formula-fn v))]
