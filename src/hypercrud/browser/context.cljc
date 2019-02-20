@@ -197,6 +197,12 @@
            (contrib.data/map-keys #(hyperfiddle.domain/uri->dbname % (:hypercrud.browser/domain ctx))))
       (dissoc nil)))
 
+(defn summon-schemas-grouped-by-dbname+ [ctx]
+  (let [x (summon-schemas-grouped-by-dbname ctx)]
+    (if (empty? x)
+      (left "Loading...")
+      (right x))))
+
 (defn schemas "Dumb setup method, separates context from :peer and helps with tests etc"
   [ctx r-schemas]
   (assoc ctx :hypercrud.browser/schemas r-schemas))

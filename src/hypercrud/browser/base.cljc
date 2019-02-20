@@ -94,13 +94,13 @@
                  ctx (assoc ctx :hypercrud.browser/attr-renderers reactive-attrs)]]
       (return ctx))))
 
-(defn data-from-route "either ctx, ctx-from-route" [route ctx]                           ; todo rename
+(defn data-from-route "either ctx, ctx-from-route" [route ctx] ; todo rename
   (mlet [ctx (-> (context/clean ctx)
-                 (routing/route+ route)
-                 #_(context/schemas (r/track context/summon-schemas-grouped-by-dbname ctx)))
+                 (routing/route+ route))
          meta-fiddle-request @(r/apply-inner-r (r/track meta-request-for-fiddle ctx))
          r-fiddle @(r/apply-inner-r (r/track hydrate-fiddle meta-fiddle-request ctx))
-         :let [ctx (context/schemas ctx (r/track context/summon-schemas-grouped-by-dbname ctx))
+         r-schemas @(r/apply-inner-r (r/track context/summon-schemas-grouped-by-dbname+ ctx))
+         :let [ctx (context/schemas ctx r-schemas)
                ctx (context/fiddle ctx r-fiddle)]
          fiddle-request @(r/apply-inner-r (r/track request-for-fiddle ctx))]
     ; fiddle request can be nil for no-arg pulls (just draw readonly form)
