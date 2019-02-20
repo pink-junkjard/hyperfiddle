@@ -24,8 +24,11 @@
        (assert (= 3 (:version ls-state)))
        (assoc ls-state :version 4 :last-modified 0))        ; just use the epoch
    4 (fn [ls-state]                                         ; v5 migrate uris to dbnames
+       (assert (= 4 (:version ls-state)))
        ; just pave anything with a uri
-       (dissoc ls-state ::runtime/auto-transact ::runtime/global-basis :stage))
+       (-> ls-state
+           (dissoc ::runtime/auto-transact ::runtime/global-basis :stage)
+           (assoc :version 5)))
    })
 
 (defn- state->local-storage [state-val]
