@@ -552,7 +552,7 @@
   [ctx r-fiddle]
   {:pre [r-fiddle
          (:hypercrud.browser/schemas ctx)
-         (-> (:hypercrud.browser/schemas ctx) deref count (> 0))]}
+         #_(-> (:hypercrud.browser/schemas ctx) deref count (> 0))]}
   (let [r-fiddle (r/fmap hyperfiddle.fiddle/apply-defaults r-fiddle)
         r-qparsed (r/fmap-> r-fiddle hyperfiddle.fiddle/parse-fiddle-query)
         r-qfind (r/fmap :qfind r-qparsed)
