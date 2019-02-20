@@ -40,13 +40,14 @@
                         writes-allowed?+
                         (constantly true)
                         (fn [writes-allowed?] (or (not writes-allowed?) (empty? @stage))))]
-        [:button {:disabled disabled?
-                  :style (cond-> {:background-color (domain/database-color (runtime/domain rt) selected-dbname)}
-                           disabled? (assoc :pointer-events "none"))
-                  :on-click (fn []
-                              (let [action (actions/manual-transact-db! rt selected-dbname)]
-                                (runtime/dispatch! rt action)))}
-         "transact!"])]
+        (when (nil? branch)
+          [:button {:disabled disabled?
+                    :style (cond-> {:background-color (domain/database-color (runtime/domain rt) selected-dbname)}
+                             disabled? (assoc :pointer-events "none"))
+                    :on-click (fn []
+                                (let [action (actions/manual-transact-db! rt selected-dbname)]
+                                  (runtime/dispatch! rt action)))}
+           "transact!"]))]
      " "
      [tooltip (either/branch
                 writes-allowed?+

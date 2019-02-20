@@ -213,8 +213,8 @@
   (fn [dispatch! get-state]
     ; check if auto-tx is OFF first?
     (when (not= tx (get-in (get-state) [::runtime/partitions branch :stage dbname]))
-      (dispatch! (batch [:reset-stage-db branch dbname tx] [:hydrate!-start nil]))
-      (hydrate-partition rt nil dispatch! get-state))))
+      (dispatch! (batch [:reset-stage-db branch dbname tx] [:hydrate!-start branch]))
+      (hydrate-partition rt branch dispatch! get-state))))
 
 (defn manual-transact-db! [rt dbname]
   (fn [dispatch! get-state]
