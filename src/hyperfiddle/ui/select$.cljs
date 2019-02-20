@@ -117,7 +117,7 @@
       (let [select-props (merge {:value value
                                  :on-change (with-entity-change! anchor-ctx)}
                                 select-props
-                                (select-keys props [:on-click]))
+                                props)
             options-props {:disabled (compute-disabled anchor-ctx select-props)}]
         [select-view select-props options-props target-ctx]))))
 
