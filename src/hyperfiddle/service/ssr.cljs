@@ -112,7 +112,7 @@
   (let [build (:BUILD env)
         initial-state {::runtime/auto-transact (data/map-values
                                                  (fn [hf-db]
-                                                   (if-some [auto-tx (:auto-transact hf-db)]
+                                                   (if-some [auto-tx (:database/auto-transact hf-db)]
                                                      auto-tx
                                                      (either/branch
                                                        (security/subject-can-transact? hf-db user-id)
