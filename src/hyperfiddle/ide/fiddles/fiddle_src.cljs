@@ -132,7 +132,7 @@
 (defn fiddle-src-renderer [val ctx props]
   (let [tab-state (r/atom (if (contains? tabs (:initial-tab props)) (:initial-tab props) :hf.src/query))]
     (fn [val ctx props]
-      [:div.fiddle-editor (into {:key (str (:fiddle/ident val))} (select-keys props [:class]))
+      [:div (into {:key (str (:fiddle/ident val))} (select-keys props [:class]))
        ; Design constraint: one codemirror per tab, and it will expand to fill height.
        [horizontal-tabs
         ; F U recom: Validation failed: Expected 'vector of tabs | atom'. Got '[:query :links :view :css :fiddle]'

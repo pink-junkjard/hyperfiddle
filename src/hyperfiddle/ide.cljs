@@ -3,7 +3,6 @@
     [cats.monad.either :as either]
     [contrib.base-64-url-safe :as base64-url-safe]
     [contrib.ednish :as ednish]
-    [contrib.pprint :as pprint]
     [contrib.reader :as reader]
     [hyperfiddle.domain :as domain]
     [hyperfiddle.runtime :as runtime]
@@ -30,11 +29,3 @@
           "&scope=" "openid email profile"
           "&state=" (base64-url-safe/encode state)
           "&redirect_uri=" (str "http://" fqdn "/auth0")))))
-
-(defn result-edn [val ctx props]
-  (let [s (-> val
-              #_(as-> $ (if (seq attrs) (select-keys $ attrs) $)) ; omit elided fiddle attrs
-              (pprint/pprint-str 50))]
-    [contrib.ui/code (assoc props                           ; Class ends up not on the codemirror, todo
-                       :value s
-                       :read-only true)]))
