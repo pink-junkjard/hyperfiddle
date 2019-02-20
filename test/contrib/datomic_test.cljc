@@ -84,7 +84,26 @@
    ])
 
 (deftest pulled-tree-derivative-2
-  []
+  (is (= (tree-derivative
+           fixtures.domains/schema
+           {:db/id 17592186045942,
+            :domain/home-route "",
+            :domain/databases
+            [{:db/id 17592186046525,
+              :domain.database/name "$",
+              :domain.database/record
+              {:db/id 17592186046087,
+               :database/uri
+               #uri "datomic:free://datomic:4334/foo-ak"}}]})
+         [:db/id
+          :domain/home-route
+          {:domain/databases
+           [:db/id
+            :domain.database/name
+            {:domain.database/record
+             [:db/id
+              :database/uri]}]}]))
+
   (let [t derivative-tests]
     (doseq [[doc schema tree derivative] t]
       (is (= (tree-derivative schema tree)
