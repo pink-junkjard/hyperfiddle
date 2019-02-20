@@ -96,16 +96,16 @@
                                (map (fn [db]
                                       (-> db
                                           (update :domain.database/record assoc
-                                                  :auto-transact false
+                                                  :database/auto-transact false
                                                   :database/color (color/color-for-name (:domain.database/name db)))
                                           (update :domain.database/name #(str app-dbname-prefix %)))))
                                (concat (->> (:domain/databases ide-datomic-record)
                                             (map (fn [db] (update db :domain.database/record assoc
-                                                                  :auto-transact true
+                                                                  :database/auto-transact true
                                                                   :database/color "#777")))))
                                (map (juxt :domain.database/name :domain.database/record))
                                (into {}))
-                          (assoc "$" (assoc (:domain/fiddle-database user-datomic-record) :auto-transact false)))
+                          (assoc "$" (assoc (:domain/fiddle-database user-datomic-record) :database/auto-transact false)))
            :environment environment
            :home-route home-route
            :service-uri service-uri
