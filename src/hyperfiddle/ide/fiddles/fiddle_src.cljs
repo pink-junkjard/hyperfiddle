@@ -20,17 +20,12 @@
     props))
 
 (defn schema-links [ctx]
-  (->> (runtime/domain (:peer ctx))
-       domain/databases
-       keys
-       (filter #(string/starts-with? % ide-domain/app-dbname-prefix))
-       (map #(subs % 5))
-       sort
-       (map (fn [dbname]
-              (let [props {:route [:hyperfiddle.ide/schema [dbname]]
+  (->> (runtime/domain (:peer ctx)) ::ide-domain/user-dbname->ide keys sort
+       (map (fn [user-dbname]
+              (let [props {:route [:hyperfiddle.ide/schema [user-dbname]]
                            #_#_:target "_blank"}]
-                ^{:key dbname}
-                [anchor ctx props dbname])))
+                ^{:key user-dbname}
+                [anchor ctx props user-dbname])))
        (doall)))
 
 (defn query-composite-stable [ctx-top val ctx-fiddle-type props]

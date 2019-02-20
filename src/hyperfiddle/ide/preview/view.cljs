@@ -4,6 +4,7 @@
     [clojure.string :as string]
     [contrib.cljs-platform :refer [code-for-browser]]
     [contrib.css :refer [css]]
+    [contrib.data :refer [map-values]]
     [contrib.reactive :as r]
     [contrib.ui]
     [hypercrud.browser.base :as base]
@@ -156,17 +157,10 @@
                        (reducers/root-reducer nil))]
     (assoc parent-state ::runtime/user-state user-state)))
 
-(defn- from [ide-branch parent-state]
+(defn- from [ide-domain ide-branch parent-state]
   (let [nil-partition (-> (get-in parent-state [::runtime/partitions ide-branch])
                           (select-keys [:route :stage])
-                          (update :stage (fn [stage]
-                                           (reduce-kv
-                                             (fn [acc dbname stage-val]
-                                               (if (string/starts-with? dbname ide-domain/app-dbname-prefix)
-                                                 (assoc acc (subs dbname (count ide-domain/app-dbname-prefix)) stage-val)
-                                                 acc))
-                                             {}
-                                             stage))))]
+                          (update :stage (fn [stage] (map-values #(get stage %) (::ide-domain/user-dbname->ide ide-domain)))))]
     (-> (::runtime/user-state parent-state)
         (assoc ::runtime/user-id (::runtime/user-id parent-state))
         (assoc-in [::runtime/partitions nil] nil-partition)
@@ -191,7 +185,7 @@
                                 service-args
                                 (when-not (hyperfiddle.ide/parse-ide-fragment encoded-fragment)
                                   encoded-fragment)))
-                 user-state (->FAtom (runtime/state (:peer ctx)) to (r/partial from ide-branch))
+                 user-state (->FAtom (runtime/state (:peer ctx)) to (r/partial from (runtime/domain (:peer ctx)) ide-branch))
                  user-io (->IOImpl user-domain)
                  user-runtime (->Runtime user-domain user-io user-state reducers/root-reducer)]
              [with-rt user-runtime user-route ide-branch])))])))

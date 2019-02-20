@@ -42,9 +42,10 @@
    [:div.right-nav {:key "right-nav"}                       ; CAREFUL; this key prevents popover flickering
     [loading-spinner ctx]
     [staging/popover-button (:peer ctx) (:branch ctx)
-     (->> (:peer ctx) runtime/domain domain/databases keys sort
-          (filter #(string/starts-with? % ide-domain/app-dbname-prefix))
-          (map (fn [%] {:id % :label (subs % (count ide-domain/app-dbname-prefix))})))]
+     (->> (runtime/domain (:peer ctx))
+          ::ide-domain/user-dbname->ide
+          (map (fn [[user-dbname ide-dbname]] {:id ide-dbname :label user-dbname}))
+          (sort-by :label))]
     (ui/link :new-fiddle ctx "new" (let [disabled? (not (security/can-create? ctx)) ; we explicitly know the context here is $
                                          anonymous? (nil? @(runtime/state (:peer ctx) [::runtime/user-id]))]
                                      {:disabled disabled?

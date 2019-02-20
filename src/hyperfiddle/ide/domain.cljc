@@ -19,7 +19,7 @@
     [promesa.core :as p]))
 
 
-(def app-dbname-prefix "$app.")
+(def user-dbname-prefix "$user.")
 
 (defn build-routes [build]
   ["/" {"api/" {(str build "/") (routes/api nil)
@@ -92,24 +92,46 @@
       (-> {:basis domains-basis
            :ident (:domain/ident ide-datomic-record)
            :fiddle-dbname fiddle-dbname
-           :databases (-> (->> (:domain/databases user-datomic-record)
-                               (map (fn [db]
-                                      (-> db
-                                          (update :domain.database/record assoc
-                                                  :database/auto-transact false
-                                                  :database/color (color/color-for-name (:domain.database/name db)))
-                                          (update :domain.database/name #(str app-dbname-prefix %)))))
-                               (concat (->> (:domain/databases ide-datomic-record)
-                                            (map (fn [db] (update db :domain.database/record assoc
-                                                                  :database/auto-transact true
-                                                                  :database/color "#777")))))
-                               (map (juxt :domain.database/name :domain.database/record))
-                               (into {}))
-                          (assoc "$" (assoc (:domain/fiddle-database user-datomic-record) :database/auto-transact false)))
+           :databases (let [user-dbs (->> (:domain/databases user-datomic-record)
+                                          (remove (fn [db]
+                                                    (= (get-in db [:domain.database/record :db/id])
+                                                       (get-in user-datomic-record [:domain/fiddle-database :db/id]))))
+                                          (map (fn [db]
+                                                 (-> db
+                                                     (update :domain.database/record assoc
+                                                             :database/auto-transact false
+                                                             :database/color (color/color-for-name (:domain.database/name db)))
+                                                     (update :domain.database/name #(str user-dbname-prefix %)))))
+                                          (map (juxt :domain.database/name :domain.database/record))
+                                          (into {}))
+                            user-fiddle-dbname (some (fn [db]
+                                                       (when (= (get-in db [:domain.database/record :db/id])
+                                                                (get-in user-datomic-record [:domain/fiddle-database :db/id]))
+                                                         (:domain.database/name db)))
+                                                     (:domain/databases user-datomic-record))
+                            ide-$ (assoc (:domain/fiddle-database user-datomic-record)
+                                    :database/auto-transact false
+                                    :database/color (color/color-for-name user-fiddle-dbname))
+                            ide-dbs (-> (->> (concat (->> (:domain/databases ide-datomic-record)
+                                                          (map (fn [db] (update db :domain.database/record assoc
+                                                                                :database/auto-transact true
+                                                                                :database/color "#777")))))
+                                             (map (juxt :domain.database/name :domain.database/record))
+                                             (into {}))
+                                        (assoc "$" ide-$))]
+                        (into user-dbs ide-dbs))
            :environment environment
            :home-route home-route
            :service-uri service-uri
            :build build
+           ::user-dbname->ide (->> (:domain/databases user-datomic-record)
+                                   (map (fn [db]
+                                          [(:domain.database/name db)
+                                           (if (= (get-in db [:domain.database/record :db/id])
+                                                  (get-in user-datomic-record [:domain/fiddle-database :db/id]))
+                                             "$"
+                                             (str user-dbname-prefix (:domain.database/name db)))]))
+                                   (into {}))
            ::user-domain-record user-datomic-record
            :html-root-id "ide-root"
            }
