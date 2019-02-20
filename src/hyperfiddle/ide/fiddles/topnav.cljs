@@ -54,7 +54,7 @@
                                                  disabled? [:warning "Writes restricted"])
                                       :hyperfiddle.ui.popover/redirect (fn [popover-data]
                                                                          [(:fiddle/ident popover-data)])}))
-    [tooltip {:label "Environment administration"} (ui/link :domain ctx "env")]
+    [tooltip {:label "Environment administration"} (ui/link :hyperfiddle.ide/env ctx)]
     (if @(runtime/state (:peer ctx) [::runtime/user-id])
       (if-let [{:keys [:hypercrud.browser/data]} (hyperfiddle.data/browse ctx :account)]
         (let [props {:tooltip [nil @(r/fmap :user/email data)]
