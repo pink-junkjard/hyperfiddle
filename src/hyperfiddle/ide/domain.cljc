@@ -110,7 +110,7 @@
            :home-route home-route
            :service-uri service-uri
            :build build
-           :user-domain-record user-datomic-record
+           ::user-domain-record user-datomic-record
            :html-root-id "ide-root"
            }
           map->IdeDomain
@@ -132,7 +132,7 @@
 
 (defn build-user+
   ([ide-domain]
-   (build-user+ ide-domain (:user-domain-record ide-domain)))
+   (build-user+ ide-domain (::user-domain-record ide-domain)))
   ([ide-domain user-domain-record]                          ; this api is clumsy, should just use single arity (hydrate with ide) so bases are sensical
     ; shitty code duplication because we cant pass our api-routes data structure as props (no regex equality)
    (mlet [environment (reader/read-edn-string+ (:domain/environment user-domain-record))
