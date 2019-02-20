@@ -148,7 +148,7 @@
        (remove nil?)
        vec))
 
-(defn pull-union [vs]
+(defn pull-union [& vs]
   ; they have to be the same data-shape (schema), which if this is a valid pull, they are
   (cond
     (sequential? (first vs))
