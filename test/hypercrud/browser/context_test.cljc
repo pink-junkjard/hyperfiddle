@@ -905,20 +905,8 @@
              (return 42))
            (left "no match for class: :hf/new1")))
 
-    (is (= (->> (hyperfiddle.data/select-here+ ctx :hf/new) (unwrap (constantly nil)) deref)
-           {:db/id 17592186047372,
-            :link/class [:hf/new],
-            :link/fiddle {:db/id 17592186047373,
-                          :fiddle/ident :dustingetz.tutorial.blog/new-post,
-                          :fiddle/type :entity,
-                          :fiddle/pull "[:db/id *]",
-                          :fiddle/pull-database "$",
-                          :fiddle/markdown "### :dustingetz.tutorial.blog/new-post",
-                          :fiddle/renderer nil},
-            :link/path ":dustingetz.post/slug",
-            :link/rel :hf/new,
-            :link/tx-fn ":user/new-post",
-            :link/formula "(constantly (hyperfiddle.api/tempid! ctx))"})))
+    (is (= (->> (hyperfiddle.data/select-here+ ctx :hf/new) (unwrap (constantly nil)) deref :link/path)
+           ":dustingetz.post/slug")))
 
   )
 
