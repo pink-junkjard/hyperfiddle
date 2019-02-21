@@ -18,13 +18,14 @@
   ; this fn has bare minimum support for this page e.g. doesnt support card/many or nested modals
   (reduce (fn [entity [op e a v]]
             (case op
-              :db/add (assoc entity a v)                    ; these are lookup refs because of the options query
+              ; Make it shaped like a pulled-tree
+              :db/add (assoc entity a {:db/ident v})        ; these are lookup refs because of the options query
               :db/retract (dissoc entity a)))
           entity
           tx))
 
 (defn valueType-and-cardinality-with-tx! [special-attrs-state ctx tx]
-  (let [entity (hypercrud.browser.context/data ctx)
+  (let [entity @(:hypercrud.browser/result ctx)             ; the whole form, not the data
         uri @(r/fmap-> (:hypercrud.browser/fiddle ctx) :fiddle/ident name
                        (context/uri ctx))
         schema @(runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :schemas uri])
@@ -46,7 +47,7 @@
       (with-tx! ctx tx))))
 
 (defn ident-with-tx! [special-attrs-state ctx tx]
-  (let [entity (hypercrud.browser.context/data ctx)
+  (let [entity (context/data ctx)
         uri @(r/fmap-> (:hypercrud.browser/fiddle ctx) :fiddle/ident name
                        (context/uri ctx))
         schema @(runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :schemas uri])
@@ -73,7 +74,7 @@
         ident-f (fn [val ctx props]
                   (let [on-change! (r/comp (r/partial ident-with-tx! special-attrs-state ctx)
                                            (r/partial entity-change->tx ctx))
-                        props (assoc props :value @(:hypercrud.browser/result ctx)
+                        props (assoc props :value (context/data ctx)
                                            :on-change on-change!)]
                     [debounced props contrib.ui/keyword]))
         valueType-and-cardinality-f (fn [val ctx props]
@@ -81,7 +82,9 @@
                                                                (r/partial entity-change->tx ctx))]
                                         [hyperfiddle.ui/hyper-control val ctx (assoc props :on-change on-change!)]))]
     (fn [val ctx props]
-      (let [ctx (update ctx :hypercrud.browser/result (partial r/track reactive-merge))
+      (let [ctx (as-> ctx ctx
+                      (update ctx :hypercrud.browser/result (partial r/track reactive-merge))
+                      (context/index-result ctx))
             valid-attr? @(r/fmap completed? (:hypercrud.browser/result ctx))]
         [:div props
          [markdown "See [Datomic schema docs](https://docs.datomic.com/on-prem/schema.html)."]

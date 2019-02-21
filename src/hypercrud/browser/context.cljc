@@ -444,7 +444,7 @@
   ; Should you use this or ::eav? Userland renderers call this.
   ; Context internals use ::eav. I think.
   (let [ctx (-infer-implicit-element ctx)]
-    @(:hypercrud.browser/eav ctx)))
+    @(:hypercrud.browser/eav ctx)))                         ; this could be lazily pulled through :result
 
 (defn e [ctx]
   (let [[e _ _] (eav ctx)]
