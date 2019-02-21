@@ -31,7 +31,8 @@
                (project/attrs-request ctx)]
               (-quiet-unwrap
                 (mlet [r-fiddle @(r/apply-inner-r (r/track base/hydrate-fiddle meta-fiddle-request ctx))
-                       :let [ctx (context/schemas ctx (r/track context/summon-schemas-grouped-by-dbname ctx))
+                       r-schemas @(r/apply-inner-r (r/track context/summon-schemas-grouped-by-dbname+ ctx))
+                       :let [ctx (context/schemas ctx r-schemas)
                              ctx (context/fiddle ctx r-fiddle)]
                        fiddle-request @(r/apply-inner-r (r/track base/request-for-fiddle ctx))]
                   (s/assert r/reactive? r-fiddle)
