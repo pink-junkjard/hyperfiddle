@@ -1,7 +1,6 @@
 (ns hyperfiddle.local-storage-sync
   (:require
     [contrib.component :as component]
-    [contrib.document :as document]
     [contrib.local-storage :as local-storage]
     [hyperfiddle.foundation :as foundation]
     [hyperfiddle.io.global-basis :as global-basis]
@@ -76,7 +75,7 @@
           ; this is desired so an inactive tab does NOT
           (dispatch! action)
           (add-watch (runtime/state rt) :local-storage local-storage-state-watcher)
-          (foundation/bootstrap-data rt init-level foundation/LEVEL-HYDRATE-PAGE (document/root-rel-url!) (::runtime/global-basis current-state) different-stage))))))
+          (foundation/bootstrap-data rt init-level foundation/LEVEL-HYDRATE-PAGE (str js/document.location.pathname js/document.location.hash) (::runtime/global-basis current-state) different-stage))))))
 
 (defn- init-auto-tx [ls ssr]
   (reduce-kv (fn [acc k ssr-v]

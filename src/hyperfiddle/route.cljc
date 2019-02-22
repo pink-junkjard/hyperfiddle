@@ -96,7 +96,7 @@
    :post [(s/valid? :hyperfiddle/route %)]}
   (let [[path frag] (string/split s #"#" 2)]
     (if (= "/" path)
-      (assoc-frag home-route frag)
+      (assoc-frag home-route (empty->nil frag))
       (-> (try-either
             (let [[_ fiddle datomic-args query frag] (re-find url-regex s)]
               (canonicalize
