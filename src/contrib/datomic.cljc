@@ -322,7 +322,7 @@
              (->> (pull-traverse schema (pull-shape pull-pattern))
                   (remove empty?)
                   (map last)
-                  (map (juxt identity #(attr schema %)))
+                  (map (juxt identity #(some-> schema (attr %)))) ; dont crash
                   (filter (comp nil? second))               ; reject good ones
                   (map first)
                   #_empty?)

@@ -59,15 +59,18 @@
                             "stage-dirty")
                    :iframe-as-popover true}]
         [ui/link :hyperfiddle.ide/stage ctx "stage" props])
-      (as-> ctx ctx (hyperfiddle.data/browse ctx :hyperfiddle/topnav-new)
-            (ui/link :hyperfiddle.ide/new-fiddle ctx "new" (let [disabled? (not (security/can-create? ctx)) ; we explicitly know the context here is $
-                                                                 anonymous? (nil? @(runtime/state (:peer ctx) [::runtime/user-id]))]
-                                                             {:disabled disabled?
-                                                              :tooltip (cond
-                                                                         (and anonymous? disabled?) [:warning "Please login"]
-                                                                         disabled? [:warning "Writes restricted"])
-                                                              :hyperfiddle.ui.popover/redirect (fn [popover-data]
-                                                                                                 [(:fiddle/ident popover-data)])})))
+      (either/branch
+        (hyperfiddle.data/browse+ ctx :hyperfiddle/topnav-new) ; iframe wrapper for naked qfind color tag
+        #(vector :span %)
+        (fn [ctx]
+          (ui/link :hyperfiddle.ide/new-fiddle ctx "new" (let [disabled? (not (security/can-create? ctx)) ; we explicitly know the context here is $
+                                                               anonymous? (nil? @(runtime/state (:peer ctx) [::runtime/user-id]))]
+                                                           {:disabled disabled?
+                                                            :tooltip (cond
+                                                                       (and anonymous? disabled?) [:warning "Please login"]
+                                                                       disabled? [:warning "Writes restricted"])
+                                                            :hyperfiddle.ui.popover/redirect (fn [popover-data]
+                                                                                               [(:fiddle/ident popover-data)])}))))
       [tooltip {:label "Environment administration"} (ui/link :hyperfiddle.ide/domain ctx "env")]
       (if @(runtime/state (:peer ctx) [::runtime/user-id])
         (if-let [{:keys [:hypercrud.browser/result]} (hyperfiddle.data/browse ctx :hyperfiddle.ide/account)]

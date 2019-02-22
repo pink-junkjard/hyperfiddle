@@ -942,7 +942,7 @@
 
       is-element-level                                      ; includes hf/new
       (do
-        (assert (:hypercrud.browser/qfind ctx) ":blank fiddle (no qfind) with hf/new is illegal, specify a qfind.")
+        #_(assert (:hypercrud.browser/qfind ctx) ":blank fiddle (no qfind) with hf/new is illegal, specify a qfind.")
 
         ; Includes FindColl and FindScalar inferred above
         ; We can hack in FindRel-1 support here too
@@ -954,7 +954,7 @@
             ; Qfind tuple case without an element in the ctx, means we have to handle all N elements in parallel.
             ; Example: [:find (pull ?e [:post/slug]) (pull ?f [:post/slug])] should generate both links.
             ; Currently this is an error case. If we push (mapv args) down to this level it can be done.
-            (do (timbre/warn "element-level links aren't well defined for tupled qfind: "
+            #_(do (timbre/warn "element-level links aren't well defined for tupled qfind: "
                              ; FindRel and FindTuple
                              @(:hypercrud.browser/qfind ctx))
                 nil))))
