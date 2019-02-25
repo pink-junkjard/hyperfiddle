@@ -95,11 +95,11 @@
        (for [[_ ctx] (hypercrud.browser.context/spread-result ctx)]
          [(requests-here ctx)
           (for [[_ ctx] (hypercrud.browser.context/spread-rows ctx)]
-            [(requests-here ctx)
+            [#_(requests-here ctx)
              (for [[_ {el :hypercrud.browser/element :as ctx}] (hypercrud.browser.context/spread-elements ctx)]
                (case (unqualify (contrib.datomic/parser-type @el))
-                 :variable [(requests-here ctx)]
-                 :aggregate [(requests-here ctx)]
+                 :variable [#_(requests-here ctx)]
+                 :aggregate [#_(requests-here ctx)]
                  :pull [(requests-here ctx)
-                        (request-attr-level ctx)]))])])
+                        #_(request-attr-level ctx)]))])])
        (cross-streams ctx)])))
