@@ -477,8 +477,7 @@
       (= :db/id a) true?
       ; For first time entity creation only, use e.g. keyword editor to set the identity
       (= :db/ident a) (not (underlying-tempid ctx e))
-      (= :db.unique/identity (:db/unique attr))             ; (attr? ctx a :db.unique/identity)
-      (not (underlying-tempid ctx e))
+      (attr? ctx a :db.unique/identity) (not (underlying-tempid ctx e)) ; this logic in wrong place?
       :else false)))
 
 (defn row "Row does not set E. E is the parent, not the child, and row is analogous to :ref :many child."
