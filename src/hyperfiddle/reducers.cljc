@@ -1,11 +1,13 @@
 (ns hyperfiddle.reducers
-  (:require [contrib.data :refer [map-values]]
-            [contrib.datomic-tx :as tx]
-            [contrib.pprint :refer [pprint-str]]
-            [hypercrud.types.Err :refer [->Err]]
-            [hypercrud.util.branch :as branch]
-            [hyperfiddle.route :as route]
-            [hyperfiddle.state :as state]))
+  (:require
+    [clojure.spec.alpha :as s]
+    [contrib.data :refer [map-values]]
+    [contrib.datomic-tx :as tx]
+    [contrib.pprint :refer [pprint-str]]
+    [hypercrud.types.Err :refer [->Err]]
+    [hyperfiddle.branch :as branch]
+    [hyperfiddle.route]                                     ; spec validation
+    [hyperfiddle.state :as state]))
 
 
 (defn- serializable-error [e]
@@ -44,32 +46,35 @@
                  (update-in partition [:stage dbname] (partial tx/into-tx schema) tx)))]
     (->> (case action
            :transact!-success
-           (let [[dbnames] args]
+           (let [[branch-id dbnames] args]
              (-> partitions
-                 (assoc-in [nil :hydrate-id] "hack; dont flicker while page rebuilds")
-                 (update-in [nil :stage] #(apply dissoc % dbnames))))
+                 (assoc-in [branch-id :hydrate-id] "hack; dont flicker while page rebuilds")
+                 (update-in [branch-id :stage] #(apply dissoc % dbnames))))
 
-           :add-partition (let [[branch route] args]
-                            (update partitions branch
-                                    (fn [current-branch]
-                                      (if (route/compare-routes route (:route current-branch))
-                                        (assoc current-branch :route route)
-                                        {:route route}))))
+           :create-partition (let [[branch-id] args
+                                   parent-branch-id (branch/parent-branch-id branch-id)]
+                               (-> partitions
+                                   (update-in [parent-branch-id ::branch/children] conj branch-id)
+                                   (assoc branch-id {})))
 
-           :discard-partition (let [[branch] args]
-                                (dissoc partitions branch))
+           :discard-partition (let [[branch-id] args
+                                    parent-branch-id (branch/parent-branch-id branch-id)]
+                                (-> partitions
+                                    (dissoc branch-id)
+                                    (update-in [parent-branch-id ::branch/children] disj branch-id)))
 
            :partition-basis (let [[branch local-basis] args]
                               (assoc-in partitions [branch :local-basis] local-basis))
 
            :partition-route (let [[branch route] args]
+                              (assert (some? (get partitions branch)) "Must create-partition before setting route")
                               (assoc-in partitions [branch :route] route))
 
            :with (let [[branch dbname tx] args]
                    (update partitions branch with dbname tx))
 
            :merge (let [[branch] args
-                        parent-branch (branch/decode-parent-branch branch)]
+                        parent-branch (branch/parent-branch-id branch)]
                     (-> (reduce (fn [partitions [dbname tx]]
                                   (update partitions parent-branch with dbname tx))
                                 partitions
@@ -120,6 +125,8 @@
            :close-popover (let [[branch popover-id] args]
                             (update-in partitions [branch :popovers] disj popover-id))
 
+           :close-all-popovers (let [[branch] args] (update partitions branch dissoc :popovers))
+
            :reset-stage-branch (let [[branch v] args]
                                  (assoc-in partitions [branch :stage] v))
 
@@ -131,9 +138,10 @@
                        ; apply defaults
                        (->> {:hydrate-id identity
                              :popovers #(or % #{})
+                             ::branch/children #(or % #{})
 
                              ; data needed to hydrate a partition
-                             :route identity
+                             :route #(some->> % (s/assert :hyperfiddle/route))
                              :stage (fn [multi-color-tx]
                                       (->> multi-color-tx
                                            (remove (fn [[dbname tx]] (empty? tx)))
@@ -147,7 +155,7 @@
                              :ptm identity
                              :schemas identity
                              :tempid-lookups identity}
-                            (reduce (fn [v [k f]] (update v k f)) partition)))))))
+                            (reduce-kv update partition)))))))
 
 (defn auto-transact-reducer [auto-tx action & args]
   (case action

@@ -60,7 +60,7 @@
 (defn dissoc-frag [[fiddle ?datomic-args ?service-args _]]
   (canonicalize fiddle ?datomic-args ?service-args nil))
 
-(defn compare-routes [a b]
+(defn equal-without-frag? [a b]
   (= (dissoc-frag a) (dissoc-frag b)))
 
 (defn decoding-error [e s]
@@ -72,7 +72,7 @@
   {:pre [(s/valid? :hyperfiddle/route route) (s/valid? :hyperfiddle/route home-route)]
    :post [(str/starts-with? % "/")]}
   (let [[fiddle datomic-args service-args frag] route]
-    (if (compare-routes route home-route)
+    (if (equal-without-frag? route home-route)
       (str "/" (some->> frag empty->nil (str "#")))
       (case fiddle
         :hyperfiddle.system/decoding-error (first datomic-args)

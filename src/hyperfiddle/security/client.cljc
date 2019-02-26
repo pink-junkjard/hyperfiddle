@@ -10,11 +10,11 @@
     [contrib.try$ :refer [try-either]]
     [hypercrud.browser.context :as context]
     [hypercrud.browser.field :as field]
+    [hyperfiddle.branch :as branch]
     [hyperfiddle.domain :as domain]
     [hyperfiddle.runtime :as runtime]
     [hyperfiddle.security :as security]
-    [taoensso.timbre :as timbre]
-    [hypercrud.util.branch :as branch]))
+    [taoensso.timbre :as timbre]))
 
 
 (def allow-anonymous
@@ -45,9 +45,8 @@
                         (some-> @(runtime/state peer [::runtime/partitions branch :tempid-lookups dbname])
                                 (either/branch #(throw (ex-info % {})) #(get % dbid))
                                 some?)
-                        (if (some? branch)
-                          (new-entity? peer dbname dbid (branch/decode-parent-branch branch))
-                          false)))]
+                        (and (not (branch/root-branch? branch))
+                             (new-entity? peer dbname dbid (branch/parent-branch-id branch)))))]
   (def entity-ownership
     {:subject-can-transact? (fn [hf-db subject] (some? subject))
      :can-create? (fn [hf-db subject ctx] (some? subject))

@@ -122,7 +122,7 @@
                                          ; todo this needs work
                                          #_#_:encoded-route (subs (foundation/route-encode rt route) 1) ; includes "/"
                                          :encoded-route (base-64-url-safe/encode (pr-str route))
-                                         :branch (ednish/encode-uri branch))
+                                         :branch (base-64-url-safe/encode (pr-str branch)))
                 :accept :application/transit+json :as :auto}
                (if (empty? stage)
                  {:method :get}                             ; Try to hit CDN

@@ -9,6 +9,7 @@
     [hyperfiddle.domain :as domain]
     [hyperfiddle.domains.bidi :refer [map->BidiDomain]]
     [hyperfiddle.domains.ednish :refer [map->EdnishDomain]]
+    [hyperfiddle.foundation :as foundation]
     [hyperfiddle.io.core :as io]
     [hyperfiddle.io.routes :as routes]
     [hyperfiddle.route :as route]
@@ -46,7 +47,7 @@
                           (select-keys datomic-record [:domain/ident :domain/fiddle-database])))))
 
 (defn hydrate-app-domain [io local-basis domain-eid service-uri build]
-  (-> (io/hydrate-one! io local-basis nil (->EntityRequest domain-eid (->DbRef "$domains" nil) domain-pull))
+  (-> (io/hydrate-one! io local-basis nil (->EntityRequest domain-eid (->DbRef "$domains" foundation/root-branch) domain-pull))
       (p/then (fn [datomic-record]
                 (if (nil? (:db/id datomic-record))
                   (p/rejected (ex-info "Domain not found" {:hyperfiddle.io/http-status-code 404}))

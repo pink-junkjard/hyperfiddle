@@ -10,7 +10,7 @@
     [hypercrud.types.EntityRequest]
     [hypercrud.types.Err :refer [->Err]]
     [hypercrud.types.QueryRequest]
-    [hypercrud.util.branch :as branch]
+    [hyperfiddle.branch :as branch]
     [hyperfiddle.domain :as domain]                         ; todo is this moral?
     [hyperfiddle.io.bindings]                               ; userland
     [taoensso.timbre :as timbre])
@@ -57,20 +57,20 @@
             (or (get @db-with-lookup branch)
                 (let [db-with+ (mlet [t (or (some-> (get local-basis dbname) exception/success)
                                             (exception/failure (ex-info (str "Basis not found") {:dbname dbname :local-basis local-basis})))
-                                      init-db-with (if branch-ident
-                                                     (let [parent-ident (branch/decode-parent-branch branch-ident)
+                                      init-db-with (if (branch/root-branch? branch-ident)
+                                                     (exception/try-on
+                                                       (let [uri (:database/uri (domain/database domain dbname))
+                                                             $ (-> (d/connect (str uri)) d/db filter-db)]
+                                                         {:db-with $
+                                                          :secure-db (d/as-of $ t)}))
+                                                     (let [parent-ident (branch/parent-branch-id branch-ident)
                                                            parent-branch (or (->> staged-branches
                                                                                   (filter #(and (= parent-ident (:branch-ident %))
                                                                                                 (= dbname (:dbname %))))
                                                                                   first)
                                                                              {:branch-ident parent-ident
                                                                               :dbname dbname})]
-                                                       (get-secure-db-from-branch+ parent-branch))
-                                                     (exception/try-on
-                                                       (let [uri (:database/uri (domain/database domain dbname))
-                                                             $ (-> (d/connect (str uri)) d/db filter-db)]
-                                                         {:db-with $
-                                                          :secure-db (d/as-of $ t)})))]
+                                                       (get-secure-db-from-branch+ parent-branch)))]
                                  ; is it a history query? (let [db (if (:history? dbval) (d/history db) db)])
                                  (if (empty? tx)
                                    (cats/return init-db-with)

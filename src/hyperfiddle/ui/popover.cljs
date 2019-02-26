@@ -13,9 +13,9 @@
     [contrib.ui.tooltip :refer [tooltip tooltip-props]]
     [hypercrud.browser.base :as base]
     [hypercrud.browser.context :as context]
-    [hypercrud.util.branch :as branch]
     [hyperfiddle.actions :as actions]
     [hyperfiddle.api]
+    [hyperfiddle.branch :as branch]
     [hyperfiddle.runtime :as runtime]
     [hyperfiddle.ui.iframe :refer [iframe-cmp]]
     [promesa.core :as p]
@@ -72,33 +72,36 @@
   (runtime/dispatch! (:peer ctx) (actions/close-popover (:branch ctx) popover-id)))
 
 (defn cancel! [popover-id child-branch ctx]
-  (runtime/dispatch! (:peer ctx) (actions/batch
-                                   (actions/close-popover (:branch ctx) popover-id)
-                                   (actions/discard-partition child-branch))))
+  (runtime/dispatch! (:peer ctx) (fn [dispatch! get-state]
+                                   (dispatch!
+                                     (apply actions/batch
+                                            (actions/close-popover (:branch ctx) popover-id)
+                                            (actions/discard-partition get-state child-branch))))))
 
-(defn managed-popover-body [route popover-id ?child-branch link-ref ctx props]
-  (let [popover-ctx-pre (cond-> (context/clean ctx)         ; hack clean for block level errors
-                                ?child-branch (assoc :branch ?child-branch))
+(defn- branched-popover-body [route popover-id child-branch-id link-ref ctx props]
+  (let [popover-ctx-pre (-> (context/clean ctx)             ; hack clean for block level errors
+                            (assoc :branch child-branch-id
+                                   :hyperfiddle.ui/error-with-stage? true))
         +popover-ctx-post (base/data-from-route route popover-ctx-pre)
         r-popover-data (r/>>= :hypercrud.browser/data +popover-ctx-post)
         popover-invalid (->> +popover-ctx-post (unwrap (constantly nil)) context/tree-invalid?)]
-    [:div.hyperfiddle-popover-body                          ; wrpaper helps with popover max-width, hard to layout without this
-     ; NOTE: this ctx logic and structure is the same as the popover branch of browser-request/recurse-request
+    [:<>
      [iframe-cmp popover-ctx-pre {:route route}]            ; cycle
-     (when ?child-branch
-       [:button {:on-click (r/partial stage! link-ref popover-id ?child-branch ctx r-popover-data props)
-                 :disabled popover-invalid} "stage"])
-     (if ?child-branch
-       [:button {:on-click #(cancel! popover-id ?child-branch ctx)} "cancel"]
-       [:button {:on-click #(close! popover-id ctx)} "close"])
-     #_[:pre (pr-str route)]]))
+     [:button {:on-click (r/partial stage! link-ref popover-id child-branch-id ctx r-popover-data props)
+               :disabled popover-invalid} "stage"]
+     [:button {:on-click #(cancel! popover-id child-branch-id ctx)} "cancel"]]))
 
-(defn open! [route popover-id child-branch ctx]
-  (runtime/dispatch! (:peer ctx)
-                     (if child-branch
-                       (actions/add-partition (:peer ctx) route child-branch
-                                              (actions/open-popover (:branch ctx) popover-id))
-                       (actions/open-popover (:branch ctx) popover-id))))
+(defn- non-branched-popover-body [route popover-id ctx]
+  [:<>
+   [iframe-cmp (context/clean ctx) {:route route}]          ; cycle
+   [:button {:on-click #(close! popover-id ctx)} "close"]])
+
+(defn- open-branched-popover! [rt parent-branch-id child-branch-id popover-id route]
+  (fn [dispatch! get-state]
+    (dispatch! (actions/batch [:create-partition child-branch-id]
+                              [:partition-route child-branch-id route]))
+    (-> (actions/bootstrap-data rt child-branch-id actions/LEVEL-GLOBAL-BASIS)
+        (p/finally (fn [] (dispatch! (actions/open-popover parent-branch-id popover-id)))))))
 
 (defn- show-popover? [popover-id ctx]
   (runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :popovers popover-id]))
@@ -135,24 +138,26 @@
   ; - link's :db/id
   ; - route
   ; - visual-ctx's data & path (where this popover is being drawn NOT its dependencies)
-  (let [child-branch (let [child-id-str (-> [(hypercrud.browser.context/tempid visual-ctx)
-                                             @(r/fmap :db/id link-ref)
-                                             (:route props)
-                                             @(r/fmap (r/partial hypercrud.browser.context/stable-entity-key ctx) (:hypercrud.browser/fiddle ctx))]
-                                            hash str)]
-                       (branch/encode-branch-child (:branch ctx) child-id-str))
-        popover-id child-branch                             ; just use child-branch as popover-id
-        child-branch (when @(r/fmap (r/comp some? blank->nil :link/tx-fn) link-ref)
-                       child-branch)
+  (let [child-branch-id (let [relative-id (-> [(hypercrud.browser.context/tempid visual-ctx)
+                                               @(r/fmap :db/id link-ref)
+                                               (:route props)
+                                               @(r/fmap (r/partial hypercrud.browser.context/stable-entity-key ctx) (:hypercrud.browser/fiddle ctx))]
+                                              hash str)]
+                          (branch/child-branch-id (:branch ctx) relative-id))
+        popover-id child-branch-id                          ; just use child-branch as popover-id
+        should-branch @(r/fmap (r/comp some? blank->nil :link/tx-fn) link-ref)
         btn-props (-> props
                       (dissoc :route :tooltip ::redirect)
-                      (assoc :on-click (r/partial open! (:route props) popover-id child-branch ctx))
+                      (assoc :on-click (r/partial runtime/dispatch! (:peer ctx)
+                                                  (if should-branch
+                                                    (open-branched-popover! (:peer ctx) (:branch ctx) child-branch-id popover-id (:route props))
+                                                    (actions/open-popover (:branch ctx) popover-id))))
                       ; use twbs btn coloring but not "btn" itself
                       (update :class css "btn-default"))]
     [wrap-with-tooltip popover-id ctx props
      [with-keychord
-      "esc" #(do (js/console.warn "esc") (if child-branch
-                                           (cancel! popover-id child-branch ctx)
+      "esc" #(do (js/console.warn "esc") (if should-branch
+                                           (cancel! popover-id child-branch-id ctx)
                                            (close! popover-id ctx)))
       [re-com/popover-anchor-wrapper
        :showing? (show-popover? popover-id ctx)
@@ -160,4 +165,7 @@
        :anchor [:button btn-props [:span (str label "▾")]]
        :popover [re-com/popover-content-wrapper
                  :no-clip? true
-                 :body [managed-popover-body (:route props) popover-id child-branch link-ref ctx props]]]]]))
+                 :body [:div.hyperfiddle-popover-body       ; wrpaper helps with popover max-width, hard to layout without this
+                        (if should-branch
+                          [branched-popover-body (:route props) popover-id child-branch-id link-ref ctx props]
+                          [non-branched-popover-body (:route props) popover-id ctx])]]]]]))

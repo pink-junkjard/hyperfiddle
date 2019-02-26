@@ -9,6 +9,7 @@
     [contrib.ui :refer [code debounced easy-checkbox validated-cmp]]
     [contrib.ui.tooltip :refer [tooltip]]
     [hyperfiddle.actions :as actions]
+    [hyperfiddle.branch :as branch]
     [hyperfiddle.domain :as domain]
     [hyperfiddle.runtime :as runtime]
     [hyperfiddle.security.client :as security]
@@ -40,12 +41,12 @@
                         writes-allowed?+
                         (constantly true)
                         (fn [writes-allowed?] (or (not writes-allowed?) (empty? @stage))))]
-        (when (nil? branch)
+        (when (branch/root-branch? branch)
           [:button {:disabled disabled?
                     :style (cond-> {:background-color (domain/database-color (runtime/domain rt) selected-dbname)}
                              disabled? (assoc :pointer-events "none"))
                     :on-click (fn []
-                                (let [action (actions/manual-transact-db! rt selected-dbname)]
+                                (let [action (actions/manual-transact-db! rt branch selected-dbname)]
                                   (runtime/dispatch! rt action)))}
            "transact!"]))]
      " "
@@ -74,8 +75,8 @@
                                     (every? (fn [v] (or (map? v) (vector? v) (seq? v))) v)))
                        v))
       to-string pprint-datoms-str
-      on-change (fn [peer branch dbname-ref o n]
-                  (runtime/dispatch! peer (actions/reset-stage-db peer branch @dbname-ref n)))]
+      on-change (fn [rt branch dbname-ref o n]
+                  (runtime/dispatch! rt (actions/reset-stage-db (runtime/io rt) branch @dbname-ref n)))]
   (defn- tab-content [rt branch dbname-ref & children]
     (into [:div.tab-content {:style {:border-color (domain/database-color (runtime/domain rt) @dbname-ref)}}
            (let [props {:value @(runtime/state rt [::runtime/partitions branch :stage @dbname-ref])
@@ -93,7 +94,7 @@
   ([selected-dbname ctx]
    [editor-cmp selected-dbname (:peer ctx) (:branch ctx) (default-dbname-labels (:peer ctx))])
   ([selected-dbname rt branch dbname-labels & children]
-   (let [dirty-dbs (->> @(runtime/state rt [::runtime/partitions nil :stage])
+   (let [dirty-dbs (->> @(runtime/state rt [::runtime/partitions branch :stage])
                         (remove (comp empty? second))
                         (map first)
                         set)

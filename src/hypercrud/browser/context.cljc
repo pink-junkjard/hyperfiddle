@@ -17,7 +17,7 @@
     [hypercrud.types.DbName :refer [#?(:cljs DbName)]]
     [hypercrud.types.DbRef :refer [->DbRef]]
     [hypercrud.types.ThinEntity :refer [->ThinEntity #?(:cljs ThinEntity)]]
-    [hypercrud.util.branch]
+    [hyperfiddle.branch :as branch]
     [hyperfiddle.route :as route]
     [hyperfiddle.runtime :as runtime])
   #?(:clj
@@ -291,15 +291,20 @@
        (filter (comp nil? first))
        seq boolean))
 
-(defn tempid! "unstable"
-  ([ctx]
-   (let [dbname (or (dbname ctx) "$")]                      ; (assert dbname "no dbname in ctx")
-     ; If you don't like $, specify a :fiddle/pull-database or :fiddle/query
-     (tempid! dbname ctx)))
-  ([dbname ctx]                                             ; deprecated arity, i think
-   @(r/fmap->> (runtime/state (:peer ctx) [::runtime/partitions])
-               (hypercrud.util.branch/branch-val dbname (:branch ctx))
-               hash str)))
+(let [impl (fn [rt branch-id dbname]
+             (-> (loop [branch-id branch-id
+                        tx nil]
+                   (let [tx (concat tx @(runtime/state rt [::runtime/partitions branch-id :stage dbname]))]
+                     (if (branch/root-branch? branch-id)
+                       tx
+                       (recur (branch/parent-branch-id branch-id) tx))))
+                 hash str))]
+  (defn tempid! "unstable"
+    ([ctx]
+     (let [dbname (or (dbname ctx) "$")]                    ; (assert dbname "no dbname in ctx")
+       ; If you don't like $, specify a :fiddle/pull-database or :fiddle/query
+       (tempid! dbname ctx)))
+    ([dbname ctx] @(r/track impl (:peer ctx) (:branch ctx) dbname))))
 
 (defn- fix-param [ctx param]
   (if (instance? ThinEntity param)

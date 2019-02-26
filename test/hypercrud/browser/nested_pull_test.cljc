@@ -6,6 +6,7 @@
             [hypercrud.browser.field :as field :refer [auto-field]]
             [hypercrud.types.DbRef :refer [->DbRef]]
             [hypercrud.types.QueryRequest :refer [->QueryRequest]]
+            [hyperfiddle.foundation :as foundation]
             [hyperfiddle.runtime :as runtime]))
 
 
@@ -30,7 +31,7 @@
 (defn build-ctx [fiddle result]                             ; this is starting to look a lot like base/process-results
   {:hypercrud.browser/fiddle (r/atom fiddle)
    :hypercrud.browser/data (r/atom result)
-   :peer (let [state (r/atom {::runtime/partitions {nil {:schemas {"$" test-schema}}}})]
+   :peer (let [state (r/atom {::runtime/partitions {foundation/root-branch {:schemas {"$" test-schema}}}})]
            (reify
              runtime/State
              (runtime/state [_] state)

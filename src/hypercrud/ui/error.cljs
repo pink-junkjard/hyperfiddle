@@ -44,6 +44,6 @@
   (cond
     (> (count (:hypercrud.browser/path ctx)) 0) error-inline
 
-    (some? (:branch ctx)) (r/partial error-block-with-stage ctx)
+    (:hyperfiddle.ui/error-with-stage? ctx) (r/partial error-block-with-stage ctx)
 
     :else error-block))
