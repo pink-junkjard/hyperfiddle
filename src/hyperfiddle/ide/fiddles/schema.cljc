@@ -45,12 +45,15 @@
    :fiddle/renderer (str '[hyperfiddle.ide.fiddles.schema-attribute/renderer val ctx props])
    :fiddle/links #{{:db/id (keyword "hyperfiddle.schema.db-cardinality-options" $db)
                     :link/fiddle (db-cardinality-options $db)
+                    :link/path ":db/valueType"                  ; $db
                     :link/class #{:hf/iframe :cardinality-options}}
                    {:db/id (keyword "hyperfiddle.schema.db-unique-options" $db)
                     :link/fiddle (db-unique-options $db)
+                    :link/path ":db/unique"                  ; $db
                     :link/class #{:hf/iframe :unique-options}}
                    {:db/id (keyword "hyperfiddle.schema.db-valueType-options" $db)
                     :link/fiddle (db-valueType-options $db)
+                    :link/path ":db/valueType"                  ; $db
                     :link/class #{:hf/iframe :valueType-options}}
                    {:db/id :system-anchor-remove            ; XXX
                     :link/class #{:hf/remove}}}})
@@ -72,7 +75,9 @@
    :fiddle/type :query
    :fiddle/renderer (load-resource "ide/schema_renderer.cljs")
    :fiddle/links #{{:db/id :system-anchor-edit              ; XXX
+                    :link/path ":db/ident"                  ; $db
                     :link/fiddle (db-attribute-edit $db)}
                    {:db/id :system-anchor-new               ; XXX
+                    :link/path ":db/ident"                  ; $db
                     :link/class #{:hf/new}
                     :link/fiddle (db-attribute-edit $db)}}})

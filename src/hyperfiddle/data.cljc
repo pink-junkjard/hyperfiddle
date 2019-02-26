@@ -2,111 +2,89 @@
   (:require
     [cats.core :refer [>>=]]
     [cats.monad.either :refer [left right]]
+    [clojure.spec.alpha :as s]
     [contrib.ct :refer [unwrap]]
     [contrib.reactive :as r]
     [cuerdas.core :as str]
     [hypercrud.browser.base :as base]
     [hypercrud.browser.context :as context]
-    [hypercrud.browser.field :as field]
-    [hypercrud.browser.link :as link]))
+    [hyperfiddle.fiddle]))
 
 
-(defn form-with-naked-legacy "Field is invoked as fn"       ; because it unifies with request fn side
-  [ctx]                                                     ; f-field :: (relative-path ctx) => Any
-  (let [paths (->> (r/fmap ::field/children (:hypercrud.browser/field ctx))
-                   (r/unsequence ::field/path-segment)
-                   (mapcat (fn [[field path-segment]]
-                             (cond->> [[path-segment]]
-                               (context/find-element-segment? path-segment) ; this only happens once at the top for relation queries
-                               (into (->> @(r/fmap->> field ::field/children (map ::field/path-segment))
-                                          (mapv (fn [child-segment]
-                                                  [path-segment child-segment]))))))))]
-    (if-not (= :relation (-> ctx :hypercrud.browser/field deref ::field/level)) ; omit relation-[]
-      (conj (vec paths) [])                                 ; entity-[]
-      (vec paths))))
+(defn select-many "All links we can reach (for this entire dimension)"
+  [ctx ?corcs]
+  {:pre [#_(:hypercrud.browser/qfind ctx)                   ; :blank ?
+         #_(:hypercrud.browser/element ctx)                 ; database color
+         (:hypercrud.browser/link-index ctx)
+         (s/assert :hypercrud/context ctx)
+         #_(:hypercrud.browser/eav ctx)] ; it can be Reaction of [nil nil nil]
+   :post [(r/reactive? %)]}                                 ; its also a vector, associative by index
+  (->> (context/links-in-dimension-r
+         ctx (contrib.data/xorxs ?corcs #{}))
+       #_(map second)))
 
-(defn deps-satisfied? "Links in this :body strata" [ctx target-path]
-  (let [this-path (:hypercrud.browser/path ctx)
-        common-path (contrib.data/ancestry-common this-path target-path)
-        common-ctx (context/refocus ctx common-path)]
-    (loop [field (:hypercrud.browser/field common-ctx)
-           [segment & xs] (contrib.data/ancestry-divergence target-path common-path)]
-      (if-not segment
-        true                                                ; finished
-        (let [child-field (r/track context/find-child-field field segment ctx)]
-          (case @(r/fmap ::field/cardinality child-field)
-            :db.cardinality/one (recur child-field xs)
-            :db.cardinality/many false
-            false) #_"Nonsensical path - probably invalid links for this query, maybe they just changed the query and the links broke")))))
-
-(defn link-path-floor "Find the shortest path that has equal dimension" [ctx path]
-  (loop [ctx (context/refocus ctx path)]                    ; we know we're at least satisfied so this is safe
-    (if-let [parent-ctx (:hypercrud.browser/parent ctx)]    ; walk it up and see if the dimension changes
-      (case (::field/cardinality @(:hypercrud.browser/field parent-ctx))
-        :db.cardinality/one (recur parent-ctx)              ; Next one is good, keep going
-        :db.cardinality/many ctx)                           ; Next one is one too far, so we're done
-      ctx)))                                                ; Empty path is the shortest path
-
-(defn deps-over-satisfied? "satisfied but not over-satisfied" [ctx link-path]
-  (let [this-path (:hypercrud.browser/path ctx)]
-    (not= this-path (:hypercrud.browser/path (link-path-floor ctx link-path)))))
-
-(letfn [(link-matches-class? [?corcs page-fiddle-ident link]
-          ; What we've got fully matches what we asked for
-          (clojure.set/superset?
-            (-> (set (:link/class link))
-                (conj (some-> link :link/fiddle :fiddle/ident))
-                (conj (or (some-> link :link/path link/read-path last)
-                          page-fiddle-ident))               ; links with no path, e.g. FindScalar and FindColl, are named by fiddle
-                (conj (some-> link :link/tx-fn (subs 1) keyword)))
-            (contrib.data/xorxs ?corcs)))]
-  (defn select-all-r "List[Link]. Find the closest match."
-    ([ctx] {:pre [ctx]}
-     (r/fmap->> (:hypercrud.browser/fiddle ctx)
-                :fiddle/links
-                (filter (r/comp (r/partial deps-satisfied? ctx) link/read-path :link/path))))
-    ([ctx ?corcs]
-     (r/fmap->> (select-all-r ctx)
-                (filter (r/partial link-matches-class? ?corcs @(r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/ident])))))))
-
-(defn ^:export select-all-here "List[Link]. Find the closest match."
-  [ctx & [?corcs]]
-  (r/fmap->> (select-all-r ctx ?corcs)
-             (filter (r/partial link/same-path-as? (:hypercrud.browser/path ctx)))))
-
-(defn validate-one+ [class links]
-  (let [n (count links)]
+(defn validate-one+r [corcs r-links]                        ; Right[Reaction] or Left[Error] - broken, error should react too
+  (let [n @(r/fmap count r-links)]
     (condp = n
-      1 (right (first links))
-      0 (left (str/format "no match for class: %s" (pr-str class)))
-      (left (str/format "Too many (%s) links matched for class: %s" n (pr-str class))))))
+      1 (right (r/fmap first r-links))
+      0 (left (str/format "no match for class: %s" (pr-str corcs)))
+      (left (str/format "Too many (%s) links matched for criteria: %s" n (pr-str corcs))))))
+
+(defn ^:export select+ [ctx & [?corcs]]                     ; Right[Reaction[Link]] or Left[String]
+  {:pre [(s/assert :hypercrud/context ctx)]}
+  (->> (select-many ctx ?corcs)
+       (validate-one+r ?corcs)
+       #_#_r/apply-inner-r deref))
+
+(defn ^:export select "reactive" [ctx & [?corcs]]
+  {:pre [(s/assert :hypercrud/context ctx)]
+   :post [(r/reactive? %)]}
+  (->> (select+ ctx ?corcs)
+       (unwrap (constantly (r/pure nil)))))
+
+(defn select-many-here' [ctx & [?corcs]]
+  (let [cs (contrib.data/xorxs ?corcs #{})
+        a (context/a ctx)]
+    ; links "here" means all possible links that apply. Can be lots of things!
+    ; :db/id and :db/ident sys links
+    ; :db/id and :db/ident parent attr links are good here too
+    ; and attr tagged :db.unique/identity
+    (concat
+      @(select-many ctx (conj cs a))
+      (if (and (context/identity? ctx a)                    ; Parent links apply here too!
+               (not (context/qfind-level? ctx)))
+        (let [ctx (context/unwind ctx 1)]
+          @(select-many ctx (conj cs (context/a ctx))))))))
+
+(defn ^:export select-many-here "reactive" ; collapses if eav is part of corcs
+  [ctx & [?corcs]]
+  {:pre [(s/assert :hypercrud/context ctx)]
+   :post [(r/reactive? %)]}
+  (r/track select-many-here' ctx ?corcs))
 
 (defn ^:export select-here+ [ctx & [?corcs]]
-  {:pre [ctx]}
-  (->> (r/fmap->> (select-all-r ctx ?corcs)
-                  (filter (r/partial link/same-path-as? (:hypercrud.browser/path ctx)))
-                  (validate-one+ ?corcs))
-       r/apply-inner-r
-       deref))
-
-(defn ^:export select+ [ctx & [?corcs]]                     ; Right[Reaction[Link]], Left[String]
-  (->> (r/fmap->> (select-all-r ctx ?corcs)
-                  (validate-one+ ?corcs))
-       r/apply-inner-r
-       deref))
+  {:pre [(s/assert :hypercrud/context ctx)]
+   :post [#_(r/reactive? %)]}                               ; Left[String]], Right[R[T]]
+  (->> (select-many-here ctx ?corcs)
+       (validate-one+r ?corcs)
+       #_#_r/apply-inner-r deref))
 
 (defn ^:export browse+ "Navigate a link by hydrating its context accounting for dependencies in scope.
   returns Either[Loading|Error,ctx]."
   [ctx & [?corcs]]
+  {:pre [(s/assert :hypercrud/context ctx)]}
   ; No focusing, can select from root, and data-from-link manufactures a new context
-  (>>= (select+ ctx ?corcs)
-       #(base/data-from-link @% ctx)))
+  (>>= (select+ ctx ?corcs)                                 ; even one hflink can explode to two iframes
+       #(base/data-from-link @% ctx)))                      ; can return tuple
 
-(defn ^:export select-here [ctx & [?corcs]]
-  (->> (select-here+ ctx ?corcs) (unwrap (constantly nil))))
-
-(defn ^:export select [ctx & [?corcs]]
-  (->> (select+ ctx ?corcs) (unwrap (constantly nil))))
-
-(defn ^:export browse [ctx & [?corcs]]
+(defn ^:export browse [ctx & [?corcs]]                      ; returns a ctx, not reactive, has reactive keys
+  {:pre [(s/assert :hypercrud/context ctx)]}
   (->> (browse+ ctx ?corcs) (unwrap (constantly nil))))
+
+(defn spread-links-here [ctx & [?corcs]]
+  (->> (select-many-here ctx ?corcs)
+       (r/unsequence :db/id)))
+
+(defn spread-links-in-dimension [ctx & [?corcs]]            ; rename: layer
+  (->> (select-many ctx ?corcs)
+       (r/unsequence :db/id)))

@@ -3,6 +3,7 @@
     [cats.monad.either :as either #?@(:cljs [:refer [Left Right]])]
     [cognitect.transit :as t]
     #?(:cljs [com.cognitect.transit.types])
+    [contrib.datomic :refer [->Schema #?(:cljs Schema)]]
     [contrib.uri :refer [->URI #?(:cljs URI)]]
     [hypercrud.types.DbVal :refer [->DbVal #?(:cljs DbVal)]]
     [hypercrud.types.EntityRequest :refer [->EntityRequest #?(:cljs EntityRequest)]]
@@ -13,6 +14,7 @@
   #?(:clj
      (:import
        (cats.monad.either Left Right)
+       (contrib.datomic Schema)
        (hypercrud.types.DbVal DbVal)
        (hypercrud.types.EntityRequest EntityRequest)
        (hypercrud.types.Err Err)
@@ -23,7 +25,8 @@
 
 
 (def read-handlers
-  {"DbVal" (t/read-handler #(apply ->DbVal %))
+  {"schema" (t/read-handler #(contrib.datomic/indexed-schema (vec %))) ; it's a javascript array wut
+   "DbVal" (t/read-handler #(apply ->DbVal %))
    "EReq" (t/read-handler #(apply ->EntityRequest %))
    "err" (t/read-handler ->Err)
    "QReq" (t/read-handler #(apply ->QueryRequest %))
@@ -34,7 +37,10 @@
    "right" (t/read-handler #(either/right %))})
 
 (def write-handlers
-  {DbVal
+  {Schema
+   (t/write-handler (constantly "schema") (fn [v] (.-schema-pulledtree v)))
+
+   DbVal
    (t/write-handler (constantly "DbVal") (fn [v] [(:uri v) (:branch v)]))
 
    EntityRequest

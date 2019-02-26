@@ -1,6 +1,7 @@
 (ns hyperfiddle.schema
   (:require
     [contrib.data :as data]
+    [contrib.datomic]
     [contrib.reactive :as r]
     [hypercrud.client.core :as hc]
     [hypercrud.types.QueryRequest :refer [->QueryRequest]]
@@ -24,7 +25,7 @@
         requests (map (fn [uri] (request (hc/db rt uri branch))) uris)]
     (-> (hydrate-requests/hydrate-all-or-nothing! rt local-basis stage requests)
         (p/then (fn [schemas]
-                  (->> (map #(data/group-by-unique :db/ident %) schemas)
+                  (->> (map contrib.datomic/indexed-schema schemas)
                        (zipmap uris)))))))
 
 (defn hydrate-schemas [rt branch]

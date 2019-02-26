@@ -1,6 +1,8 @@
 (ns contrib.datomic-errors
-  (:require [contrib.data :refer [cond-let parse-query-element]]
-            [cuerdas.core :as string]))
+  (:require
+    [contrib.data :refer [cond-let parse-query-element]]
+    [contrib.pprint :refer [pprint-str]]
+    [cuerdas.core :as string]))
 
 
 (defn parse-datomic-error-soup [e req]
@@ -14,7 +16,7 @@
     [[match msg] (re-find #"^.+ :db.error/invalid-entity-id (.+)$" e)] [:db.error/invalid-entity-id msg]
     [[match msg] (re-find #"^.+ :db.error/insufficient-binding (.+)$" e)]
     [:db.error/insufficient-binding msg
-     (str (some-> req .-query pr-str) "\n\n" "Hint: Click 'src' to see and edit the query.")]
+     (str (some-> req .-query pprint-str))]                 ; query as whitespace string should be available
     [[match msg] (re-find #"^.+ :db.error/not-a-data-function (.+)$" e)] [:db.error/not-a-data-function msg]
     [[match msg] (re-find #"^.+ :db.error/not-an-entity (.+)$" e)]
     [:db.error/not-an-entity msg

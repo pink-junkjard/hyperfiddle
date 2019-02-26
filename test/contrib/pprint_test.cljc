@@ -28,17 +28,9 @@
   '(fn [ctx]
      (let [hide-datomic (reagent.core/atom true)
            db-attr? #(<= (:db/id %) 62)
-           do-filter-reactive (fn [xs]                      ; perf sensitive
+           do-filter-reactive (fn [xs]
                                 (as-> xs xs
-                                      (if @hide-datomic (remove db-attr? xs) xs)))]
-       (fn [ctx]
-         [:div.hyperfiddle-schema
-          [hyperfiddle.ui/markdown (-> ctx :hypercrud.browser/fiddle deref :db/doc)]
-          [:label {:style {:font-weight "400" :display "block"}} [:input {:type "checkbox" :checked @hide-datomic :on-change #(swap! hide-datomic not)}] " hide Datomic system attributes"]
-          [:label {:style {:font-weight "400" :display "block"}} [:input {:type "checkbox" :checked @hide-archived :on-change #(swap! hide-archived not)}] " hide Hyperfiddle archived attributes"]
-          (let [ctx (-> ctx
-                        (update :hypercrud.browser/data (partial contrib.reactive/fmap do-filter-reactive)))]
-            [hyperfiddle.ui/result @(:hypercrud.browser/data ctx) ctx])]))))
+                                      (if @hide-datomic (remove db-attr? xs) xs)))])))
 
 #_(deftest pprint-performance-1 []
 

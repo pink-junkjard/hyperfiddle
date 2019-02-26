@@ -1,6 +1,8 @@
 (ns contrib.reactive
-  (:refer-clojure :exclude [atom comp constantly partial])
-  (:require [cats.core :as cats]
+  (:refer-clojure :exclude [atom comp constantly partial sequence apply])
+  (:require [cats.core :as cats :refer [return]]
+            [cats.monad.either :refer [branch left right]]
+            [clojure.spec.alpha :as s]
             [contrib.data :as util]
     #?(:cljs [reagent.core :as reagent])
     #?(:cljs [reagent.ratom :refer [IReactiveAtom]]))
@@ -17,19 +19,22 @@
      :cljs (satisfies? IReactiveAtom v)))
 
 (defn atom [x & rest]
-  (apply #?(:clj clojure.core/atom :cljs reagent/atom) x rest))
+  (clojure.core/apply #?(:clj clojure.core/atom :cljs reagent/atom) x rest))
 
 (defn cursor [src path]
-  {:pre [(reactive? src)]}
+  {:pre [(s/assert reactive? src)]}
   ; todo support more than just IDeref
   #?(:clj  (delay (get-in @src path))
      :cljs (reagent/cursor src path)))
 
 (defn partial [f & args]
-  (apply #?(:clj clojure.core/partial :cljs reagent/partial) f args))
+  (clojure.core/apply #?(:clj clojure.core/partial :cljs reagent/partial) f args))
 
 (defn last-arg-first [f & args]
-  (apply f (last args) (drop-last 1 args)))
+  (clojure.core/apply f (last args) (drop-last 1 args)))
+
+(defn flip [f x y]
+  (f y x))
 
 #?(:cljs
    (deftype Constantly [v]
@@ -113,7 +118,7 @@
      (-invoke [_ a b c d e f g h i j k l m n o p q r s t]
        (cf a b c d e f g h i j k l m n o p q r s t))
      (-invoke [_ a b c d e f g h i j k l m n o p q r s t rest]
-       (apply cf a b c d e f g h i j k l m n o p q r s t rest))
+       (clojure.core/apply cf a b c d e f g h i j k l m n o p q r s t rest))
      IEquiv
      (-equiv [_ other] (and (instance? Comp other) (= fs (.-fs other))))
      IHash
@@ -122,18 +127,39 @@
 #?(:cljs (defn comp
            ([] identity)
            ([f] f)
-           ([f & fs] (->Comp (apply clojure.core/comp f fs) (cons f fs))))
+           ([f & fs] (->Comp (clojure.core/apply clojure.core/comp f fs) (cons f fs))))
    :clj  (def comp clojure.core/comp))
 
 (defn track [f & args]
   ; todo support more than just IDeref
-  #?(:clj  (delay (apply f args))
-     :cljs (apply reagent/track f args)))
+  #?(:clj  (delay (clojure.core/apply f args))
+     :cljs (clojure.core/apply reagent/track f args)))
 
-(defn fmap [f rv]
-  {:pre [f]}
-  (assert (reactive? rv) (str "fmap rv: " rv " did you pass nil instead of (r/atom nil)?"))
-  (track (comp f deref) rv))
+(let [f (fn [rvs]
+          (doall (map deref rvs)))]
+  (defn sequence "see cats.core/sequence" [rvs]
+    (track f rvs)
+    #_(reduce (fn [acc rv]
+                (fmap (partial cons acc) rv))
+              (atom ())
+              rvs)))
+
+(declare apply)
+
+(defn fmap
+  ([f rv]
+   {:pre [f]}
+   (assert (reactive? rv) (str "fmap rv: " rv " did you pass nil instead of (r/atom nil)?"))
+   (track (comp f deref) rv))
+  ; Not idiomatic
+  #_([f rv & rvs]
+    ; java.lang.RuntimeException: Can't have fixed arity function with more params than variadic function
+   (apply f (cons rv rvs))))
+
+(defn apply
+  ([f rvs]
+   (fmap (partial clojure.core/apply f) (sequence rvs)))
+  #_(fmap->> (sequence rvs) (clojure.core/apply f)))        ; seems broken macro in cljs only `WARNING: Wrong number of args (1) passed to cljs.core/apply at line 219 reactive.cljc`
 
 (defn >>= [fr rv]
   (track (comp deref fr deref) rv))
@@ -166,11 +192,16 @@
 ; Reactive[Monad[_]] => Reactive[Monad[Reactive[_]]]
 ; useful for reacting on the Either (left v right), but not the Right's value
 ; this should probably fall out eventually
-(let [f (fn [rmv] (cats/fmap (clojure.core/constantly (fmap cats/extract rmv)) @rmv))]
+(let [f (fn [rmv]
+          {:pre [#_(s/assert cats.monad.either/either? @rmv)]}
+          (cats/fmap (clojure.core/constantly (fmap cats/extract rmv)) @rmv))]
   (defn apply-inner-r [rmv]
+    {:pre [(s/assert reactive? rmv)
+           #_(s/assert cats.monad.either/either? @rmv)]
+     :post [(s/assert reactive? %)]}
     (track f rmv)))
 
-(defn unsequence
+(defn unsequence                                            ; legacy, soon dead.
   "Expand a reference of a list into a list of references while maintaining order.
 
   If `key-fn` is provided, the children cursors will be pathed by the provided key-fn, NOT index.
@@ -181,18 +212,18 @@
    (assert @(fmap #(or (vector? %) (nil? %)) rv) "unsequencing by index requires vector input, maybe try using a key like :db/id?")
    (->> (range @(fmap count rv))
         ; cursur indexing by index silently fails if @rv is a list here
-        (map (fn [index] [(cursor rv [index]) index]))))
-  ([key-fn rv]
+        (map (fn [ix] [ix (cursor rv [ix])]))))
+  ([key-fn rv]                                              ; kill this arity
    {:pre [(reactive? rv)]}
-   (let [lookup (fmap (partial util/group-by-unique key-fn) rv)]
+   (let [lookup (fmap (partial util/group-by-unique key-fn) rv)] ; because results are vectors(sets) and we need to traverse by id
      (->> @(fmap (partial map key-fn) rv)
-          (map (fn [key] [(cursor lookup [key]) key]))))))
+          (map (fn [k] [k (cursor lookup [k])]))))))
 
-(defn row-keyfn' "See hypercrud.browser.context/row-keyfn"
-  [f row]
-  {:pre [(not (reactive? row))]}
-  ; This keyfn is very tricky, read https://github.com/hyperfiddle/hyperfiddle/issues/341
-  (-> (if (or (vector? row) (seq? row))                     ; todo should probably inspect fields instead of seq
-        (map f row)
-        (f row))
-      hash))
+(defn ctxf "reactive apply f to sequenced rvs extracted from map
+  ks can be fns, but must be stable refs"
+  [stable-f ctx & ks]
+  (let [rvs ((clojure.core/apply juxt ks) ctx)]
+    (apply stable-f rvs)))
+
+(defn pure [v]
+  (track identity v))

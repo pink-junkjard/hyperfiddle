@@ -50,9 +50,12 @@
               (fn [f] [f value ctx props])))))))
 
 (defn- ui-comp [ctx & [props]]                              ; user-renderer comes through here
-  (let [value @(:hypercrud.browser/data ctx)
+  (let [value @(:hypercrud.browser/result ctx)              ; TODO remove this, make them ask
         props (update props :class css (auto-ui-css-class ctx))
-        view-props (select-keys props [:class :initial-tab :on-click #_:disabled]) ; https://github.com/hyperfiddle/hyperfiddle/issues/698
+
+        ; The reactdom component should filter the keys at the last second.
+        ; https://github.com/hyperfiddle/hyperfiddle/issues/698
+        view-props props #_(select-keys props [:class :initial-tab :on-click #_:disabled])
         display-mode @(:hypercrud.ui/display-mode ctx)
         error-props (-> (select-keys props [:class :on-click])
                         (update :class css "hyperfiddle-error"))]
@@ -71,16 +74,17 @@
 
 (defn- src-mode [route ctx]
   (mlet [ctx (-> (context/clean ctx)
+                 #_(context/schemas (r/track context/summon-schemas-grouped-by-dbname ctx))
                  (routing/route+ route))
          request @(r/apply-inner-r (r/track base/meta-request-for-fiddle ctx))
-         :let [fiddle (let [fiddle {:fiddle/type :entity
-                                    :fiddle/pull-database "$"}]
-                        ; turns out we dont need fiddle for much if we already know the request
-                        (r/track fiddle/apply-defaults fiddle))]
          ctx (-> (context/source-mode ctx)
                  (context/clean)
-                 (routing/route+ [nil [(->ThinEntity "$" [:fiddle/ident @(r/fmap first (:hypercrud.browser/route ctx))])]]))]
-    (base/process-results fiddle request ctx)))
+                 (routing/route+ [nil [(->ThinEntity "$" [:fiddle/ident @(r/fmap first (:hypercrud.browser/route ctx))])]])
+                 ; turns out we dont need fiddle for much if we already know the request
+                 (context/schemas (r/track context/summon-schemas-grouped-by-dbname ctx))
+                 (context/fiddle (r/pure {:fiddle/type :entity
+                                          :fiddle/pull-database "$"})))]
+    (base/process-results request ctx)))
 
 (defn iframe-cmp [ctx {:keys [route hf-live] :as props}]    ; :: [route ctx & [?f props]]
   (let [click-fn (or (::on-click ctx) (constantly nil))     ; parent ctx receives click event, not child frame

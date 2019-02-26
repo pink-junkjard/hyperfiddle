@@ -18,7 +18,8 @@
             tags/*cljs-data-readers* (merge tags/*cljs-data-readers*
                                             hc-data-readers
                                             {'entity hc-readers/entity
-                                             'uri hc-readers/uri})]
+                                             'uri hc-readers/uri
+                                             'schema hc-readers/schema})]
     (let [r (atom nil)]
       (when-not (contains? (::ana/namespaces @-cljsjs-empty-state) eval-in-ns)
         (cljs/eval-str -cljsjs-empty-state
@@ -45,7 +46,8 @@
             tags/*cljs-data-readers* (merge tags/*cljs-data-readers*
                                             hc-data-readers
                                             {'entity hc-readers/entity
-                                             'uri hc-readers/uri})]
+                                             'uri hc-readers/uri
+                                             'schema hc-readers/schema})]
     (let [r (atom nil)
           _ (cljs/eval-str -cljsjs-empty-state
                            code-str

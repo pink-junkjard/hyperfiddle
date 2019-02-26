@@ -32,9 +32,9 @@
             fiddle-name (if (keyword? fiddle-ident) (name fiddle-ident))]
         [tooltip {:label fiddle-name}
          [:span fiddle-name]])
-      (let [props {:tooltip [nil "Fiddles in this domain"]
-                   :iframe-as-popover true}]
-        [ui/link :fiddle-shortcuts ctx "index" props])]
+      [ui/link :hyperfiddle.ide/entry-point-fiddles ctx "index"
+       {:tooltip [nil "Fiddles in this domain"]
+        :iframe-as-popover true}]]
 
      [:div.right-nav {:key "right-nav"}                     ; CAREFUL; this key prevents popover flickering
       [loading-spinner ctx]
@@ -58,21 +58,25 @@
                    :class (when-not @(r/fmap empty? (runtime/state (:peer ctx) [::runtime/partitions nil :stage]))
                             "stage-dirty")
                    :iframe-as-popover true}]
-        [ui/link :stage ctx "stage" props])
-      (ui/link :new-fiddle ctx "new" (let [disabled? (not (security/can-create? ctx)) ; we explicitly know the context here is $
-                                                   anonymous? (nil? @(runtime/state (:peer ctx) [::runtime/user-id]))]
-                                               {:disabled disabled?
-                                                :tooltip (cond
-                                                           (and anonymous? disabled?) [:warning "Please login"]
-                                                           disabled? [:warning "Writes restricted"])
-                                                :hyperfiddle.ui.popover/redirect (fn [popover-data]
-                                                                                   [(:fiddle/ident popover-data)])}))
-      [tooltip {:label "Environment administration"} (ui/link :domain ctx "env")]
+        [ui/link :hyperfiddle.ide/stage ctx "stage" props])
+      (either/branch
+        (hyperfiddle.data/browse+ ctx :hyperfiddle/topnav-new) ; iframe wrapper for naked qfind color tag
+        #(vector :span %)
+        (fn [ctx]
+          (ui/link :hyperfiddle.ide/new-fiddle ctx "new" (let [disabled? (not (security/can-create? ctx)) ; we explicitly know the context here is $
+                                                               anonymous? (nil? @(runtime/state (:peer ctx) [::runtime/user-id]))]
+                                                           {:disabled disabled?
+                                                            :tooltip (cond
+                                                                       (and anonymous? disabled?) [:warning "Please login"]
+                                                                       disabled? [:warning "Writes restricted"])
+                                                            :hyperfiddle.ui.popover/redirect (fn [popover-data]
+                                                                                               [(:fiddle/ident popover-data)])}))))
+      [tooltip {:label "Environment administration"} (ui/link :hyperfiddle.ide/domain ctx "env")]
       (if @(runtime/state (:peer ctx) [::runtime/user-id])
-        (if-let [{:keys [:hypercrud.browser/data]} (hyperfiddle.data/browse ctx :account)]
-          (let [props {:tooltip [nil @(r/fmap :user/email data)]
+        (if-let [{:keys [:hypercrud.browser/result]} (hyperfiddle.data/browse ctx :hyperfiddle.ide/account)]
+          (let [props {:tooltip [nil @(r/fmap :user/email result)]
                        :iframe-as-popover true}]
-            [ui/link :account ctx @(r/fmap :user/name data) props]))
+            [ui/link :hyperfiddle.ide/account ctx @(r/fmap :user/name result) props]))
         [:a {:href (foundation/stateless-login-url ctx)} "login"])]]))
 
 (defn hack-login-renderer [val ctx props]
@@ -83,7 +87,8 @@
     [loading-spinner ctx]]])
 
 (defn renderer [val ctx props]
-  (let [f (if (and (= :hyperfiddle.ide/please-login (first (context/target-route ctx)))
+  (let [#_#_ctx (hypercrud.browser.context/element ctx)               ; its blank
+        f (if (and (= :hyperfiddle.ide/please-login (first (context/target-route ctx)))
                    (not= [:domain/ident foundation/source-domain-ident] (:domain-eid (runtime/host-env (:peer ctx)))))
             hack-login-renderer
             renderer')]

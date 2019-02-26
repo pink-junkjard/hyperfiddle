@@ -1,16 +1,17 @@
 (ns hyperfiddle.fiddle
   (:require
-    [cats.core :as cats]
+    [cats.core :as cats :refer [mlet return =<< fmap]]
     [clojure.spec.alpha :as s]
     [contrib.ct :refer [unwrap]]
     [contrib.data :refer [update-existing]]
-    [contrib.reader :as reader]
+    [contrib.reader]
     [contrib.string :refer [or-str]]
     [contrib.template :as template]
     [contrib.try$ :refer [try-either]]
     [cuerdas.core :as str]
     [datascript.parser]
     #_[hyperfiddle.ui]
+    #_[hyperfiddle.api]                                     ; tempid formulas
     [taoensso.timbre :as timbre]))
 
 
@@ -68,7 +69,7 @@
 (defn infer-query-formula [query]
   (unwrap
     #(timbre/warn %)
-    (->> (reader/memoized-read-string+ query)
+    (->> (contrib.reader/memoized-read-string+ query)
          (cats/=<< #(try-either (datascript.parser/parse-query %)))
          (cats/fmap (fn [{:keys [qin]}]
                       (if (->> qin
@@ -78,6 +79,22 @@
                         ; todo (juxt first second)
                         "identity"
                         "(constantly nil)"))))))
+
+(defn read-a "Use :qin to infer the src if the link/a eschews it."
+  [s qin]
+  (let [[x :as xs] (->> (contrib.reader/memoized-read-edn-string+ (str "[" s "]"))
+                        (unwrap #(timbre/error %)))]
+    (condp = (count xs)
+      2 xs
+      1 ['$ x]                                              ; TODO: Use :qin to choose the right color
+      ; 0 is invalid
+      0 nil)))
+
+(defn read-path [s]
+  (->> (contrib.reader/memoized-read-edn-string+ (str "[" s "]"))
+       (unwrap #(timbre/error %))                           ; too late to report anything to the dev
+       last                                                 ; Adapt legacy to attribute
+       ))
 
 (def link-defaults
   {:link/formula (fn [link]
@@ -96,12 +113,25 @@
                      ; TODO: What if :txfn is combined with :target-fiddle :blank, or :target-fiddle :FindTuple?
                      :else-txfn "identity"))
 
-   :link/tx-fn (fn [link]
-                 ; Auto parent-child management for eav contexts
-                 (let [a (contrib.string/blank->nil (:link/path link))]
+   :link/tx-fn (fn [schemas qin link]
+                 ; Auto parent-child management for eav ref contexts
+                 (let [[src-db a] (read-a (contrib.string/blank->nil (:link/path link)) qin)
+                       ; Consider: ref, fiddle-ident, scalar (e.g. :streaker/date, :fiddle/ident, :db/ident)
+                       schema (get schemas (str src-db))
+                       is-identity (and a (contrib.datomic/unique? schema a :db.unique/identity))
+                       is-ref (and a (contrib.datomic/ref? schema a))]
                    (condp some (:link/class link)
-                     #{:hf/new :hf/affix} (if a ":db/add" ":zero") ; hack to draw as popover
-                     #{:hf/remove :hf/detach} (if a ":db/retract" ":db.fn/retractEntity")
+                     #{:hf/new :hf/affix} (cond
+                                            ; Need to know what context we in.
+                                            ; Identity can be parent-child ref.
+                                            is-identity ":zero" ; hack to draw as popover
+                                            is-ref ":db/add"
+                                            :else ":zero")  ; nil a, or qfind-level
+
+                     #{:hf/remove :hf/detach} (cond
+                                                is-identity ":db.fn/retractEntity"
+                                                is-ref ":db/retract"
+                                                :else ":db.fn/retractEntity") ; legacy compat, remove
                      nil)))})
 
 (def fiddle-defaults
@@ -114,15 +144,17 @@
                          :clj  nil))
    :fiddle/type (constantly :blank)})                       ; default is :query from new-fiddle; but from links panel, it's :entity
 
-(defn auto-link [link]
+(defn auto-link [schemas qin link]
   (-> link
       (update-existing :link/fiddle apply-defaults)
       (update :link/formula or-str ((:link/formula link-defaults) link))
-      (update :link/tx-fn or-str ((:link/tx-fn link-defaults) link))))
+      (update :link/tx-fn or-str ((:link/tx-fn link-defaults) schemas qin link))))
 
-(defn apply-defaults [fiddle]
+(defn apply-defaults "Fiddle-level defaults but not links.
+  Links need the qfind, but qfind needs the fiddle defaults.
+  Don't depend on ctx, this function runs in many situations including in datalog"
+  [fiddle]
   (as-> fiddle fiddle
-        (update fiddle :fiddle/links (partial map auto-link))
         (update fiddle :fiddle/type #(or % ((:fiddle/type fiddle-defaults) fiddle)))
         (cond-> fiddle
                 (= :query (:fiddle/type fiddle)) (update :fiddle/query or-str ((:fiddle/query fiddle-defaults) fiddle))
@@ -130,6 +162,10 @@
                                                       (update :fiddle/pull-database or-str ((:fiddle/pull-database fiddle-defaults) fiddle))))
         (update fiddle :fiddle/markdown or-str ((:fiddle/markdown fiddle-defaults) fiddle))
         (update fiddle :fiddle/renderer or-str ((:fiddle/renderer fiddle-defaults) fiddle))))
+
+(defn apply-fiddle-links-defaults "Link defaults require a parsed qfind, so has to be done separately later."
+  [fiddle schemas qparsed]
+  (update fiddle :fiddle/links (partial map (partial auto-link schemas (:qin qparsed)))))
 
 (def browser-pull                                           ; synchronized with http://hyperfiddle.hyperfiddle.net/:hyperfiddle!ide/
   [:db/id
@@ -144,7 +180,6 @@
                                   :fiddle/type              ; validation
                                   ]}
                    :link/formula
-                   :link/ident                              ; legacy
                    :link/path
                    :link/tx-fn]}
    :fiddle/markdown
@@ -157,3 +192,18 @@
    :fiddle/hydrate-result-as-fiddle
    '*                                                       ; For hyperblog, so we can access :hyperblog.post/title etc from the fiddle renderer
    ])
+
+
+(defn parse-fiddle-query [{:keys [fiddle/type fiddle/query fiddle/pull fiddle/pull-database]}]
+  (->> (case type
+         :blank nil
+         :entity (->> (contrib.reader/memoized-read-edn-string+ pull)
+                      (fmap (fn [pull]
+                              (let [source (symbol pull-database)
+                                    fake-q `[:find (~'pull ~source ~'?e ~pull) . :where [~'?e]]]
+                                (datascript.parser/parse-query fake-q))))
+                      (unwrap (constantly nil)))
+         :query (->> (contrib.reader/memoized-read-edn-string+ query)
+                     (=<< #(try-either
+                             (datascript.parser/parse-query %)))
+                     (unwrap (constantly nil))))))

@@ -2,11 +2,12 @@
   (:require-macros [hyperfiddle.ui :refer [-build-fiddle]])
   (:require
     [cats.core :as cats :refer [fmap >>=]]
-    [cats.monad.either :as either]
+    [cats.monad.either :as either :refer [branch]]
     [clojure.core.match :refer [match match*]]
     [clojure.string :as string]
     [contrib.ct :refer [unwrap]]
     [contrib.css :refer [css css-slugify]]
+    [contrib.data :refer [unqualify]]
     [contrib.eval :as eval]
     [contrib.pprint :refer [pprint-str]]
     [contrib.reactive :as r]
@@ -17,26 +18,24 @@
     [contrib.validation]
     [datascript.parser :refer [FindRel FindColl FindTuple FindScalar Variable Aggregate Pull]]
     [hypercrud.browser.context :as context]
-    [hypercrud.browser.field :as field]
-    [hypercrud.browser.link :as link]
     [hypercrud.browser.routing :as routing]
     [hypercrud.ui.connection-color :refer [connection-color]]
     [hypercrud.ui.error :as ui-error]
     [hypercrud.ui.stale :as stale]
     [hyperfiddle.data :as data]
     [hyperfiddle.domain]
-    [hyperfiddle.ide.console-links]
     [hyperfiddle.route :as route]
     [hyperfiddle.runtime]
     [hyperfiddle.security.client :as security]
     [hyperfiddle.ui.api]
-    [hyperfiddle.ui.controls :as controls :refer [label-with-docs dbid-label magic-new]]
+    [hyperfiddle.ui.controls :as controls :refer [label-with-docs identity-label ref-label element-label magic-new]]
     [hyperfiddle.ui.docstring :refer [semantic-docstring]]
     [hyperfiddle.ui.iframe :refer [iframe-cmp]]
     [hyperfiddle.ui.popover :refer [effect-cmp popover-cmp]]
     [hyperfiddle.ui.select$]
     [hyperfiddle.ui.sort :as sort]
-    [hyperfiddle.ui.util :refer [writable-entity?]]))
+    [hyperfiddle.ui.util :refer [writable-entity?]]
+    [cljs.spec.alpha :as s]))
 
 
 (let [memoized-eval-expr-str!+ (memoize eval/eval-expr-str!+) ; don't actually need to safely eval, just want to memoize exceptions)
@@ -47,12 +46,13 @@
                              (fn [e] (throw e))
                              (fn [f] (into [f] args))))]
   (defn attr-renderer-control [val ctx & [props]]
-    ; The only way to stabilize this is for this type signature to become a react class.
-    (when-let [user-f (-> @(r/cursor (:hypercrud.browser/attr-renderers ctx) [(last (:hypercrud.browser/path ctx))])
-                          blank->nil)]
-      [user-portal (ui-error/error-comp ctx) nil
-       ; ?user-f is stable due to memoizing eval (and only due to this)
-       [eval-renderer-comp user-f val ctx props]])))
+    (let [[_ a _] (context/eav ctx)]
+      ; The only way to stabilize this is for this type signature to become a react class.
+      (when-let [user-f (-> @(r/cursor (:hypercrud.browser/attr-renderers ctx) [a])
+                            blank->nil)]
+        [user-portal (ui-error/error-comp ctx) nil
+         ; ?user-f is stable due to memoizing eval (and only due to this)
+         [eval-renderer-comp user-f val ctx props]]))))
 
 (declare result)
 (declare pull)
@@ -64,89 +64,117 @@
 (declare fiddle-xray)
 
 (defn entity-links-iframe [val ctx & [props]]
-  (->> (r/fmap->> (data/select-all-r ctx :hf/iframe)
-                  (remove (r/comp (r/partial data/deps-over-satisfied? ctx) link/read-path :link/path)))
-       (r/unsequence (r/partial context/stable-relation-key ctx))
-       (map (fn [[rv k]]
-              ^{:key k}
-              [ui-from-link rv ctx props]))
-       (into [:<>])))
+  ; Remove links that are also available at our ancestors.
+  ; http://hyperfiddle.hyperfiddle.site/:hyperfiddle.ide!domain/~entity('$domains',(:domain!ident,'hyperfiddle'))
+  ; http://tank.hyperfiddle.site/:tutorial.race!submission/~entity('$',(:dustingetz.reg!email,'bob@example.com'))
+  ; http://tank.hyperfiddle.site/:dustingetz.seattle!communities/
+  (if (or (= (context/depth ctx) 0)
+          (and (> (context/depth ctx) 0)
+               (let [[_ a _] (context/eav ctx)]
+                 (not (contrib.datomic/ref-one? @(:hypercrud.browser/schema ctx) a)))))
+    [:<>
+     ; keep flip flopping. is it here, or in dimension ??
+     (for [[k r-link] (hyperfiddle.data/spread-links-in-dimension ctx :hf/iframe)]
+       ^{:key k}
+       [ui-from-link r-link ctx props])]))
+
+(defn iframe-field-default [val ctx props]
+  (let [props (-> props (dissoc :class) (assoc :label-fn (r/constantly nil) #_[:div "nested pull iframes"]))]
+    [field [] ctx entity-links-iframe props]))
 
 (defn control "this is a function, which returns component"
   [val ctx & [props]]                                       ; returns Func[(ref, props, ctx) => DOM]
-  (let [segment (last (:hypercrud.browser/path ctx))
-        attr @(context/hydrate-attribute ctx segment)
-        type (or (some-> attr :db/valueType :db/ident name keyword) (context/segment-type-2 segment)) ; can include :element ? :aggregate, :entity
-        cardinality (some-> attr :db/cardinality :db/ident name keyword)]
-    (match* [type cardinality]
-      [:element _] controls/string                          ; FindRel-Variable
-      #_#_[:aggregate _] controls/string                    ; entity, aggregate, what else?
-      #_#_[:entity _] entity-links
-      [:attribute _] (r/constantly (str "no schema for attr: " segment))
+  {:pre [ctx]}
+  (let [element @(:hypercrud.browser/element ctx)
+        [_ a _] (context/eav ctx)                           ; what about fiddle-level
+        value-type (some-> (:hypercrud.browser/schema ctx) deref (contrib.datomic/valueType a)) ; put protocol on ctx to remove guard
+        cardinality (some-> (:hypercrud.browser/schema ctx) deref (contrib.datomic/cardinality a))
+        element-type (contrib.datomic/parser-type element)]
+    (match* [(unqualify element-type) (unqualify value-type) (unqualify cardinality)]
+      [:variable _ _] controls/string
+      [:aggregate _ _] controls/string
+      [:pull :boolean :one] controls/boolean
+      [:pull :keyword :one] controls/keyword
+      [:pull :string :one] controls/string
+      [:pull :long :one] controls/long
+      [:pull :instant :one] controls/instant
+      [:pull :ref :one] controls/ref
+      [:pull :ref :many] controls/ref-many
+      [_ _ :one] controls/edn
+      [_ _ :many] controls/edn-many)))
 
-      [:splat _] magic-new
-      [:boolean :one] controls/boolean
-      [:keyword :one] controls/keyword
-      [:string :one] controls/string
-      [:long :one] controls/long
-      [:instant :one] controls/instant
-      [:ref :one] controls/ref
-      [:ref :many] controls/ref-many
-      [_ :one] controls/edn
-      [_ :many] controls/edn-many)))
-
-(defn ^:export hyper-control [val ctx & [props]]
+(defn ^:export hyper-control "Val is for userland field renderers, our builtin controls use ctx and ignore val."
+  [val ctx & [props]]
   {:post [%]}
-  ;(js/console.warn (str (:db/ident @(context/hydrate-attribute ctx (last (:hypercrud.browser/path ctx))))))
   (or (attr-renderer-control val ctx props)
-      (let [-field @(:hypercrud.browser/field ctx)]
+      (let [[_ a _] (context/eav ctx)
+            children (contrib.datomic/pull-level (hypercrud.browser.context/pull-enclosure-here ctx))]
         (cond                                               ; Duplicate options test to avoid circular dependency in controls/ref
-          (:options props) [(control val ctx props) val ctx props]
-          (field/identity-segment? -field) [controls/id-or-ident val ctx props]
-          (field/children-identity-only? -field) [(control val ctx props) val ctx props]
-          (seq (::field/children -field)) (let [ctx (dissoc ctx ::layout)]
-                                            [:div           ; wrapper div: https://github.com/hyperfiddle/hyperfiddle/issues/541
-                                             [pull field val ctx props]
-                                             [field [] ctx entity-links-iframe (-> props (dissoc :class) (assoc :label-fn (r/constantly nil #_[:div "nested pull iframes"])))]])
-          :else [(control val ctx props) val ctx props]))))
+          (:options props)
+          [(control val ctx props) val ctx props]
+
+          (context/identity? ctx a)
+          [controls/id-or-ident val ctx props]
+
+          ; flatten useless nesting
+          (and (seq children)
+               (= 1 (count children))
+               (every? (partial context/identity? ctx) children))
+          ; This if statement is needed to flatten test case: http://hyperfiddle.hyperfiddle.site/:databases/
+          ; Dude i have no idea why this if statement is necessary
+          (if (contrib.datomic/attr? @(:hypercrud.browser/schema ctx) a #{:db.type/ref :db.cardinality/many})
+            (let [W (control val ctx props)]
+              [W val ctx props])
+            (let [[a] children                              ; pick one, best if there is only one
+                  ctx (context/focus ctx [a])]
+              [controls/id-or-ident (context/data ctx) ctx props]))
+
+          (seq children)
+          (let [ctx (dissoc ctx ::layout)]
+            [:div                                           ; wrapper div: https://github.com/hyperfiddle/hyperfiddle/issues/541
+             [pull val ctx props]                           ; account for hf/new at parent ref e.g. :community/neighborhood
+             [iframe-field-default val ctx props]])
+
+          :else
+          [(control val ctx props) val ctx props]))))
 
 (defn ^:export hyper-label [_ ctx & [props]]
-  (let [field @(:hypercrud.browser/field ctx)
-        level (::field/level field)
-        segment (last (:hypercrud.browser/path ctx))
-        segment-type (context/segment-type-2 segment)       ; :element means :relation? no, naked. Relation is ortho
-        has-child-fields @(r/fmap-> (:hypercrud.browser/field ctx) ::field/children nil? not)]
-    (cond
-      (field/identity-segment? field) (dbid-label _ ctx props)
-      :else (match* [level segment-type segment has-child-fields]
-              [nil :splat _ _] (label-with-docs (::field/label field) (semantic-docstring ctx "Free-hand attribute entry") props)
-              [nil :attribute _ _] (label-with-docs (::field/label field) (semantic-docstring ctx) props)
-              [nil :element _ true] (label-with-docs "*relation*" (semantic-docstring ctx) props)
-              [nil :element _ false] (label-with-docs (::field/label field) (semantic-docstring ctx) props)
-              [nil :naked-or-element _ _] (label-with-docs "*relation*" (semantic-docstring ctx) props) ; Schema new attr, and fiddle-links new link - needs to be split
-              [:relation :naked-or-element _ _] (label-with-docs "*relation*" (semantic-docstring ctx) props)
-              [:tuple :naked-or-element _ _] (label-with-docs "*tuple*" (semantic-docstring ctx) props)))))
+  (let [?element (:hypercrud.browser/element ctx)
+        element-type (if ?element (contrib.datomic/parser-type @?element))
+        i (:hypercrud.browser/element-index ctx)
+        [_ a _] (context/eav ctx)
+        attr (and a (context/attr ctx a))]
+    (match* [i (unqualify element-type) a attr]             ; has-child-fields @(r/fmap-> (:hypercrud.browser/field ctx) ::field/children nil? not)
+      [_ nil _ _] nil                                       ; e.g. !field[js/user.hyperblog-post-link]()
+      [_ :pull :db/id _] (identity-label _ ctx props)
+      [_ :pull :db/ident _] (identity-label _ ctx props)
+      [_ :pull _ {:db/unique :db.unique/identity}] (identity-label _ ctx props)
+      [i :pull nil _] (element-label _ ctx props)
+      [_ :pull aa _] (ref-label _ ctx props)
+      [_ :variable _ _] (element-label _ ctx props)
+      [_ :aggregate _ _] (element-label _ ctx props))))
 
 
-(defn ^:export semantic-css [ctx]
+(defn ^:export semantic-css "Works at all levels: attr, element and fiddle."
+  [ctx]
   ; Include the fiddle level ident css.
   ; Semantic css needs to be prefixed with - to avoid collisions. todo
-  (->> (concat
-         ["hyperfiddle"
-          (context/dbname ctx)                              ; color
-          (name (context/segment-type-2 (last (:hypercrud.browser/path ctx))))
-          (string/join "/" (:hypercrud.browser/path ctx))   ; legacy unique selector for each location
-          (->> (:hypercrud.browser/path ctx)                ; actually generate a unique selector for each location
-               (cons :hypercrud.browser/path)               ; need to prefix the path with something to differentiate between attr and single attr paths
-               (string/join "/"))]
-         (when (context/attribute-segment? (last (:hypercrud.browser/path ctx)))
-           (let [attr-ident (last (:hypercrud.browser/path ctx))]
-             [@(context/hydrate-attribute ctx attr-ident :db/valueType :db/ident)
-              @(context/hydrate-attribute ctx attr-ident :db/cardinality :db/ident)
-              (some-> @(context/hydrate-attribute ctx attr-ident :db/isComponent) (if :component))]))
-         (:hypercrud.browser/path ctx))
-       (map css-slugify)
-       (apply css)))
+  (let [[_ a _] @(:hypercrud.browser/eav ctx)]
+    (->> (concat
+           ["hyperfiddle"
+            (context/dbname ctx)                            ; color
+            (name (context/segment-type-2 a))               ; false :attribute on fiddle-ident fixme
+            (string/join "/" (:hypercrud.browser/pull-path ctx)) ; legacy unique selector for each location
+            (->> (:hypercrud.browser/pull-path ctx)              ; actually generate a unique selector for each location
+                 (cons "-hypercrud-browser-path")                ; path prefix differentiates between attr and single attr paths
+                 (string/join "/"))]
+           (when (> (hypercrud.browser.context/pull-depth ctx) 0) ; differentiate pull from fiddle-ident
+             [(contrib.datomic/valueType @(:hypercrud.browser/schema ctx) a)
+              (contrib.datomic/cardinality @(:hypercrud.browser/schema ctx) a)
+              (if (contrib.datomic/isComponent @(:hypercrud.browser/schema ctx) a) :component)])
+           (:hypercrud.browser/pull-path ctx))              ; pullpath is legacy, remove from css todo
+         (map css-slugify)
+         (apply css))))
 
 (defn ^:export value "Relation level value renderer. Works in forms and lists but not tables (which need head/body structure).
 User renderers should not be exposed to the reaction."
@@ -154,14 +182,14 @@ User renderers should not be exposed to the reaction."
   [relative-path ctx ?f & [props]]                          ; ?f :: (ref, props, ctx) => DOM
   (let [ctx (context/focus ctx relative-path)
         props (update props :class css (semantic-css ctx))]
-    [(or ?f hyper-control) @(:hypercrud.browser/data ctx) ctx props]))
+    [(or ?f hyper-control) (hypercrud.browser.context/data ctx) ctx props]))
 
 (defn ^:export anchor [ctx props & children]
   (let [props (-> props
                   (update :class css "hyperfiddle")
-                  (dissoc :route)
                   (assoc :href (some->> (:route props) (hyperfiddle.foundation/route-encode (:peer ctx)))))]
-    (into [:a props] children)))
+    (into [:a (select-keys props [:class :href :style])]
+          children)))
 
 (letfn [(prompt [link-ref ?label]
           (or ?label
@@ -172,10 +200,11 @@ User renderers should not be exposed to the reaction."
           (if-let [[fiddle-ident args] ?route]
             (->> (concat #_class #_[fiddle-ident] args)
                  (map pr-str) (interpose " ") (apply str))))
-        (validated-route-tooltip-props [r+?route link-ref ctx props] ; link is for validation
+        (validated-route-tooltip-props [+?route link ctx props] ; link is for validation
           ; this is a fine place to eval, put error message in the tooltip prop
-          ; each prop might have special rules about his default, for example :visible is default true, does this get handled here?
-          (let [+route (>>= @r+?route #(routing/validated-route+ (:link/fiddle @link-ref) % ctx))
+          ; each prop might have special rules about his default, for example :visible is default true,
+          ; does this get handled here?
+          (let [+route (>>= +?route #(routing/validated-route+ (:link/fiddle link) % ctx))
                 errors (->> [+route] (filter either/left?) (map cats/extract) (into #{}))
                 ?route (unwrap (constantly nil) +route)]
             (-> props
@@ -184,62 +213,68 @@ User renderers should not be exposed to the reaction."
                                    (if-not (empty? errors)
                                      [:warning (pprint-str errors)]
                                      (if (:hyperfiddle.ui/debug-tooltips ctx)
-                                       [nil (link-tooltip @link-ref ?route ctx)]
+                                       [nil (link-tooltip link ?route ctx)]
                                        existing-tooltip))))
                 (update :class css (when-not (empty? errors) "invalid")))))
         (disabled? [link-ref ctx]
           (condp some @(r/fmap :link/class link-ref)
             #{:hf/new} nil #_(not @(r/track security/can-create? ctx)) ; flag
-            #{:hf/remove} (if @(r/cursor (:hypercrud.browser/eav ctx) [1])
-                            (not @(r/track security/writable-entity? (:hypercrud.browser/parent ctx)))
+            #{:hf/remove} (if (let [[_ a _] @(:hypercrud.browser/eav ctx)] a)
+                            (if-let [ctx (:hypercrud.browser/parent ctx)] (not @(r/track security/writable-entity? ctx))) ; check logic
                             (not @(r/track security/writable-entity? ctx)))
             ; else we don't know the semantics, just nil out
             nil))]
   (defn ui-from-link [link-ref ctx & [props ?label]]
     {:pre [link-ref (r/reactive? link-ref)]}
-    (let [visual-ctx ctx
-          [ctx r+?route] (context/refocus' ctx link-ref)
-          style {:color nil #_(connection-color ctx (cond (hyperfiddle.ide.console-links/system-link? (:db/id @link-ref)) 60 :else 40))}
-          props (update props :style #(or % style))
+    ; Once this link changes, pretty much everything below here needs to recompute
+    ; Reactions are unlikely to be faster than render-tree-pruning.
+    (let [link @link-ref
+          visual-ctx ctx
           has-tx-fn @(r/fmap-> link-ref :link/tx-fn blank->nil boolean)
-          is-iframe @(r/fmap->> link-ref :link/class (some #{:hf/iframe}))]
+          is-iframe @(r/fmap->> link-ref :link/class (some #{:hf/iframe}))
+          +route-and-ctx (context/refocus-to-link+ ctx link)
+          +route (fmap second +route-and-ctx)
+          ?ctx (branch +route-and-ctx (constantly nil) first)]
+      ;(assert ?ctx "not sure what there is that can be done")
       (cond
         (and has-tx-fn @(r/fmap-> link-ref :link/fiddle nil?))
         (let [props (-> props
                         (update :class css "hyperfiddle")
-                        (update :disabled #(or % (disabled? link-ref ctx))))]
-          [effect-cmp link-ref ctx props @(r/track prompt link-ref ?label)])
+                        (update :disabled #(or % (disabled? link-ref ?ctx))))]
+          [effect-cmp link-ref ?ctx props @(r/track prompt link-ref ?label)])
 
         (or has-tx-fn (and is-iframe (:iframe-as-popover props)))
-        (let [props (-> @(r/track validated-route-tooltip-props r+?route link-ref ctx props)
+        (let [props (-> (validated-route-tooltip-props +route link ?ctx props)
                         (dissoc :iframe-as-popover)
-                        (update :class css "hyperfiddle")   ; should this be in popover-cmp? what is this class? – unify with semantic css
-                        (update :disabled #(or % (disabled? link-ref ctx))))
+                        (update :class css "hyperfiddle")   ; should this be in popover-cmp? unify with semantic css
+                        (update :disabled #(or % (disabled? link-ref ?ctx))))
               label @(r/track prompt link-ref ?label)]
-          [popover-cmp link-ref ctx visual-ctx props label])
+          [popover-cmp link-ref ?ctx visual-ctx props label])
 
         is-iframe
-        [stale/loading (stale/can-be-loading? ctx) (fmap #(route/assoc-frag % (:frag props)) @r+?route) ; what is this frag noise?
-         (fn [e] [(ui-error/error-comp ctx) e])
+        [stale/loading (stale/can-be-loading? visual-ctx)          ; was just ctx before
+         (fmap #(route/assoc-frag % (:frag props)) +route) ; what is this frag noise?
+         (fn [e] [(ui-error/error-comp ?ctx) e])
          (fn [route]
            (let [iframe (or (::custom-iframe props) iframe-cmp)]
-             [iframe ctx (-> props                          ; flagged - :class
+             [iframe ?ctx (-> props                          ; flagged - :class
                              (assoc :route route)
                              (dissoc props ::custom-iframe)
                              (update :class css (->> @(r/fmap :link/class link-ref)
                                                      (string/join " ")
                                                      css-slugify)))]))]
 
-        :else (let [props @(r/track validated-route-tooltip-props r+?route link-ref ctx props)]
+        :else (let [props (validated-route-tooltip-props +route link ?ctx props)]
                 [tooltip (tooltip-props (:tooltip props))
                  (let [props (dissoc props :tooltip)]
                    ; what about class - flagged
                    ; No eav, the route is the same info
-                   [anchor ctx props @(r/track prompt link-ref ?label)])])
-        ))))
+                   [anchor ?ctx props @(r/track prompt link-ref ?label)])])))))
 
-(defn ^:export link "Relation level link renderer. Works in forms and lists but not tables." ; this is dumb, use a field renderer
-  [corcs ctx & [?label props]]                              ; path should be optional, for disambiguation only. Naked can be hard-linked in markdown?
+(defn ^:export link "Relation level link renderer. Works in forms and lists but not tables.
+  path should be optional, for disambiguation only. Naked can be hard-linked in markdown?
+  This is dumb, use a field-renderer"
+  [corcs ctx & [?label props]]
   (either/branch
     (data/select+ ctx corcs)
     #(vector :span %)
@@ -258,148 +293,158 @@ User renderers should not be exposed to the reaction."
       (fn [link-ref]
         [ui-from-link link-ref ctx props]))))
 
-(defn form-field "Form fields are label AND value. Table fields are label OR value."
-  [relative-path ctx Body Head props]
-  (with-meta
+(defn form-field "Form fields are label AND value. Table fields are label OR value.
+  EAV is already set."
+  [ctx Body Head props]
+  (let []
     [:div {:class (css "field" (:class props))
            :style {:border-color (connection-color ctx)}}
-     [Head nil (dissoc ctx :hypercrud.browser/data) props]
+     [Head nil ctx props]                                   ; suppress ?v in head even if defined
      (let [props (as-> props props
                        (update props :disabled #(or % (not @(r/track writable-entity? ctx))))
                        (update props :is-invalid #(or % (context/leaf-invalid? ctx)))
                        (update props :class css (if (:disabled props) "disabled")))]
-       [Body @(:hypercrud.browser/data ctx) ctx props])]
-    (when (= '* (last relative-path))                       ; :hypercrud.browser/path
-      ; guard against crashes for nil data
-      {:key @(r/fmap-> (or (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data])
-                           (r/track identity nil))
-                       keys hash)})))
+       [Body (hypercrud.browser.context/data ctx) ctx props])]))
 
 (defn table-field "Form fields are label AND value. Table fields are label OR value."
-  [relative-path ctx Body Head props]                       ; Body :: (val props ctx) => DOM, invoked as component
-  ; Presence of data to detect head vs body? Kind of dumb
-  (case (if (:hypercrud.browser/data ctx) :body :head)      ; this is ugly and not uniform with form-field NOTE: NO DEREF ON THIS NIL CHECK
+  [ctx Body Head props]                                     ; Body :: (val props ctx) => DOM, invoked as component
+  (case (if (:hypercrud.browser/head-sentinel ctx) :head :body)        ; broken
     :head [:th {:class (css "field" (:class props))         ; hoist
                 :style {:background-color (connection-color ctx)}}
            [Head nil ctx (-> props
-                             (update :class css (when (sort/sortable? ctx) "sortable") (some-> (sort/sort-direction relative-path ctx) name))
-                             (assoc :on-click (r/partial sort/toggle-sort! relative-path ctx)))]]
+                             (update :class css (when (sort/sortable? ctx) "sortable")
+                                     (some-> (sort/sort-direction (:hypercrud.browser/pull-path ctx) ctx) name))
+                             (assoc :on-click (r/partial sort/toggle-sort! (:hypercrud.browser/pull-path ctx) ctx)))]]
     ; Field omits [] but table does not, because we use it to specifically draw repeating anchors with a field renderer.
     :body [:td {:class (css "field" (:class props))
-                :style {:border-color (connection-color ctx)}}
+                :style {:border-color (connection-color ctx 92)}}
            (let [props (as-> props props
                              (update props :disabled #(or % (not @(r/track writable-entity? ctx))))
                              (update props :is-invalid #(or % (context/leaf-invalid? ctx)))
                              (update props :class css (if (:disabled props) "disabled")))]
-             [Body @(:hypercrud.browser/data ctx) ctx props])]))
+             [Body (hypercrud.browser.context/data ctx) ctx props])]))
 
 (defn ^:export field "Works in a form or table context. Draws label and/or value."
   [relative-path ctx & [?f props]]
-  (let [ctx (context/focus ctx relative-path)
+  {:pre [ctx]}
+  (let [ctx (context/focus ctx relative-path) ; Handle element and attr
         Body (or ?f hyper-control)
         Head (or (:label-fn props) hyper-label)
         props (dissoc props :label-fn)
-        props (update props :class css (semantic-css ctx))
-        is-magic-new (= '* (last relative-path))]
-    (case (:hyperfiddle.ui/layout ctx)
-      :hyperfiddle.ui.layout/table (when-not is-magic-new
-                                     [table-field relative-path ctx Body Head props])
-      [form-field relative-path ctx Body Head props])))
+        props (update props :class css (semantic-css ctx))]
+
+
+    ; Make this go away. Since field isn't an abstraction, these don't need to share code anymore?
+    ; What about multimethod field overload?
+    (case (:hyperfiddle.ui/layout ctx)                      ; check cardinality
+      :hyperfiddle.ui.layout/table
+      ^{:key (str relative-path)}
+      [table-field ctx Body Head props]
+
+      ^{:key (str relative-path)}                           ; could be a product, does eav as key work for that?
+      [form-field ctx Body Head props])))
 
 (defn ^:export table "Semantic table; columns driven externally" ; this is just a widget
   [columns ctx & [props]]
+  {:pre [(s/assert :hypercrud/context ctx)]}
+  ; Need backwards compat arity
   (let [sort-col (r/atom (::sort/initial-sort props))]
     (fn [columns ctx & [props]]
-      (let [props (dissoc props ::sort/initial-sort)
+      {:pre [(s/assert :hypercrud/context ctx)]}
+      (let [props (update props :class (fnil css "hyperfiddle") "unp") ; fnil case is iframe root (not a field :many)
             ctx (assoc ctx ::sort/sort-col sort-col
+                           :hypercrud.browser/head-sentinel true ; hacks - this is coordination with the context, how to fix?
                            ::layout :hyperfiddle.ui.layout/table)]
-        [:table (update props :class (fnil css "hyperfiddle") "unp") ; fnil case is iframe root (not a field :many)
-         [:thead (->> (columns (dissoc ctx :hypercrud.browser/data) props) (into [:tr]))] ; strict
-         (->> (r/fmap-> (:hypercrud.browser/data ctx)
-                        (sort/sort-fn sort-col))
-              (r/unsequence (r/partial context/row-keyfn ctx))
-              (map (fn [[row k]]
-                     (->> (columns (context/row ctx row k) props)
-                          (into ^{:key k} [:tr]))))         ; strict
-              (into [:tbody]))]))))
+        [:table (select-keys props [:class :style])
+         [:thead (into [:tr] (columns ctx))]
+         ; filter? Group-by? You can't. This is data driven. Shape your data in the peer.
+         (into [:tbody] (for [[ix [?k ctx]] (->> (hypercrud.browser.context/spread-rows ctx #(sort/sort-fn % sort-col))
+                                                 ; Duplicate rows https://github.com/hyperfiddle/hyperfiddle/issues/298
+                                                 (map-indexed vector))]
+                          ; columns keys should work out, field sets it on inside
+                          #_[:tr {:key (str ?k)} (columns ctx)]
+                          (let [k (or ?k ix)
+                                cs (columns ctx)]
+                            (into [:tr {:key (str k)}] cs))))]))))
 
 (defn hint [val {:keys [hypercrud.browser/fiddle] :as ctx} props]
   (if (and (-> (:fiddle/type @fiddle) (= :entity))
            (empty? val))
-    [:div.alert.alert-warning "Warning: invalid route (d/pull requires an entity argument). To add a tempid entity to the URL, click here: "
+    [:div.alert.alert-warning "Warning: invalid route (d/pull requires an entity argument). To add a tempid entity to
+    the URL, click here: "
      [:a {:href "~entity('$','tempid')"} [:code "~entity('$','tempid')"]] "."]))
 
-(defn form "Not an abstraction." [fields val ctx & [props]]
-  (into [:<> {:key (str (context/row-keyfn ctx val))}]
-        (fields (assoc ctx ::layout :hyperfiddle.ui.layout/block))))
+(defn form "Not an abstraction." [columns val ctx & [props]]
+  {:pre [(s/assert :hypercrud/context ctx)]}
+  (let [ctx (assoc ctx ::layout :hyperfiddle.ui.layout/block)] ; make this go away
+    (into
+      [:<> {:key (str (context/row-key ctx val))}]   ; when entity-keyfn?
+      (columns ctx))))
 
-(defn columns [m-field relative-path field ctx & [props]]
-  (concat
-    (->> @(r/fmap->> m-field ::field/children (map ::field/path-segment))
-         (map (fn [child-segment]
-                (let [relative-path (conj relative-path child-segment)]
-                  ^{:key (str relative-path)}
-                  [field relative-path ctx hyper-control props]))))
-    (when-let [f (condp = @(r/fmap ::field/element-type m-field)
-                   Variable hyper-control
-                   Aggregate hyper-control
-                   Pull nil #_entity-links
-                   ; else nested pulls
-                   nil)]
-      [^{:key (str relative-path)} [field relative-path ctx f props]])))
-
-(defn columns-relation-product [field ctx & [props]]
-  (->> (r/fmap ::field/children (:hypercrud.browser/field ctx))
-       (r/unsequence ::field/path-segment)
-       (mapcat (fn [[m-field segment]]
-                 (columns m-field [segment] field ctx props)))))
+(defn columns [ctx & [props]]
+  {:pre [(s/assert :hypercrud/context ctx)]}
+  #_(cons (field relpath ctx nil props))
+  (doall (for [[k _] (hypercrud.browser.context/spread-attributes ctx)]
+           (field [k] ctx nil props))))
 
 (defn pull "handles any datomic result that isn't a relation, recursively"
-  [field val ctx & [props]]
-  (let [cardinality @(r/fmap ::field/cardinality (:hypercrud.browser/field ctx))]
-    (match* [cardinality]
-      [:db.cardinality/one] [form (r/partial columns (:hypercrud.browser/field ctx) [] field) val ctx props]
-      [:db.cardinality/many] [table (r/partial columns (:hypercrud.browser/field ctx) [] field) ctx props])))
+  [val ctx & [props]]
+  {:pre [(s/assert :hypercrud/context ctx)]}
+  (let [[_ a _] (context/eav ctx)]
+    ; detect top and do fiddle-level here, instead of in columns?
+    (match* [(contrib.datomic/cardinality @(:hypercrud.browser/schema ctx) a)] ; this is parent - not focused?
+      [:db.cardinality/one] [:<>
+                             (controls/hf-new val ctx)
+                             (controls/hf-remove val ctx)
+                             [form columns val ctx props]]
+
+      ; http://hyperfiddle.hyperfiddle.site/:hyperfiddle.ide!domain/~entity('$domains',(:domain!ident,'hyperfiddle'))
+      [:db.cardinality/many] [:<>
+                              #_(controls/hf-new val ctx)   ; table db/id will handle this
+                              [table columns ctx props]]
+      [_] [:pre (pr-str a)])))
+
+(defn table-column-product "We collapse the top layer of pull into a cartesian product.
+  What we really want is grouped table headers to clarify what is going on here."
+  [ctx props]
+  ; http://hyperfiddle.hyperfiddle.site/:database!options-list/
+  #_(cons (field [] ctx props))
+  (->> (for [[i {el :hypercrud.browser/element :as ctx-e}] (hypercrud.browser.context/spread-elements ctx)]
+         #_(cons (field [i] ctx props))
+         (case (unqualify (contrib.datomic/parser-type @el))
+           :variable [(field [i] ctx props)]
+           :aggregate [(field [i] ctx props)]
+           :pull (for [[a ctx-a] (hypercrud.browser.context/spread-attributes ctx-e)]
+                   (field [i a] ctx props))))
+       (mapcat identity)                                    ; Don't flatten the hiccup
+       doall))
 
 (defn ^:export result "Default result renderer. Invoked as fn, returns seq-hiccup, hiccup or
 nil. call site must wrap with a Reagent component"          ; is this just hyper-control ?
   [val ctx & [props]]
   [:<>
-   (hint val ctx props)
-   (let [type @(r/fmap :fiddle/type (:hypercrud.browser/fiddle ctx))
-         level @(r/fmap ::field/level (:hypercrud.browser/field ctx))]
-     (match* [type level]
-       [:blank _] nil
-       [:query :relation] [table (r/partial columns-relation-product field) ctx props]
-       [:query :tuple] [form (r/partial columns-relation-product field) val ctx props]
-       [_ _] (pull field val ctx props)))
-   (let [props (-> props (dissoc :class) (assoc :label-fn (r/constantly nil)))]
-     [field [] ctx entity-links-iframe props])])
+   (doall
+     (for [[k ctx] (hypercrud.browser.context/spread-result ctx)]
+       [:<> {:key k}
+        (hint val ctx props)
+        (condp some [(type @(:hypercrud.browser/qfind ctx))] ; spread-rows
+
+          #{FindRel FindColl}
+          [table table-column-product ctx props]
+
+          #{FindTuple FindScalar}
+          [form table-column-product val ctx props])]))
+   [iframe-field-default val ctx props]])
 
 (def ^:dynamic markdown)                                    ; this should be hf-contrib or something
 
 (def ^:export fiddle (-build-fiddle))
 
-(let [f (fn [new-links fiddle]
-          (update fiddle :fiddle/links
-                  (partial contrib.data/merge-by
-                           (juxt (fn hf-rel [link]
-                                   ; There is only one hf rel in the class
-                                   (filter #(= "hf" (namespace %)) (:link/class link)))
-                                 (comp blank->nil :link/path))
-                           new-links)))]
-  (defn inject-console-links [ctx]
-    (let [schemas (-> (->> @(hyperfiddle.runtime/state (:peer ctx) [:hyperfiddle.runtime/partitions (:branch ctx) :schemas])
-                           (contrib.data/map-keys #(hyperfiddle.domain/uri->dbname % (:hypercrud.browser/domain ctx))))
-                      (dissoc nil))
-          links (hyperfiddle.ide.console-links/console-links-fiddle schemas @(:hypercrud.browser/fiddle ctx) @(:hypercrud.browser/data ctx))]
-      (update ctx :hypercrud.browser/fiddle #(r/fmap->> % (f links))))))
-
 (defn ^:export fiddle-xray [val ctx & [props]]
-  (let [#_#_ctx (inject-console-links ctx)]
-    [:div (select-keys props [:class :on-click])
-     [:h3 (pr-str @(:hypercrud.browser/route ctx))]
-     [result val ctx {}]]))
+  [:div (select-keys props [:class :on-click])
+   [:h3 (pr-str @(:hypercrud.browser/route ctx))]
+   ;(for [ctx (hyperfiddle.api/spread-fiddle ctx)])
+   [result val ctx {}]])
 
 (letfn [(render-edn [data]
           (let [edn-str (pprint-str data 160)]

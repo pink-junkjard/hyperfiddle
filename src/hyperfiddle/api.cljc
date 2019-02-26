@@ -1,8 +1,6 @@
 (ns hyperfiddle.api
   (:require
-    [contrib.reactive :as r]
     [hypercrud.browser.context]))
-
 
 
 (defn ^:export ^:legacy tempid-child
@@ -17,10 +15,11 @@
   ([ctx]
    (hypercrud.browser.context/tempid! ctx)))
 
-(defn ^:export tempid! [{r-eav :hypercrud.browser/eav :as ctx}]
-  (if @(r/fmap-> r-eav (get 1))                             ; TODO and not a find-element, which will soon be the case. Currently broken for find elements https://github.com/hyperfiddle/hyperfiddle/issues/826
-    (hypercrud.browser.context/tempid ctx)
-    (hypercrud.browser.context/tempid! ctx)))
+(defn ^:export tempid! [ctx]
+  ; This is buggy. We want Collections and Sets to inspect the stage for unique generation?
+  (if (hypercrud.browser.context/qfind-level? ctx)
+    (hypercrud.browser.context/tempid! ctx)
+    (hypercrud.browser.context/tempid! ctx)))               ; ???
 
 (defmulti txfn (fn [user-txfn e a v ctx] user-txfn))
 
@@ -31,10 +30,13 @@
   [])                                                       ; hack to draw as popover
 
 (defmethod txfn :db/add [_ e a v ctx]
+  {:pre [e a v]}
   [[:db/add e a v]])
 
 (defmethod txfn :db/retract [_ e a v ctx]
+  {:pre [e a v]}
   [[:db/retract e a v]])
 
 (defmethod txfn :db.fn/retractEntity [_ _ _ v ctx]
+  {:pre [v]}
   [[:db.fn/retractEntity v]])

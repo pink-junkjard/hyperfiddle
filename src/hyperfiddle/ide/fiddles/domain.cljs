@@ -4,6 +4,7 @@
 
 
 (defn ^:export domain-ident-renderer [val ctx props]
-  (let [href (str "http://" val "." (:ide/root (runtime/host-env (:peer ctx))))]
+  (let [href (str "http://" val "." (:ide/root (runtime/host-env (:peer ctx))))
+        props (merge props {:href href})]
     [:div
-     [:a (merge props {:href href}) href]]))
+     [:a (select-keys props [:href :class :style :on-click]) href]]))
