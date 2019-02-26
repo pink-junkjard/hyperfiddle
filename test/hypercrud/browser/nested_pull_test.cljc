@@ -29,7 +29,8 @@
        (data/group-by-assume-unique :db/ident)))
 
 (defn build-ctx [fiddle result]                             ; this is starting to look a lot like base/process-results
-  {:hypercrud.browser/fiddle (r/atom fiddle)
+  {:branch foundation/root-branch
+   :hypercrud.browser/fiddle (r/atom fiddle)
    :hypercrud.browser/data (r/atom result)
    :peer (let [state (r/atom {::runtime/partitions {foundation/root-branch {:schemas {"$" test-schema}}}})]
            (reify
