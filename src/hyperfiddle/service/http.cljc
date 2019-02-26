@@ -66,7 +66,7 @@
               (route/validate-route+ route)
               (fn [e] (throw (ex-info "Invalid encoded-route" {:route route :hyperfiddle.io/http-status-code 400} e)))
               (constantly nil))
-          branch (some-> (:branch route-params) ednish/decode-uri)]
+          branch (-> (:branch route-params) base-64-url-safe/decode read-edn-string!)]
       (-> (->> (mapcat second stage)
                (remove (comp empty? second))
                (map first)
