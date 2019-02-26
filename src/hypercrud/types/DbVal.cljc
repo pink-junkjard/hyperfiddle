@@ -12,9 +12,3 @@
 ; and transit needs to make that space efficient.
 
 (defrecord DbVal [uri branch #_history?])
-
-(defn read-DbVal [v]
-  (reduce (fn [acc [k v]]
-            (assoc acc k v))
-          (->DbVal nil nil)
-          v))

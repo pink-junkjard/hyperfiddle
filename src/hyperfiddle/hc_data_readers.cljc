@@ -5,10 +5,10 @@
     [hyperfiddle.readers]                                   ; important
     [hypercrud.types.DbName :refer [->DbName]]
     [hypercrud.types.DbRef :refer [map->DbRef]]
-    [hypercrud.types.DbVal :refer [read-DbVal]]
-    [hypercrud.types.EntityRequest :refer [read-EntityRequest]]
-    [hypercrud.types.Err :refer [read-Err]]
-    [hypercrud.types.QueryRequest :refer [read-QueryRequest]]
+    [hypercrud.types.DbVal :refer [map->DbVal]]
+    [hypercrud.types.EntityRequest :refer [map->EntityRequest]]
+    [hypercrud.types.Err :refer [map->Err]]
+    [hypercrud.types.QueryRequest :refer [map->QueryRequest]]
     [hypercrud.types.ThinEntity :refer [read-ThinEntity]]
     [contrib.uri :refer [read-URI]]))
 
@@ -22,7 +22,7 @@
    'entity read-ThinEntity
    'uri read-URI
    'hypercrud.types.DbRef.DbRef map->DbRef
-   'hypercrud.types.DbVal.DbVal read-DbVal
-   'hypercrud.types.EntityRequest.EntityRequest read-EntityRequest
-   'hypercrud.types.Err.Err read-Err
-   'hypercrud.types.QueryRequest.QueryRequest read-QueryRequest})
+   'hypercrud.types.DbVal.DbVal map->DbVal
+   'hypercrud.types.EntityRequest.EntityRequest map->EntityRequest
+   'hypercrud.types.Err.Err map->Err
+   'hypercrud.types.QueryRequest.QueryRequest map->QueryRequest})
