@@ -17,6 +17,7 @@
     [hyperfiddle.ide.preview.io :refer [->IOImpl]]
     [hyperfiddle.ide.preview.runtime :refer [->Runtime]]
     [hyperfiddle.ide.preview.state :refer [->FAtom]]
+    [hyperfiddle.io.basis :as basis]
     [hyperfiddle.local-storage-sync :refer [map->LocalStorageSync]]
     [hyperfiddle.project :as project]
     [hyperfiddle.reducers :as reducers]
@@ -58,12 +59,26 @@
         display-mode (r/atom :hypercrud.browser.browser-ui/user)
         ; specifically deref and re-wrap this ref on mount because we are tracking deviation from this value
         staleness (r/atom (ide-branch-reference rt ide-branch))
-        is-stale? (fn [] (not= @staleness (ide-branch-reference rt ide-branch)))
+        stale-global-basis? (fn []
+                              (= -1 (basis/compare-uri-maps @(runtime/state rt [::runtime/global-basis :user])
+                                                            @(runtime/state rt [::ide-user-global-basis]))))
+        stale-local-basis? (fn []
+                             (= -1 (basis/compare-uri-maps
+                                     @(runtime/state rt [::runtime/partitions user-branch :local-basis])
+                                     @(runtime/state rt [::runtime/partitions ide-branch :local-basis]))))
+        is-stale? (fn [] (or (not= @staleness (ide-branch-reference rt ide-branch))
+                             (stale-global-basis?)
+                             (stale-local-basis?)))
         refresh! (fn []
-                   (reset! staleness (ide-branch-reference rt ide-branch))
-                   (reset! is-refreshing true)
-                   (-> (actions/hydrate-partition (runtime/io rt) user-branch (partial runtime/dispatch! rt) (fn [] @(runtime/state rt)))
-                       (p/finally (fn [] (reset! is-refreshing false)))))]
+                   (when-not (or @is-refreshing @initial-render)
+                     (let [init-level (cond
+                                        (stale-global-basis?) actions/LEVEL-NONE
+                                        (stale-local-basis?) actions/LEVEL-GLOBAL-BASIS
+                                        :else actions/LEVEL-LOCAL-BASIS)]
+                       (reset! staleness (ide-branch-reference rt ide-branch))
+                       (reset! is-refreshing true)
+                       (-> (actions/bootstrap-data rt user-branch init-level)
+                           (p/finally (fn [] (reset! is-refreshing false)))))))]
     (reagent/create-class
       {:reagent-render
        (fn [rt route ide-branch]
@@ -160,16 +175,19 @@
 
 (defn- to [parent-state user-state]
   (let [user-state (-> (update user-state ::runtime/partitions dissoc foundation/root-branch) ; root branch is readonly to users
-                       (dissoc ::runtime/user-id)
+                       (dissoc ::ide-user-global-basis ::runtime/user-id)
                        (reducers/root-reducer nil))]
     (assoc parent-state ::runtime/user-state user-state)))
 
 (defn- from [ide-domain ide-branch parent-state]
   (let [root-partition (-> (get-in parent-state [::runtime/partitions ide-branch])
                            (select-keys [:route :stage :local-basis])
+                           (update :local-basis (fn [local-basis] (map-values #(get local-basis %) (::ide-domain/user-dbname->ide ide-domain))))
                            (update :stage (fn [stage] (map-values #(get stage %) (::ide-domain/user-dbname->ide ide-domain)))))]
     (-> (::runtime/user-state parent-state)
-        (assoc ::runtime/user-id (::runtime/user-id parent-state))
+        (assoc ::ide-user-global-basis (map-values #(get-in parent-state [::runtime/global-basis :user %])
+                                                   (::ide-domain/user-dbname->ide ide-domain))
+               ::runtime/user-id (::runtime/user-id parent-state))
         (assoc-in [::runtime/partitions foundation/root-branch] root-partition)
         (update-in [::runtime/partitions (build-user-branch-id ide-branch)] #(or % {})) ; branch MUST exist in state
         (reducers/root-reducer nil))))
