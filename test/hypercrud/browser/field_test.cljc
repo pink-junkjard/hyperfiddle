@@ -8,6 +8,7 @@
             [hypercrud.types.DbRef :refer [->DbRef]]
             [hypercrud.types.EntityRequest :refer [->EntityRequest]]
             [hypercrud.types.QueryRequest :refer [->QueryRequest]]
+            [hyperfiddle.foundation :as foundation]
             [hyperfiddle.runtime :as runtime]))
 
 
@@ -75,9 +76,10 @@
        (data/group-by-assume-unique :db/ident)))
 
 (defn build-ctx [fiddle result]                             ; this is starting to look a lot like base/process-results
-  {:hypercrud.browser/fiddle (r/atom fiddle)
+  {:branch foundation/root-branch
+   :hypercrud.browser/fiddle (r/atom fiddle)
    :hypercrud.browser/data (r/atom result)
-   :peer (let [state (r/atom {::runtime/partitions {nil {:schemas {"$" test-schema}}}})]
+   :peer (let [state (r/atom {::runtime/partitions {foundation/root-branch {:schemas {"$" test-schema}}}})]
            (reify
              runtime/State
              (runtime/state [_] state)
@@ -239,25 +241,25 @@
 (deftest entity []
   (pull->attr-tests {:fiddle/type :entity
                      :fiddle/pull-database "$"}
-                    #(->EntityRequest 1 (->DbRef "$" nil) %)
+                    #(->EntityRequest 1 (->DbRef "$" foundation/root-branch) %)
                     merge-into-one))
 
 (deftest query-rel []
   (pull->attr-tests {:fiddle/type :query}
-                    #(->QueryRequest [:find (list 'pull '?e %) :in '$ '?e] [(->DbRef "$" nil) 1])
+                    #(->QueryRequest [:find (list 'pull '?e %) :in '$ '?e] [(->DbRef "$" foundation/root-branch) 1])
                     (partial map vector)))
 
 (deftest query-coll []
   (pull->attr-tests {:fiddle/type :query}
-                    #(->QueryRequest [:find [(list 'pull '?e %) '...] :in '$ '?e] [(->DbRef "$" nil) 1])
+                    #(->QueryRequest [:find [(list 'pull '?e %) '...] :in '$ '?e] [(->DbRef "$" foundation/root-branch) 1])
                     identity))
 
 (deftest query-tuple []
   (pull->attr-tests {:fiddle/type :query}
-                    #(->QueryRequest [:find [(list 'pull '?e %)] :in '$ '?e] [(->DbRef "$" nil) 1])
+                    #(->QueryRequest [:find [(list 'pull '?e %)] :in '$ '?e] [(->DbRef "$" foundation/root-branch) 1])
                     (comp vector merge-into-one)))
 
 (deftest query-scalar []
   (pull->attr-tests {:fiddle/type :query}
-                    #(->QueryRequest [:find (list 'pull '?e %) '. :in '$ '?e] [(->DbRef "$" nil) 1])
+                    #(->QueryRequest [:find (list 'pull '?e %) '. :in '$ '?e] [(->DbRef "$" foundation/root-branch) 1])
                     merge-into-one))
