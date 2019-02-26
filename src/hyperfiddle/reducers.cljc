@@ -27,15 +27,8 @@
 (defn global-basis-reducer [global-basis action & args]
   (case action
     :hydrate!-route-success (let [[branch attr-renderers project ptm schemas tempid-lookups new-local-basis] args]
-                              (if (nil? branch)
-                                (map-values (fn [sub-basis]
-                                              (reduce-kv (fn [sub-basis uri t]
-                                                           (if (contains? sub-basis uri)
-                                                             (assoc sub-basis uri t)
-                                                             sub-basis))
-                                                         sub-basis
-                                                         new-local-basis))
-                                            global-basis)
+                              (if (branch/root-branch? branch)
+                                (assoc global-basis :user new-local-basis)
                                 global-basis))
     :set-global-basis (first args)
     global-basis))
