@@ -22,6 +22,7 @@
     hyperfiddle.data-test
     hyperfiddle.fiddle-test
     hyperfiddle.ide.console-links-test
+    hyperfiddle.io.basis-test
     hyperfiddle.io.global-basis-test
     hyperfiddle.readers-test
     hyperfiddle.route-test
@@ -49,6 +50,7 @@
     'hyperfiddle.data-test
     'hyperfiddle.fiddle-test
     'hyperfiddle.ide.console-links-test
+    'hyperfiddle.io.basis-test
     'hyperfiddle.io.global-basis-test
     'hyperfiddle.readers-test
     'hyperfiddle.route-test
