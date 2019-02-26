@@ -77,17 +77,18 @@
   SchemaIndexedNormalized
   (-repr-portable-hack [this] (str "#schema " (pr-str schema-pulledtree)))
   (attr [this a]
-    (s/assert keyword? a)
-    (let [is-reverse-nav (-> (name a) (subs 0 1) (= "_"))]
-      (cond
-        (= a :db/id) dbid
-        is-reverse-nav (make-reverse-attr this a)
-        :else
-        (-> (schema-by-attr a)
-            (contrib.data/update-existing :db/valueType smart-lookup-ref-no-tempids)
-            (contrib.data/update-existing :db/cardinality smart-lookup-ref-no-tempids)
-            (contrib.data/update-existing :db/isComponent smart-lookup-ref-no-tempids)
-            (contrib.data/update-existing :db/unique smart-lookup-ref-no-tempids)))))
+    (when a
+      (s/assert keyword? a)
+      (let [is-reverse-nav (-> (name a) (subs 0 1) (= "_"))]
+        (cond
+          (= a :db/id) dbid
+          is-reverse-nav (make-reverse-attr this a)
+          :else
+          (-> (schema-by-attr a)
+              (contrib.data/update-existing :db/valueType smart-lookup-ref-no-tempids)
+              (contrib.data/update-existing :db/cardinality smart-lookup-ref-no-tempids)
+              (contrib.data/update-existing :db/isComponent smart-lookup-ref-no-tempids)
+              (contrib.data/update-existing :db/unique smart-lookup-ref-no-tempids))))))
   (attr? [this a corcs]
     (let [haystack (into #{} (vals (attr this a)))
           needles (contrib.data/xorxs corcs #{})]
