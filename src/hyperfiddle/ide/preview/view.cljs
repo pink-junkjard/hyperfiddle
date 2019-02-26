@@ -52,13 +52,15 @@
 (defn with-rt [rt route ide-branch]
   (let [user-branch (build-user-branch-id ide-branch)
         ls (atom (map->LocalStorageSync {:rt rt :branch-id user-branch :ls-key :USER-STATE}))
-        initial-render (r/atom true)
-        is-refreshing (r/atom true)
-        is-hovering-refresh-button (r/atom false)
-        alt-key (r/atom false)
-        display-mode (r/atom :hypercrud.browser.browser-ui/user)
-        ; specifically deref and re-wrap this ref on mount because we are tracking deviation from this value
-        staleness (r/atom (ide-branch-reference rt ide-branch))
+        preview-state (r/atom {:initial-render true
+                               :is-refreshing true
+                               :is-hovering-refresh-button false
+                               :alt-key-pressed false
+                               :display-mode :hypercrud.browser.browser-ui/user
+
+                               ; specifically deref and re-wrap this ref on mount because we are tracking deviation from this value
+                               :staleness (ide-branch-reference rt ide-branch)
+                               })
         stale-global-basis? (fn []
                               (= -1 (basis/compare-uri-maps @(runtime/state rt [::runtime/global-basis :user])
                                                             @(runtime/state rt [::ide-user-global-basis]))))
@@ -66,41 +68,44 @@
                              (= -1 (basis/compare-uri-maps
                                      @(runtime/state rt [::runtime/partitions user-branch :local-basis])
                                      @(runtime/state rt [::runtime/partitions ide-branch :local-basis]))))
-        is-stale? (fn [] (or (not= @staleness (ide-branch-reference rt ide-branch))
+        is-stale? (fn [] (or (not= @(r/cursor preview-state [:staleness]) (ide-branch-reference rt ide-branch))
                              (stale-global-basis?)
                              (stale-local-basis?)))
         refresh! (fn []
-                   (when-not (or @is-refreshing @initial-render)
+                   (when-not (or @(r/cursor preview-state [:is-refreshing])
+                                 @(r/cursor preview-state [:initial-render]))
                      (let [init-level (cond
                                         (stale-global-basis?) actions/LEVEL-NONE
                                         (stale-local-basis?) actions/LEVEL-GLOBAL-BASIS
                                         :else actions/LEVEL-LOCAL-BASIS)]
-                       (reset! staleness (ide-branch-reference rt ide-branch))
-                       (reset! is-refreshing true)
+                       (swap! preview-state assoc
+                              :staleness (ide-branch-reference rt ide-branch)
+                              :is-refreshing true)
                        (-> (actions/bootstrap-data rt user-branch init-level)
-                           (p/finally (fn [] (reset! is-refreshing false)))))))]
+                           (p/finally (fn [] (swap! preview-state assoc :is-refreshing false)))))))]
     (reagent/create-class
       {:reagent-render
        (fn [rt route ide-branch]
          (let [ctx {:peer rt
                     :branch user-branch
                     :hyperfiddle.ui/debug-tooltips true
-                    :hypercrud.ui/display-mode display-mode
+                    :hypercrud.ui/display-mode (r/cursor preview-state [:display-mode])
                     :hyperfiddle.ui.iframe/on-click (r/partial frame-on-click rt)}]
            [:<>
             (let [stale @(r/track is-stale?)]
               [:div.preview-toolbar (when stale {:class "stale"})
                ; todo animation
-               [:button {:class "refresh" :on-click #(refresh!)
-                         :disabled @is-refreshing
-                         :on-mouse-over #(do (reset! is-hovering-refresh-button true) nil)
-                         :on-mouse-out #(do (reset! is-hovering-refresh-button false) nil)}
-                [re-com/popover-tooltip
-                 :showing? (r/atom (and @is-hovering-refresh-button (not @is-refreshing)))
-                 :anchor "↻"
-                 :label (if stale
-                          "Currently stale, refresh to see changes (or press alt+enter)"
-                          "Refresh preview to see changes")]]
+               (let [is-hovering-refresh-button (r/cursor preview-state [:is-hovering-refresh-button])]
+                 [:button {:class "refresh" :on-click #(refresh!)
+                           :disabled @(r/cursor preview-state [:is-refreshing])
+                           :on-mouse-over #(do (reset! is-hovering-refresh-button true) nil)
+                           :on-mouse-out #(do (reset! is-hovering-refresh-button false) nil)}
+                  [re-com/popover-tooltip
+                   :showing? (r/atom (and @is-hovering-refresh-button (not @(r/cursor preview-state [:is-refreshing]))))
+                   :anchor "↻"
+                   :label (if stale
+                            "Currently stale, refresh to see changes (or press alt+enter)"
+                            "Refresh preview to see changes")]])
                [:span.url]
                #_[contrib.ui/text
                   {:value (domain/url-encode (runtime/domain rt) route)
@@ -114,10 +119,10 @@
                           (map (fn [props]
                                  [contrib.ui/radio-with-label
                                   (assoc props
-                                    :checked (= (:value props) @display-mode)
-                                    :on-change (r/partial reset! display-mode))]))))
+                                    :checked (= (:value props) @(r/cursor preview-state [:display-mode]))
+                                    :on-change #(swap! preview-state assoc :display-mode %))]))))
                [staging/popover-button rt user-branch (staging/default-dbname-labels rt)]])
-            (if @initial-render
+            (if @(r/cursor preview-state [:initial-render])
               [loading-page]
               (let [code+ (project/eval-domain-code!+ @(runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :project :project/code]))]
                 [:<>
@@ -128,44 +133,46 @@
                            message (or (some-> (ex-cause e) ex-message) (ex-message e))]
                        [:h6 {:style {:text-align "center" :background-color "lightpink" :margin 0 :padding "0.5em 0"}}
                         "Exception evaluating " [:a {:href href} [:code ":domain/code"]] ": " message])))
-                 [:div#root (when @alt-key {:style {:cursor "pointer"}})
+                 [:div#root (when @(r/cursor preview-state [:alt-key-pressed]) {:style {:cursor "pointer"}})
                   [:style {:dangerouslySetInnerHTML {:__html @(runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :project :project/css])}}]
                   ^{:key "user-iframe"}
                   [iframe-cmp ctx
                    {:route route
                     :class (css "hyperfiddle-user"
                                 "hyperfiddle-ide"
-                                (some-> @display-mode name (->> (str "display-mode-"))))}]]]))]))
+                                (some-> @(r/cursor preview-state [:display-mode]) name (->> (str "display-mode-"))))}]]]))]))
 
        :component-did-mount
        (fn [this]
          (let [[_ rt route ide-branch] (reagent/argv this)]
            (.register-many keypress (clj->js [{"keys" "alt"
                                                "prevent_repeat" true
-                                               "on_keydown" #(reset! alt-key true)
-                                               "on_keyup" #(reset! alt-key false)}
+                                               "on_keydown" #(swap! preview-state assoc :alt-key-pressed true)
+                                               "on_keyup" #(swap! preview-state assoc :alt-key-pressed false)}
                                               {"keys" "alt enter"
                                                "on_keydown" #(refresh!)}
                                               {"keys" "ctrl `"
                                                "on_keydown" (fn []
-                                                              (swap! display-mode #(if (not= :hypercrud.browser.browser-ui/user %)
-                                                                                     :hypercrud.browser.browser-ui/user
-                                                                                     :hypercrud.browser.browser-ui/xray)))}]))
+                                                              (swap! preview-state update :display-mode
+                                                                     #(if (not= :hypercrud.browser.browser-ui/user %)
+                                                                        :hypercrud.browser.browser-ui/user
+                                                                        :hypercrud.browser.browser-ui/xray)))}]))
            (runtime/dispatch! rt [:partition-route user-branch route])
            (swap! ls component/start)
            (-> (actions/bootstrap-data rt user-branch actions/LEVEL-NONE)
                (p/finally (fn []
-                            (reset! initial-render false)
-                            (reset! is-refreshing false))))))
+                            (swap! preview-state assoc
+                                   :initial-render false
+                                   :is-refreshing false))))))
 
        :component-did-update
        (fn [this [_ _ prev-route _]]
          (let [[_ rt next-route ide-branch] (reagent/argv this)]
            (when-not (= prev-route next-route)
-             (reset! is-refreshing true)
+             (swap! preview-state assoc :is-refreshing true)
              (runtime/dispatch! rt (fn [dispatch! get-state]
                                      (-> (actions/set-route rt next-route user-branch false dispatch! get-state)
-                                         (p/finally (fn [] (reset! is-refreshing false)))))))))
+                                         (p/finally (fn [] (swap! preview-state assoc :is-refreshing false)))))))))
 
        :component-will-unmount
        (fn [this]
