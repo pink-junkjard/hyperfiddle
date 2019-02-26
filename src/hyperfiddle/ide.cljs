@@ -5,6 +5,7 @@
     [contrib.ednish :as ednish]
     [contrib.reader :as reader]
     [hyperfiddle.domain :as domain]
+    [hyperfiddle.foundation :as foundation]
     [hyperfiddle.runtime :as runtime]
 
     ; pull in the entire ide app for reference from user-land
@@ -20,7 +21,7 @@
       fragment)))
 
 (defn stateless-login-url
-  ([ctx] (stateless-login-url ctx (domain/url-encode (runtime/domain (:peer ctx)) @(runtime/state (:peer ctx) [::runtime/partitions nil :route]))))
+  ([ctx] (stateless-login-url ctx (domain/url-encode (runtime/domain (:peer ctx)) @(runtime/state (:peer ctx) [::runtime/partitions foundation/root-branch :route]))))
   ([ctx state]
    (let [{:keys [hyperfiddle.ide/fqdn ide-domain] :as domain} (runtime/domain (:peer ctx))
          {:keys [domain client-id]} (get-in (domain/environment domain) [:auth0 ide-domain])]

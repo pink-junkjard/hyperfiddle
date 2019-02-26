@@ -1,10 +1,10 @@
 (ns hyperfiddle.ide.fiddles.topnav
   (:require
-    [clojure.string :as string]
     [contrib.reactive :as r]
     [contrib.ui.tooltip :refer [tooltip]]
     [hyperfiddle.data]
     [hyperfiddle.domain :as domain]
+    [hyperfiddle.foundation :as foundation]
     [hyperfiddle.ide.domain :as ide-domain]
     [hyperfiddle.runtime :as runtime]
     [hyperfiddle.security.client :as security]
@@ -26,7 +26,7 @@
     (let [props {:tooltip [nil "Fiddles in this domain"]
                  :iframe-as-popover true}]
       [ui/link :fiddle-shortcuts ctx "index" props])
-    [:span (let [[fiddle-ident :as route] @(runtime/state (:peer ctx) [::runtime/partitions nil :route])]
+    [:span (let [[fiddle-ident :as route] @(runtime/state (:peer ctx) [::runtime/partitions foundation/root-branch :route])]
              (cond
                (= fiddle-ident :hyperfiddle.ide/edit) (let [[_ [user-fiddle-ident]] route]
                                                         (str "edit: "
@@ -70,7 +70,7 @@
     [loading-spinner ctx]]])
 
 (defn renderer [value ctx props]
-  (let [f (if (= :hyperfiddle.ide/please-login (first @(runtime/state (:peer ctx) [::runtime/partitions nil :route])))
+  (let [f (if (= :hyperfiddle.ide/please-login (first @(runtime/state (:peer ctx) [::runtime/partitions foundation/root-branch :route])))
             hack-login-renderer
             renderer')]
     [f value ctx props]))

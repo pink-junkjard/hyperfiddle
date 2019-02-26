@@ -1,22 +1,23 @@
 (ns hyperfiddle.ide.preview.view
   (:require
     [cats.monad.either :as either]
-    [clojure.string :as string]
     [contrib.cljs-platform :refer [code-for-browser]]
+    [contrib.component :as component]
     [contrib.css :refer [css]]
     [contrib.data :refer [map-values]]
     [contrib.reactive :as r]
     [contrib.ui]
     [hypercrud.browser.base :as base]
     [hypercrud.ui.error :as error-cmps]
-    [hypercrud.util.branch :as branch]
     [hyperfiddle.actions :as actions]
+    [hyperfiddle.branch :as branch]
     [hyperfiddle.domain :as domain]
     [hyperfiddle.foundation :as foundation]
     [hyperfiddle.ide.domain :as ide-domain]
     [hyperfiddle.ide.preview.io :refer [->IOImpl]]
     [hyperfiddle.ide.preview.runtime :refer [->Runtime]]
     [hyperfiddle.ide.preview.state :refer [->FAtom]]
+    [hyperfiddle.local-storage-sync :refer [map->LocalStorageSync]]
     [hyperfiddle.project :as project]
     [hyperfiddle.reducers :as reducers]
     [hyperfiddle.route :as route]
@@ -41,24 +42,27 @@
         (.stopPropagation event)
         (js/window.open (domain/url-encode (runtime/domain rt) route) "_blank")))))
 
+(defn build-user-branch-id [ide-branch] (branch/child-branch-id ide-branch "user"))
+
 (defn ide-branch-reference [rt ide-branch]
   (-> @(runtime/state rt [::runtime/partitions ide-branch])
       (select-keys [:stage :local-basis])))
 
 (defn with-rt [rt route ide-branch]
-  (let [initial-render (r/atom true)
+  (let [user-branch (build-user-branch-id ide-branch)
+        ls (atom (map->LocalStorageSync {:rt rt :branch-id user-branch :ls-key :USER-STATE}))
+        initial-render (r/atom true)
         is-refreshing (r/atom true)
         is-hovering-refresh-button (r/atom false)
         alt-key (r/atom false)
         display-mode (r/atom :hypercrud.browser.browser-ui/user)
-        user-branch (branch/encode-branch-child ide-branch "user")
         ; specifically deref and re-wrap this ref on mount because we are tracking deviation from this value
         staleness (r/atom (ide-branch-reference rt ide-branch))
         is-stale? (fn [] (not= @staleness (ide-branch-reference rt ide-branch)))
         refresh! (fn []
                    (reset! staleness (ide-branch-reference rt ide-branch))
                    (reset! is-refreshing true)
-                   (-> (actions/hydrate-partition rt user-branch (partial runtime/dispatch! rt) (fn [] @(runtime/state rt)))
+                   (-> (actions/hydrate-partition (runtime/io rt) user-branch (partial runtime/dispatch! rt) (fn [] @(runtime/state rt)))
                        (p/finally (fn [] (reset! is-refreshing false)))))]
     (reagent/create-class
       {:reagent-render
@@ -132,8 +136,9 @@
                                                               (swap! display-mode #(if (not= :hypercrud.browser.browser-ui/user %)
                                                                                      :hypercrud.browser.browser-ui/user
                                                                                      :hypercrud.browser.browser-ui/xray)))}]))
-
-           (-> (foundation/bootstrap-data2 rt foundation/LEVEL-NONE foundation/LEVEL-HYDRATE-PAGE route user-branch nil)
+           (runtime/dispatch! rt [:partition-route user-branch route])
+           (swap! ls component/start)
+           (-> (actions/bootstrap-data rt user-branch actions/LEVEL-NONE)
                (p/finally (fn []
                             (reset! initial-render false)
                             (reset! is-refreshing false))))))
@@ -143,27 +148,30 @@
          (let [[_ rt next-route ide-branch] (reagent/argv this)]
            (when-not (= prev-route next-route)
              (reset! is-refreshing true)
-             (-> (foundation/bootstrap-data2 rt foundation/LEVEL-GLOBAL-BASIS foundation/LEVEL-HYDRATE-PAGE next-route user-branch nil)
-                 (p/finally (fn [] (reset! is-refreshing false)))))))
+             (runtime/dispatch! rt (fn [dispatch! get-state]
+                                     (-> (actions/set-route rt next-route user-branch false dispatch! get-state)
+                                         (p/finally (fn [] (reset! is-refreshing false)))))))))
 
        :component-will-unmount
        (fn [this]
+         (component/stop @ls)
          (.reset keypress))
        })))
 
 (defn- to [parent-state user-state]
-  (let [user-state (-> (update user-state ::runtime/partitions dissoc nil) ; nil branch is readonly to users
+  (let [user-state (-> (update user-state ::runtime/partitions dissoc foundation/root-branch) ; root branch is readonly to users
                        (dissoc ::runtime/user-id)
                        (reducers/root-reducer nil))]
     (assoc parent-state ::runtime/user-state user-state)))
 
 (defn- from [ide-domain ide-branch parent-state]
-  (let [nil-partition (-> (get-in parent-state [::runtime/partitions ide-branch])
-                          (select-keys [:route :stage])
-                          (update :stage (fn [stage] (map-values #(get stage %) (::ide-domain/user-dbname->ide ide-domain)))))]
+  (let [root-partition (-> (get-in parent-state [::runtime/partitions ide-branch])
+                           (select-keys [:route :stage])
+                           (update :stage (fn [stage] (map-values #(get stage %) (::ide-domain/user-dbname->ide ide-domain)))))]
     (-> (::runtime/user-state parent-state)
         (assoc ::runtime/user-id (::runtime/user-id parent-state))
-        (assoc-in [::runtime/partitions nil] nil-partition)
+        (assoc-in [::runtime/partitions foundation/root-branch] root-partition)
+        (update-in [::runtime/partitions (build-user-branch-id ide-branch)] #(or % {})) ; branch MUST exist in state
         (reducers/root-reducer nil))))
 
 (defn view-cmp [user-domain-record ctx props]

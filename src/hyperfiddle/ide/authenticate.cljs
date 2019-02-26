@@ -8,6 +8,7 @@
     [hypercrud.types.DbRef :refer [->DbRef]]
     [hypercrud.types.EntityRequest :refer [map->EntityRequest]]
     [hyperfiddle.domain :as domain]
+    [hyperfiddle.foundation :as foundation]
     [hyperfiddle.io.core :as io]
     [hyperfiddle.service.cookie :as cookie]
     [hyperfiddle.service.jwt :as jwt]
@@ -38,7 +39,7 @@
          id-token ((jwt/build-verifier (:AUTH0_CLIENT_SECRET env) (str (:AUTH0_DOMAIN env) "/")) encoded-id-token)
          basis (io/sync io #{"$users"})
          user-record (->> (map->EntityRequest {:e [:user/sub (:sub id-token)]
-                                               :db (->DbRef "$users" nil)
+                                               :db (->DbRef "$users" foundation/root-branch)
                                                :pull-exp [:db/id :user/user-id :user/created-date]})
                           (io/hydrate-one! io basis nil))
          :let [user-id (:user/user-id user-record (random-uuid))]

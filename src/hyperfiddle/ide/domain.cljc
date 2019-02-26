@@ -9,10 +9,10 @@
     [hypercrud.transit :as transit]
     [hypercrud.types.DbRef :refer [->DbRef]]
     [hypercrud.types.EntityRequest :refer [->EntityRequest]]
-    [hypercrud.types.QueryRequest :refer [->QueryRequest]]
     [hyperfiddle.database.color :as color]
     [hyperfiddle.domain :as domain]
     [hyperfiddle.domains.multi-datomic :as multi-datomic]
+    [hyperfiddle.foundation :as foundation]
     [hyperfiddle.io.core :as io]
     [hyperfiddle.io.routes :as routes]
     [hyperfiddle.route :as route]
@@ -173,8 +173,8 @@
           (cats/fmap (fn [home-route] (map->EdnishDomain (assoc partial-domain :home-route home-route))))))))
 
 (defn hydrate-ide-domain [io local-basis app-domain-ident service-uri build]
-  (let [requests [(->EntityRequest [:domain/ident "hyperfiddle"] (->DbRef "$domains" nil) multi-datomic/domain-pull)
-                  (->EntityRequest [:domain/ident app-domain-ident] (->DbRef "$domains" nil) multi-datomic/domain-pull)]]
+  (let [requests [(->EntityRequest [:domain/ident "hyperfiddle"] (->DbRef "$domains" foundation/root-branch) multi-datomic/domain-pull)
+                  (->EntityRequest [:domain/ident app-domain-ident] (->DbRef "$domains" foundation/root-branch) multi-datomic/domain-pull)]]
     (-> (io/hydrate-all-or-nothing! io local-basis nil requests)
         (p/then (fn [[ide-domain user-domain]]
                   (if (nil? (:db/id ide-domain))

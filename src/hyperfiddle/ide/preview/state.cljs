@@ -38,7 +38,7 @@
 
   IWatchable
   (-notify-watches [this old new] (-notify-watches ratom old new))
-  (-add-watch [this key f] (-add-watch ratom key f))
+  (-add-watch [this key f] (-add-watch ratom key (fn [k r o n] (f k r (from o) (from n)))))
   (-remove-watch [this key] (-remove-watch ratom key))
 
   IHash
