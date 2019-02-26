@@ -1,23 +1,16 @@
 (ns hyperfiddle.ui.iframe
   (:require
-    [cats.core :refer [mlet]]
     [cats.monad.either :as either]
     [contrib.css :refer [css css-slugify]]
-    [contrib.data :refer [map-keys map-values]]
     [contrib.eval :as eval]
     [contrib.eval-cljs :as eval-cljs]
     [contrib.reactive :as r]
     [contrib.string :refer [blank->nil]]
     [contrib.ui.safe-render :refer [user-portal]]
     [hypercrud.browser.base :as base]
-    [hypercrud.client.peer :as peer]
-    [hypercrud.transit :as transit]
-    [hypercrud.types.Err :as Err]
-    [hypercrud.types.ThinEntity :refer [->ThinEntity]]
     [hypercrud.ui.error :as ui-error]
     [hypercrud.ui.stale :as stale]
-    [hyperfiddle.runtime :as runtime]
-    [reagent.core :as reagent]))
+    [hyperfiddle.runtime :as runtime]))
 
 
 (defn- auto-ui-css-class [ctx]                              ; semantic css
@@ -73,25 +66,6 @@
         props (dissoc props :route)]
     [stale/loading (stale/can-be-loading? ctx) either-v
      (fn [e]
-       (reagent/after-render
-         (fn []
-           (when (and (exists? js/Sentry)                   ; todo hide behind interface on runtime
-                      (peer/loading? e)
-                      (not @(stale/can-be-loading? ctx)))
-             (.withScope js/Sentry (fn [scope]
-                                     (.setExtra scope "ex-data" (clj->js (ex-data e)))
-                                     (.setExtra scope "route" (pr-str route))
-                                     (.setExtra scope "global-basis" (clj->js @(runtime/state (:peer ctx) [::runtime/global-basis])))
-                                     (.setExtra scope "branch-ident" (clj->js (:branch ctx)))
-                                     (.setExtra scope "branch-state" (-> @(runtime/state (:peer ctx) [::runtime/partitions (:branch ctx)])
-                                                                         (select-keys [:route :local-basis :ptm])
-                                                                         (update :ptm keys)
-                                                                         (transit/encode)))
-                                     (.captureMessage js/Sentry (str (cond
-                                                                       (Err/Err? e) (:msg e)
-                                                                       (map? e) (:message e)
-                                                                       (string? e) e
-                                                                       :else (ex-message e)))))))))
        [error-comp e (cond-> {:class (css "hyperfiddle-error" (:class props) "ui")}
                        (::on-click ctx) (assoc :on-click (r/partial (::on-click ctx) route)))])
      (fn [ctx]                                              ; fresh clean ctx
