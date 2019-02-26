@@ -166,7 +166,7 @@
 
 (defn- from [ide-domain ide-branch parent-state]
   (let [root-partition (-> (get-in parent-state [::runtime/partitions ide-branch])
-                           (select-keys [:route :stage])
+                           (select-keys [:route :stage :local-basis])
                            (update :stage (fn [stage] (map-values #(get stage %) (::ide-domain/user-dbname->ide ide-domain)))))]
     (-> (::runtime/user-state parent-state)
         (assoc ::runtime/user-id (::runtime/user-id parent-state))
