@@ -200,25 +200,23 @@
         (reducers/root-reducer nil))))
 
 (defn view-cmp [user-domain-record ctx props]
-  (let []
-    (fn [user-domain-record ctx props]
-      [:div (select-keys props [:class])
-       (either/branch
-         (ide-domain/build-user+ (runtime/domain (:peer ctx)) user-domain-record)
-         (fn [e]
-           [:<>
-            [:h2 "Domain misconfigured"]                    ; todo improve me
-            [error-cmps/error-block e]])
-         (fn [user-domain]
-           (let [ide-branch (:branch ctx)
-                 user-route (let [[_ [fiddle-lookup-ref & datomic-args] service-args encoded-fragment] @(runtime/state (:peer ctx) [::runtime/partitions ide-branch :route])]
-                              (route/canonicalize
-                                (base/legacy-lookup-ref->fiddle-ident fiddle-lookup-ref)
-                                (vec datomic-args)
-                                service-args
-                                (when-not (hyperfiddle.ide/parse-ide-fragment encoded-fragment)
-                                  encoded-fragment)))
-                 user-state (->FAtom (runtime/state (:peer ctx)) to (r/partial from (runtime/domain (:peer ctx)) ide-branch))
-                 user-io (->IOImpl user-domain)
-                 user-runtime (->Runtime user-domain user-io user-state reducers/root-reducer)]
-             [with-rt user-runtime user-route ide-branch])))])))
+  [:div (select-keys props [:class])
+   (either/branch
+     (ide-domain/build-user+ (runtime/domain (:peer ctx)) user-domain-record)
+     (fn [e]
+       [:<>
+        [:h2 "Domain misconfigured"]                        ; todo improve me
+        [error-cmps/error-block e]])
+     (fn [user-domain]
+       (let [ide-branch (:branch ctx)
+             user-route (let [[_ [fiddle-lookup-ref & datomic-args] service-args encoded-fragment] @(runtime/state (:peer ctx) [::runtime/partitions ide-branch :route])]
+                          (route/canonicalize
+                            (base/legacy-lookup-ref->fiddle-ident fiddle-lookup-ref)
+                            (vec datomic-args)
+                            service-args
+                            (when-not (hyperfiddle.ide/parse-ide-fragment encoded-fragment)
+                              encoded-fragment)))
+             user-state (->FAtom (runtime/state (:peer ctx)) to (r/partial from (runtime/domain (:peer ctx)) ide-branch))
+             user-io (->IOImpl user-domain)
+             user-runtime (->Runtime user-domain user-io user-state reducers/root-reducer)]
+         [with-rt user-runtime user-route ide-branch])))])
