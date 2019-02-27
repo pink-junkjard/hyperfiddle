@@ -67,7 +67,9 @@
   ; pr-str here to disambiguate `"tempid"` from `17592186046396` and `:gender/male`
   ; ... This is dumb datomic hacks, views should never even see tempids
   (let [[_ _ v] (context/eav ctx)]
-    (str v)))
+    (if v
+      (str v)
+      "nil")))
 
 (defn hf-new [_ ctx]
   (for [[k r-link] (hyperfiddle.data/spread-links-here ctx :hf/new)]
@@ -94,9 +96,11 @@
 
 (defn render-related-links [val ctx]
   [:<>
-   (for [[k rv] (related-links val ctx)]
-     ^{:key k}
-     [hyperfiddle.ui/ui-from-link rv ctx])])
+   (->> (for [[k rv] (related-links val ctx)]
+          ^{:key k}
+          [hyperfiddle.ui/ui-from-link rv ctx])
+        (interpose "·")
+        doall)])
 
 (defn entity-links [val ctx]
   (let [[[k rv] :as rkvs] (related-links val ctx)]
@@ -111,10 +115,11 @@
       ; Disambiguate the links with link labels
       [:<>
        [:div.input (id-prompt ctx val)]
-       (doall
-         (for [[k rv] rkvs]
-           ^{:key k}
-           [hyperfiddle.ui/ui-from-link rv ctx]))])))
+       (->> (for [[k rv] rkvs]
+              ^{:key k}
+              [hyperfiddle.ui/ui-from-link rv ctx])
+            (interpose "·")
+            doall)])))
 
 (defn ^:export ref [val ctx & [props]]
   (cond
