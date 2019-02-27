@@ -110,7 +110,7 @@
              (cats/fmap (fn [internal-secure-db]
                           (->SecureDbWith (:secure-db internal-secure-db) (:id->tempid internal-secure-db)))))))))
 
-(defn extract-tempid-lookup [internal-secure-db+]
+(defn extract-tempid-lookup+ [internal-secure-db+]
   (if (exception/success? internal-secure-db+)
     (either/right (:id->tempid @internal-secure-db+))
     (let [e (cats/extract internal-secure-db+)]
@@ -122,7 +122,7 @@
   (->> @db-with-lookup
        (filter #(= branch-ident (:branch-ident (first %))))
        (reduce (fn [acc [branch internal-secure-db+]]
-                 (assoc acc (:dbname branch) (extract-tempid-lookup internal-secure-db+)))
+                 (assoc acc (:dbname branch) (extract-tempid-lookup+ internal-secure-db+)))
                {})))
 
 (defn hydrate-request [get-secure-db-with+ request ?subject]
@@ -144,7 +144,7 @@
                           (map #(hydrate-request get-secure-db-with+ % ?subject))
                           (doall))
         tempid-lookups (reduce (fn [acc [branch internal-secure-db+]]
-                                 (assoc-in acc [(:branch-ident branch) (:dbname branch)] (extract-tempid-lookup internal-secure-db+)))
+                                 (assoc-in acc [(:branch-ident branch) (:dbname branch)] (extract-tempid-lookup+ internal-secure-db+)))
                                {}
                                @db-with-lookup)]
     {:pulled-trees pulled-trees
