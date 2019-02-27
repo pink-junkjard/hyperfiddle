@@ -3,7 +3,6 @@
   (:require
     [cats.core :as cats]
     [cats.monad.either :as either]
-    [hyperfiddle.io.legacy :refer [process-result]]
     [promesa.core :as p]))
 
 
@@ -17,16 +16,11 @@
 
 (defn hydrate-one! [io local-basis staged-branches request]
   (-> (hydrate-requests io local-basis staged-branches [request])
-      (p/then (fn [{:keys [pulled-trees]}]
-                (-> (process-result (first pulled-trees) request)
-                    (either/branch p/rejected p/resolved))))))
+      (p/then (fn [{:keys [pulled-trees]}] (either/branch (first pulled-trees) p/rejected p/resolved)))))
 
 ; Promise[List[Response]]
 (defn hydrate-all-or-nothing! [io local-basis staged-branches requests]
   (if (empty? requests)
     (p/resolved nil)
     (-> (hydrate-requests io local-basis staged-branches requests)
-        (p/then (fn [{:keys [pulled-trees]}]
-                  (-> (map process-result pulled-trees requests)
-                      (cats/sequence)
-                      (either/branch p/rejected p/resolved)))))))
+        (p/then (fn [{:keys [pulled-trees]}] (either/branch (cats/sequence pulled-trees) p/rejected p/resolved))))))

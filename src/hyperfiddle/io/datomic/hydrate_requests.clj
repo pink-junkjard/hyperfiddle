@@ -4,12 +4,13 @@
     [cats.monad.either :as either]
     [cats.monad.exception :as exception]
     [clojure.set :as set]
+    [clojure.string :as string]
+    [contrib.data :refer [cond-let parse-query-element]]
     [contrib.datomic]
-    [contrib.datomic-errors :as datomic-errors]
+    [contrib.try$ :refer [try-either]]
     [datomic.api :as d]
     [hypercrud.types.DbVal]
     [hypercrud.types.EntityRequest]
-    [hypercrud.types.Err :refer [->Err]]
     [hypercrud.types.QueryRequest]
     [hyperfiddle.branch :as branch]
     [hyperfiddle.domain :as domain]                         ; todo is this moral?
@@ -111,10 +112,54 @@
              (cats/fmap (fn [internal-secure-db]
                           (->SecureDbWith (:secure-db internal-secure-db) (:id->tempid internal-secure-db)))))))))
 
-(defn extract-tempid-lookup+ [internal-secure-db+]
+; this is legacy garbage
+; todo just catch and generate exceptions inside get-secure-db-with and hydrate-request*
+(defn- error-cleaner [e req]
+  (let [error-str (str e)
+        parsed-soup (cond-let
+                      [msg #_(re-find #"(?s)^.+ :db.error/datoms-conflict (.+)$" error-str)
+                       (some-> (string/split error-str #"^.+ :db\.error/datoms-conflict ") second)]
+                      [:db.error/datoms-conflict msg
+                       "Hint: Hyperfiddle has generated an invalid Datomic transaction. If you are using the staging area, this is
+                       probably a 'merge conflict' which must be reconciled by editing the staging area by hand. If it is a buggy
+                       widget, please file an issue."]
+                      [[match msg] (re-find #"^.+ :db.error/invalid-entity-id (.+)$" error-str)] [:db.error/invalid-entity-id msg]
+                      [[match msg] (re-find #"^.+ :db.error/insufficient-binding (.+)$" error-str)]
+                      [:db.error/insufficient-binding msg
+                       (str (some-> req .-query pr-str) "\n\n" "Hint: Click 'src' to see and edit the query.")]
+                      [[match msg] (re-find #"^.+ :db.error/not-a-data-function (.+)$" error-str)] [:db.error/not-a-data-function msg]
+                      [[match msg] (re-find #"^.+ :db.error/not-an-entity (.+)$" error-str)]
+                      [:db.error/not-an-entity msg
+                       "Hint: If this is a schema attribute, does it exist?
+                       This can happen if you both create a schema entity and use it in the
+                       same transaction. Transact the schema before using it. Also try auto-transact."]
+                      [[match msg] (re-find #"^.+ :db.error/wrong-type-for-attribute (.+)$" error-str)] [:db.error/wrong-type-for-attribute msg]
+                      [[match msg] (re-find #"^.+ :hyperfiddle.error/basis-stale (.+)$" error-str)] [:hyperfiddle.error/basis-stale msg]
+
+                      ; It is the Clojure way.
+                      [[match msg] (re-find #"^com.google.common.util.concurrent.UncheckedExecutionException: java.lang.IllegalArgumentException: (.+)$" error-str)] [:hyperfiddle.error/invalid-pull msg]
+                      [[match msg] (re-find #"^.+ message: Unable to find data source: (.+)$" error-str)]
+                      (let [expected (parse-query-element (some-> req .-query) :in)]
+                        [:hyperfiddle.error/query-arity
+                         (str "Query argument missing: " msg " which corresponds with " expected ".\n"
+                              "Hint: add a link/formula or edit the URL.")]))]
+    (if-let [[ident error-msg human-hint] parsed-soup]
+      (ex-info (str ident) {:ident ident
+                            :error-msg error-msg
+                            :human-hint human-hint})
+
+      (ex-info (str :hyperfiddle.error/unrecognized)
+               {:ident :hyperfiddle.error/unrecognized
+                :error-msg error-str
+                :human-hint
+                (str "Please comment this error at [hyperfiddle#170](https://github.com/hyperfiddle/hyperfiddle/issues/170) so we can match it."
+                     "\n\n```\n" (pr-str req) "\n```")}))))
+
+(defn- extract-tempid-lookup+ [internal-secure-db+]
+  ; todo function should fall out with error-cleaning
   (if (exception/success? internal-secure-db+)
     (cats/fmap :id->tempid internal-secure-db+)
-    (exception/failure (datomic-errors/datomic-error-cleaner (str (cats/extract internal-secure-db+)) nil))))
+    (exception/failure (error-cleaner (cats/extract internal-secure-db+) nil))))
 
 (defn extract-tempid-lookups [db-with-lookup branch-ident]
   ; oof these are crap data structures
@@ -127,10 +172,9 @@
 (defn hydrate-request [get-secure-db-with+ request ?subject]
   {:pre [(or (instance? EntityRequest request) (instance? QueryRequest request))]}
   (binding [hyperfiddle.io.bindings/*subject* ?subject]
-    (try (hydrate-request* request (comp exception/extract get-secure-db-with+))
-         (catch Throwable e
-           (timbre/error e)
-           (->Err (str e))))))
+    (either/branch-left
+      (try-either (hydrate-request* request (comp exception/extract get-secure-db-with+)))
+      (fn [e] (either/left (error-cleaner e request))))))
 
 (defn hydrate-requests [domain local-basis requests staged-branches ?subject]
   {:pre [requests

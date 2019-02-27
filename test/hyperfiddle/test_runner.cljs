@@ -5,7 +5,6 @@
     ; NOT clj tests, this is only for CLJS tests
     contrib.char$-test
     contrib.data-test
-    contrib.datomic-errors-test
     contrib.datomic-test
     contrib.datomic-tx-test
     contrib.ednish-test
@@ -33,7 +32,6 @@
   (doo-tests
     'contrib.char$-test
     'contrib.data-test
-    'contrib.datomic-errors-test
     'contrib.datomic-test
     'contrib.datomic-tx-test
     'contrib.ednish-test

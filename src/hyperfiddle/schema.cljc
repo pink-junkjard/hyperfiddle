@@ -1,13 +1,13 @@
 (ns hyperfiddle.schema
   (:require
+    [cats.core :as cats]
+    [cats.monad.either :as either]
     [cats.monad.exception :as exception]
     [contrib.data :as data]
     [hypercrud.types.DbRef :refer [->DbRef]]
-    [hypercrud.types.Err :as Err]
     [hypercrud.types.QueryRequest :refer [->QueryRequest]]
     [hyperfiddle.domain :as domain]
     [hyperfiddle.io.core :as io]
-    [hyperfiddle.io.legacy :as io-legacy]
     [promesa.core :as p]))
 
 
@@ -26,10 +26,8 @@
         requests (mapv (fn [dbname] (request (->DbRef dbname branch))) dbnames)]
     (-> (io/hydrate-requests io local-basis staged-branches requests)
         (p/then (fn [{:keys [pulled-trees]}]
-                  (->> (map (fn [resultset-or-error request]
-                              (if (Err/Err? resultset-or-error)
-                                (exception/failure (io-legacy/human-error resultset-or-error request))
-                                (exception/success (data/group-by-unique :db/ident resultset-or-error))))
-                            pulled-trees
-                            requests)
+                  (->> pulled-trees
+                       (map (fn [pulled-tree+]
+                              (-> (cats/fmap #(data/group-by-unique :db/ident %) pulled-tree+)
+                                  (either/branch exception/failure exception/success))))
                        (zipmap dbnames)))))))

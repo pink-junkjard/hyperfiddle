@@ -8,7 +8,7 @@
     [hypercrud.client.core :as hc]
     [hyperfiddle.io.core :as io]
     [hyperfiddle.io.datomic.hydrate-requests :as hydrate-requests]
-    [hyperfiddle.io.legacy :refer [process-result stage->staged-branches]]
+    [hyperfiddle.io.legacy :refer [stage->staged-branches]]
     [hyperfiddle.project :as project]
     [hyperfiddle.reducers :as reducers]
     [hyperfiddle.runtime :as runtime]
@@ -36,8 +36,7 @@
                   ptm (assoc ptm request response)
                   tempid-lookups (hydrate-requests/extract-tempid-lookups db-with-lookup branch)]
               (runtime/dispatch! rt [:hydrate!-success branch ptm tempid-lookups])
-              (get ptm request)))
-          (process-result request)
+              response))
           (r/atom)))))
 
 (defn hydrate-route [domain local-basis route branch stage ?subject]
