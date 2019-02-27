@@ -46,9 +46,7 @@
       empty-renderer (fn [val ctx props]
                        (link #{:fiddle/links :hf/remove} ctx))
       link-control (fn [val ctx props]
-                     (let [[_ a _] (context/eav ctx)
-                           props (assoc props :default-value (get (::record ctx) a)
-                                              #_@(r/fmap f (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data])))]
+                     (let [props (assoc props :default-value (get (::record ctx) (context/a ctx)))]
                        (hyper-control val ctx props)))]
   (defn links-renderer [val ctx props]
     [:div
