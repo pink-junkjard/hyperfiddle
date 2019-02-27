@@ -5,6 +5,7 @@
     [cats.monad.exception :as exception]
     [clojure.set :as set]
     [contrib.datomic]
+    [contrib.datomic-errors :as datomic-errors]
     [datomic.api :as d]
     [hypercrud.types.DbVal]
     [hypercrud.types.EntityRequest]
@@ -112,10 +113,8 @@
 
 (defn extract-tempid-lookup+ [internal-secure-db+]
   (if (exception/success? internal-secure-db+)
-    (either/right (:id->tempid @internal-secure-db+))
-    (let [e (cats/extract internal-secure-db+)]
-      (timbre/error e)
-      (either/left (str e)))))
+    (cats/fmap :id->tempid internal-secure-db+)
+    (exception/failure (datomic-errors/datomic-error-cleaner (str (cats/extract internal-secure-db+)) nil))))
 
 (defn extract-tempid-lookups [db-with-lookup branch-ident]
   ; oof these are crap data structures

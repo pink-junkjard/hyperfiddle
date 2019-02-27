@@ -98,8 +98,7 @@
 (defn update-to-tempids! [get-state branch dbname tx]
   (let [{:keys [tempid-lookups schemas]} (get-in (get-state) [::runtime/partitions branch])
         schema @(get schemas dbname)
-        id->tempid (some-> (get tempid-lookups dbname)
-                           (either/branch #(throw (ex-info % {})) identity))]
+        id->tempid (some-> (get tempid-lookups dbname) deref)]
     (map (partial tx/stmt-id->tempid id->tempid schema) tx)))
 
 (defn transact! [rt root-branch-id tx-groups dispatch! get-state & {:keys [route post-tx]}]

@@ -83,7 +83,7 @@
            (->> (conj [::runtime/partitions (:branch ctx) :tempid-lookups])
                 (runtime/state (:peer ctx))
                 deref)
-           (either/branch #(throw (ex-info % {})) identity))))
+           deref)))
 
 (defn underlying-tempid "ctx just needs :branch and :peer" [ctx id]
   ; This muddled thinking is caused by https://github.com/hyperfiddle/hyperfiddle/issues/584

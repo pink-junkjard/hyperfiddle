@@ -43,7 +43,8 @@
       new-entity? (fn new-entity? [peer dbname dbid branch]
                     (or (contrib.datomic/tempid? dbid)
                         (some-> @(runtime/state peer [::runtime/partitions branch :tempid-lookups dbname])
-                                (either/branch #(throw (ex-info % {})) #(get % dbid))
+                                deref
+                                (get dbid)
                                 some?)
                         (and (not (branch/root-branch? branch))
                              (new-entity? peer dbname dbid (branch/parent-branch-id branch)))))]
