@@ -49,7 +49,7 @@
                 ; :pull addresses the grouped double header which our grids don't ask for today
                 :pull nil
                 :variable (:symbol el)
-                :aggregate (str (cons (:symbol el)
+                :aggregate (str (cons (-> el :fn :symbol)
                                       (map (comp second first) (:args el)))))]
     (label-with-docs label (semantic-docstring ctx) props)))
 
