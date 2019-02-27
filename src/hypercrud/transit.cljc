@@ -1,6 +1,8 @@
 (ns hypercrud.transit
   (:require
+    [cats.core :as cats]
     [cats.monad.either :as either #?@(:cljs [:refer [Left Right]])]
+    [cats.monad.exception :as exception #?@(:cljs [:refer [Failure Success]])]
     [cognitect.transit :as t]
     #?(:cljs [com.cognitect.transit.types])
     [contrib.uri :refer [->URI #?(:cljs URI)]]
@@ -15,7 +17,9 @@
     [hyperfiddle.domains.ednish :refer [map->EdnishDomain #?(:cljs EdnishDomain)]])
   #?(:clj
      (:import
+       (clojure.lang ExceptionInfo)
        (cats.monad.either Left Right)
+       (cats.monad.exception Failure Success)
        (hypercrud.types.DbName DbName)
        (hypercrud.types.DbRef DbRef)
        (hypercrud.types.DbVal DbVal)
@@ -40,6 +44,9 @@
    "r" (t/read-handler ->URI)
    "left" (t/read-handler #(either/left %))
    "right" (t/read-handler #(either/right %))
+   "failure" (t/read-handler #(exception/failure %))
+   "success" (t/read-handler #(exception/success %))
+   "ex-info" (t/read-handler #(apply ex-info %))
    "BidiDomain" (t/read-handler map->BidiDomain)
    "EdnishDomain" (t/read-handler map->EdnishDomain)
    })
@@ -55,6 +62,11 @@
    ThinEntity (t/write-handler (constantly "entity") (fn [v] [(.-dbname v) (.-id v)]))
    Left (t/write-handler (constantly "left") deref)
    Right (t/write-handler (constantly "right") deref)
+   Failure (t/write-handler (constantly "failure") cats/extract)
+   Success (t/write-handler (constantly "success") cats/extract)
+   ExceptionInfo (t/write-handler (constantly "ex-info") (fn [ex] [#?(:clj (.getMessage ex) :cljs (ex-message ex))
+                                                                   (ex-data ex)
+                                                                   #?(:clj (.getCause ex) :cljs (ex-cause ex))]))
    BidiDomain (t/write-handler (constantly "BidiDomain") #(into {} %))
    EdnishDomain (t/write-handler (constantly "EdnishDomain") #(into {} %))
    #?@(:cljs [URI (t/write-handler (constantly "r") (fn [v] (.-uri-str v)))])
