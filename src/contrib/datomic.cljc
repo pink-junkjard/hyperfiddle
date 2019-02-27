@@ -74,8 +74,23 @@
            :db/valueType :db.type/long})
 
 (deftype Schema [schema-pulledtree schema-by-attr]
-  SchemaIndexedNormalized
-  (-repr-portable-hack [this] (str "#schema " (pr-str schema-pulledtree)))
+  #?@(:clj
+      [Object (equals [o other] (and (instance? Schema other) (= (.-schema-pulledtree o) (.-schema-pulledtree other))))
+       IHashEq (hasheq [o] (hash (.-schema-pulledtree o)))
+       ILookup
+       (valAt [this k] (get (.-schema-by-attr this) k))
+       (valAt [this k not-found] (get (.-schema-by-attr this) k not-found))]
+      :cljs
+      [IEquiv (-equiv [o other] (and (instance? Schema other) (= (.-schema-pulledtree o) (.-schema-pulledtree other))))
+       IHash (-hash [o] (hash (.-schema-pulledtree o)))
+       IPrintWithWriter (-pr-writer [o writer _] (-write writer (-repr-portable-hack o)))
+       ILookup
+       (-lookup [o k] (get (.-schema-by-attr o) k))
+       (-lookup [o k not-found] (get (.-schema-by-attr o) k not-found))]))
+
+(extend-protocol SchemaIndexedNormalized
+  Schema
+  (-repr-portable-hack [this] (str "#schema " (pr-str (.-schema-pulledtree this))))
   (attr [this a]
     (when a
       (s/assert keyword? a)
@@ -84,7 +99,7 @@
           (= a :db/id) dbid
           is-reverse-nav (make-reverse-attr this a)
           :else
-          (-> (schema-by-attr a)
+          (-> (a (.-schema-by-attr this))
               (contrib.data/update-existing :db/valueType smart-lookup-ref-no-tempids)
               (contrib.data/update-existing :db/cardinality smart-lookup-ref-no-tempids)
               (contrib.data/update-existing :db/isComponent smart-lookup-ref-no-tempids)
@@ -103,19 +118,18 @@
   (cardinality? [this a k] (= k (cardinality this a)))
   (ref? [this k] (valueType? this k :db.type/ref))
 
-  #?@(:clj
-      [Object (equals [o other] (and (instance? Schema other) (= (.-schema-pulledtree o) (.-schema-pulledtree other))))
-       IHashEq (hasheq [o] (hash schema-pulledtree))
-       ILookup
-       (valAt [this k] (get schema-by-attr k))
-       (valAt [this k not-found] (get schema-by-attr k not-found))]
-      :cljs
-      [IEquiv (-equiv [o other] (and (instance? Schema other) (= (.-schema-pulledtree o) (.-schema-pulledtree other))))
-       IHash (-hash [o] (hash schema-pulledtree))
-       IPrintWithWriter (-pr-writer [o writer _] (-write writer (-repr-portable-hack o)))
-       ILookup
-       (-lookup [o k] (get schema-by-attr k))
-       (-lookup [o k not-found] (get schema-by-attr k not-found))]))
+  nil
+  (-repr-portable-hack [this] (str "#schema " (pr-str nil)))
+  (attr [this a] nil)
+  (attr? [this a corcs] false)
+  (valueType [this a] nil)
+  (cardinality [this a] nil)
+  (isComponent [this a] nil)
+  (unique [this a] nil)
+  (unique? [this a k] nil)
+  (valueType? [this a k] nil)
+  (cardinality? [this a k] nil)
+  (ref? [this k] nil))
 
 #?(:clj (defmethod print-method Schema [o ^java.io.Writer w] (.write w (-repr-portable-hack o))))
 #?(:clj (defmethod print-dup Schema [o w] (print-method o w)))

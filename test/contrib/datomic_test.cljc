@@ -307,6 +307,7 @@
     (is (= (contrib.datomic/find-identity-attr fixtures.hfhf/schema {:a 1 :fiddle/ident :yo}) :fiddle/ident))
     (is (= (contrib.datomic/find-identity-attr fixtures.hfhf/schema {:a 1}) nil))
     (is (= (contrib.datomic/find-identity-attr fixtures.hfhf/schema nil) nil))
+    (is (= (contrib.datomic/attr nil :fiddle/ident) nil))
     )
 
   (testing "reverse navigation"
