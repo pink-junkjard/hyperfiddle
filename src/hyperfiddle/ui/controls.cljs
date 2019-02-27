@@ -102,24 +102,26 @@
         (interpose "·")
         doall)])
 
-(defn entity-links [val ctx]
+(defn entity-links [val ctx &  more-links]
   (let [[[k rv] :as rkvs] (related-links val ctx)]
     (cond
       (= 1 (count rkvs))
       ; Use the id-prompt as the anchor label if there is only one related link.
       ; There is almost always only one. This conserves a lot of width.
-      [:div.input
-       [hyperfiddle.ui/ui-from-link rv ctx nil (id-prompt ctx val)]]
+      [:<>
+       [:div.input [hyperfiddle.ui/ui-from-link rv ctx nil (id-prompt ctx val)]]
+       more-links]
 
       :else
       ; Disambiguate the links with link labels
       [:<>
        [:div.input (id-prompt ctx val)]
-       (->> (for [[k rv] rkvs]
-              ^{:key k}
-              [hyperfiddle.ui/ui-from-link rv ctx])
-            (interpose "·")
-            doall)])))
+       (-> (for [[k rv] rkvs]
+             ^{:key k}
+             [hyperfiddle.ui/ui-from-link rv ctx])
+           (concat more-links)
+           (->> (interpose "·"))
+           doall)])))
 
 (defn ^:export ref [val ctx & [props]]
   (cond
@@ -128,9 +130,9 @@
 
     :else
     [:div.hyperfiddle-input-group
-     (entity-links val ctx)
-     (hf-new val ctx)                                       ; new child
-     (hf-remove val ctx)]))
+     (entity-links val ctx
+                   (hf-new val ctx)                         ; new child
+                   (hf-remove val ctx))]))
 
 (defn ^:export keyword [val ctx & [props]]
   [:div.hyperfiddle-input-group
@@ -142,13 +144,17 @@
 (defn ^:export ref-many [val ctx & [props]]
   [hyperfiddle.ui/table hyperfiddle.ui/columns ctx props])
 
-(defn ^:export id-or-ident [val ctx & [props]]
+(defn ^:export identity-control [val ctx & [props]]
   [:div.hyperfiddle-input-group
-   (entity-links val ctx)
-   ; http://tank.hyperfiddle.site/:dustingetz!gender-shirtsize/
-   #_(hf-new val ctx)                                       ; in table context, only a ref if this attr is ref.
-   (if-not (context/underlying-tempid ctx (context/e ctx))  ; val can be part of lookup ref scalar
-     (hf-remove val ctx))])
+   ; hf/new can't just be slammed in, because once semantic, it will be available
+   ; in places where it wasn't asked for. So in datamode, what do you do?
+   ; I think we ignore it in forms, and only draw it in table headers.
+   (entity-links val ctx
+                 ; http://tank.hyperfiddle.site/:dustingetz!gender-shirtsize/
+                 ; http://alexandrkozyrev.hyperfiddle.site/:codeq/
+                 #_(hf-new val ctx) ; in table context, only a ref if this attr is ref.
+                 (if-not (context/underlying-tempid ctx (context/e ctx)) ; val can be part of lookup ref scalar
+                   (hf-remove val ctx)))])
 
 (defn ^:export instant [val ctx & [props]]
   (let [props (assoc props :value val :on-change (with-entity-change! ctx))]

@@ -114,7 +114,7 @@
           [(control val ctx props) val ctx props]
 
           (context/identity? ctx a)
-          [controls/id-or-ident val ctx props]
+          [controls/identity-control val ctx props]
 
           ; flatten useless nesting
           (and (seq children)
@@ -127,7 +127,7 @@
               [W val ctx props])
             (let [[a] children                              ; pick one, best if there is only one
                   ctx (context/focus ctx [a])]
-              [controls/id-or-ident (context/data ctx) ctx props]))
+              [controls/identity-control (context/data ctx) ctx props]))
 
           (seq children)
           (let [ctx (dissoc ctx ::layout)]
