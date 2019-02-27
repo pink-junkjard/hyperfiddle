@@ -37,7 +37,7 @@
 
 (let [parent-m (fn parent-m [ctx]
                  (let [?ident (some-> (:hypercrud.browser/field ctx) (r/cursor [::field/path-segment]) deref)]
-                   (if @(context/hydrate-attribute ctx ?ident :db/isComponent)
+                   (if (context/hydrate-attribute! ctx ?ident :db/isComponent)
                      (parent-m (:hypercrud.browser/parent ctx))
                      (some-> (:hypercrud.browser/data ctx) deref))))
       new-entity? (fn new-entity? [peer dbname dbid branch]

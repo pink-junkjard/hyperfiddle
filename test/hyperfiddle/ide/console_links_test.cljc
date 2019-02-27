@@ -1,5 +1,6 @@
 (ns hyperfiddle.ide.console-links-test
   (:require
+    [cats.monad.exception :as exception]
     [clojure.core.match :refer [match]]
     [clojure.string :as string]
     [clojure.test :refer [deftest is]]
@@ -73,8 +74,8 @@
          (results FindRel)))
   )
 
-(def schemas {"$" fixtures.ctx/schema
-              "$domains" fixtures.domains/schema})
+(def schemas {"$" (exception/success fixtures.ctx/schema)
+              "$domains" (exception/success fixtures.domains/schema)})
 #_(deftest console-link-internals
   []
   (is (= (console-links-e schemas

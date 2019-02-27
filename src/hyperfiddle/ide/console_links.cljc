@@ -75,7 +75,7 @@
         ))))
 
 (defn console-links-e [schemas qfind ix e collection]
-  (let [schema (get schemas (str (get-in e [:source :symbol])))
+  (let [schema @(get schemas (str (get-in e [:source :symbol])))
         all-paths (element-spread schema e collection)
         all-links (->> all-paths (map (partial console-links-rules schema qfind e)))
         all-paths (->> all-paths (map (fn [path]

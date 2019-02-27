@@ -35,7 +35,7 @@
 
 (defn partitions-reducer [partitions action & args]
   (let [with (fn [partition dbname tx]
-               (let [schema (get-in partition [:schemas dbname])]
+               (let [schema @(get-in partition [:schemas dbname])]
                  (update-in partition [:stage dbname] (partial tx/into-tx schema) tx)))]
     (->> (case action
            :transact!-success

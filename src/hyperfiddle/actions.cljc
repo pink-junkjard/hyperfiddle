@@ -95,9 +95,9 @@
                           (discard-child-partitions get-state branch)))
         (bootstrap-data rt branch LEVEL-GLOBAL-BASIS)))))
 
-(defn update-to-tempids [get-state branch dbname tx]
+(defn update-to-tempids! [get-state branch dbname tx]
   (let [{:keys [tempid-lookups schemas]} (get-in (get-state) [::runtime/partitions branch])
-        schema (get schemas dbname)
+        schema @(get schemas dbname)
         id->tempid (some-> (get tempid-lookups dbname)
                            (either/branch #(throw (ex-info % {})) identity))]
     (map (partial tx/stmt-id->tempid id->tempid schema) tx)))
@@ -144,7 +144,7 @@
   (fn [dispatch! get-state]
     (let [tx-groups (->> tx-groups
                          (remove (fn [[dbname tx]] (empty? tx)))
-                         (map (fn [[dbname tx]] [dbname (update-to-tempids get-state branch dbname tx)]))
+                         (map (fn [[dbname tx]] [dbname (update-to-tempids! get-state branch dbname tx)]))
                          (into {}))
           transact-dbnames (->> (keys tx-groups)
                                 (filter (fn [dbname] (and (branch/root-branch? branch) (should-transact!? dbname get-state)))))
@@ -181,7 +181,7 @@
               {:pre [(not-any? nil? (keys tx))]}            ; tx :: {uri tx}    https://github.com/hyperfiddle/hyperfiddle/issues/816
               (let [with-actions (mapv (fn [[dbname tx]]
                                          (assert dbname)
-                                         (let [tx (update-to-tempids get-state branch dbname tx)]
+                                         (let [tx (update-to-tempids! get-state branch dbname tx)]
                                            [:with branch dbname tx]))
                                        tx)
                     parent-branch (branch/parent-branch-id branch)]

@@ -1,14 +1,16 @@
 (ns hypercrud.browser.field-test
   #?(:cljs (:require-macros [hypercrud.browser.field-test :refer [pull->attr-tests test-defined-pull test-partial-splat test-splat]]))
-  (:require [clojure.test :refer [deftest is testing]]
-            [contrib.data :as data]
-            [contrib.reactive :as r]
-            [hypercrud.browser.context :as context]
-            [hypercrud.browser.field :as field :refer [auto-field infer-attrs]]
-            [hypercrud.types.DbRef :refer [->DbRef]]
-            [hypercrud.types.EntityRequest :refer [->EntityRequest]]
-            [hypercrud.types.QueryRequest :refer [->QueryRequest]]
-            [hyperfiddle.runtime :as runtime]))
+  (:require
+    [cats.monad.exception :as exception]
+    [clojure.test :refer [deftest is testing]]
+    [contrib.data :as data]
+    [contrib.reactive :as r]
+    [hypercrud.browser.context :as context]
+    [hypercrud.browser.field :as field :refer [auto-field infer-attrs]]
+    [hypercrud.types.DbRef :refer [->DbRef]]
+    [hypercrud.types.EntityRequest :refer [->EntityRequest]]
+    [hypercrud.types.QueryRequest :refer [->QueryRequest]]
+    [hyperfiddle.runtime :as runtime]))
 
 
 (def root-branch ["root"])
@@ -80,7 +82,7 @@
   {:branch root-branch
    :hypercrud.browser/fiddle (r/atom fiddle)
    :hypercrud.browser/data (r/atom result)
-   :peer (let [state (r/atom {::runtime/partitions {root-branch {:schemas {"$" test-schema}}}})]
+   :peer (let [state (r/atom {::runtime/partitions {root-branch {:schemas {"$" (exception/success test-schema)}}}})]
            (reify
              runtime/State
              (runtime/state [_] state)

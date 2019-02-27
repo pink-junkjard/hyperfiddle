@@ -75,7 +75,7 @@
 (defn control "this is a function, which returns component"
   [val ctx & [props]]                                       ; returns Func[(ref, props, ctx) => DOM]
   (let [segment (last (:hypercrud.browser/path ctx))
-        attr @(context/hydrate-attribute ctx segment)
+        attr (context/hydrate-attribute! ctx segment)
         type (or (some-> attr :db/valueType :db/ident name keyword) (context/segment-type-2 segment)) ; can include :element ? :aggregate, :entity
         cardinality (some-> attr :db/cardinality :db/ident name keyword)]
     (match* [type cardinality]
@@ -140,10 +140,10 @@
                (cons :hypercrud.browser/path)               ; need to prefix the path with something to differentiate between attr and single attr paths
                (string/join "/"))]
          (when (context/attribute-segment? (last (:hypercrud.browser/path ctx)))
-           (let [attr-ident (last (:hypercrud.browser/path ctx))]
-             [@(context/hydrate-attribute ctx attr-ident :db/valueType :db/ident)
-              @(context/hydrate-attribute ctx attr-ident :db/cardinality :db/ident)
-              (some-> @(context/hydrate-attribute ctx attr-ident :db/isComponent) (if :component))]))
+           (let [attr (context/hydrate-attribute! ctx (last (:hypercrud.browser/path ctx)))]
+             [(get-in attr [:db/valueType :db/ident])
+              (get-in attr [:db/cardinality :db/ident])
+              (when (:db/isComponent attr) :component)]))
          (:hypercrud.browser/path ctx))
        (map css-slugify)
        (apply css)))

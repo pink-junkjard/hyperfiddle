@@ -13,7 +13,7 @@
   ([ctx n]
    (let [entity @(get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data])
          attr-ident (last (:hypercrud.browser/path ctx))
-         {:keys [:db/cardinality :db/valueType]} @(context/hydrate-attribute ctx attr-ident)
+         {:keys [:db/cardinality :db/valueType]} (context/hydrate-attribute! ctx attr-ident)
          o (if (not= (:db/ident valueType) :db.type/ref)
              (get entity attr-ident)
              (case (:db/ident cardinality)
@@ -22,7 +22,7 @@
      (entity-change->tx ctx o n)))
   ([ctx o n]
    (let [id @(r/fmap (r/partial context/smart-entity-identifier ctx) (get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data]))
-         attribute @(context/hydrate-attribute ctx (last (:hypercrud.browser/path ctx)))
+         attribute (context/hydrate-attribute! ctx (last (:hypercrud.browser/path ctx)))
          n (empty->nil n)]                                  ; hack for garbage string controls
      (tx/edit-entity id attribute o n))))
 

@@ -1,8 +1,6 @@
 (ns hyperfiddle.ui.docstring
   (:require
     [contrib.string :refer [blank->nil]]
-    [contrib.pprint :refer [pprint-str]]
-    [contrib.reactive :as r]
     [cuerdas.core :as str]
     [hypercrud.browser.context :as context]))
 
@@ -29,12 +27,12 @@
 
 (defn semantic-docstring [ctx & [doc-override]]
   (let [path (:hypercrud.browser/path ctx)
-        attr (context/hydrate-attribute ctx (last (:hypercrud.browser/path ctx)))
-        typedoc (some->> @(r/fmap attribute-schema-human attr)
+        attr (context/hydrate-attribute! ctx (last (:hypercrud.browser/path ctx)))
+        typedoc (some->> (attribute-schema-human attr)
                          (interpose " ") (apply str))
         help-md (blank->nil
                   (str (if typedoc (str "`" (pr-str path) " " typedoc "`\n\n")) ; markdown needs double line-break
                        ;"`" (pprint-str @(:hypercrud.browser/field ctx)) "`\n\n" ; debug
-                       (or doc-override (some-> @(r/cursor attr [:db/doc]) blank->nil))
+                       (or doc-override (blank->nil (:db/doc attr)))
                        ))]
     help-md))

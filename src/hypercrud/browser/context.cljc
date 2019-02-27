@@ -1,6 +1,6 @@
 (ns hypercrud.browser.context
   (:require
-    [cats.core :refer [mlet return]]
+    [cats.core :as cats :refer [mlet return]]
     [cats.monad.either :as either :refer [left right]]
     [clojure.string :as string]
     [contrib.data :refer [ancestry-common ancestry-divergence]]
@@ -108,8 +108,11 @@
         nil                                                 ; This is an entity but you didn't pull any identity - error?
         )))
 
-(defn hydrate-attribute [ctx ident & ?more-path]
-  (runtime/state (:peer ctx) (concat [::runtime/partitions (:branch ctx) :schemas (dbname ctx)] (cons ident ?more-path))))
+(let [f (fn [?schema+ path] (some->> ?schema+ (cats/fmap #(get-in % path))))]
+  (defn hydrate-attribute! [ctx ident & ?more-path]
+    (some-> @(r/fmap-> (runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :schemas (dbname ctx)])
+                       (f (cons ident ?more-path)))
+            deref)))
 
 (defn- set-parent [ctx]
   (assoc ctx :hypercrud.browser/parent (dissoc ctx :hypercrud.browser/data)))
@@ -123,7 +126,7 @@
            first)
       (when (keyword? path-segment)
         (let [dbname (str (::field/source-symbol @field))
-              schema @(runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :schemas dbname])]
+              schema @@(runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :schemas dbname])]
           (field/summon schema (::field/source-symbol @field) path-segment)))))
 
 (defn find-parent-field [ctx]
@@ -229,7 +232,7 @@
   [ctx v]
   (let [[_ a _] @(:hypercrud.browser/eav ctx)
         valueType (if a
-                    @(hydrate-attribute ctx a :db/valueType :db/ident)
+                    (hydrate-attribute! ctx a :db/valueType :db/ident)
                     :db.type/ref)]                          ; if there is no a in scope, we must be a new entity
     (cond
       (instance? ThinEntity v) v                            ; backwards compat with old hfhf formulas which return #entity

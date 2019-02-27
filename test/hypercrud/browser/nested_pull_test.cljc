@@ -1,13 +1,15 @@
 (ns hypercrud.browser.nested-pull-test
-  (:require [clojure.test :refer [deftest is testing]]
-            [clojure.walk :as walk]
-            [contrib.data :as data]
-            [contrib.reactive :as r]
-            [hypercrud.browser.field :as field :refer [auto-field]]
-            [hypercrud.types.DbRef :refer [->DbRef]]
-            [hypercrud.types.QueryRequest :refer [->QueryRequest]]
-            [hyperfiddle.foundation :as foundation]
-            [hyperfiddle.runtime :as runtime]))
+  (:require
+    [cats.monad.exception :as exception]
+    [clojure.test :refer [deftest is testing]]
+    [clojure.walk :as walk]
+    [contrib.data :as data]
+    [contrib.reactive :as r]
+    [hypercrud.browser.field :as field :refer [auto-field]]
+    [hypercrud.types.DbRef :refer [->DbRef]]
+    [hypercrud.types.QueryRequest :refer [->QueryRequest]]
+    [hyperfiddle.foundation :as foundation]
+    [hyperfiddle.runtime :as runtime]))
 
 
 (def test-schema
@@ -32,7 +34,7 @@
   {:branch foundation/root-branch
    :hypercrud.browser/fiddle (r/atom fiddle)
    :hypercrud.browser/data (r/atom result)
-   :peer (let [state (r/atom {::runtime/partitions {foundation/root-branch {:schemas {"$" test-schema}}}})]
+   :peer (let [state (r/atom {::runtime/partitions {foundation/root-branch {:schemas {"$" (exception/success test-schema)}}}})]
            (reify
              runtime/State
              (runtime/state [_] state)

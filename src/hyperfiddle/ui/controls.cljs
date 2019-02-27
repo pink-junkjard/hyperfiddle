@@ -21,7 +21,7 @@
 
 
 (defn value-validator [ctx]
-  (case @(context/hydrate-attribute ctx (last (:hypercrud.browser/path ctx)) :db/valueType :db/ident)
+  (case (context/hydrate-attribute! ctx (last (:hypercrud.browser/path ctx)) :db/valueType :db/ident)
     :db.type/bigdec any?                                    ;  todo
     :db.type/bigint any?                                    ;  todo
     :db.type/boolean boolean?
@@ -83,7 +83,7 @@
 
 (defn cardinality [ctx]
   (let [segment (last (:hypercrud.browser/path ctx))
-        attr @(context/hydrate-attribute ctx segment)]
+        attr (context/hydrate-attribute! ctx segment)]
     (some-> attr :db/cardinality :db/ident)))
 
 (defn dbid-label [_ ctx & [props]]
@@ -191,7 +191,7 @@
                        (assert (every? value-pred v))
                        v))]
   (defn ^:export edn-many [val ctx & [props]]
-    (let [valueType @(context/hydrate-attribute ctx (last (:hypercrud.browser/path ctx)) :db/valueType :db/ident)
+    (let [valueType (context/hydrate-attribute! ctx (last (:hypercrud.browser/path ctx)) :db/valueType :db/ident)
           val (set (if (= valueType :db.type/ref) (map (r/partial context/smart-entity-identifier ctx) val) val))
           props (-> (assoc props
                       :value val

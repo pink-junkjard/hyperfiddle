@@ -1,5 +1,6 @@
 (ns fixtures.ctx
   (:require
+    [cats.monad.exception :as exception]
     [contrib.reactive :as r]
     [contrib.reader]
     [hyperfiddle.runtime :as runtime]))
@@ -103,7 +104,7 @@
 (def ctx
   {:hyperfiddle.ui/debug-tooltips true,
    :hypercrud.browser/path [],
-   :peer (let [state (r/atom {::runtime/partitions {["root"] {:schemas {"$" schema}}}})]
+   :peer (let [state (r/atom {::runtime/partitions {["root"] {:schemas {"$" (exception/success schema)}}}})]
            (reify runtime/State
              (runtime/state [_] state)
              (runtime/state [_ path] (r/cursor state path)))),
