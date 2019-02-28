@@ -128,7 +128,7 @@
 (defn should-transact!? [dbname get-state]
   (get-in (get-state) [::runtime/auto-transact dbname]))
 
-(defn with-groups [rt branch tx-groups & {:keys [route post-tx]}]
+(defn with-groups [rt branch tx-groups & {:keys [route]}]
   {:pre [(not-any? nil? (keys tx-groups))]}
   (fn [dispatch! get-state]
     (let [tx-groups (->> tx-groups
@@ -160,7 +160,7 @@
   [:open-popover branch popover-id])
 
 (defn stage-popover [rt branch tx-groups & {:keys [route on-start]}] ; todo rewrite in terms of with-groups
-  {:pre [(not-any? nil? (keys tx-groups))]}            ; tx :: {uri tx}    https://github.com/hyperfiddle/hyperfiddle/issues/816
+  {:pre [(not-any? nil? (keys tx-groups))]}
   (fn [dispatch! get-state]
     (let [with-actions (mapv (fn [[dbname tx]]
                                (assert dbname)
@@ -170,7 +170,7 @@
           parent-branch (branch/parent-branch-id branch)]
       ; should the tx fn not be withd? if the transact! fails, do we want to run it again?
       (dispatch! (apply batch (concat with-actions on-start)))
-      ;(with-groups rt invert-route parent-branch tx-groups :route route :post-tx nil)
+      ;(with-groups rt parent-branch tx-groups :route route)
       (let [tx-groups (->> (get-in (get-state) [::runtime/partitions branch :stage])
                            (filter (fn [[dbname tx]] (and (should-transact!? dbname get-state) (not (empty? tx)))))
                            (into {}))]
