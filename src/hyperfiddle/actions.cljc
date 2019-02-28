@@ -159,47 +159,45 @@
 (defn open-popover [branch popover-id]
   [:open-popover branch popover-id])
 
-(defn stage-popover [rt branch swap-fn-async & on-start]    ; todo rewrite in terms of with-groups
+(defn stage-popover [rt branch tx-groups & {:keys [route on-start]}] ; todo rewrite in terms of with-groups
+  {:pre [(not-any? nil? (keys tx-groups))]}            ; tx :: {uri tx}    https://github.com/hyperfiddle/hyperfiddle/issues/816
   (fn [dispatch! get-state]
-    (p/then (swap-fn-async)
-            (fn [{:keys [tx app-route]}]
-              {:pre [(not-any? nil? (keys tx))]}            ; tx :: {uri tx}    https://github.com/hyperfiddle/hyperfiddle/issues/816
-              (let [with-actions (mapv (fn [[dbname tx]]
-                                         (assert dbname)
-                                         (let [tx (update-to-tempids! get-state branch dbname tx)]
-                                           [:with branch dbname tx]))
-                                       tx)
-                    parent-branch (branch/parent-branch-id branch)]
-                ; should the tx fn not be withd? if the transact! fails, do we want to run it again?
-                (dispatch! (apply batch (concat with-actions on-start)))
-                ;(with-groups rt invert-route parent-branch tx-groups :route app-route :post-tx nil)
-                (let [tx-groups (->> (get-in (get-state) [::runtime/partitions branch :stage])
-                                     (filter (fn [[dbname tx]] (and (should-transact!? dbname get-state) (not (empty? tx)))))
-                                     (into {}))]
-                  (if (and (branch/root-branch? parent-branch) (not (empty? tx-groups)))
-                    ; todo what if transact throws?
-                    (transact! rt parent-branch tx-groups dispatch! get-state
-                               :post-tx (let [clear-uris (->> (keys tx-groups)
-                                                              (map (fn [dbname] [:reset-stage-db branch dbname nil]))
-                                                              vec)]
-                                          (concat clear-uris ; clear the uris that were transacted
-                                                  [[:merge branch] ; merge the untransacted uris up
-                                                   (discard-partition get-state branch)])) ; clean up the partition
-                               :route app-route)
-                    (either/branch
-                      (or (some-> app-route route/validate-route+) (either/right nil)) ; arbitrary user input, need to validate
-                      (fn [e]
-                        (dispatch! (batch [:merge branch]
-                                          [:set-error e]
-                                          (discard-partition get-state branch))))
-                      (fn [app-route]
-                        (let [actions [[:merge branch]
-                                       (when app-route
-                                         ; what about local-basis?
-                                         [:partition-route parent-branch app-route])
-                                       (discard-partition get-state branch)]]
-                          (dispatch! (apply batch (conj actions [:hydrate!-start parent-branch])))
-                          (hydrate-partition (runtime/io rt) parent-branch dispatch! get-state)))))))))))
+    (let [with-actions (mapv (fn [[dbname tx]]
+                               (assert dbname)
+                               (let [tx (update-to-tempids! get-state branch dbname tx)]
+                                 [:with branch dbname tx]))
+                             tx-groups)
+          parent-branch (branch/parent-branch-id branch)]
+      ; should the tx fn not be withd? if the transact! fails, do we want to run it again?
+      (dispatch! (apply batch (concat with-actions on-start)))
+      ;(with-groups rt invert-route parent-branch tx-groups :route route :post-tx nil)
+      (let [tx-groups (->> (get-in (get-state) [::runtime/partitions branch :stage])
+                           (filter (fn [[dbname tx]] (and (should-transact!? dbname get-state) (not (empty? tx)))))
+                           (into {}))]
+        (if (and (branch/root-branch? parent-branch) (not (empty? tx-groups)))
+          ; todo what if transact throws?
+          (transact! rt parent-branch tx-groups dispatch! get-state
+                     :post-tx (let [clear-uris (->> (keys tx-groups)
+                                                    (map (fn [dbname] [:reset-stage-db branch dbname nil]))
+                                                    vec)]
+                                (concat clear-uris          ; clear the uris that were transacted
+                                        [[:merge branch]    ; merge the untransacted uris up
+                                         (discard-partition get-state branch)])) ; clean up the partition
+                     :route route)
+          (either/branch
+            (or (some-> route route/validate-route+) (either/right nil)) ; arbitrary user input, need to validate
+            (fn [e]
+              (dispatch! (batch [:merge branch]
+                                [:set-error e]
+                                (discard-partition get-state branch))))
+            (fn [route]
+              (let [actions [[:merge branch]
+                             (when route
+                               ; what about local-basis?
+                               [:partition-route parent-branch route])
+                             (discard-partition get-state branch)]]
+                (dispatch! (apply batch (conj actions [:hydrate!-start parent-branch])))
+                (hydrate-partition (runtime/io rt) parent-branch dispatch! get-state)))))))))
 
 (defn reset-stage-db [io branch dbname tx]
   (fn [dispatch! get-state]

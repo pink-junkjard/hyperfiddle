@@ -1,9 +1,7 @@
 (ns hyperfiddle.ui.popover
   (:require
-    [cats.core :refer [fmap]]
     [contrib.css :refer [css]]
     [contrib.ct :refer [unwrap]]
-    [contrib.data :refer [dissoc-nils]]
     [contrib.eval :as eval]
     [contrib.keypress :refer [with-keychord]]
     [contrib.reactive :as r]
@@ -25,48 +23,37 @@
 
 (let [safe-eval-string #(try-promise (eval/eval-expr-str! %))
       memoized-eval-string (memoize safe-eval-string)]
-  (defn- with-swap-fn [link-ref ctx f]
+  (defn- run-txfn! [link-ref ctx]
     (let [{:keys [:link/tx-fn] :as link} @link-ref]
       (-> (if (blank->nil tx-fn)
             (memoized-eval-string tx-fn)                    ; TODO migrate type to keyword
             (p/resolved (constantly nil)))
           (p/then
             (fn [user-txfn]
-              (p/promise
-                (fn [resolve! reject!]
-                  (let [swap-fn-async (fn []
-                                        (let [result (let [[e a v] @(:hypercrud.browser/eav ctx)
-                                                           result (hyperfiddle.api/txfn user-txfn e a v ctx)]
-                                                       ; txfn may be sync or async
-                                                       (if-not (p/promise? result) (p/resolved result) result))]
-                                          ; let the caller of this :stage fn know the result
-                                          ; This is super funky, a swap-fn should not be effecting, but seems like it would work.
-                                          (-> result (p/branch (fn [v] (resolve! nil))
-                                                               (fn [e]
-                                                                 (reject! e)
-                                                                 (timbre/warn e))))
-
-                                          ; return the result to the action, it could be a promise
-                                          result))]
-                    (runtime/dispatch! (:peer ctx) [:txfn (:link/class link) (:link/path link)])
-                    (f swap-fn-async))))))
-          ; todo something better with these exceptions (could be user error)
-          (p/catch (fn [err] (js/alert (pprint-str err))))))))
+              (runtime/dispatch! (:peer ctx) [:txfn (:link/class link) (:link/path link)])
+              (try
+                (let [[e a v] @(:hypercrud.browser/eav ctx)
+                      result (hyperfiddle.api/txfn user-txfn e a v ctx)]
+                  ; txfn may be sync or async
+                  (if (p/promise? result)
+                    result
+                    (p/resolved result)))
+                (catch js/Error e (p/rejected e)))))
+          (p/catch (fn [e]
+                     ; todo something better with these exceptions (could be user error)
+                     (timbre/warn e)
+                     (js/alert (pprint-str e))
+                     (throw e)))))))
 
 (defn stage! [link-ref popover-id child-branch ctx r-popover-data props]
-  (let [f (fn [swap-fn-async]
-            ; the swap-fn could be determined via the link rel
-            (->> (actions/stage-popover (:peer ctx) child-branch
-                                        #(->> (swap-fn-async)
-                                              (fmap
-                                                (fn [tx]
-                                                  (-> {:tx {(or (hypercrud.browser.context/dbname ctx) "$") ; https://github.com/hyperfiddle/hyperfiddle/issues/816
-                                                            tx}
-                                                       :app-route (if-let [f (::redirect props)] (f @r-popover-data))}
-                                                      dissoc-nils))))
-                                        (actions/close-popover (:branch ctx) popover-id))
-                 (runtime/dispatch! (:peer ctx))))]
-    (with-swap-fn link-ref ctx f)))
+  (-> (run-txfn! link-ref ctx)
+      (p/then (fn [tx]
+                (let [tx-groups {(or (hypercrud.browser.context/dbname ctx) "$") ; https://github.com/hyperfiddle/hyperfiddle/issues/816
+                                 tx}]
+                  (->> (actions/stage-popover (:peer ctx) child-branch tx-groups
+                                              :route (when-let [f (::redirect props)] (f @r-popover-data))
+                                              :on-start [(actions/close-popover (:branch ctx) popover-id)])
+                       (runtime/dispatch! (:peer ctx))))))))
 
 (defn close! [popover-id ctx]
   (runtime/dispatch! (:peer ctx) (actions/close-popover (:branch ctx) popover-id)))
@@ -112,23 +99,17 @@
     child
     [tooltip (tooltip-props (:tooltip props)) child]))
 
-(defn run-txfn! [link-ref ctx props]
-  (let [popover-data nil]
-    (letfn [(f [swap-fn-async]
-              (-> (->> (swap-fn-async)
-                       (fmap (fn [tx]
-                               (-> {:tx {(hypercrud.browser.context/dbname ctx) tx}
-                                    :app-route (if-let [f (::redirect props)] (f popover-data))}
-                                   dissoc-nils))))
-                  (p/then
-                    (fn [{:keys [tx app-route]}]
-                      (->> (actions/with-groups (:peer ctx) (:branch ctx) tx :route app-route)
-                           (runtime/dispatch! (:peer ctx)))))))]
-      (with-swap-fn link-ref ctx f))))
+(defn run-effect! [link-ref ctx props]
+  (-> (run-txfn! link-ref ctx)
+      (p/then
+        (fn [tx]
+          (->> (actions/with-groups (:peer ctx) (:branch ctx) {(hypercrud.browser.context/dbname ctx) tx}
+                                    :route (when-let [f (::redirect props)] (f nil)))
+               (runtime/dispatch! (:peer ctx)))))))
 
 (defn effect-cmp [link-ref ctx props label]
   (let [props (-> props
-                  (assoc :on-click (r/partial run-txfn! link-ref ctx props))
+                  (assoc :on-click (r/partial run-effect! link-ref ctx props))
                   ; use twbs btn coloring but not "btn" itself
                   (update :class css "btn-warning"))]
     [:button props [:span (str label "!")]]))
