@@ -39,10 +39,8 @@
                  (update-in partition [:stage dbname] (partial tx/into-tx schema) tx)))]
     (->> (case action
            :transact!-success
-           (let [[branch-id dbnames] args]
-             (-> partitions
-                 (assoc-in [branch-id :hydrate-id] "hack; dont flicker while page rebuilds")
-                 (update-in [branch-id :stage] #(apply dissoc % dbnames))))
+           (let [[branch-id] args]
+             (assoc-in partitions [branch-id :hydrate-id] "hack; dont flicker while page rebuilds"))
 
            :create-partition (let [[branch-id] args
                                    parent-branch-id (branch/parent-branch-id branch-id)]

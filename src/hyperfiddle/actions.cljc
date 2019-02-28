@@ -101,8 +101,7 @@
         id->tempid (some-> (get tempid-lookups dbname) deref)]
     (map (partial tx/stmt-id->tempid id->tempid schema) tx)))
 
-(defn transact! [rt root-branch-id tx-groups dispatch! get-state & {:keys [route post-tx]}]
-  {:pre [(branch/root-branch? root-branch-id)]}
+(defn transact! [rt branch-id tx-groups dispatch! get-state & {:keys [route post-tx]}]
   (dispatch! [:transact!-start])
   (-> (io/transact! (runtime/io rt) tx-groups)
       (p/catch (fn [e]
@@ -110,9 +109,9 @@
                  (throw e)))
       (p/then (fn [{:keys [tempid->id]}]
                 ; todo should just call foundation/bootstrap-data
-                (mlet [:let [on-finally (into [[:transact!-success root-branch-id (keys tx-groups)]] post-tx)]
+                (mlet [:let [on-finally (into [[:transact!-success branch-id (keys tx-groups)]] post-tx)]
                        _ (refresh-global-basis (runtime/io rt) on-finally dispatch! get-state)
-                       :let [current-route (get-in (get-state) [::runtime/partitions root-branch-id :route])]]
+                       :let [current-route (get-in (get-state) [::runtime/partitions branch-id :route])]]
                   (either/branch
                     (or (some-> route route/validate-route+) ; arbitrary user input, need to validate
                         (either/right current-route))
@@ -124,7 +123,7 @@
                             route' (route/invert-route route invert-id)]
                         ; todo we want to overwrite our current browser location with this new url
                         ; currently this new route breaks the back button
-                        (set-route rt route' root-branch-id true dispatch! get-state)))))))))
+                        (set-route rt route' branch-id true dispatch! get-state)))))))))
 
 (defn should-transact!? [dbname get-state]
   (get-in (get-state) [::runtime/auto-transact dbname]))
@@ -144,11 +143,7 @@
       (if (not (empty? transact-groups))
         ; todo what if transact throws?
         (transact! rt branch transact-groups dispatch! get-state
-                   :post-tx (let [clear-uris (->> (keys transact-groups)
-                                                  (map (fn [dbname] [:reset-stage-db branch dbname nil]))
-                                                  vec)]
-                              (concat clear-uris            ; clear the uris that were transacted
-                                      with-actions))
+                   :post-tx with-actions
                    :route route)
         (either/branch
           (or (some-> route route/validate-route+) (either/right nil)) ; arbitrary user input, need to validate
@@ -213,10 +208,10 @@
       (dispatch! (batch [:reset-stage-db branch dbname tx] [:hydrate!-start branch]))
       (hydrate-partition io branch dispatch! get-state))))
 
-(defn manual-transact-db! [rt root-branch-id dbname]
+(defn manual-transact-db! [rt branch-id dbname]
   (fn [dispatch! get-state]
     ; todo do something when child branches exist and are not nil: hyperfiddle/hyperfiddle#99
     ; can only transact one branch
-    (let [tx-groups (-> (get-in (get-state) [::runtime/partitions root-branch-id :stage])
+    (let [tx-groups (-> (get-in (get-state) [::runtime/partitions branch-id :stage])
                         (select-keys [dbname]))]
-      (transact! rt root-branch-id tx-groups dispatch! get-state :post-tx [[:reset-stage-db nil dbname]]))))
+      (transact! rt branch-id tx-groups dispatch! get-state :post-tx [[:reset-stage-db branch-id dbname]]))))
