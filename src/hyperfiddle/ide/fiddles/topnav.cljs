@@ -45,7 +45,8 @@
      (->> (runtime/domain (:peer ctx))
           ::ide-domain/user-dbname->ide
           (map (fn [[user-dbname ide-dbname]] {:id ide-dbname :label user-dbname}))
-          (sort-by :label))]
+          (sort-by :label))
+     :show-auto-tx true]
     (ui/link :new-fiddle ctx "new" (let [disabled? (not (security/can-create? ctx)) ; we explicitly know the context here is $
                                          anonymous? (nil? @(runtime/state (:peer ctx) [::runtime/user-id]))]
                                      {:disabled disabled?
