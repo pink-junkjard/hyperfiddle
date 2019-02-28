@@ -81,15 +81,21 @@
                         "identity"
                         "(constantly nil)"))))))
 
+(defn validate-link-a [[src a :as v]]
+  ; reject 0, for instance
+  (when (and (symbol? src)
+             (keyword? a))
+    v))
+
 (defn read-a "Use :qin to infer the src if the link/a eschews it."
   [s qin]
   (let [[x :as xs] (->> (contrib.reader/memoized-read-edn-string+ (str "[" s "]"))
                         (unwrap #(timbre/error %)))]
-    (condp = (count xs)
-      2 xs
-      1 ['$ x]                                              ; TODO: Use :qin to choose the right color
-      ; 0 is invalid
-      0 nil)))
+    (validate-link-a
+      (condp = (count xs)
+        2 xs
+        1 ['$ x]                                            ; TODO: Use :qin to choose the right color
+        nil))))
 
 (defn read-path [s]
   (->> (contrib.reader/memoized-read-edn-string+ (str "[" s "]"))
@@ -119,8 +125,8 @@
                  (let [[src-db a] (read-a (contrib.string/blank->nil (:link/path link)) qin)
                        ; Consider: ref, fiddle-ident, scalar (e.g. :streaker/date, :fiddle/ident, :db/ident)
                        schema (get schemas (str src-db))
-                       is-identity (and a (contrib.datomic/unique? schema a :db.unique/identity))
-                       is-ref (and a (contrib.datomic/ref? schema a))]
+                       is-identity (contrib.datomic/attr? schema a :db.unique/identity)
+                       is-ref (contrib.datomic/attr? schema a :db.type/ref)]
                    (condp some (:link/class link)
                      #{:hf/new :hf/affix} (cond
                                             ; Need to know what context we in.
