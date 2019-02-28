@@ -9,7 +9,6 @@
     [contrib.ui :refer [code debounced easy-checkbox validated-cmp]]
     [contrib.ui.tooltip :refer [tooltip]]
     [hyperfiddle.actions :as actions]
-    [hyperfiddle.branch :as branch]
     [hyperfiddle.domain :as domain]
     [hyperfiddle.runtime :as runtime]
     [hyperfiddle.security.client :as security]
@@ -22,52 +21,60 @@
     selected-dbname
     (first tab-ids)))
 
-(defn ^:export stage-ui-buttons [selected-dbname-ref rt branch dbname-labels]
-  (let [selected-dbname (default-tab-model @selected-dbname-ref (map :id dbname-labels))
-        stage (runtime/state rt [::runtime/partitions branch :stage selected-dbname])
-        writes-allowed?+ (let [hf-db (domain/database (runtime/domain rt) selected-dbname)
-                               subject @(runtime/state rt [::runtime/user-id])]
-                           (security/subject-can-transact? hf-db subject))
-        anonymous? (nil? @(runtime/state rt [::runtime/user-id]))]
-    [:<>
-     [tooltip (either/branch
-                writes-allowed?+
-                (fn [e] {:status :warning :label "Misconfigured db security"})
-                (fn [writes-allowed?]
-                  (cond (and (not writes-allowed?) anonymous?) {:status :warning :label "Please login"}
-                        (not writes-allowed?) {:status :warning :label "Writes restricted"}
-                        (empty? @stage) {:status :warning :label "no changes"})))
-      (let [disabled? (either/branch
-                        writes-allowed?+
-                        (constantly true)
-                        (fn [writes-allowed?] (or (not writes-allowed?) (empty? @stage))))]
-        (when (branch/root-branch? branch)
-          [:button {:disabled disabled?
-                    :style (cond-> {:background-color (domain/database-color (runtime/domain rt) selected-dbname)}
-                             disabled? (assoc :pointer-events "none"))
-                    :on-click (fn []
-                                (let [action (actions/manual-transact-db! rt branch selected-dbname)]
-                                  (runtime/dispatch! rt action)))}
-           "transact!"]))]
-     " "
-     [tooltip (either/branch
-                writes-allowed?+
-                (fn [e] {:status :warning :label "Misconfigured db security"})
-                (fn [writes-allowed?]
-                  (cond (and anonymous? (not writes-allowed?)) {:status :warning :label "Please login"}
-                        (not writes-allowed?) {:status :warning :label "Writes restricted"}
-                        (not (empty? @stage)) {:status :warning :label "please transact! all changes first"})))
-      (let [is-disabled (either/branch
-                          writes-allowed?+
-                          (constantly true)
-                          (fn [writes-allowed?]
-                            (or (not writes-allowed?) (not (empty? @stage)))))
-            is-auto-transact @(runtime/state rt [::runtime/auto-transact selected-dbname])]
-        [easy-checkbox {:disabled is-disabled
-                        :style (if is-disabled {:pointer-events "none"})
-                        :checked (boolean is-auto-transact)
-                        :on-change #(runtime/dispatch! rt [:toggle-auto-transact selected-dbname])}
-         "auto-transact"])]]))
+
+(defn- anonymous? [rt] (nil? @(runtime/state rt [::runtime/user-id])))
+
+(defn- writes-allowed?+ [rt selected-dbname]
+  (let [hf-db (domain/database (runtime/domain rt) selected-dbname)
+        subject @(runtime/state rt [::runtime/user-id])]
+    (security/subject-can-transact? hf-db subject)))
+
+(defn transact-button [rt branch-id selected-dbname-ref]
+  (let [selected-dbname @selected-dbname-ref
+        writes-allowed?+ (writes-allowed?+ rt selected-dbname)
+        stage (runtime/state rt [::runtime/partitions branch-id :stage selected-dbname])]
+    [tooltip (either/branch
+               writes-allowed?+
+               (fn [e] {:status :warning :label "Misconfigured db security"})
+               (fn [writes-allowed?]
+                 (cond (and (not writes-allowed?) (anonymous? rt)) {:status :warning :label "Please login"}
+                       (not writes-allowed?) {:status :warning :label "Writes restricted"}
+                       (empty? @stage) {:status :warning :label "no changes"})))
+     (let [disabled? (either/branch
+                       writes-allowed?+
+                       (constantly true)
+                       (fn [writes-allowed?] (or (not writes-allowed?) (empty? @stage))))]
+       [:button {:disabled disabled?
+                 :style (cond-> {:background-color (domain/database-color (runtime/domain rt) selected-dbname)}
+                          disabled? (assoc :pointer-events "none"))
+                 :on-click (fn []
+                             (let [action (actions/manual-transact-db! rt branch-id selected-dbname)]
+                               (runtime/dispatch! rt action)))}
+        "transact!"])]))
+
+(defn auto-transact-control [rt branch-id selected-dbname-ref]
+  (let [selected-dbname @selected-dbname-ref
+        writes-allowed?+ (writes-allowed?+ rt selected-dbname)
+        stage (runtime/state rt [::runtime/partitions branch-id :stage selected-dbname])]
+    [tooltip (either/branch
+               writes-allowed?+
+               (fn [e] {:status :warning :label "Misconfigured db security"})
+               (fn [writes-allowed?]
+                 (cond (and (anonymous? rt) (not writes-allowed?)) {:status :warning :label "Please login"}
+                       (not writes-allowed?) {:status :warning :label "Writes restricted"}
+                       (not (empty? @stage)) {:status :warning :label "please transact! all changes first"})))
+     (let [is-disabled (either/branch
+                         writes-allowed?+
+                         (constantly true)
+                         (fn [writes-allowed?]
+                           (or (not writes-allowed?) (not (empty? @stage)))))
+           is-auto-transact @(runtime/state rt [::runtime/auto-transact selected-dbname])]
+       [easy-checkbox {:disabled is-disabled
+                       :style (cond-> {:margin-left "0.5em"}
+                                is-disabled (assoc :pointer-events "none"))
+                       :checked (boolean is-auto-transact)
+                       :on-change #(runtime/dispatch! rt [:toggle-auto-transact selected-dbname])}
+        " auto-transact"])]))
 
 (let [parse-string (fn [s]
                      (let [v (read-edn-string! s)]
@@ -126,28 +133,36 @@
          (str "##### Auto-transact:\n\n"))
     {:hyperfiddle.ui.markdown-extensions/unp true}]])
 
-(defn ^:export popover-button [rt branch dbname-labels]
+(defn ^:export popover-button [rt branch dbname-labels & {:keys [show-auto-tx]}]
   (let [show-tooltip (r/atom false)
         show-stage (r/atom false)
         selected-dbname (runtime/state rt [:staging/selected-uri])]
-    (fn [rt branch dbname-labels]
-      [:div.hyperfiddle-staging-popover-button
-       [re-com/popover-tooltip
-        :showing? (r/atom (and @show-tooltip (not @show-stage)))
-        :label [tooltip-content rt dbname-labels]
-        :anchor [re-com/popover-anchor-wrapper
-                 :showing? show-stage
-                 :position :below-center
-                 :anchor (let [stage-is-dirty (not @(r/fmap empty? (runtime/state rt [::runtime/partitions branch :stage])))]
-                           [:button {:on-click #(reset! show-stage true)
-                                     :on-mouse-over #(do (reset! show-tooltip true) nil)
-                                     :on-mouse-out #(do (reset! show-tooltip false) nil)
-                                     :class (cond-> "hyperfiddle btn-default"
-                                              stage-is-dirty (css "stage-dirty"))}
-                            "stage▾"])
-                 :popover [re-com/popover-content-wrapper
-                           :no-clip? true?
-                           :body [:div.hyperfiddle-popover-body
-                                  [editor-cmp selected-dbname rt branch dbname-labels
-                                   [stage-ui-buttons selected-dbname rt branch dbname-labels]
-                                   [:button.close-popover {:on-click (r/partial reset! show-stage false)} "close"]]]]]]])))
+    (fn [rt branch dbname-labels & {:keys [show-auto-tx]}]
+      (let [maybe-tooltip-wrapper (fn [button-cmp]
+                                    (if show-auto-tx
+                                      [re-com/popover-tooltip
+                                       :showing? (r/atom (and @show-tooltip (not @show-stage)))
+                                       :label [tooltip-content rt dbname-labels]
+                                       :anchor button-cmp]
+                                      button-cmp))]
+        [:div.hyperfiddle-staging-popover-button
+         (maybe-tooltip-wrapper
+           [re-com/popover-anchor-wrapper
+            :showing? show-stage
+            :position :below-center
+            :anchor (let [stage-is-dirty (not @(r/fmap empty? (runtime/state rt [::runtime/partitions branch :stage])))]
+                      [:button (cond-> {:on-click #(reset! show-stage true)
+                                        :class (cond-> "hyperfiddle btn-default"
+                                                 stage-is-dirty (css "stage-dirty"))}
+                                 show-auto-tx (assoc :on-mouse-over #(do (reset! show-tooltip true) nil)
+                                                     :on-mouse-out #(do (reset! show-tooltip false) nil)))
+                       "stage▾"])
+            :popover [re-com/popover-content-wrapper
+                      :no-clip? true?
+                      :body (let [selected-dbname' (r/fmap-> selected-dbname (default-tab-model (mapv :id dbname-labels)))]
+                              [:div.hyperfiddle-popover-body
+                               [editor-cmp selected-dbname rt branch dbname-labels
+                                [transact-button rt branch selected-dbname']
+                                (when show-auto-tx
+                                  [auto-transact-control rt branch selected-dbname'])
+                                [:button.close-popover {:on-click (r/partial reset! show-stage false)} "close"]]])]])]))))
