@@ -1,6 +1,7 @@
 (ns hyperfiddle.domain
   (:require
     [bidi.bidi :as bidi]
+    [clojure.set :as set]
     [hyperfiddle.database.color :as color]))
 
 
@@ -27,3 +28,7 @@
 
 (defn api-match-path [domain path & {:as options}]
   (apply bidi/match-route (api-routes domain) path (apply concat options)))
+
+(defn valid-dbname? [domain dbname] (some? (database domain dbname)))
+
+(defn valid-dbnames? [domain dbnames] (set/subset? (set dbnames) (set (keys (databases domain)))))

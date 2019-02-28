@@ -76,7 +76,7 @@
                        v))
       to-string pprint-datoms-str
       on-change (fn [rt branch dbname-ref o n]
-                  (runtime/dispatch! rt (actions/reset-stage-db (runtime/io rt) branch @dbname-ref n)))]
+                  (runtime/dispatch! rt (actions/reset-stage-db rt branch @dbname-ref n)))]
   (defn- tab-content [rt branch dbname-ref & children]
     (into [:div.tab-content {:style {:border-color (domain/database-color (runtime/domain rt) @dbname-ref)}}
            (let [props {:value @(runtime/state rt [::runtime/partitions branch :stage @dbname-ref])

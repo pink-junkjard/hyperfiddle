@@ -6,8 +6,8 @@
     [clojure.spec.alpha :as s]
     [contrib.data :as data]
     [contrib.datomic-tx :as tx]
-    [hypercrud.types.Err :as Err]
     [hyperfiddle.branch :as branch]
+    [hyperfiddle.domain :as domain]
     [hyperfiddle.io.core :as io]
     [hyperfiddle.route :as route]
     [hyperfiddle.runtime :as runtime]
@@ -95,13 +95,14 @@
                           (discard-child-partitions get-state branch)))
         (bootstrap-data rt branch LEVEL-GLOBAL-BASIS)))))
 
-(defn update-to-tempids! [get-state branch dbname tx]
+(defn- update-to-tempids! [get-state branch dbname tx]
   (let [{:keys [tempid-lookups schemas]} (get-in (get-state) [::runtime/partitions branch])
         schema @(get schemas dbname)
         id->tempid (some-> (get tempid-lookups dbname) deref)]
     (map (partial tx/stmt-id->tempid id->tempid schema) tx)))
 
 (defn transact! [rt branch-id tx-groups dispatch! get-state & {:keys [route post-tx]}]
+  {:pre [(domain/valid-dbnames? (runtime/domain rt) (keys tx-groups))]}
   (dispatch! [:transact!-start])
   (-> (io/transact! (runtime/io rt) tx-groups)
       (p/catch (fn [e]
@@ -129,7 +130,7 @@
   (get-in (get-state) [::runtime/auto-transact dbname]))
 
 (defn with-groups [rt branch tx-groups & {:keys [route]}]
-  {:pre [(not-any? nil? (keys tx-groups))]}
+  {:pre [(domain/valid-dbnames? (runtime/domain rt) (keys tx-groups))]}
   (fn [dispatch! get-state]
     (let [tx-groups (->> tx-groups
                          (remove (fn [[dbname tx]] (empty? tx)))
@@ -160,10 +161,9 @@
   [:open-popover branch popover-id])
 
 (defn stage-popover [rt branch tx-groups & {:keys [route on-start]}] ; todo rewrite in terms of with-groups
-  {:pre [(not-any? nil? (keys tx-groups))]}
+  {:pre [(domain/valid-dbnames? (runtime/domain rt) (keys tx-groups))]}
   (fn [dispatch! get-state]
     (let [with-actions (mapv (fn [[dbname tx]]
-                               (assert dbname)
                                (let [tx (update-to-tempids! get-state branch dbname tx)]
                                  [:with branch dbname tx]))
                              tx-groups)
@@ -199,14 +199,16 @@
                 (dispatch! (apply batch (conj actions [:hydrate!-start parent-branch])))
                 (hydrate-partition (runtime/io rt) parent-branch dispatch! get-state)))))))))
 
-(defn reset-stage-db [io branch dbname tx]
+(defn reset-stage-db [rt branch dbname tx]
+  {:pre [(domain/valid-dbname? (runtime/domain rt) dbname)]}
   (fn [dispatch! get-state]
     ; check if auto-tx is OFF first?
     (when (not= tx (get-in (get-state) [::runtime/partitions branch :stage dbname]))
       (dispatch! (batch [:reset-stage-db branch dbname tx] [:hydrate!-start branch]))
-      (hydrate-partition io branch dispatch! get-state))))
+      (hydrate-partition (runtime/io rt) branch dispatch! get-state))))
 
 (defn manual-transact-db! [rt branch-id dbname]
+  {:pre [(domain/valid-dbname? (runtime/domain rt) dbname)]}
   (fn [dispatch! get-state]
     ; todo do something when child branches exist and are not nil: hyperfiddle/hyperfiddle#99
     ; can only transact one branch
