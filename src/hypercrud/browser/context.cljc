@@ -1,7 +1,7 @@
 (ns hypercrud.browser.context
   (:require
     [cats.core :refer [mlet return =<< fmap]]
-    [cats.monad.either :as either :refer [left right either?]]
+    [cats.monad.either :as either :refer [left right either? branch]]
     [contrib.ct :refer [unwrap maybe maybe->either]]
     [contrib.data :refer [ancestry-common ancestry-divergence unqualify]]
     [contrib.datomic]
@@ -71,14 +71,23 @@
 (s/def :hypercrud.browser/schema r/reactive?)
 (s/def :hypercrud.browser/pull-path (s/coll-of keyword? :kind vector?))
 
-(defn valid? [{:keys [:hypercrud.browser/qfind
-                      :hypercrud.browser/fiddle] :as ctx}]
+(defn valid+ [{:keys [:hypercrud.browser/qfind
+                      :hypercrud.browser/fiddle
+                      :hypercrud.browser/qfind-invalid-attrs
+                      :hypercrud.browser/query-validation-issues]
+               :as ctx}]
+  ; Accumulate issues, not just first issue
   (let [{:keys [:fiddle/type]} @fiddle]
     (cond
-      (= type :blank) true
-      (not qfind) (taoensso.timbre/warn "invalid qfind: " (pr-str (:hypercrud.browser/qfind ctx)))
-      (:hypercrud.browser/qfind-invalid-attrs ctx) (taoensso.timbre/warn "invalid attrs: " (pr-str (:hypercrud.browser/qfind-invalid-attrs ctx)))
-      :else true)))
+      (= type :blank) (right ctx)
+      query-validation-issues (left (str "invalid query: " (pr-str query-validation-issues)))
+      (not @qfind) (left (str "invalid qfind: " (pr-str @qfind))) ; impossible
+      (seq qfind-invalid-attrs) (left (str "invalid attrs: " (pr-str qfind-invalid-attrs)))
+      :else (right ctx))))
+
+(defn valid? [ctx]
+  ; (taoensso.timbre/warn "invalid query: " (pr-str query-validation-issues))
+  (branch (valid+ ctx) (constantly false) (constantly true)))
 
 (defn clean [ctx]
   ; Keeps the :peer which owns the schemas
@@ -319,17 +328,15 @@
   Works at fiddle and attribute level. Currently we do not index at element level (rather it is already indexed by vec index)"
   ([ctx]
    {:pre [(= (depth ctx) 0)]}
-   (let [qfind (:hypercrud.browser/qfind ctx)]
+   (let [qfind @(:hypercrud.browser/qfind ctx)]
      (cond                                                  ; fiddle | nested attr (otherwise already spread)
 
        (not qfind)
        (assoc ctx :hypercrud.browser/result-index (:hypercrud.browser/result ctx))
 
        (= (depth ctx) 0)                                    ; fiddle level
-       (let [{r-qfind :hypercrud.browser/qfind} ctx
-             r-ordered-result (:hypercrud.browser/result ctx)]
-
-         (condp = (type @r-qfind)
+       (let [r-ordered-result (:hypercrud.browser/result ctx)]
+         (condp = (type qfind)
            FindRel
            (assoc ctx :hypercrud.browser/result-index
                       (r/fmap->> r-ordered-result (contrib.data/group-by-unique (partial row-key-v ctx))))
@@ -553,57 +560,45 @@
          (:hypercrud.browser/schemas ctx)
          #_(-> (:hypercrud.browser/schemas ctx) deref count (> 0))]}
   (let [r-fiddle (r/fmap hyperfiddle.fiddle/apply-defaults r-fiddle)
-        r-qparsed (r/fmap-> r-fiddle hyperfiddle.fiddle/parse-fiddle-query)
-        r-qfind (r/fmap :qfind r-qparsed)
+        r+-qparsed (r/fmap-> r-fiddle hyperfiddle.fiddle/parse-fiddle-query+)
+        r-qfind (r/fmap (comp :qfind #(unwrap (constantly nil) %)) r+-qparsed)
+        r-qparsed (r/fmap->> r+-qparsed (unwrap (constantly nil)))
         r-fiddle (r/fmap->> (r/sequence [r-fiddle (:hypercrud.browser/schemas ctx) r-qparsed])
-                            (apply hyperfiddle.fiddle/apply-fiddle-links-defaults))
-        element-validation-issues (if-let [qfind @r-qfind]
-                                    (seq (contrib.datomic/validate-qfind-attrs
-                                           @(:hypercrud.browser/schemas ctx) qfind)))]
-    (as-> ctx ctx
-          (assoc ctx :hypercrud.browser/fiddle r-fiddle)
-          (if r-qfind
-            (if @r-qfind
-              (as-> ctx ctx
-                    (assoc ctx :hypercrud.browser/qfind r-qfind
-                               :hypercrud.browser/qparsed r-qparsed)
-                    (if element-validation-issues
-                      (assoc ctx :hypercrud.browser/qfind-invalid-attrs element-validation-issues)
-                      ctx))
-              ctx)
-            ctx)
-          (assoc ctx :hypercrud.browser/link-index (r/fmap->> r-fiddle :fiddle/links (map link-identifiers)))
-          (assoc ctx :hypercrud.browser/eav (r/apply stable-eav-av
-                                                     [(r/pure nil)
-                                                      (r/fmap :fiddle/ident r-fiddle)
-                                                      (r/pure nil)]))
-          ; push this down, it should be nil now
-          (assoc ctx :hypercrud.browser/pull-path []))))
+                            (apply hyperfiddle.fiddle/apply-fiddle-links-defaults))]
+    ; Can't keep track of reaction types. Just set the key to (reactive nil) rather than omit the key.
+    (assoc ctx
+      :hypercrud.browser/query-validation-issues (branch @r+-qparsed identity (constantly nil))
+      :hypercrud.browser/fiddle r-fiddle
+      :hypercrud.browser/qfind r-qfind
+      :hypercrud.browser/qparsed r-qparsed
+      :hypercrud.browser/qfind-invalid-attrs (contrib.datomic/validate-qfind-attrs
+                                               @(:hypercrud.browser/schemas ctx) @r-qfind)
+      :hypercrud.browser/link-index (r/fmap->> r-fiddle :fiddle/links (map link-identifiers))
+      :hypercrud.browser/eav (r/apply stable-eav-av
+                                      [(r/pure nil)
+                                       (r/fmap :fiddle/ident r-fiddle)
+                                       (r/pure nil)])
+      :hypercrud.browser/pull-path [])))                    ; push this down, it should be nil now
 
 (defn result [ctx r-result]
   {:pre [r-result
          (:hypercrud.browser/fiddle ctx)]}
+  ;(assert (not @(:hypercrud.browser/query-validation-issues ctx)) @(:hypercrud.browser/query-validation-issues ctx))
   (as-> ctx ctx
         (assoc ctx :hypercrud.browser/result r-result)      ; can be nil if no qfind
-        (if (:hypercrud.browser/qfind ctx)
-          (if @(:hypercrud.browser/qfind ctx)
-            (assoc ctx :hypercrud.browser/result-enclosure
-                       (r/ctxf contrib.datomic/result-enclosure ctx
-                               :hypercrud.browser/schemas
-                               :hypercrud.browser/qfind
-                               :hypercrud.browser/result))
-            ctx)
-          ctx)
-        (assoc ctx :hypercrud.browser/validation-hints
-                   (contrib.validation/validate
-                     (s/get-spec @(r/fmap-> (:hypercrud.browser/fiddle ctx) :fiddle/ident))
-                     @(:hypercrud.browser/result ctx)
-                     (partial row-key ctx)))                ; i dont think fallback v
-
+        (assoc ctx                                          ; uses result
+          :hypercrud.browser/result-enclosure (r/ctxf contrib.datomic/result-enclosure ctx
+                                                      :hypercrud.browser/schemas
+                                                      :hypercrud.browser/qfind
+                                                      :hypercrud.browser/result)
+          :hypercrud.browser/validation-hints (contrib.validation/validate
+                                                (s/get-spec @(r/fmap-> (:hypercrud.browser/fiddle ctx) :fiddle/ident))
+                                                @(:hypercrud.browser/result ctx)
+                                                ; i dont think fallback v
+                                                (partial row-key ctx)))
         ; index-result implicitly depends on eav in the tempid reversal stable entity code.
         ; Conceptually, it should be after qfind and before EAV.
-        (index-result ctx)                                  ; in row case, now indexed, but path is not aligned yet
-        ))
+        (index-result ctx)))                                ; in row case, now indexed, but path is not aligned yet
 
 (defn stable-element-schema [schemas element]
   (let [{{db :symbol} :source} element]
@@ -687,7 +682,7 @@
     (as->
       ctx ctx
       (-infer-implicit-element ctx)                         ; ensure pull-enclosure
-      (-validate-qfind-element ctx)
+      #_(-validate-qfind-element ctx)
       (set-parent ctx)
       (update ctx :hypercrud.browser/pull-path (fnil conj []) a') ; what is the cardinality? are we awaiting a row?
       (if (:hypercrud.browser/head-sentinel ctx)

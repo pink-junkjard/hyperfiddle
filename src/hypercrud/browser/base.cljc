@@ -86,7 +86,8 @@
     Not even the topfiddle"
     [request ctx]
     ; Blow mlet in case of (right _) -> (left _), but don't recompute if (right :a) -> (right :b).
-    (mlet [reactive-attrs @(r/apply-inner-r (project/hydrate-attrs ctx))
+    (mlet [ctx (context/valid+ ctx)
+           reactive-attrs @(r/apply-inner-r (project/hydrate-attrs ctx))
            ; result SHOULD be sorted out of jvm, though isn't yet
            r-result @(r/apply-inner-r (r/track nil-or-hydrate (:peer ctx) (:branch ctx) request))
            :let [#_#_sort-fn (hyperfiddle.ui.sort/sort-fn % sort-col)
