@@ -106,15 +106,6 @@
   (dispatch! [:transact!-start])
   (-> (io/transact! (runtime/io rt) tx-groups)
       (p/catch (fn [e]
-                 #?(:cljs
-                    (let [message (cond
-                                    (string? e) e
-                                    (Err/Err? e) (:msg e)
-                                    (map? e) (:message e)
-                                    :else (ex-message e))]
-                      (if (= "Please refresh your browser" message)
-                        (js/alert "We deployed some updates and your client is out of date, press OK and we will refresh your page")
-                        (js/alert message))))
                  (dispatch! [:transact!-failure e])
                  (throw e)))
       (p/then (fn [{:keys [tempid->id]}]
