@@ -35,6 +35,7 @@
                   :hyperfiddle/owners])))
 
 (s/def :hyperfiddle.ide/new-fiddle (s/keys :req [:fiddle/ident]))
+(s/def :hyperfiddle.ide/new-link (s/keys :req [:link/path]))
 
 (s/def :fiddle/ident keyword?)
 (s/def :fiddle/uuid uuid?)
@@ -42,8 +43,8 @@
 (s/def :fiddle/query string?)
 (s/def :fiddle/pull string?)
 (s/def :fiddle/pull-database string?)
-(s/def :fiddle/links (s/coll-of (s/and (s/keys :opt [:link/class
-                                                     :link/path :link/fiddle :link/formula :link/tx-fn])
+(s/def :fiddle/links (s/coll-of (s/and (s/keys :req [:link/path]
+                                               :opt [:link/class :link/fiddle :link/formula :link/tx-fn])
                                        #_(s/multi-spec fiddle-link :link/class))))
 (s/def :fiddle/markdown string?)
 (s/def :fiddle/renderer string?)

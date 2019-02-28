@@ -484,6 +484,7 @@
       (= :db/id a) true?
       ; For first time entity creation only, use e.g. keyword editor to set the identity
       (= :db/ident a) (not (underlying-tempid ctx e))
+      ; need to check v also. If there isn't a v (underlying), you are also allowed to set it.
       (attr? ctx a :db.unique/identity) (not (underlying-tempid ctx e)) ; this logic in wrong place?
       :else false)))
 
@@ -710,12 +711,11 @@
     [a hint]))
 
 (defn tree-invalid? "For popover buttons (fiddle level)" [ctx]
-  (->> (validation-hints-here ctx)
+  (->> (:hypercrud.browser/validation-hints ctx)
        seq boolean))
 
 (defn leaf-invalid? "The thing that styles red" [ctx]
   (->> (validation-hints-here ctx)
-       (filter (comp nil? first))
        seq boolean))
 
 (defn pull-enclosure-here "safe to be called anywhere"

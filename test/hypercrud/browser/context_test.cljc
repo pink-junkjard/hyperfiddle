@@ -1262,6 +1262,42 @@
 ;
 ;  )
 
+(deftest fiddle-validation
+  (testing "new fiddle popover validation"
+    (def ctx (mock-fiddle! fixtures.tank/schemas fixtures.tank/fiddles :fixtures.tank/new-link1))
+    (is (= (context/tree-invalid? ctx) true))
+    (is (= (context/leaf-invalid? (context/attribute ctx :link/path)) true))
+    (is (= (context/leaf-invalid? (context/attribute ctx :db/id)) false))
+
+    (def ctx (mock-fiddle! fixtures.tank/schemas fixtures.tank/fiddles :fixtures.tank/new-link2))
+    (is (= (context/tree-invalid? ctx) false))
+    (is (= (context/leaf-invalid? (context/attribute ctx :link/path)) false))
+    (is (= (context/leaf-invalid? (context/attribute ctx :db/id)) false)))
+
+  (testing "links table validation"
+
+    (def table-ctx (mock-fiddle! fixtures.tank/schemas fixtures.tank/fiddles :fixtures.tank/test-links-table-validation))
+    (is (= (context/tree-invalid? table-ctx) true))
+    (def a (-> table-ctx
+                 (context/attribute :fiddle/links)
+                 (context/row 17592186061849)
+                 (context/attribute :link/path)))
+    (is (= (context/eav a) [17592186061849 :link/path ":fiddle/links"]))
+    (is (= (context/leaf-invalid? a) false))
+
+    (def b (-> table-ctx
+               (context/attribute :fiddle/links)
+               (context/row 17592186061848)
+               (context/attribute :link/path)))
+
+    (is (= (context/eav b) [17592186061848 :link/path nil]))
+    (is (= (context/leaf-invalid? b) true))
+    (is (= (context/leaf-invalid? (context/attribute b :db/id)) false)))
+
+  )
+
+
+
 #_(deftest deps-satisfied-1
     []
     (is (= (deps-satisfied? [0 :fiddle/links] [0 :fiddle/links :link/fiddle]) false))

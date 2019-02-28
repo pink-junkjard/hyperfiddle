@@ -257,6 +257,114 @@
      :hyperfiddle/owners [#uuid "acd054a8-4e36-4d6c-a9ec-95bdc47f0d39"]
      :hyperfiddle/starred true}
     ]
+   ::new-link1
+   [{:db/id 17592186058175,
+     :fiddle/renderer
+     "(let [{:keys [:hypercrud.browser/fiddle]} ctx]\n  [:div props\n   [hyperfiddle.ui/markdown (:fiddle/markdown @fiddle) ctx]])",
+     :fiddle/type :entity,
+     :fiddle/pull "[:link/path\n :db/id]",
+     :fiddle/css
+     ".-hyperfiddle-ide-new-link .field { display: flex; }\n.-hyperfiddle-ide-new-link div.field > :first-child { \n  flex: 0 1 7em !important; display: inline; padding-right: 1em; text-align: right; }\n.-hyperfiddle-ide-new-link div.field > :nth-child(2) { flex: 1 1; }",
+     :fiddle/markdown
+     "#### new-link\n\n!field(:link/path){placeholder=\":district/region\"}",
+     :fiddle/ident :hyperfiddle.ide/new-link}
+    {:db/id "hyperfiddle.tempid--2017569654"}]
+
+   ::new-link2
+   [{:db/id 17592186058175,
+     :fiddle/renderer
+     "(let [{:keys [:hypercrud.browser/fiddle]} ctx]\n  [:div props\n   [hyperfiddle.ui/markdown (:fiddle/markdown @fiddle) ctx]])",
+     :fiddle/type :entity,
+     :fiddle/pull "[:link/path\n :db/id]",
+     :fiddle/css
+     ".-hyperfiddle-ide-new-link .field { display: flex; }\n.-hyperfiddle-ide-new-link div.field > :first-child { \n  flex: 0 1 7em !important; display: inline; padding-right: 1em; text-align: right; }\n.-hyperfiddle-ide-new-link div.field > :nth-child(2) { flex: 1 1; }",
+     :fiddle/markdown
+     "#### new-link\n\n!field(:link/path){placeholder=\":district/region\"}",
+     :fiddle/ident :hyperfiddle.ide/new-link}
+    {:db/id 17592186062067, :link/path ":woo"}]
+
+   ::test-links-table-validation
+   [{:db/id 17592186061847,
+     :fiddle/renderer
+     "hyperfiddle.ide.fiddles.fiddle-src/fiddle-src-renderer",
+     :fiddle/links
+     [{:db/id 17592186061848,
+       :link/class [:hf/remove]}
+      {:db/id 17592186061849,
+       :link/class [:hf/remove],
+       :link/path ":fiddle/links"}
+      {:db/id 17592186061850,
+       :link/class [:hf/iframe],
+       :link/fiddle
+       {:db/id 17592186045605,
+        :fiddle/ident
+        :hyperfiddle.ide/fiddle-options,
+        :fiddle/query
+        "[:find [(pull ?link [:db/id :fiddle/ident]) ...]\n #_(pull ?link [:db/id :fiddle/ident])\n :where \n (or [?link :fiddle/ident] \n     [?link :fiddle/type])]",
+        :fiddle/type :query},
+       :link/path ":hyperfiddle/ide"}
+      {:db/id 17592186061851,
+       :link/class [:hf/new],
+       :link/fiddle
+       {:db/id 17592186056398,
+        :fiddle/ident :hyperfiddle.ide/new-fiddle,
+        :fiddle/type :entity},
+       :link/path ":link/fiddle"}
+      {:db/id 17592186061852,
+       :link/class [:hf/new],
+       :link/fiddle
+       {:db/id 17592186058175,
+        :fiddle/ident :hyperfiddle.ide/new-link,
+        :fiddle/type :entity},
+       :link/path ":fiddle/links"}],
+     :fiddle/type :entity,
+     :fiddle/pull
+     "; synchronized with hyperfiddle.fiddle/browser-pull\n[:db/id\n :fiddle/css\n :fiddle/ident\n {:fiddle/links [:db/id\n                 :link/class\n                 {:link/fiddle [:db/id\n                                :fiddle/ident               ; routing\n                                :fiddle/query               ; validation\n                                :fiddle/type                ; validation\n                                ]}\n                 :link/formula\n                 :link/path\n                 :link/rel\n                 :link/tx-fn]}\n :fiddle/markdown\n :fiddle/pull\n :fiddle/pull-database\n :fiddle/query\n :fiddle/cljs-ns\n :fiddle/renderer\n :fiddle/type\n :fiddle/hydrate-result-as-fiddle\n *                                                          ; For hyperblog, so we can access :hyperblog.post/title etc from the fiddle renderer\n ]",
+     :fiddle/css
+     "table.hyperfiddle.-fiddle-links { table-layout: fixed; }\ntable.-fiddle-links th.-hypercrud-browser-path--fiddle-links { width: 60px; }\n\ntable.-fiddle-links td.-hypercrud-browser-path--fiddle-links--link-fiddle { display: flex; }\ntable.hyperfiddle.-fiddle-links td.field.-link-fiddle > select { flex: 0 1 80% !important; } /* line up :new */\n\n.fiddle-editor > .nav > li > a {\n  padding: 3px 6px;\n}\n",
+     :fiddle/ident :hyperfiddle/ide,
+     :hyperfiddle/starred true}
+
+    {:db/id 17592186061847,
+     :fiddle/renderer
+     "hyperfiddle.ide.fiddles.fiddle-src/fiddle-src-renderer",
+     :fiddle/links
+     [{:db/id 17592186061848,
+       :link/class [:hf/remove]}
+      {:db/id 17592186061849,
+       :link/class [:hf/remove],
+       :link/path ":fiddle/links"}
+      {:db/id 17592186061850,
+       :link/class [:hf/iframe],
+       :link/fiddle
+       {:db/id 17592186045605,
+        :fiddle/ident
+        :hyperfiddle.ide/fiddle-options,
+        :fiddle/query
+        "[:find [(pull ?link [:db/id :fiddle/ident]) ...]\n #_(pull ?link [:db/id :fiddle/ident])\n :where \n (or [?link :fiddle/ident] \n     [?link :fiddle/type])]",
+        :fiddle/type :query},
+       :link/path ":hyperfiddle/ide"}
+      {:db/id 17592186061851,
+       :link/class [:hf/new],
+       :link/fiddle
+       {:db/id 17592186056398,
+        :fiddle/ident :hyperfiddle.ide/new-fiddle,
+        :fiddle/type :entity},
+       :link/path ":link/fiddle"}
+      {:db/id 17592186061852,
+       :link/class [:hf/new],
+       :link/fiddle
+       {:db/id 17592186058175,
+        :fiddle/ident :hyperfiddle.ide/new-link,
+        :fiddle/type :entity},
+       :link/path ":fiddle/links"}],
+     :fiddle/type :entity,
+     :fiddle/pull
+     "; synchronized with hyperfiddle.fiddle/browser-pull\n[:db/id\n :fiddle/css\n :fiddle/ident\n {:fiddle/links [:db/id\n                 :link/class\n                 {:link/fiddle [:db/id\n                                :fiddle/ident               ; routing\n                                :fiddle/query               ; validation\n                                :fiddle/type                ; validation\n                                ]}\n                 :link/formula\n                 :link/path\n                 :link/rel\n                 :link/tx-fn]}\n :fiddle/markdown\n :fiddle/pull\n :fiddle/pull-database\n :fiddle/query\n :fiddle/cljs-ns\n :fiddle/renderer\n :fiddle/type\n :fiddle/hydrate-result-as-fiddle\n *                                                          ; For hyperblog, so we can access :hyperblog.post/title etc from the fiddle renderer\n ]",
+     :fiddle/css
+     "table.hyperfiddle.-fiddle-links { table-layout: fixed; }\ntable.-fiddle-links th.-hypercrud-browser-path--fiddle-links { width: 60px; }\n\ntable.-fiddle-links td.-hypercrud-browser-path--fiddle-links--link-fiddle { display: flex; }\ntable.hyperfiddle.-fiddle-links td.field.-link-fiddle > select { flex: 0 1 80% !important; } /* line up :new */\n\n.fiddle-editor > .nav > li > a {\n  padding: 3px 6px;\n}\n",
+     :fiddle/ident :hyperfiddle/ide,
+     :hyperfiddle/starred true}]
 
 
    :seattle/neighborhoods
