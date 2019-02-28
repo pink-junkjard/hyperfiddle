@@ -18,7 +18,7 @@
     [hyperfiddle.ide.preview.state :refer [->FAtom]]
     [hyperfiddle.io.basis :as basis]
     [hyperfiddle.io.browser :refer [->IOImpl]]
-    [hyperfiddle.local-storage-sync :refer [map->LocalStorageSync]]
+    [hyperfiddle.local-storage-sync :as local-storage :refer [map->LocalStorageSync]]
     [hyperfiddle.project :as project]
     [hyperfiddle.reducers :as reducers]
     [hyperfiddle.route :as route]
@@ -159,7 +159,8 @@
                                                                         :hypercrud.browser.browser-ui/user
                                                                         :hypercrud.browser.browser-ui/xray)))}]))
            (runtime/dispatch! rt [:partition-route user-branch route])
-           (swap! ls component/start)
+           (when local-storage/is-supported
+             (swap! ls component/start))
            (-> (actions/bootstrap-data rt user-branch actions/LEVEL-NONE)
                (p/finally (fn []
                             (swap! preview-state assoc
@@ -177,7 +178,8 @@
 
        :component-will-unmount
        (fn [this]
-         (component/stop @ls)
+         (when local-storage/is-supported
+           (component/stop @ls))
          (.reset keypress))
        })))
 
