@@ -4,6 +4,7 @@
     [contrib.datomic-tx :as tx]
     [contrib.reactive :as r]
     [contrib.ui :refer [debounced]]
+    [hypercrud.browser.context :as context]
     [hyperfiddle.runtime :as runtime]
     [hyperfiddle.ui :refer [field markdown]]
     [hyperfiddle.ui.util :refer [entity-change->tx with-tx!]]))
@@ -24,7 +25,7 @@
 
 (defn valueType-and-cardinality-with-tx! [special-attrs-state ctx tx]
   (let [entity @(get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data])
-        dbname @(r/fmap-> (:hypercrud.browser/fiddle ctx) :fiddle/ident name)
+        dbname (context/dbname ctx)
         schema @@(runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :schemas dbname])
         new-entity (merge-in-tx entity tx ctx)]
     (case [(completed? entity) (completed? new-entity)]
@@ -45,7 +46,7 @@
 
 (defn ident-with-tx! [special-attrs-state ctx tx]
   (let [entity @(get-in ctx [:hypercrud.browser/parent :hypercrud.browser/data])
-        dbname @(r/fmap-> (:hypercrud.browser/fiddle ctx) :fiddle/ident name)
+        dbname (context/dbname ctx)
         schema @@(runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :schemas dbname])
         new-entity (merge-in-tx entity tx ctx)]
     (case [(completed? entity) (completed? new-entity)]
