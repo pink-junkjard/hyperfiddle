@@ -77,7 +77,7 @@
 
 (defn with-serializer [ide-domain]
   (->> (let [rep-fn #(-> (into {} %) (dissoc :hack-transit-serializer))]
-         #(transit/encode % :opts {:handlers (assoc transit/write-handlers IdeDomain (t/write-handler (constantly "IdeDomain") rep-fn))}))
+         #(transit/encode % :type :json-verbose :opts {:handlers (assoc transit/write-handlers IdeDomain (t/write-handler (constantly "IdeDomain") rep-fn))}))
        (assoc ide-domain :hack-transit-serializer)))
 
 (defn from-rep [rep] (-> (map->IdeDomain rep) with-serializer))
