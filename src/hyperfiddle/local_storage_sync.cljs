@@ -53,9 +53,8 @@
 
 (defn watch-key [branch-id] (keyword (hash branch-id) "local-storage"))
 
-(defn- local-storage-event-action [rt branch-id ls-key e dispatch! get-state]
-  (assert false "check event key")
-  (let [{:keys [::runtime/auto-transact ::runtime/global-basis ::runtime/user-id :stage :version]} (local-storage/get-item (.-storageArea e) ls-key)
+(defn- local-storage-event-action [rt branch-id ls-key new-value dispatch! get-state]
+  (let [{:keys [::runtime/auto-transact ::runtime/global-basis ::runtime/user-id :stage :version]} new-value
         current-state (get-state)]
     (if (not= running-ls-schema-version version)
       (let [error "Hyperfiddle has been updated, please refresh!"]
@@ -136,7 +135,9 @@
               (-> (merge initial-state (dissoc new-ls-state :stage :version :last-modified))
                   (assoc-in [::runtime/partitions branch-id :stage] (:stage new-ls-state)))))
 
-    (let [event-listener (fn [e] (runtime/dispatch! rt (partial local-storage-event-action rt branch-id ls-key e)))]
+    (let [event-listener (fn [e]
+                           (when (= ls-key (local-storage/event-key e))
+                             (runtime/dispatch! rt (partial local-storage-event-action rt branch-id ls-key (local-storage/event-new-value e)))))]
       (.addEventListener js/window "storage" event-listener)
       (add-watch (runtime/state rt) (watch-key branch-id) (partial local-storage-state-watcher branch-id ls-key))
       (assoc component :event-listener event-listener)))

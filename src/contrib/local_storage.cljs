@@ -31,6 +31,12 @@
   ([storage]
    (.clear storage)))
 
+(defn event-key [local-storage-event] (transit/decode (.-key local-storage-event) :type -transit-encoding))
+
+(defn event-old-value [local-storage-event] (transit/decode (.-oldValue local-storage-event) :type -transit-encoding))
+
+(defn event-new-value [local-storage-event] (transit/decode (.-newValue local-storage-event) :type -transit-encoding))
+
 ; https://developer.mozilla.org/en-US/docs/Web/API/Web_Storage_API/Using_the_Web_Storage_API#Feature-detecting_localStorage
 (def is-supported
   (try
