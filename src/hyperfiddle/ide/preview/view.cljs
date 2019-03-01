@@ -69,10 +69,15 @@
                              (= -1 (basis/compare-uri-maps
                                      @(runtime/state rt [::runtime/partitions user-branch :local-basis])
                                      @(runtime/state rt [::runtime/partitions ide-branch :local-basis]))))
-        is-stale? (fn [] (and (not @(r/cursor preview-state [:initial-render]))
-                              (or (not= @(r/cursor preview-state [:staleness]) (ide-branch-reference rt ide-branch))
-                                  (stale-global-basis?)
-                                  (stale-local-basis?))))
+        is-stale? (fn []
+                    #_(println (pr-str {:initial-render @(r/cursor preview-state [:initial-render])
+                                        :staleness-not= (not= @(r/cursor preview-state [:staleness]) (ide-branch-reference rt ide-branch))
+                                        :stale-gb? (stale-global-basis?)
+                                        :stale-lb (stale-local-basis?)}))
+                    (and (not @(r/cursor preview-state [:initial-render]))
+                         (or (not= @(r/cursor preview-state [:staleness]) (ide-branch-reference rt ide-branch))
+                             (stale-global-basis?)
+                             (stale-local-basis?))))
         refresh! (fn []
                    (when-not (or @(r/cursor preview-state [:is-refreshing])
                                  @(r/cursor preview-state [:initial-render]))
