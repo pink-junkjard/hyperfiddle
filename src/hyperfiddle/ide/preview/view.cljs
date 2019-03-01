@@ -140,9 +140,7 @@
                   ^{:key "user-iframe"}
                   [iframe-cmp ctx
                    {:route route
-                    :class (css "hyperfiddle-user"
-                                "hyperfiddle-ide"
-                                (some-> @(r/cursor preview-state [:display-mode]) name (->> (str "display-mode-"))))}]]]))]))
+                    :class (some-> @(r/cursor preview-state [:display-mode]) name (->> (str "display-mode-")))}]]]))]))
 
        :component-did-mount
        (fn [this]
