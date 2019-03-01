@@ -100,13 +100,13 @@
         [:<>
          ; env vars for client side rendering
          [:script {:id "params" :type "application/transit-json"
-                   :dangerouslySetInnerHTML {:__html (transit/encode client-params)}}]
+                   :dangerouslySetInnerHTML {:__html (transit/encode client-params :type :json-verbose)}}]
          [:script {:id "domain" :type "application/transit-json"
                    :dangerouslySetInnerHTML {:__html (let [domain (runtime/domain rt)
-                                                           f (or (:hack-transit-serializer domain) transit/encode)]
+                                                           f (or (:hack-transit-serializer domain) #(transit/encode % :type :json-verbose))]
                                                        (f domain))}}]
          [:script {:id "state" :type "application/transit-json"
-                   :dangerouslySetInnerHTML {:__html (transit/encode @(runtime/state rt))}}]
+                   :dangerouslySetInnerHTML {:__html (transit/encode @(runtime/state rt) :type :json-verbose)}}]
          [:script {:id "preamble" :src (str resource-base "/preamble.js")}]
          [:script {:id "main" :src (str resource-base "/main.js")}]])]]))
 
