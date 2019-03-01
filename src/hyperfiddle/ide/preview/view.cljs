@@ -173,7 +173,9 @@
              (swap! preview-state assoc :is-refreshing true)
              (runtime/dispatch! rt (fn [dispatch! get-state]
                                      (-> (actions/set-route rt next-route user-branch false dispatch! get-state)
-                                         (p/finally (fn [] (swap! preview-state assoc :is-refreshing false)))))))))
+                                         (p/finally (fn [] (swap! preview-state assoc
+                                                                  :staleness (ide-branch-reference rt ide-branch)
+                                                                  :is-refreshing false)))))))))
 
        :component-will-unmount
        (fn [this]
