@@ -2,6 +2,7 @@
  dbname hyperfiddle.readers/dbname
  entity hyperfiddle.readers/entity
  uri hyperfiddle.readers/uri
+ schema hyperfiddle.readers/schema
 
  ; defrecords get these for free in clj
  hypercrud.types.DbRef.DbRef hypercrud.types.DbRef/map->DbRef

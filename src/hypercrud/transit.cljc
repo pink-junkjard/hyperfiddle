@@ -5,6 +5,7 @@
     [cats.monad.exception :as exception #?@(:cljs [:refer [Failure Success]])]
     [cognitect.transit :as t]
     #?(:cljs [com.cognitect.transit.types])
+    [contrib.datomic :refer [->Schema #?(:cljs Schema)]]
     [contrib.uri :refer [->URI #?(:cljs URI)]]
     [hypercrud.types.DbName :refer [->DbName #?(:cljs DbName)]]
     [hypercrud.types.DbRef :refer [->DbRef #?(:cljs DbRef)]]
@@ -17,9 +18,10 @@
     [hyperfiddle.domains.ednish :refer [map->EdnishDomain #?(:cljs EdnishDomain)]])
   #?(:clj
      (:import
-       (clojure.lang ExceptionInfo)
        (cats.monad.either Left Right)
        (cats.monad.exception Failure Success)
+       (clojure.lang ExceptionInfo)
+       (contrib.datomic Schema)
        (hypercrud.types.DbName DbName)
        (hypercrud.types.DbRef DbRef)
        (hypercrud.types.DbVal DbVal)
@@ -34,6 +36,7 @@
 
 (def read-handlers
   {
+   "schema" (t/read-handler #(contrib.datomic/indexed-schema (vec %))) ; it's a javascript array wut
    "DbName" (t/read-handler ->DbName)
    "DbRef" (t/read-handler #(apply ->DbRef %))
    "DbVal" (t/read-handler #(apply ->DbVal %))
@@ -53,6 +56,7 @@
 
 (def write-handlers
   {
+   Schema (t/write-handler (constantly "schema") (fn [v] (.-schema-pulledtree v)))
    DbName (t/write-handler (constantly "DbName") (fn [v] (:dbname v)))
    DbRef (t/write-handler (constantly "DbRef") (fn [v] [(:dbname v) (:branch v)]))
    DbVal (t/write-handler (constantly "DbVal") (fn [v] [(:uri v) (:branch v)]))

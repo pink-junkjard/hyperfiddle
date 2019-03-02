@@ -15,14 +15,35 @@
        (map (juxt f identity))
        (into {})))
 
-(defn group-by-unique [f xs]
+(defn group-by-unique [kf xs]                                ; i think args are flipped, this is more like update-in than map
+  (->> xs
+       (map (juxt kf identity))
+       (reduce (fn [acc [k _ :as kv]]
+                 ; https://github.com/hyperfiddle/hyperfiddle/issues/298
+                 ; nil key is legal for sparse entity that pulls to empty.
+                 #_(assert k (str "group-by-unique, nil key: " k))
+
+                 ; Legal duplicates happen for entity without identity.
+                 ; When indexing this is not a problem, because they have equal value and actually should coalesce.
+                 #_(assert (not (contains? acc k)) (str "group-by-unique, duplicate key: " k))
+                 (conj acc kv))
+               {})
+       doall                                                ; catch duplicate key errors sooner
+       ))
+
+(defn group-by-unique-ordered "Take care to never update this value, it will lose the ordered type.
+  Unused, has linear lookup, needs clj-commons/ordered which needs to be ported to CLJC."
+  [f xs]
   (->> xs
        (map (juxt f identity))
        (reduce (fn [acc [k _ :as kv]]
-                 (if (contains? acc k)
-                   (throw (ex-info "Duplicate key" k))
-                   (conj acc kv)))
-               {})))
+                 #_(if (contains? acc k)
+                     (throw (ex-info "Duplicate key" k)))
+                 (conj acc kv))
+               [])
+       flatten
+       ; Use https://github.com/clj-commons/ordered instead, array-map has linear lookups
+       (apply array-map)))
 
 (defn merge-by [f as bs]
   (->> (merge
@@ -101,6 +122,9 @@
 
 (defn tee [g f!] (fn [v] (f! v) (g v)))
 
+;(defmacro tee2 [f! form]
+;  `((tee identity f!) ~@form))
+
 (defn kwargs
   "arg format is kwargs first; trailing non-kw args are nil key
       [:a 1 :b 2 'a 'b 'c] => {nil (a b c), :b 2, :a 1}"
@@ -110,12 +134,12 @@
     (-> (apply hash-map (flatten kwargs))
         (as-> $ (if (seq args) (assoc $ nil args) $)))))
 
-(defn xorxs [xorxs]
+(defn xorxs [xorxs & [zero]]
   (cond (vector? xorxs) xorxs
         (set? xorxs) xorxs
         (seq? xorxs) xorxs
-        (nil? xorxs) nil
-        :else-single-value [xorxs] #_"can be a map"))
+        (nil? xorxs) zero
+        :else-single-value-or-map ((fnil conj []) zero xorxs)))
 
 (defn group-by-pred [f? xs]
   (let [{a true b false} (group-by f? xs)]
@@ -179,3 +203,10 @@
   ; pad bs only, not as
   (->> (drop-while (partial apply =) (map vector as (pad nil bs)))
        (map first)))
+
+(defn assoc-if [m k v]
+  (conj m (if v [k v])))
+
+(defn unqualify [?qualified-kw]
+  (if ?qualified-kw
+    (keyword (name ?qualified-kw))))

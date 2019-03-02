@@ -1,6 +1,7 @@
 (ns hyperfiddle.hc_data_readers
   (:require
     #?(:cljs [contrib.uuid :refer [read-uuid]])
+    [contrib.datomic :refer [indexed-schema]]
     [#?(:cljs cljs.reader :clj clojure.tools.reader.default-data-readers)]
     [hyperfiddle.readers]                                   ; important
     [hypercrud.types.DbName :refer [->DbName]]
@@ -20,6 +21,7 @@
    ;'js #?(:cljs cljs.tagged-literals/read-js) ; compiler, not reader ?
    'dbname ->DbName
    'entity read-ThinEntity
+   'schema indexed-schema
    'uri read-URI
    'hypercrud.types.DbRef.DbRef map->DbRef
    'hypercrud.types.DbVal.DbVal map->DbVal

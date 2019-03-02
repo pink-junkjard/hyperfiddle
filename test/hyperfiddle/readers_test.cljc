@@ -1,5 +1,6 @@
 (ns hyperfiddle.readers-test
   (:require [clojure.test :refer [deftest is]]
+            [contrib.datomic]
             [contrib.eval :as eval]
             [contrib.reader :as reader :refer [read-edn-string!]]
             [hypercrud.transit :as transit]
@@ -90,3 +91,12 @@
                   #inst "2017-12-31"
                   "#inst \"2017-12-31\""
                   "{\"~#t\":\"2017-12-31\"}"))
+
+(deftest schema
+  []
+  (test-all-forms (contrib.datomic/indexed-schema [{:db/id 10, :db/ident :db/ident, :db/valueType {:db/ident :db.type/keyword}, :db/cardinality {:db/ident :db.cardinality/one}, :db/unique {:db/ident :db.unique/identity}, :db/doc "Attribute used to uniquely name an entity."}])
+                  #schema[#:db{:id 10, :ident :db/ident, :valueType #:db{:ident :db.type/keyword}, :cardinality #:db{:ident :db.cardinality/one}, :unique #:db{:ident :db.unique/identity}, :doc "Attribute used to uniquely name an entity."}]
+                  "#schema[#:db{:id 10, :ident :db/ident, :valueType #:db{:ident :db.type/keyword}, :cardinality #:db{:ident :db.cardinality/one}, :unique #:db{:ident :db.unique/identity}, :doc \"Attribute used to uniquely name an entity.\"}]"
+                  "[\"~#schema\",[[\"^ \",\"~:db/id\",10,\"~:db/ident\",\"^2\",\"~:db/valueType\",[\"^ \",\"^2\",\"~:db.type/keyword\"],\"~:db/cardinality\",[\"^ \",\"^2\",\"~:db.cardinality/one\"],\"~:db/unique\",[\"^ \",\"^2\",\"~:db.unique/identity\"],\"~:db/doc\",\"Attribute used to uniquely name an entity.\"]]]"
+                  )
+  )

@@ -9,7 +9,6 @@
     [contrib.reactive :as r]
     [contrib.try$ :refer [try-either]]
     [hypercrud.browser.context :as context]
-    [hypercrud.browser.field :as field]
     [hyperfiddle.branch :as branch]
     [hyperfiddle.domain :as domain]
     [hyperfiddle.runtime :as runtime]
@@ -36,10 +35,9 @@
      :writable-entity? (fn [hf-db subject ctx] (owned-by? hf-db subject))}))
 
 (let [parent-m (fn parent-m [ctx]
-                 (let [?ident (some-> (:hypercrud.browser/field ctx) (r/cursor [::field/path-segment]) deref)]
-                   (if (context/hydrate-attribute! ctx ?ident :db/isComponent)
-                     (parent-m (:hypercrud.browser/parent ctx))
-                     (some-> (:hypercrud.browser/data ctx) deref))))
+                 (if (:db/isComponent (context/attr ctx (context/a ctx)))
+                   (parent-m (:hypercrud.browser/parent ctx))
+                   (hypercrud.browser.context/data ctx)))
       new-entity? (fn new-entity? [peer dbname dbid branch]
                     (or (contrib.datomic/tempid? dbid)
                         (some-> @(runtime/state peer [::runtime/partitions branch :tempid-lookups dbname])

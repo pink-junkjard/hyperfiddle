@@ -1,9 +1,11 @@
 (ns contrib.data-test
   (:require
-    [clojure.test :refer [deftest is]]
+    [clojure.test :refer [deftest is testing]]
     [contrib.string :refer [blank->nil]]
-    [contrib.data :refer [cond-let map-pad pad rtrim-coll fix-arity fvor take-to ungroup dissoc-nils
-                          compare-by-index ancestry-common ancestry-divergence merge-by collect orp]]))
+    [contrib.data :refer [xorxs
+                          cond-let map-pad pad rtrim-coll fix-arity fvor take-to ungroup dissoc-nils
+                          compare-by-index ancestry-common ancestry-divergence merge-by collect orp
+                          assoc-if]]))
 
 
 (comment
@@ -125,3 +127,38 @@
 (deftest orp-test []
   (is (= false (orp some? nil false 1)))
   (is (= 6 (orp even? 1 3 5 6 7))))
+
+(deftest xorxs-test
+  []
+  (is (= (xorxs :a [])
+         (xorxs :a)
+         (xorxs [:a])
+         [:a]))
+  (is (= (xorxs :a #{})
+         (xorxs #{:a})
+         #{:a}))
+  (is (= (xorxs nil) nil))
+  (is (= (xorxs nil #{}) #{}))
+  )
+
+(def result (->> (iterate inc 0)
+                 (take 10)
+                 (map #(assoc {} :id %))))
+
+(last result)
+
+(deftest group-by-
+  (testing "maintains order"
+    (is (= (->> result
+                reverse
+                (contrib.data/group-by-unique-ordered :id)
+                last)
+           [0 {:id 0}]))
+
+    )
+  )
+
+(deftest assoc-if'
+  (is (= (assoc-if {:a 1} :b 2) {:a 1, :b 2}))
+  (is (= (assoc-if {:a 1} :b nil) {:a 1}))
+  )

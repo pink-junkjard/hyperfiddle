@@ -8,6 +8,7 @@
     [contrib.string :refer [blank->nil]]
     [contrib.ui.safe-render :refer [user-portal]]
     [hypercrud.browser.base :as base]
+    [hypercrud.browser.context :as context]
     [hypercrud.ui.error :as ui-error]
     [hypercrud.ui.stale :as stale]
     [hyperfiddle.runtime :as runtime]))
@@ -40,22 +41,29 @@
               (fn [f] [f value ctx props])))))))
 
 (defn- ui-comp [ctx & [props]]                              ; user-renderer comes through here
-  (let [value @(:hypercrud.browser/data ctx)
+  (let [value @(:hypercrud.browser/result ctx)              ; TODO remove this, make them ask
         props (update props :class css (auto-ui-css-class ctx))
-        view-props (select-keys props [:class :initial-tab :on-click #_:disabled]) ; https://github.com/hyperfiddle/hyperfiddle/issues/698
+        ; The reactdom component should filter the keys at the last second.
+        ; https://github.com/hyperfiddle/hyperfiddle/issues/698
+        view-props props #_(select-keys props [:class :initial-tab :on-click #_:disabled])
         display-mode (or (some-> (:hypercrud.ui/display-mode ctx) deref) :hypercrud.browser.browser-ui/user)
         error-props (-> (select-keys props [:class :on-click])
                         (update :class css "hyperfiddle-error"))]
     ^{:key (str display-mode)}
     [user-portal (ui-error/error-comp ctx) error-props
-     (case display-mode
-       :hypercrud.browser.browser-ui/user (if-let [user-renderer (:user-renderer props)]
-                                            [user-renderer value ctx view-props]
-                                            ; If userland crashes (fiddle/renderer OR cljs-ns), reactions don't take hold, we need to reset here.
-                                            ; Cheaper to pass this as a prop than to hash everything
-                                            [fiddle-renderer-cmp value ctx view-props @(:hypercrud.browser/fiddle ctx)])
-       :hypercrud.browser.browser-ui/xray [hyperfiddle.ui/fiddle-xray value ctx view-props]
-       :hypercrud.browser.browser-ui/api [hyperfiddle.ui/fiddle-api value ctx view-props])]))
+     (either/branch                                         ; Validate context is well-formed and fiddles are valid.
+       (context/valid+ ctx)
+       (fn [e]
+         [:pre (pr-str e #_(:hypercrud.browser/query-validation-issues ctx))])
+       (fn [_]
+         (case display-mode
+           :hypercrud.browser.browser-ui/user (if-let [user-renderer (:user-renderer props)] ; validate qfind and stuff?
+                                                [user-renderer value ctx view-props]
+                                                ; If userland crashes (fiddle/renderer OR cljs-ns), reactions don't take hold, we need to reset here.
+                                                ; Cheaper to pass this as a prop than to hash everything
+                                                [fiddle-renderer-cmp value ctx view-props @(:hypercrud.browser/fiddle ctx)])
+           :hypercrud.browser.browser-ui/xray [hyperfiddle.ui/fiddle-xray value ctx view-props]
+           :hypercrud.browser.browser-ui/api [hyperfiddle.ui/fiddle-api value ctx view-props])))]))
 
 (defn- fiddle-css-renderer [s] [:style {:dangerouslySetInnerHTML {:__html @s}}])
 

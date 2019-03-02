@@ -3,7 +3,7 @@
     [cats.core :as cats]
     [cats.monad.either :as either]
     [cats.monad.exception :as exception]
-    [contrib.data :as data]
+    [contrib.datomic]
     [hypercrud.types.DbRef :refer [->DbRef]]
     [hypercrud.types.QueryRequest :refer [->QueryRequest]]
     [hyperfiddle.domain :as domain]
@@ -28,6 +28,6 @@
         (p/then (fn [{:keys [pulled-trees]}]
                   (->> pulled-trees
                        (map (fn [pulled-tree+]
-                              (-> (cats/fmap #(data/group-by-unique :db/ident %) pulled-tree+)
+                              (-> (cats/fmap contrib.datomic/indexed-schema pulled-tree+)
                                   (either/branch exception/failure exception/success))))
                        (zipmap dbnames)))))))

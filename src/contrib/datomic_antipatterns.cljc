@@ -1,9 +1,9 @@
 (ns contrib.datomic-antipatterns
   (:require
-    [clojure.set :as set]
+    [clojure.set]
     [clojure.walk :as walk]
     [contrib.data :refer [group-by-pred]]
-    [fixtures.ctx :refer [ctx schema result-coll]]))
+    [fixtures.ctx :refer [schema result-coll]]))
 
 
 ; This is a graveyard of bad ideas.
@@ -113,3 +113,14 @@
                                                    :reg/gender {:db/id 17592186046204}})
   ;(prewalk-pulled-tree schema distinct pulled-tree-1)
   )
+
+; Antipattern because you really only want to descend pulls. You should unwind to the top
+; and descend while comparing to a resultpath, or something.
+(defn pullpath-unwind-while "Find oldest ancestor matching pred.
+  Hint: Pred probably closes over schema."
+  [f? pullpath]
+  #_(drop-while f? (reverse pullpath))
+  (loop [[a & as :as here] (reverse pullpath)]              ; pullpath is guaranteed to align with pullshape
+    (if (and a (f? a))
+      (recur as)
+      here)))

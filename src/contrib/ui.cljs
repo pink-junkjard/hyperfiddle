@@ -149,14 +149,17 @@
 (let [checked (fn [e] (.. e -target -checked))]             ; letfn not working #470
   (defn checkbox [props]
     [:input (-> (assoc props :type "checkbox")
-                (update-existing :on-change r/comp checked))]))
+                (update-existing :on-change r/comp checked)
+                (select-keys [:type :checked :on-change :disabled :read-only :class :style #_:is-invalid]))]))
 
 (let [target-value (fn [e] (.. e -target -value))]          ; letfn not working #470
   (defn text [props]
-    [:input (-> (assoc props :type "text")
-                (dissoc :is-invalid)
-                (cond-> (:is-invalid props) (update :class css "invalid"))
-                (update-existing :on-change r/comp target-value))]))
+    (let [props (-> (assoc props :type "text")
+                    (dissoc :is-invalid)
+                    (cond-> (:is-invalid props) (update :class css "invalid"))
+                    (update-existing :on-change r/comp target-value))]
+      [:input (select-keys props [:type :value :default-value :on-change :class :style :read-only :disabled
+                                  :placeholder])])))
 
 (let [parse-string (fn [s]                                  ; letfn not working #470
                      (let [v (some-> s contrib.reader/read-edn-string!)]
@@ -184,7 +187,7 @@
     (if (blank->nil label)
       [:label (-> props
                   (assoc :style {:font-weight "400"})
-                  (dissoc :on-change :checked))
+                  (select-keys [:class :style]))
        control " " label]
       control)))
 

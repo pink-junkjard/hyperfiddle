@@ -120,7 +120,10 @@
   (let [ctx (assoc ctx ::unp true)]
     (if-let [f (some->> content memoized-safe-eval (unwrap #(timbre/warn %)))]
       [f ctx]
-      (hyperfiddle.ui/result @(:hypercrud.browser/data ctx) ctx (update props :class css "unp")))))
+      (hyperfiddle.ui/result
+        (:hypercrud.browser/result ctx) #_(hypercrud.browser.context/data ctx) ; backwards compat
+        ctx
+        (update props :class css "unp")))))
 
 (defmethod md-ext :value [_ content argument props ctx]
   (let [path (unwrap #(timbre/warn %) (memoized-read-edn-string+ (str "[" argument "]")))
@@ -141,11 +144,8 @@
 
 (defmethod md-ext :list [_ content argument props ctx]
   [:ul props
-   (->> (:hypercrud.browser/data ctx)
-        (r/unsequence (r/partial context/row-keyfn ctx))
-        (map (fn [[row k]]
-               ^{:key k}
-               [:li [markdown content (context/row ctx row)]]))
-        (doall))])
+   (for [[ix ctx] (hypercrud.browser.context/spread-rows ctx)]
+     ^{:key ix}
+     [:li [markdown content ctx]])])
 
 (def ^:export markdown (remark/remark! (methods md-ext)))

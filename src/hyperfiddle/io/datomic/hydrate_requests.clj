@@ -7,15 +7,15 @@
     [clojure.string :as string]
     [contrib.data :refer [cond-let parse-query-element]]
     [contrib.datomic]
+    [contrib.pprint :refer [pprint-str]]
     [contrib.try$ :refer [try-either]]
     [datomic.api :as d]
     [hypercrud.types.DbVal]
     [hypercrud.types.EntityRequest]
     [hypercrud.types.QueryRequest]
     [hyperfiddle.branch :as branch]
-    [hyperfiddle.domain :as domain]                         ; todo is this moral?
-    [hyperfiddle.io.bindings]                               ; userland
-    [taoensso.timbre :as timbre])
+    [hyperfiddle.domain :as domain]
+    [hyperfiddle.io.bindings])                              ; userland
   (:import
     (hypercrud.types.DbRef DbRef)
     (hypercrud.types.EntityRequest EntityRequest)
@@ -126,7 +126,7 @@
                       [[match msg] (re-find #"^.+ :db.error/invalid-entity-id (.+)$" error-str)] [:db.error/invalid-entity-id msg]
                       [[match msg] (re-find #"^.+ :db.error/insufficient-binding (.+)$" error-str)]
                       [:db.error/insufficient-binding msg
-                       (str (some-> req .-query pr-str) "\n\n" "Hint: Click 'src' to see and edit the query.")]
+                       (str (some-> req .-query pprint-str))] ; query as whitespace string should be available
                       [[match msg] (re-find #"^.+ :db.error/not-a-data-function (.+)$" error-str)] [:db.error/not-a-data-function msg]
                       [[match msg] (re-find #"^.+ :db.error/not-an-entity (.+)$" error-str)]
                       [:db.error/not-an-entity msg

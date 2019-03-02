@@ -19,20 +19,17 @@
 (defn attribute-schema-human [attr]
   ((juxt
      #_:db/ident
-     #(some-> % :db/valueType :db/ident name)
-     #(some-> % :db/cardinality :db/ident name)
+     #(some-> % :db/valueType name)
+     #(some-> % :db/cardinality name)
      #(some-> % :db/isComponent (if :component) name)
-     #(some-> % :db/unique :db/ident name))
+     #(some-> % :db/unique name))
     attr))
 
 (defn semantic-docstring [ctx & [doc-override]]
-  (let [path (:hypercrud.browser/path ctx)
-        attr (context/hydrate-attribute! ctx (last (:hypercrud.browser/path ctx)))
-        typedoc (some->> (attribute-schema-human attr)
-                         (interpose " ") (apply str))
+  (let [attr (context/attr ctx)
+        typedoc (some->> (attribute-schema-human attr) (interpose " ") (apply str))
         help-md (blank->nil
-                  (str (if typedoc (str "`" (pr-str path) " " typedoc "`\n\n")) ; markdown needs double line-break
-                       ;"`" (pprint-str @(:hypercrud.browser/field ctx)) "`\n\n" ; debug
-                       (or doc-override (blank->nil (:db/doc attr)))
-                       ))]
+                  ; Use path over a because it could have flattened the nesting and attr is ambiguous
+                  (str (if typedoc (str "`" (:db/ident attr) " " typedoc "`\n\n")) ; markdown needs double line-break
+                       (or doc-override (-> attr :db/doc blank->nil))))]
     help-md))

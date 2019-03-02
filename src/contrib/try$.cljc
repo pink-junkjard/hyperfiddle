@@ -37,3 +37,6 @@
      [& body]
      (let [e (gensym)]
        `(try-catch-non-fatal (p/resolved (do ~@body)) ~e (p/rejected ~e)))))
+
+(defn either->promise [mv]
+  (either/branch mv p/rejected p/resolved))
