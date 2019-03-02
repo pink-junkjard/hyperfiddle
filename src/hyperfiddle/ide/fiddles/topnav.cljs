@@ -1,5 +1,6 @@
 (ns hyperfiddle.ide.fiddles.topnav
   (:require
+    [cats.monad.either :as either]
     [contrib.reactive :as r]
     [contrib.ui.tooltip :refer [tooltip]]
     [hyperfiddle.data]
@@ -25,7 +26,7 @@
     [tooltip {:label "Home"} [:a {:href "/"} (:app-domain-ident (runtime/domain (:peer ctx)))]]
     (let [props {:tooltip [nil "Fiddles in this domain"]
                  :iframe-as-popover true}]
-      [ui/link :fiddle-shortcuts ctx "index" props])
+      [ui/link :hyperfiddle.ide/entry-point-fiddles ctx "index" props])
     [:span (let [[fiddle-ident :as route] @(runtime/state (:peer ctx) [::runtime/partitions foundation/root-branch :route])]
              (cond
                (= fiddle-ident :hyperfiddle.ide/edit) (let [[_ [user-fiddle-ident]] route]
@@ -47,20 +48,25 @@
           (map (fn [[user-dbname ide-dbname]] {:id ide-dbname :label user-dbname}))
           (sort-by :label))
      :show-auto-tx true]
-    (ui/link :new-fiddle ctx "new" (let [disabled? (not (security/can-create? ctx)) ; we explicitly know the context here is $
-                                         anonymous? (nil? @(runtime/state (:peer ctx) [::runtime/user-id]))]
-                                     {:disabled disabled?
-                                      :tooltip (cond
-                                                 (and anonymous? disabled?) [:warning "Please login"]
-                                                 disabled? [:warning "Writes restricted"])
-                                      :hyperfiddle.ui.popover/redirect (fn [popover-data]
-                                                                         [(:fiddle/ident popover-data)])}))
-    [tooltip {:label "Environment administration"} (ui/link :hyperfiddle.ide/env ctx)]
+    (either/branch
+      (hyperfiddle.data/browse+ ctx :hyperfiddle/topnav-new) ; iframe wrapper for naked qfind color tag
+      #(vector :span %)                                     ; todo fix this shit error handling, why not throw?
+      (fn [ctx]
+        (ui/link :hyperfiddle.ide/new-fiddle ctx "new"
+                 (let [disabled? (not (security/can-create? ctx)) ; we explicitly know the context here is $
+                       anonymous? (nil? @(runtime/state (:peer ctx) [::runtime/user-id]))]
+                   {:disabled disabled?
+                    :tooltip (cond
+                               (and anonymous? disabled?) [:warning "Please login"]
+                               disabled? [:warning "Writes restricted"])
+                    :hyperfiddle.ui.popover/redirect (fn [popover-data]
+                                                       [(:fiddle/ident popover-data)])}))))
+    [tooltip {:label "Environment administration"} (ui/link :hyperfiddle.ide/env ctx "env")]
     (if @(runtime/state (:peer ctx) [::runtime/user-id])
-      (if-let [{:keys [:hypercrud.browser/data]} (hyperfiddle.data/browse ctx :account)]
-        (let [props {:tooltip [nil @(r/fmap :user/email data)]
+      (if-let [{:keys [:hypercrud.browser/result]} (hyperfiddle.data/browse ctx :hyperfiddle.ide/account)]
+        (let [props {:tooltip [nil @(r/fmap :user/email result)]
                      :iframe-as-popover true}]
-          [ui/link :account ctx @(r/fmap :user/name data) props]))
+          [ui/link :hyperfiddle.ide/account ctx @(r/fmap :user/name result) props]))
       [:a {:href (hyperfiddle.ide/stateless-login-url ctx)} "login"])]])
 
 (defn hack-login-renderer [value ctx props]
