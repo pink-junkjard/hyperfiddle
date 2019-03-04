@@ -65,7 +65,6 @@
 (s/def :hypercrud.browser/result-path (s/coll-of ::result-path-segment :kind vector?))
 (s/def :hypercrud.browser/element r/reactive?)
 (s/def :hypercrud.browser/element-index int?)
-(s/def :hypercrud.browser/schemas r/reactive?)
 (s/def :hypercrud.browser/schema r/reactive?)
 (s/def :hypercrud.browser/pull-path (s/coll-of keyword? :kind vector?))
 
