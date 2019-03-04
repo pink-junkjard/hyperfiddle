@@ -3,11 +3,7 @@
     [hypercrud.browser.context]))
 
 
-(defn ^:export ^:legacy tempid-child
-  "Generate tempid from eav, this tempid is idempotent and stable over time"
-  [ctx val]
-  (hypercrud.browser.context/tempid ctx))
-
+; (d/touch (:fiddle/_links (d/entity (db! "datomic:free://datomic:4334/root") 17592186060983)))
 (defn ^:export ^:legacy tempid-detached
   "Generate tempid that has not yet been used, by inspecting the stage – a side effect!"
   ([dbname ctx]

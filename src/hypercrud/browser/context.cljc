@@ -1057,13 +1057,6 @@
       :else-valid
       (either/right params'))))
 
-(defn tempid "stable" [ctx]
-  ; recurse all the way up the path? just data + parent-data is relative not fully qualified, which is not unique
-  ; is this just eav?
-  (->> (map pr-str (eav ctx))
-       (cons "hyperfiddle.tempid")
-       (clojure.string/join "-")))
-
 (defn tempid! "unstable"
   ([ctx]
     ; :blank can assume $; otherwise user should specify a qfind
