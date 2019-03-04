@@ -52,7 +52,7 @@
      [table
       (fn [ctx]
         (let [ctx (assoc-if ctx ::record (if-not (:hypercrud.browser/head-sentinel ctx)
-                                           (fiddle/auto-link @(:hypercrud.browser/schemas ctx)
+                                           (fiddle/auto-link @(runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :schemas])
                                                              (:qin @(:hypercrud.browser/qparsed ctx))
                                                              (context/data ctx))))]
           [(field [:link/path] ctx link-control)
