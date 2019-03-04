@@ -15,6 +15,9 @@
   (url-encode [domain route])
   (api-routes [domain])
   (service-uri [domain])
+
+  (system-fiddle? [domain fiddle-ident])
+  (hydrate-system-fiddle [domain fiddle-ident])
   )
 
 (defn database [domain dbname]

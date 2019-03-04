@@ -1,5 +1,5 @@
 (ns hypercrud.browser.base
-  (:require [cats.core :refer [mlet return]]
+  (:require [cats.core :refer [>>= mlet return]]
             [cats.monad.either :as either :refer [left right]]
             [contrib.ct :refer [unwrap]]
             [contrib.data]
@@ -17,7 +17,6 @@
             [hyperfiddle.domain :as domain]
             [hyperfiddle.fiddle :as fiddle]
             [hyperfiddle.runtime :as runtime]
-            [hyperfiddle.system-fiddle :as system-fiddle]
             [hyperfiddle.ui.sort]
             [taoensso.timbre :as timbre])
   #?(:clj
@@ -43,7 +42,7 @@
     lookup-ref))
 
 (defn meta-request-for-fiddle [ctx]
-  (if @(r/fmap-> (:hypercrud.browser/route ctx) first system-fiddle/system-fiddle?)
+  (if @(r/fmap->> (:hypercrud.browser/route ctx) first (domain/system-fiddle? (runtime/domain (:peer ctx))))
     (either/right nil)
     (try-either
       (let [fiddle @(r/fmap first (:hypercrud.browser/route ctx))
@@ -60,12 +59,10 @@
     (either/right fiddle)))
 
 (defn hydrate-fiddle [meta-fiddle-request ctx]
-  (mlet [:let [[arg1 :as route] @(:hypercrud.browser/route ctx)]
-         fiddle (if (system-fiddle/system-fiddle? arg1)
-                  (system-fiddle/hydrate arg1)
-                  (mlet [fiddle @(hc/hydrate (:peer ctx) (:branch ctx) @meta-fiddle-request)]
-                    (validate-fiddle fiddle)))]
-    (return fiddle)))
+  (let [fiddle-ident (first @(:hypercrud.browser/route ctx))]
+    (if (domain/system-fiddle? (runtime/domain (:peer ctx)) fiddle-ident)
+      (domain/hydrate-system-fiddle (runtime/domain (:peer ctx)) fiddle-ident)
+      (>>= @(hc/hydrate (:peer ctx) (:branch ctx) @meta-fiddle-request) validate-fiddle))))
 
 (defn request-for-fiddle [{fiddle :hypercrud.browser/fiddle :as ctx}] ; depends on route
   ; it's a fiddle-ctx now, which has the defaults applied
