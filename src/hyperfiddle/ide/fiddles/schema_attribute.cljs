@@ -83,7 +83,7 @@
             ctx (-> (update ctx :hypercrud.browser/result (partial r/track reactive-merge))
                     (context/index-result))
             valid-attr? @(r/fmap completed? (:hypercrud.browser/result ctx))]
-        [:div props
+        [:div.-hyperfiddle-ide-schema-editor-attribute props
          [markdown "See [Datomic schema docs](https://docs.datomic.com/on-prem/schema.html)."]
          (field [:db/ident] ctx ident-f)
          (field [:db/valueType] ctx valueType-and-cardinality-f {:options "valueType-options"})

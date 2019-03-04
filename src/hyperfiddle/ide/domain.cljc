@@ -13,9 +13,11 @@
     [hyperfiddle.domain :as domain]
     [hyperfiddle.domains.multi-datomic :as multi-datomic]
     [hyperfiddle.foundation :as foundation]
+    [hyperfiddle.ide.system-fiddle :as ide-system-fiddle]
     [hyperfiddle.io.core :as io]
     [hyperfiddle.io.routes :as routes]
     [hyperfiddle.route :as route]
+    [hyperfiddle.system-fiddle :as system-fiddle]
     [promesa.core :as p]))
 
 
@@ -56,7 +58,7 @@
 
   (url-decode [domain s]
     (let [[fiddle-ident :as route] (route/url-decode s home-route)]
-      (if (and (keyword? fiddle-ident) (= "hyperfiddle.ide" (namespace fiddle-ident)))
+      (if (and (keyword? fiddle-ident) (#{"hyperfiddle.ide" "hyperfiddle.ide.schema"} (namespace fiddle-ident)))
         route
         (let [[user-fiddle user-datomic-args service-args fragment] route
               ide-fiddle :hyperfiddle.ide/edit
@@ -73,6 +75,13 @@
 
   (api-routes [domain] (build-routes build))
   (service-uri [domain] service-uri)
+  (system-fiddle? [domain fiddle-ident]
+    (or (and (keyword? fiddle-ident) (= "hyperfiddle.ide.schema" (namespace fiddle-ident)))
+        (system-fiddle/system-fiddle? fiddle-ident)))
+  (hydrate-system-fiddle [domain fiddle-ident]
+    (if (and (keyword? fiddle-ident) (= "hyperfiddle.ide.schema" (namespace fiddle-ident)))
+      (ide-system-fiddle/hydrate fiddle-ident (::user-dbname->ide domain))
+      (system-fiddle/hydrate fiddle-ident)))
   )
 
 (defn with-serializer [ide-domain]
@@ -150,6 +159,8 @@
   (url-encode [domain route] (route/url-encode route home-route))
   (api-routes [domain] (nested-user-routes build))
   (service-uri [domain] service-uri)
+  (system-fiddle? [domain fiddle-ident] (system-fiddle/system-fiddle? fiddle-ident))
+  (hydrate-system-fiddle [domain fiddle-ident] (system-fiddle/hydrate fiddle-ident))
   )
 
 (defn build-user+

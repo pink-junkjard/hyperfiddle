@@ -20,7 +20,7 @@
 (defn schema-links [ctx]
   (->> (runtime/domain (:peer ctx)) ::ide-domain/user-dbname->ide keys sort
        (map (fn [user-dbname]
-              (let [props {:route [:hyperfiddle.ide/schema [user-dbname]]
+              (let [props {:route [(keyword "hyperfiddle.ide.schema" user-dbname)]
                            #_#_:target "_blank"}]
                 ^{:key user-dbname}
                 [anchor ctx props user-dbname])))
