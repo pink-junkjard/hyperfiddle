@@ -60,7 +60,8 @@
                                                   :option-label (r/comp pr-str :fiddle/ident)})
            (field [:link/class] ctx link-control)
            (field [:link/tx-fn] ctx link-control)
-           #_(field [:link/formula] ctx link-control)
+           (when (exists? js/show_formulas)
+             (field [:link/formula] ctx link-control))
            (field [] ctx empty-renderer)]))                 ; why does [:db/id] crash here?
       ctx
       props]]))
