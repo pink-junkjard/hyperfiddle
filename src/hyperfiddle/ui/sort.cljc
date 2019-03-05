@@ -1,21 +1,17 @@
 (ns hyperfiddle.ui.sort
   (:require
-    [datascript.parser #?@(:cljs [:refer [FindRel FindColl FindTuple FindScalar Variable Aggregate Pull]])]
-    [hypercrud.browser.context :as context])
-  #?(:clj
-     (:import
-       (datascript.parser FindRel FindColl FindTuple FindScalar Variable Aggregate Pull))))
+    [contrib.data :refer [unqualify]]
+    [contrib.datomic]
+    [hypercrud.browser.context :as context]))
 
 
 (defn sortable? [ctx]
-  (let [is-element-level (= (hypercrud.browser.context/pull-depth ctx) 0)
-        element (some-> (:hypercrud.browser/element ctx) deref)] ; fiddle-attr level
+  (let [element (some-> (:hypercrud.browser/element ctx) deref)]
     ; Used to check links dont break sorting, but those cases don't happen anymore.
-
-    (if (and is-element-level element)                      ; fiddle-level but didn't focus an element
-      (condp some [(type element)]
-        #{Aggregate Variable} true
-        #{Pull} (let [a (context/a ctx)]
+    (if (and element (not (context/qfind-level? ctx)))
+      (condp some [(unqualify (contrib.datomic/parser-type element))]
+        #{:aggregate :variable} true
+        #{:pull} (let [a (context/a ctx)]
                   (and
                     (context/attr? ctx a :db.cardinality/one)
                     ; ref requires more work (inspect label-prop)

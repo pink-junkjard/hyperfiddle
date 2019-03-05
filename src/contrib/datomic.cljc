@@ -28,17 +28,17 @@
       nil                                                   ; This is an entity but you didn't pull any identity - error?
       )))
 
-(def parser-types {FindRel ::find-rel
-                   FindColl ::find-coll
-                   FindTuple ::find-tuple
-                   FindScalar ::find-scalar
-                   Pull ::pull
-                   Variable ::variable
-                   Aggregate ::aggregate})
+(def -parser-types {FindRel ::find-rel
+                    FindColl ::find-coll
+                    FindTuple ::find-tuple
+                    FindScalar ::find-scalar
+                    Pull ::pull
+                    Variable ::variable
+                    Aggregate ::aggregate})
 
 (defn parser-type "element or qfind" [?p]                   ; not reactive
-  (parser-types (if ?p
-                  (type ?p))))
+  (-parser-types (if ?p
+                   (type ?p))))
 
 (defprotocol SchemaIndexedNormalized
   ; Implement this interface in both peer and Hypercrud client
