@@ -31,7 +31,8 @@
   ([storage]
    (.clear storage)))
 
-(defn event-key [local-storage-event] (transit/decode (.-key local-storage-event) :type -transit-encoding))
+(defn same-key? [k local-storage-event]
+  (= (transit/encode k :type -transit-encoding) (.-key local-storage-event)))
 
 (defn event-old-value [local-storage-event] (transit/decode (.-oldValue local-storage-event) :type -transit-encoding))
 

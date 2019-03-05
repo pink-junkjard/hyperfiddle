@@ -136,7 +136,7 @@
                   (assoc-in [::runtime/partitions branch-id :stage] (:stage new-ls-state)))))
 
     (let [event-listener (fn [e]
-                           (when (= ls-key (local-storage/event-key e))
+                           (when (local-storage/same-key? ls-key e)
                              (runtime/dispatch! rt (partial local-storage-event-action rt branch-id ls-key (local-storage/event-new-value e)))))]
       (.addEventListener js/window "storage" event-listener)
       (add-watch (runtime/state rt) (watch-key branch-id) (partial local-storage-state-watcher branch-id ls-key))
