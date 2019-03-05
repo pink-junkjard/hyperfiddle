@@ -911,14 +911,7 @@
               element (:hypercrud.browser/element ctx)]
           (if element
             (tag-element-v-with-color ctx v)
-
-            ; Qfind tuple case without an element in the ctx, means we have to handle all N elements in parallel.
-            ; Example: [:find (pull ?e [:post/slug]) (pull ?f [:post/slug])] should generate both links.
-            ; Currently this is an error case. If we push (mapv args) down to this level it can be done.
-            #_(do (timbre/warn "element-level links aren't well defined for tupled qfind: "
-                               ; FindRel and FindTuple
-                               @(:hypercrud.browser/qfind ctx))
-                  nil))))
+            v)))
 
       (contrib.datomic/ref? @(:hypercrud.browser/schema ctx) a)
       (tag-v-with-color' ctx v)
