@@ -132,9 +132,21 @@
                    (hf-new val ctx)                         ; new child
                    (hf-remove val ctx))]))
 
+(declare edn)
+
+; Not working yet
+#_(defn ^:export ref-keyword [val ctx & [props]]
+  (cond
+    (context/underlying-tempid ctx (context/e ctx))
+    [edn val ctx props]
+
+    :else
+    [ref val ctx props]))
+
 (defn ^:export keyword [val ctx & [props]]
   [:div.hyperfiddle-input-group
-   (let [props (assoc props :value val :on-change (with-entity-change! ctx))]
+   (let [props (merge {:value val :on-change (with-entity-change! ctx)}
+                      props)]
      [debounced props contrib.ui/keyword])
    (hf-remove val ctx)                                      ; why? They can just backspace it
    (render-related-links val ctx)])
@@ -233,10 +245,10 @@
                        v))]
   (defn ^:export edn [val ctx & [props]]
     [:div.hyperfiddle-input-group
-     (let [props (assoc props
-                   :value val
-                   :mode "clojure"
-                   :on-change (with-entity-change! ctx))]
+     (let [props (merge {:value val
+                         :mode "clojure"
+                         :on-change (with-entity-change! ctx)}
+                        props)]
        [debounced props contrib.ui/validated-cmp
         (r/partial parse-string (value-validator ctx))
         pprint-str

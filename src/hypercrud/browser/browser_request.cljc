@@ -90,7 +90,7 @@
     (flatten
       [(requests-here ctx)
        (for [[_ ctx] (hypercrud.browser.context/spread-result ctx)]
-         [(requests-here ctx)
+         [(requests-here ctx)                               ; depend on result? Not sure if right
           (for [[_ ctx] (hypercrud.browser.context/spread-rows ctx)]
             [#_(requests-here ctx)
              (for [[_ {el :hypercrud.browser/element :as ctx}] (hypercrud.browser.context/spread-elements ctx)]
@@ -98,5 +98,14 @@
                  :variable [#_(requests-here ctx)]
                  :aggregate [#_(requests-here ctx)]
                  :pull [(requests-here ctx)
-                        #_(request-attr-level ctx)]))])])
+                        ; Dependent attr links, slow af though, so disabled for now.
+                        #_(request-attr-level ctx)]))])
+
+          ; no rows - independent
+          (for [[_ {el :hypercrud.browser/element :as ctx}] (hypercrud.browser.context/spread-elements ctx)]
+            (case (unqualify (contrib.datomic/parser-type @el))
+              :variable [#_(requests-here ctx)]
+              :aggregate [#_(requests-here ctx)]
+              :pull [(requests-here ctx)
+                     (request-attr-level ctx)]))])
        (cross-streams ctx)])))

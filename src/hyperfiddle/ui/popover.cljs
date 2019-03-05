@@ -128,10 +128,12 @@
   ; - route
   ; - visual-ctx's data & path (where this popover is being drawn NOT its dependencies)
   (let [child-branch-id (let [relative-id (-> [(if (:hypercrud.browser/qfind ctx) ; guard crash on :blank fiddles
-                                                 (hypercrud.browser.context/tempid visual-ctx))
+                                                 #_(context/eav visual-ctx) ; if this is nested table head, [e a nil] is ambiguous
+                                                 (:hypercrud.browser/result-path ctx))
                                                @(r/fmap :db/id link-ref)
                                                (:route props)
-                                               @(r/fmap (r/partial hypercrud.browser.context/reagent-entity-key ctx) (:hypercrud.browser/fiddle ctx))]
+                                               @(r/fmap (r/partial context/reagent-entity-key ctx)
+                                                        (:hypercrud.browser/fiddle ctx))]
                                               hash str)]
                           (branch/child-branch-id (:branch ctx) relative-id))
         popover-id child-branch-id                          ; just use child-branch as popover-id
