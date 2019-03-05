@@ -20,10 +20,10 @@
 
     (->> @(hyperfiddle.data/select-many ctx #{:hf/iframe}) ; this omits deep dependent iframes fixme
          (map (partial r/flip base/data-from-link! ctx))
-         (map (juxt :hypercrud.browser/route ctx->data)))
+         (map (juxt (r/comp deref :hypercrud.browser/route) ctx->data)))
 
     (when @(r/fmap :fiddle/hydrate-result-as-fiddle (:hypercrud.browser/fiddle ctx))
       (let [[_ [inner-fiddle & inner-args]] @(:hypercrud.browser/route ctx)
             route [inner-fiddle (vec inner-args)]
             ctx (base/data-from-route! route ctx)]
-        ((juxt :hypercrud.browser/route ctx->data) ctx)))))
+        ((juxt (r/comp deref :hypercrud.browser/route) ctx->data) ctx)))))
