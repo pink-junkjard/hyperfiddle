@@ -19,19 +19,19 @@
    (defmethod kvlt.middleware.params/coerce-form-params
      (keyword "application/transit+json")
      [{:keys [form-params]}]
-     (transit/encode form-params :type :json-verbose)))
+     (transit/encode form-params)))
 
 #?(:cljs
    (defmethod kvlt.middleware/from-content-type
      (keyword "application/transit+json; charset=utf-8")
      [resp]
-     (update resp :body transit/decode :type :json-verbose)))
+     (update resp :body transit/decode)))
 
 #?(:cljs
    (defmethod kvlt.middleware/from-content-type
      (keyword "application/transit+json")
      [resp]
-     (update resp :body transit/decode :type :json-verbose)))
+     (update resp :body transit/decode)))
 
 #?(:cljs
    (defmethod kvlt.middleware.params/coerce-form-params :application/edn [{:keys [form-params]}]
