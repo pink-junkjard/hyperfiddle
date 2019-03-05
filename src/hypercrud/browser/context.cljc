@@ -443,7 +443,7 @@
   (let [[e _ _] (eav ctx)                                   ; Wrong in child case
         attr (and a (attr ctx a))]
     (cond
-      (= :db/id a) true?
+      (= :db/id a) true
       ; For first time entity creation only, use e.g. keyword editor to set the identity
       (= :db/ident a) (not (underlying-tempid ctx e))
       ; need to check v also. If there isn't a v (underlying), you are also allowed to set it.

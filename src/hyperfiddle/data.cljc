@@ -49,12 +49,20 @@
     ; :db/id and :db/ident sys links
     ; :db/id and :db/ident parent attr links are good here too
     ; and attr tagged :db.unique/identity
-    (concat
-      @(select-many ctx (conj cs a))
-      (if (and (context/identity? ctx a)                    ; Parent links apply here too!
-               (not (context/qfind-level? ctx)))
-        (let [ctx (context/unwind ctx 1)]
-          @(select-many ctx (conj cs (context/a ctx))))))))
+    (cond
+      ; If we are an identity, check here, + identity siblings, + parent
+      ; In other words, go up to parent then check all child who are identity to get them all.
+      (context/identity? ctx a)
+      (let [ctx (context/unwind ctx 1)]
+        (->> (for [[a ctx] (context/spread-attributes ctx)
+                   :when (context/identity? ctx a) #_(context/attr? ctx :db.unique/identity)]
+               @(select-many ctx (conj cs a)))
+             (sequence cat)
+             (concat @(select-many ctx (conj cs (context/a ctx))))))
+
+      ; Otherwise just check here.
+      :else
+      @(select-many ctx (conj cs a)))))
 
 (defn ^:export select-many-here "reactive" ; collapses if eav is part of corcs
   [ctx & [?corcs]]
