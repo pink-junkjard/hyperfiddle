@@ -66,8 +66,7 @@
       :domain/css
       "/* Not th – that hits fiddle shortcuts */\ndiv.hyperfiddle.ui div.hyperfiddle.field.-fiddle-pull,\ndiv.hyperfiddle.ui div.hyperfiddle.field.-fiddle-query,\ndiv.hyperfiddle.ui div.hyperfiddle.field.-fiddle-cljs-ns,\ndiv.hyperfiddle.ui div.hyperfiddle.field.-fiddle-renderer,\ndiv.hyperfiddle.ui div.hyperfiddle.field.-fiddle-css,\ndiv.hyperfiddle.ui div.hyperfiddle.field.-fiddle-markdown { display: block !important; }",
       :domain/ident "hyperfiddle",
-      :domain/environment
-      "{:auth0 {\"hyperfiddle.net\" {:domain \"https://hypercrud.auth0.com\"\n                            :client-id \"HKjJJXteIwACAPO2y7AFtJCkuQj1y2yt\"}\n         \"hfmaster.xyz\" {:domain \"https://hypercrud-master.auth0.com\"\n                         :client-id \"IGkBUHFdxiO1uvc52B5InIvNFoGgY229\"}\n         \"hffeature.xyz\" {:domain \"https://hypercrud-master.auth0.com\"\n                          :client-id \"IGkBUHFdxiO1uvc52B5InIvNFoGgY229\"}\n         \"hyperfiddle.site\" {:domain \"https://hypercrud-dev.auth0.com\"\n                             :client-id \"FV2T2B6QDSdakM0Hg57VygzdvZctn7oj\"}\n         }}"}]
+      :domain/environment ""}]
 
     :database/options-list
     [{:db/id 17592186061550,
@@ -78,27 +77,14 @@
       "table.hyperfiddle {table-layout: fixed;}",
       :fiddle/ident :database/options-list}
      [[{:db/id 17592186046713, :database/uri #uri "datomic:free://datomic:4334/mbrainz"} "mbrainz"]
-      [{:db/id 17592186046769, :database/uri #uri "datomic:free://172.18.0.3:4334/tank"} "34/tank"]
       [{:db/id 17592186046090, :database/uri #uri "datomic:free://datomic:4334/root"} "root"]
-      [{:db/id 17592186046100, :database/uri #uri "datomic:free://datomic:4334/hyperfiddle-users"} "hyperfiddle-users"]
       [{:db/id 17592186046093, :database/uri #uri "datomic:free://datomic:4334/hyperfiddle-blog-source"} "hyperfiddle-blog-source"]
       [{:db/id 17592186046097, :database/uri #uri "datomic:free://datomic:4334/sandbox"} "sandbox"]
       [{:db/id 17592186046639, :database/uri #uri "datomic:free://datomic:4334/tank"} "tank"]
-      [{:db/id 17592186046177, :database/uri #uri "datomic:free://datomic:4334/domains"} "domains"]
-      [{:db/id 17592186046240, :database/uri #uri "datomic:free://datomic:4334/~dustin.getz@hyperfiddle.net+beta"} "~dustin.getz@hyperfiddle.net+beta"]
       [{:db/id 17592186046092, :database/uri #uri "datomic:free://datomic:4334/dustingetz.com"} "dustingetz.com"]
       [{:db/id 17592186046705, :database/uri #uri "datomic:free://datomic:4334/clojurians-log"} "clojurians-log"]
       [{:db/id 17592186046096, :database/uri #uri "datomic:free://datomic:4334/seattle"} "seattle"]
-      [{:db/id 17592186046088, :database/uri #uri "datomic:free://datomic:4334/litepay"} "litepay"]
-      [{:db/id 17592186046089, :database/uri #uri "datomic:free://datomic:4334/litepay-app"} "litepay-app"]
-      [{:db/id 17592186046104, :database/uri #uri "datomic:free://datomic:4334/~brian@yellowdig.com+1"} "~brian@yellowdig.com+1"]
-      [{:db/id 17592186046087, :database/uri #uri "datomic:free://datomic:4334/~alexandr.kozyrev@gmail.com+1"} "~alexandr.kozyrev@gmail.com+1"]
-      [{:db/id 17592186046720, :database/uri #uri "datomic:free://datomic:4334/~monstagoblin@googlemail.com+1"} "~monstagoblin@googlemail.com+1"]
-      [{:db/id 17592186046141, :database/uri #uri "datomic:free://datomic:4334/~khardenstine@gmail.com+1"} "~khardenstine@gmail.com+1"]
-      [{:db/id 17592186046143, :database/uri #uri "datomic:free://datomic:4334/~khardenstine@gmail.com+2"} "~khardenstine@gmail.com+2"]
-      [{:db/id 17592186046103, :database/uri #uri "datomic:free://datomic:4334/~dustin.getz"} "~dustin.getz"]
-      [{:db/id 17592186046462, :database/uri #uri "datomic:free://datomic:4334/~david.rolle@gmail.com+1"} "~david.rolle@gmail.com+1"]]]
-
+      [{:db/id 17592186046103, :database/uri #uri "datomic:free://datomic:4334/~dustin.getz"} "~dustin.getz"]]]
     })
 
 (def schema
