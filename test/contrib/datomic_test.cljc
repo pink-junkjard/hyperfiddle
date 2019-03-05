@@ -202,6 +202,15 @@
                                    ])
   (pull-enclosure fixtures.ctx/schema (pull-shape pull-pattern-1) fixtures.ctx/result-coll)
   (pull-enclosure fixtures.ctx/schema (pull-shape pull-pattern-1) [])
+
+  (is (= (pull-enclosure fixtures.tank/schema
+                         [:db/id
+                          :community/name
+                          :community/neighborhood]
+                         [{:db/id 17592186045520,
+                           :community/name "15th Ave Community",
+                           :community/neighborhood {:db/id 17592186045519}}])
+         [:db/id :community/name :community/neighborhood]))
   )
 
 (deftest pull-traverse1
