@@ -18,6 +18,7 @@
     [contrib.ui.tooltip :refer [tooltip tooltip-props]]
     [contrib.validation]
     [datascript.parser :refer [FindRel FindColl FindTuple FindScalar Variable Aggregate Pull]]
+    [hypercrud.browser.base :as base]
     [hypercrud.browser.context :as context]
     [hypercrud.browser.routing :as routing]
     [hypercrud.ui.error :as ui-error]
@@ -27,7 +28,6 @@
     [hyperfiddle.route :as route]
     [hyperfiddle.runtime :as runtime]
     [hyperfiddle.security.client :as security]
-    [hyperfiddle.ui.api]
     [hyperfiddle.ui.controls :as controls :refer [label-with-docs identity-label ref-label element-label magic-new]]
     [hyperfiddle.ui.docstring :refer [semantic-docstring]]
     [hyperfiddle.ui.iframe :refer [iframe-cmp]]
@@ -449,19 +449,25 @@ nil. call site must wrap with a Reagent component"          ; is this just hyper
 (letfn [(render-edn [data]
           (let [edn-str (pprint-str data 160)]
             [contrib.ui/code {:value edn-str :read-only true}]))]
-  (defn ^:export fiddle-api [val ctx & [props]]
-    (let [data (hyperfiddle.ui.api/api-data ctx)]
-      [:div.hyperfiddle.display-mode-api.container-fluid (select-keys props [:class])
-       [:h3
-        [:dl
-         [:dt "route"] [:dd (pr-str @(:hypercrud.browser/route ctx))]]]
-       (render-edn (get data @(:hypercrud.browser/route ctx)))
-       (->> (dissoc data @(:hypercrud.browser/route ctx))
-            (map (fn [[route result]]
+  (defn ^:export fiddle-api [_ ctx & [props]]
+    [:div.hyperfiddle.display-mode-api.container-fluid (select-keys props [:class])
+     [:h3
+      [:dl
+       [:dt "route"] [:dd (pr-str @(:hypercrud.browser/route ctx))]]]
+     (render-edn (some-> (:hypercrud.browser/result ctx) deref))
+     (->> @(hyperfiddle.data/select-many ctx #{:hf/iframe}) ; this omits deep dependent iframes fixme
+          (map #(base/data-from-link! % ctx))
+          (concat (when @(r/fmap :fiddle/hydrate-result-as-fiddle (:hypercrud.browser/fiddle ctx))
+                    (let [[_ [inner-fiddle & inner-args]] @(:hypercrud.browser/route ctx)
+                          route [inner-fiddle (vec inner-args)]]
+                      [(base/data-from-route! route ctx)])))
+          (map (fn [ctx]
+                 (let [route (some-> (:hypercrud.browser/route ctx) deref)]
                    ^{:key (str (hash route))}
                    [:div
                     [:dl [:dt "route"] [:dd (pr-str route)]]
-                    (render-edn result)])))])))
+                    (render-edn (some-> (:hypercrud.browser/result ctx) deref))])))
+          doall)]))
 
 (defn ^:export img [val ctx & [props]]
   [:img (merge props {:src val})])
