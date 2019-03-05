@@ -1,7 +1,7 @@
 (ns contrib.ednish
   (:require
     [clojure.set]
-    [clojure.string :as str]
+    [clojure.string :as string]
     [contrib.reader :as reader]
     [contrib.rfc3986 :refer [encode-rfc3986-pchar decode-rfc3986-pchar]]))
 
@@ -26,12 +26,12 @@
 coalesce into lists and are not disambiguated."
   [edn-str]
   (reduce (fn [a [k v]]
-            (str/replace a k v))
+            (string/replace a k v))
           edn-str
           -edn-dialect-mappings))
 
 (defn decode-ednish [ednish-str]
-  (reduce (fn [a [k v]] (str/replace a k v))
+  (reduce (fn [a [k v]] (string/replace a k v))
           ednish-str
           (clojure.set/map-invert -edn-dialect-mappings)))
 
