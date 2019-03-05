@@ -73,7 +73,7 @@
 
     :entity
     (let [[_ args] @(:hypercrud.browser/route ctx)          ; Missing entity param is valid state now https://github.com/hyperfiddle/hyperfiddle/issues/268
-          [dbname ?e] (if (instance? DbName (first args))
+          [dbname ?e] (if false #_(instance? DbName (first args))
                         [(:dbname (first args)) (second args)]
                         [nil (first args)])]
       (if-let [dbname (or dbname @(r/cursor fiddle [:fiddle/pull-database]))]

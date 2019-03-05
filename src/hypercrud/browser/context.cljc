@@ -899,7 +899,7 @@
         is-element-level (= (pull-depth ctx) 0)]
     (cond
       (instance? ThinEntity v) v                            ; legacy compat with IDE legacy #entity formulas
-      (instance? DbName v) v
+      #_#_(instance? DbName v) v
 
       is-element-level                                      ; includes hf/new
       (do
@@ -994,7 +994,7 @@
                                        [arg & next-args :as args] args
                                        [hole & next-holes] query-holes]
                                   (let [[arg next-args] (if (string/starts-with? hole "$")
-                                                          (if (instance? DbName arg)
+                                                          (if false #_(instance? DbName arg)
                                                             [(->DbRef (:dbname arg) (:branch ctx)) next-args]
                                                             [(->DbRef hole (:branch ctx)) args])
                                                           [(fix-param ctx arg) next-args])
