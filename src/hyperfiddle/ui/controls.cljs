@@ -81,9 +81,10 @@
 (defn hf-remove [val ctx]
   ; (if-not (:hypercrud.browser/head-sentinel ctx))
   (if val
-    (for [[k r-link] (hyperfiddle.data/spread-links-here ctx :hf/remove)]
-      ^{:key k}
-      [hyperfiddle.ui/ui-from-link r-link ctx])))
+    (doall
+      (for [[k r-link] (hyperfiddle.data/spread-links-here ctx :hf/remove)]
+        ^{:key k}
+        [hyperfiddle.ui/ui-from-link r-link ctx]))))
 
 (defn related-links "Refs don't call this directly, but scalars can.
   These are like Right JOIN. If there is no ref you can't traverse it."
