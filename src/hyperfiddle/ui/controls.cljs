@@ -18,7 +18,8 @@
     [hyperfiddle.ui.docstring :refer [semantic-docstring]]
     [hyperfiddle.ui.select$ :refer [select]]
     [hyperfiddle.ui.util :refer [with-entity-change! with-tx!]]
-    [taoensso.timbre]))
+    [taoensso.timbre]
+    [hyperfiddle.fiddle :as fiddle]))
 
 (defn label-with-docs [label help-md props]
   [tooltip-thick (if help-md [:div.hyperfiddle.docstring [contrib.ui/markdown help-md]])
@@ -70,7 +71,10 @@
       "nil")))
 
 (defn hf-new [_ ctx]
-  (for [[k r-link] (hyperfiddle.data/spread-links-here ctx :hf/new)]
+  (for [[k r-link] (hyperfiddle.data/spread-links-here ctx :hf/new)
+        ; db/id should not draw other links' hf/new in col head
+        ; https://github.com/hyperfiddle/hyperfiddle/issues/888
+        :when (= (context/a ctx) (fiddle/read-path (:link/path @r-link)))]
     ^{:key k}
     [hyperfiddle.ui/ui-from-link r-link ctx]))
 
