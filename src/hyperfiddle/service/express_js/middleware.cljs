@@ -22,7 +22,7 @@
     (.append express-res k v))
   (doto express-res
     (.status (:status platform-response))
-    (.format #js {"application/transit+json" #(.send express-res (transit/encode (:body platform-response) :type :json-verbose))
+    (.format #js {"application/transit+json" #(.send express-res (transit/encode (:body platform-response)))
                   "text/html" (fn []
                                 (if (string? (:body platform-response))
                                   (.send express-res (:body platform-response))
@@ -32,7 +32,7 @@
   (-> (platform-req-handler
         :domain (object/get req "domain")
         :route-params (object/get req "route-params")
-        :request-body (some-> req .-body hack-buggy-express-body-text-parser (transit/decode :type :json-verbose))
+        :request-body (some-> req .-body hack-buggy-express-body-text-parser transit/decode)
         :jwt (object/get req "jwt")
         :user-id (object/get req "user-id"))
       (p/then (partial send-platform-response res))))
@@ -70,7 +70,7 @@
                                       (get :ide-domain)
                                       cookie/jwt-options-express
                                       clj->js))
-              (.format #js {"application/transit+json" #(.send res (transit/encode (->Err (ex-message e)) :type :json-verbose))
+              (.format #js {"application/transit+json" #(.send res (transit/encode (->Err (ex-message e))))
                             ; todo flesh out a real session expiration page
                             "text/html" #(.send res "Session expired, please refresh and login")}))))))))
 
