@@ -1,7 +1,7 @@
 (ns hyperfiddle.ide.fiddles.schema-editor)
 
 
-(defn renderer [_ ctx props]
+(defn renderer' [_ ctx props]
   (let [hide-datomic (contrib.reactive/atom true)
         hide-archived (contrib.reactive/atom true)
         is-edn (contrib.reactive/atom false)
@@ -47,3 +47,8 @@
                (hyperfiddle.ui/field [:db/doc] ctx)])
             ctx
             {:hyperfiddle.ui.sort/initial-sort [[:db/ident] :asc]}]))])))
+
+(defn renderer [& args]
+  (if (= "nodejs" *target*)
+    (hyperfiddle.ui.loading/loading-page)
+    (into [renderer'] args)))
