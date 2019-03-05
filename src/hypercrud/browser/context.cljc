@@ -134,10 +134,6 @@
     :hypercrud.browser/element deref
     :source :symbol str))
 
-(defn ^:deprecated uri
-  ([ctx] (dbname ctx))
-  ([dbname ctx] dbname))
-
 (defn ctx->id-lookup "light ctx dependency - needs :branch and :peer"
   ([ctx] (ctx->id-lookup (dbname ctx) ctx))
   ([dbname ctx]

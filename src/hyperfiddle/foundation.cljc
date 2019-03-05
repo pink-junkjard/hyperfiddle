@@ -3,25 +3,14 @@
     [cats.monad.either :as either]
     #?(:cljs [contrib.reactive :as r])
     [hypercrud.types.Err :as Err]
-    [hyperfiddle.domain :as domain]
     [hyperfiddle.project :as project]
     [hyperfiddle.runtime :as runtime]
     [hyperfiddle.security.domains]
     #?(:cljs [hyperfiddle.ui.iframe :refer [iframe-cmp]])
-    #?(:cljs [hyperfiddle.ui.staging :as staging])
-    [taoensso.timbre :as timbre]))
+    #?(:cljs [hyperfiddle.ui.staging :as staging])))
 
 
 (def root-branch ["root"])
-
-(defn ^:deprecated route-encode [rt route]
-  (timbre/warn "foundation/route-encode is deprecated")
-  (domain/url-encode (runtime/domain rt) route))
-
-#?(:cljs
-   (defn ^:deprecated stateless-login-url [& args]
-     (timbre/warn "foundation/stateless-login-url is deprecated")
-     (apply hyperfiddle.ide/stateless-login-url args)))
 
 #?(:cljs
    (defn error-cmp [e]
