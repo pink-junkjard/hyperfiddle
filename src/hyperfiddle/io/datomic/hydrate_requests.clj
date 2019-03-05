@@ -10,7 +10,6 @@
     [contrib.pprint :refer [pprint-str]]
     [contrib.try$ :refer [try-either]]
     [datomic.api :as d]
-    [hypercrud.types.DbVal]
     [hypercrud.types.EntityRequest]
     [hypercrud.types.QueryRequest]
     [hyperfiddle.branch :as branch]

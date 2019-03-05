@@ -5,7 +5,6 @@
             [contrib.reader :as reader :refer [read-edn-string!]]
             [hypercrud.transit :as transit]
             [hypercrud.types.DbRef :refer [->DbRef]]
-            [hypercrud.types.DbVal :refer [->DbVal]]
             [hypercrud.types.ThinEntity :refer [->ThinEntity]]
             [hypercrud.types.EntityRequest :refer [->EntityRequest]]
             [hypercrud.types.Err :refer [->Err]]
@@ -49,12 +48,6 @@
                   #hypercrud.types.DbRef.DbRef{:dbname "foo" :branch "bar"}
                   "#hypercrud.types.DbRef.DbRef{:dbname \"foo\" :branch \"bar\"}"
                   "{\"~#DbRef\":[\"foo\",\"bar\"]}"))
-
-(deftest DbVal []
-  (test-all-forms (->DbVal "foo" "bar")
-                  #hypercrud.types.DbVal.DbVal{:uri "foo" :branch "bar"}
-                  "#hypercrud.types.DbVal.DbVal{:uri \"foo\" :branch \"bar\"}"
-                  "{\"~#DbVal\":[\"foo\",\"bar\"]}"))
 
 (deftest entity []
   (test-all-forms (->ThinEntity "foo" "bar")

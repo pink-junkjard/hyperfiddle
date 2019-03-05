@@ -6,7 +6,6 @@
     [hyperfiddle.readers]                                   ; important
     [hypercrud.types.DbName :refer [->DbName]]
     [hypercrud.types.DbRef :refer [map->DbRef]]
-    [hypercrud.types.DbVal :refer [map->DbVal]]
     [hypercrud.types.EntityRequest :refer [map->EntityRequest]]
     [hypercrud.types.Err :refer [map->Err]]
     [hypercrud.types.QueryRequest :refer [map->QueryRequest]]
@@ -24,7 +23,6 @@
    'schema indexed-schema
    'uri read-URI
    'hypercrud.types.DbRef.DbRef map->DbRef
-   'hypercrud.types.DbVal.DbVal map->DbVal
    'hypercrud.types.EntityRequest.EntityRequest map->EntityRequest
    'hypercrud.types.Err.Err map->Err
    'hypercrud.types.QueryRequest.QueryRequest map->QueryRequest})
