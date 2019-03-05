@@ -49,8 +49,8 @@
           (sort-by :label))
      :show-auto-tx true]
     (either/branch
-      (hyperfiddle.data/browse+ ctx :hyperfiddle/topnav-new) ; iframe wrapper for naked qfind color tag
-      #(vector :span %)                                     ; todo fix this shit error handling, why not throw?
+      (hyperfiddle.data/browse+ ctx :hyperfiddle.ide/topnav-new) ; iframe wrapper for naked qfind color tag
+      (fn [e] [:span (ex-message e)])                       ; todo fix this shit error handling, why not throw?
       (fn [ctx]
         (ui/link :hyperfiddle.ide/new-fiddle ctx "new"
                  (let [disabled? (not (security/can-create? ctx)) ; we explicitly know the context here is $
