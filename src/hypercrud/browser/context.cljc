@@ -82,10 +82,6 @@
       (seq qfind-invalid-attrs) (left (str "invalid attrs: " (pr-str qfind-invalid-attrs)))
       :else (right ctx))))
 
-(defn valid? [ctx]
-  ; (taoensso.timbre/warn "invalid query: " (pr-str query-validation-issues))
-  (either/branch (valid+ ctx) (constantly false) (constantly true)))
-
 (defn clean [ctx]
   ; Keeps the :peer which owns the schemas
   (dissoc ctx
