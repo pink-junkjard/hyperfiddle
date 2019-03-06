@@ -3,7 +3,7 @@
     [clojure.test :refer [deftest is testing]]
     [contrib.datomic :refer [pull-shape tree-derivative pull-enclosure pull-level
                              pull-traverse pull-union normalize-result
-                             validate-qfind-attrs]]
+                             validate-qfind-attrs!]]
     [contrib.datomic2 :refer []]
     [contrib.ct]
     [contrib.try$]
