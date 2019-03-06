@@ -896,4 +896,48 @@
          {:db/ident :putterson.todone/title, :db/valueType {:db/ident :db.type/string}, :db/cardinality {:db/ident :db.cardinality/one}})
      ))
 
-(def schemas {"$" (exception/success schema)})
+(def schemas {"$" (exception/success schema)
+              "$soup"
+              (exception/success
+                (contrib.datomic/indexed-schema
+                  [{:db/ident :a/j
+                    :db/cardinality {:db/ident :db.cardinality/one}
+                    :db/valueType {:db/ident :db.type/string}}
+                   {:db/ident :a/k
+                    :db/cardinality {:db/ident :db.cardinality/one}
+                    :db/valueType {:db/ident :db.type/string}}
+                   {:db/ident :a/s
+                    :db/cardinality {:db/ident :db.cardinality/one}
+                    :db/valueType {:db/ident :db.type/ref}}
+                   {:db/ident :a/t
+                    :db/cardinality {:db/ident :db.cardinality/one}
+                    :db/valueType {:db/ident :db.type/ref}}
+                   {:db/ident :a/u
+                    :db/cardinality {:db/ident :db.cardinality/many}
+                    :db/valueType {:db/ident :db.type/ref}}
+                   {:db/ident :a/v
+                    :db/cardinality {:db/ident :db.cardinality/many}
+                    :db/valueType {:db/ident :db.type/string}}
+                   {:db/ident :a/x
+                    :db/cardinality {:db/ident :db.cardinality/one}
+                    :db/valueType {:db/ident :db.type/ref}}
+                   {:db/ident :a/y
+                    :db/cardinality {:db/ident :db.cardinality/one}
+                    :db/valueType {:db/ident :db.type/string}}
+                   {:db/ident :a/z
+                    :db/cardinality {:db/ident :db.cardinality/one}
+                    :db/valueType {:db/ident :db.type/string}}
+                   {:db/ident :a/comp-one
+                    :db/cardinality {:db/ident :db.cardinality/one}
+                    :db/valueType {:db/ident :db.type/ref}
+                    :db/isComponent true}
+                   {:db/ident :a/comp-many
+                    :db/cardinality {:db/ident :db.cardinality/one}
+                    :db/valueType {:db/ident :db.type/ref}
+                    :db/isComponent true}
+                   {:db/ident :b/x
+                    :db/cardinality {:db/ident :db.cardinality/one}
+                    :db/valueType {:db/ident :db.type/string}}
+                   {:db/ident :b/y
+                    :db/cardinality {:db/ident :db.cardinality/one}
+                    :db/valueType {:db/ident :db.type/string}}]))})

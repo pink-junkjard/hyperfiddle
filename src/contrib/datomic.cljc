@@ -141,25 +141,32 @@
 
 (defn- attr-spec->shape "Take the pull and get rid of everything, even splat, just attrs requested.
   Does not validate and does not look at schema, do that later."
-  [a]
+  [schema a]
   ; todo :as
   (cond
+    ;(and (keyword? a) (attr? schema a :db.type/ref)) {a [:db/id]}
     (keyword? a) a
     (#{'* "*"} a) nil
     (map? a) (reduce-kv (fn [m k v]
                           (when-not (number? v)             ; bail on recursive specs https://github.com/hyperfiddle/hyperfiddle/issues/363
-                            (assoc m (attr-spec->shape k)
-                                     (pull-shape v))))
+                            (assoc m (attr-spec->shape schema k)
+                                     (pull-shape schema v))))
                         {} a)
     (and (sequential? a) (keyword? (first a))) (first a)
     (and (sequential? a) (#{'limit "limit" 'default "default"} (first a))) (second a)
     :else a))
 
-(defn pull-shape [pull-pattern]
-  ;{:pre [(sequential? pull-pattern)]}
+(defn pull-shape "Get rid of the pull syntax, leaving just the core pull shape.
+Shape is normalized to match the shape of the Datomic result, e.g. [:user/a-ref] becomes {:user/a-ref [:db/id]}"
+  [schema pull-pattern]
   (assert (sequential? pull-pattern) (pr-str pull-pattern))
   (->> pull-pattern
-       (map attr-spec->shape)
+       (map (partial attr-spec->shape schema))
+       (map (fn [a]
+              (if (and (keyword? a)
+                       (attr? schema a :db.type/ref))
+                {a [:db/id]}
+                a)))
        (remove nil?)
        vec))
 
@@ -182,6 +189,7 @@
   [schema pulled-tree]
   {:pre [schema #_pulled-tree]}
   ; nil pulled-tree is legal, see https://github.com/hyperfiddle/hyperfiddle/issues/298
+  ; Can't normalize {:user/a-ref [:db/id]}, you have to work with what they asked for, our UI will deal with it.
   (->> pulled-tree
        (reduce-kv
          (fn [acc k v]
@@ -254,7 +262,7 @@
   ; derivative oriented, ignores spread
   {:pre [schema]}
   (condp = (type e)
-    Pull (pull-traverse schema (pull-enclosure schema (pull-shape pull-pattern) collection))
+    Pull (pull-traverse schema (pull-enclosure schema (pull-shape schema pull-pattern) collection))
     Variable [[]]
     Aggregate [[]]))
 
@@ -301,7 +309,7 @@
                                        coll (mapv #(get % i) ?data)
                                        dbname (str db)
                                        schema (some-> (get schemas dbname) deref)]
-                                   (pull-enclosure schema (pull-shape pull-pattern) coll)))))
+                                   (pull-enclosure schema (pull-shape schema pull-pattern) coll)))))
            vec))))
 
 (defn spread-elements' [f schemas qfind data]
@@ -337,7 +345,7 @@
     ::variable []
     ::aggregate []
     ::pull (let [{{pull-pattern :value} :pattern} element]
-             (->> (pull-traverse schema (pull-shape pull-pattern))
+             (->> (pull-traverse schema (pull-shape schema pull-pattern))
                   (remove empty?)
                   (map last)
                   (map (juxt identity #(some-> schema (attr %)))) ; dont crash

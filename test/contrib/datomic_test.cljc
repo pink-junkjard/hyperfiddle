@@ -15,17 +15,19 @@
   #?(:clj (:import (datascript.parser FindRel FindColl FindTuple FindScalar Variable Aggregate Pull))))
 
 
-(def pull-pattern-1 '[:reg/email
-                      :reg/age
+(def pull-pattern-1 '[:dustingetz.reg/email
+                      :dustingetz.reg/age
                       *
-                      {:reg/gender [:db/ident]
-                       :reg/shirt-size [:db/ident
-                                        *]}
+                      {:dustingetz.reg/gender
+                       [:db/ident]
+                       :dustingetz.reg/shirt-size
+                       [:db/ident
+                        *]}
                       :db/id])
 
 (deftest pull-shape-
-  []
-  (is (= (pull-shape '[:a/a
+  (is (= (pull-shape @(fixtures.tank/schemas "$soup")
+                     '[:a/a
                        [:a/comp-one :as "comp-one"]
                        :a/comp-many
                        *
@@ -35,14 +37,20 @@
                         (limit :a/u 2) [*]
                         :a/x [*]}
                        (default :a/z "a/z default")])
-         [:a/a :a/comp-one :a/comp-many :a/v #:a{:s [:b/a :b/b #:c{:a []} #:c{:b [:d/a]}], :t [], :u [], :x []} :a/z]))
-  (is (= [:reg/email
-          :reg/age
-          #:reg{:gender [:db/ident],
-                :shirt-size [:db/ident]}
-          :db/id]
-         (pull-shape pull-pattern-1)))
-  (is (= (pull-shape [:db/id
+         [:a/a
+          #:a{:comp-one [:db/id]}
+          #:a{:comp-many [:db/id]}
+          :a/v
+          #:a{:s [:b/a :b/b #:c{:a []} #:c{:b [:d/a]}], :t [], :u [], :x []}
+          :a/z]))
+  (is (= (pull-shape fixtures.tank/schema pull-pattern-1)
+         [:dustingetz.reg/email
+          :dustingetz.reg/age
+          #:dustingetz.reg{:gender [:db/ident],
+                           :shirt-size [:db/ident]}
+          :db/id]))
+  (is (= (pull-shape fixtures.tank/schema
+                     [:db/id
                       :hyperblog.post/sort-index1
                       :hyperblog.post/published
                       :hyperblog.post/hidden
@@ -187,6 +195,12 @@
   )
 
 
+(def p [:db/id
+        :community/name
+        :community/neighborhood])
+(def pt {:db/id 17592186045520,
+         :community/name "15th Ave Community",
+         :community/neighborhood {:db/id 17592186045519}})
 
 (deftest enclosing-pull-shape-
   []
@@ -200,17 +214,41 @@
                                     :db/ident :shirt-size/womens-medium,
                                     :reg/gender {:db/id 17592186046204}}
                                    ])
-  (pull-enclosure fixtures.ctx/schema (pull-shape pull-pattern-1) fixtures.ctx/result-coll)
-  (pull-enclosure fixtures.ctx/schema (pull-shape pull-pattern-1) [])
+  (pull-enclosure fixtures.ctx/schema (pull-shape fixtures.ctx/schema pull-pattern-1) fixtures.ctx/result-coll)
+  (pull-enclosure fixtures.ctx/schema (pull-shape fixtures.ctx/schema pull-pattern-1) [])
 
-  (is (= (pull-enclosure fixtures.tank/schema
-                         [:db/id
-                          :community/name
-                          :community/neighborhood]
-                         [{:db/id 17592186045520,
-                           :community/name "15th Ave Community",
-                           :community/neighborhood {:db/id 17592186045519}}])
-         [:db/id :community/name :community/neighborhood]))
+  (testing "{:user/a-ref [:db/id]} is already in canonical pull shape"
+    (is (= (pull-enclosure fixtures.tank/schema
+                           [:db/id
+                            :community/name
+                            {:community/neighborhood [:db/id]}]
+                           [pt])
+           [:db/id :community/name #:community{:neighborhood [:db/id]}]))
+
+    (is (= (tree-derivative fixtures.tank/schema pt)
+           [:db/id :community/name #:community{:neighborhood [:db/id]}]))
+
+    (is (= (pull-shape fixtures.tank/schema [:db/id
+                                             :community/name
+                                             {:community/neighborhood [:db/id]}])
+           [:db/id :community/name #:community{:neighborhood [:db/id]}]))
+
+    (is (= (pull-shape fixtures.tank/schema [:dustingetz.reg/age
+                                             :dustingetz.reg/gender
+                                             {:dustingetz.reg/gender [:db/id]}
+                                             {:dustingetz.reg/gender [:db/ident]}])
+           [:dustingetz.reg/age
+            #:dustingetz.reg{:gender [:db/id]}
+            #:dustingetz.reg{:gender [:db/id]}
+            #:dustingetz.reg{:gender [:db/ident]}]))
+    )
+
+  (testing "normalize {:user/a-ref [:db/id]} relative to the requested pull shape"
+    (is (= (pull-shape fixtures.tank/schema p)
+           [:db/id :community/name #:community{:neighborhood [:db/id]}]))
+
+    (is (= (pull-enclosure fixtures.tank/schema (pull-shape fixtures.tank/schema p) [pt])
+           [:db/id :community/name #:community{:neighborhood [:db/id]}])))
   )
 
 (deftest pull-traverse1
