@@ -1,7 +1,7 @@
 (ns hyperfiddle.fiddle
   (:require
-    [cats.core :as cats :refer [mlet return =<< fmap]]
-    [cats.monad.either :refer [left right]]
+    [cats.core :as cats :refer [>>=]]
+    [cats.monad.either :refer [right]]
     [clojure.spec.alpha :as s]
     [contrib.ct :refer [unwrap]]
     [contrib.data :refer [update-existing]]
@@ -206,11 +206,12 @@
 (defn parse-fiddle-query+ [{:keys [fiddle/type fiddle/query fiddle/pull fiddle/pull-database]}]
   (case type
     :blank (right nil)
-    :entity (->> (contrib.reader/memoized-read-edn-string+ pull)
-                 (fmap (fn [pull]
-                         (let [source (symbol pull-database)
-                               fake-q `[:find (~'pull ~source ~'?e ~pull) . :where [~'?e]]]
-                           (datascript.parser/parse-query fake-q)))))
-    :query (->> (contrib.reader/memoized-read-edn-string+ query)
-                (=<< #(try-either
-                        (datascript.parser/parse-query %))))))
+    :entity (>>= (contrib.reader/memoized-read-edn-string+ pull)
+                 (fn [pull]
+                   (try-either
+                     (let [source (symbol pull-database)
+                           fake-q `[:find (~'pull ~source ~'?e ~pull) . :where [~'?e]]]
+                       (datascript.parser/parse-query fake-q)))))
+    :query (>>= (contrib.reader/memoized-read-edn-string+ query)
+                #(try-either
+                   (datascript.parser/parse-query %)))))

@@ -97,7 +97,7 @@
                    (routing/route+ route))
            meta-fiddle-request @(r/apply-inner-r (r/track meta-request-for-fiddle ctx))
            r-fiddle @(r/apply-inner-r (r/track hydrate-fiddle meta-fiddle-request ctx))
-           :let [ctx (context/fiddle ctx r-fiddle)]
+           ctx (context/fiddle+ ctx r-fiddle)
            fiddle-request @(r/apply-inner-r (r/track request-for-fiddle ctx))
            ctx (context/valid+ ctx)
            ; result SHOULD be sorted out of jvm, though isn't yet

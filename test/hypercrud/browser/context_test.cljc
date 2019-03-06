@@ -1,7 +1,7 @@
 (ns hypercrud.browser.context-test
   (:require
     [cats.core :refer [mlet return fmap extract]]
-    [cats.monad.either :refer [left right left? right?]]
+    [cats.monad.either :as either :refer [left right left? right?]]
     [contrib.ct :refer [unwrap]]
     [contrib.reactive :as r]
     [clojure.test :refer [deftest is testing]]
@@ -36,7 +36,8 @@
      (-> {:branch branch-id
           :hypercrud.browser/route nil
           :peer (mock-peer branch-id schemas)}
-         (context/fiddle (r/pure fiddle))
+         (context/fiddle+ (r/pure fiddle))
+         (either/branch (fn [e] (throw e)) identity)
          (context/result (r/pure result))))))
 
 (deftest primitives
