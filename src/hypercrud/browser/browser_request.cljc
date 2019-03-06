@@ -1,56 +1,34 @@
 (ns hypercrud.browser.browser-request
   (:require
-    [cats.core :as cats :refer [mlet]]
     [cats.monad.either :as either]
-    [clojure.spec.alpha :as s]
     [contrib.data :refer [unqualify]]
     [contrib.datomic]
     [contrib.reactive :as r]
-    [datascript.parser #?@(:cljs [:refer [FindRel FindColl FindTuple FindScalar Variable Aggregate Pull]])]
     [hypercrud.browser.base :as base]
     [hypercrud.browser.context :as context]
-    [hypercrud.browser.routing :as routing]
-    [hypercrud.client.peer :refer [-quiet-unwrap]]
-    [hyperfiddle.api]
-    [hyperfiddle.data :as data])
-  #?(:clj
-     (:import
-       (datascript.parser FindRel FindColl FindTuple FindScalar Variable Aggregate Pull))))
+    [hyperfiddle.data :as data]
+    [taoensso.timbre :as timbre]))
 
 
 (declare requests)
-(declare with-result)
 
 (defn request-from-route [route ctx]
-  (when-let [ctx (-> (context/clean ctx)
-                     (routing/route+ route)
-                     -quiet-unwrap)]
-    (when-let [meta-fiddle-request (-quiet-unwrap @(r/apply-inner-r (r/track base/meta-request-for-fiddle ctx)))]
-      (assert (r/reactive? meta-fiddle-request))
-      (concat [@meta-fiddle-request]
-              (-quiet-unwrap
-                (mlet [r-fiddle @(r/apply-inner-r (r/track base/hydrate-fiddle meta-fiddle-request ctx))
-                       :let [ctx (context/fiddle ctx r-fiddle)]
-                       fiddle-request @(r/apply-inner-r (r/track base/request-for-fiddle ctx))]
-                  (s/assert r/reactive? r-fiddle)
-                  (s/assert r/reactive? fiddle-request)
-                  (cats/return
-                    (concat
-                      (some-> @fiddle-request vector)
-                      (->> (base/process-results fiddle-request ctx)
-                           ; Don't set context/fiddle (would set A to fiddle-ident)
-                           ; Context methods must be robust to fiddle-attrs now.
-                           (cats/fmap requests)
-                           (-quiet-unwrap))))))))))
+  (either/branch
+    (base/data-from-route route ctx)
+    (fn [e] (timbre/warn e))                                ; do we actually care about this error?
+    (fn [ctx] (requests ctx))))
 
 (defn request-from-link [link ctx]
-  ; can return two links worth of requests, but the mapcat will work
-  (-quiet-unwrap (base/from-link link ctx (fn [route ctx]
-                                            (either/right (request-from-route route ctx))))))
+  (either/branch
+    (base/from-link link ctx (fn [route ctx]
+                               (request-from-route route ctx)
+                               (either/right nil)))
+    (fn [e] (timbre/warn e))                                ; do we actually care about this error?
+    (constantly nil)))
 
 (defn requests-here [ctx]
-  (->> @(data/select-many-here ctx #{:hf/iframe})
-       (mapcat #(request-from-link % ctx))))
+  (doseq [link @(data/select-many-here ctx #{:hf/iframe})]
+    (request-from-link link ctx)))
 
 ; at this point we only care about inline links and popovers are hydrated on their on hydrate-route calls
 ; On the request side, we walk the whole resultset and load each iframe from exactly the right place
@@ -65,10 +43,10 @@
       (request-from-route [inner-fiddle (vec inner-args)] ctx))))
 
 (defn request-attr-level [ctx]
-  (for [[a ctx] (hypercrud.browser.context/spread-attributes ctx)]
-    [(requests-here ctx)
-     ; UnsupportedOperationException: Can only recur from tail position
-     (request-attr-level ctx)]))
+  (doseq [[a ctx] (context/spread-attributes ctx)]
+    (requests-here ctx)
+    ; UnsupportedOperationException: Can only recur from tail position
+    (request-attr-level ctx)))
 
 ; Spread across the resultset
 ; Create the links at each slot
@@ -86,26 +64,25 @@
 (defn requests [ctx]
   ; More efficient to drive from links. But to do this, we need to refocus
   ; from the top, multiplying out for all possible dependencies.
-  (if (hypercrud.browser.context/valid? ctx)
-    (flatten
-      [(requests-here ctx)
-       (for [[_ ctx] (hypercrud.browser.context/spread-result ctx)]
-         [(requests-here ctx)                               ; depend on result? Not sure if right
-          (for [[_ ctx] (hypercrud.browser.context/spread-rows ctx)]
-            [#_(requests-here ctx)
-             (for [[_ {el :hypercrud.browser/element :as ctx}] (hypercrud.browser.context/spread-elements ctx)]
-               (case (unqualify (contrib.datomic/parser-type @el))
-                 :variable [#_(requests-here ctx)]
-                 :aggregate [#_(requests-here ctx)]
-                 :pull [(requests-here ctx)
-                        ; Dependent attr links, slow af though, so disabled for now.
-                        #_(request-attr-level ctx)]))])
+  (when (context/valid? ctx)
+    (requests-here ctx)
+    (doseq [[_ ctx] (context/spread-result ctx)]
+      (requests-here ctx)                                   ; depend on result? Not sure if right
+      (doseq [[_ ctx] (context/spread-rows ctx)]
+        #_(requests-here ctx)
+        (doseq [[_ {el :hypercrud.browser/element :as ctx}] (context/spread-elements ctx)]
+          (case (unqualify (contrib.datomic/parser-type @el))
+            :variable #_(requests-here ctx)
+            :aggregate #_(requests-here ctx)
+            :pull (do (requests-here ctx)
+                      ; Dependent attr links, slow af though, so disabled for now.
+                      (request-attr-level ctx)))))
 
-          ; no rows - independent
-          (for [[_ {el :hypercrud.browser/element :as ctx}] (hypercrud.browser.context/spread-elements ctx)]
-            (case (unqualify (contrib.datomic/parser-type @el))
-              :variable [#_(requests-here ctx)]
-              :aggregate [#_(requests-here ctx)]
-              :pull [(requests-here ctx)
-                     (request-attr-level ctx)]))])
-       (cross-streams ctx)])))
+      ; no rows - independent
+      (doseq [[_ {el :hypercrud.browser/element :as ctx}] (context/spread-elements ctx)]
+        (case (unqualify (contrib.datomic/parser-type @el))
+          :variable #_(requests-here ctx)
+          :aggregate #_(requests-here ctx)
+          :pull (do (requests-here ctx)
+                    (request-attr-level ctx)))))
+    (cross-streams ctx)))

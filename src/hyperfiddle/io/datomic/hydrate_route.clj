@@ -69,5 +69,5 @@
               state-atom (r/atom (reducers/root-reducer initial-state nil))
               rt (->RT domain db-with-lookup get-secure-db-with+ state-atom ?subject)]
           (perf/time (fn [get-total-time] (timbre/debug "Hydrate-route::request-fn" "total time: " (get-total-time)))
-                     (doall (browser-request/request-from-route route {:branch branch :peer rt})))
+                     (browser-request/request-from-route route {:branch branch :peer rt}))
           (select-keys @(runtime/state rt [::runtime/partitions branch]) [:local-basis :attr-renderers :project :ptm :schemas :tempid-lookups]))))))
