@@ -1102,30 +1102,30 @@
     )
   )
 
-(deftest schema-aliases
-  (testing "Disabled test breaks without schema alias support"
-    (def ctx (mock-fiddle! :cookbook/markdown-table))
-    (is (= (context/data ctx)
-           [{:db/id 17592186046744, :task/title "Feed baby", :task/completed true}
-            {:db/id 17592186046745, :task/title "Mow the lawn"}
-            {:db/id 17592186046746, :task/title "Do the dishes", :task/completed true}]))
+; broken without schema alias support
+#_(deftest schema-aliases
+    (let [ctx (mock-fiddle! :cookbook/markdown-table)]
+      (is (= (context/data ctx)
+             [{:db/id 17592186046744, :task/title "Feed baby", :task/completed true}
+              {:db/id 17592186046745, :task/title "Mow the lawn"}
+              {:db/id 17592186046746, :task/title "Do the dishes", :task/completed true}])))
 
-    (def ctx (-> (mock-fiddle! :cookbook/markdown-table)    ; FindColl
-                 (context/row 17592186046744)
-                 ;(context/element 0)                        ; required for FindRel
-                 #_(context/attribute :dustingetz.post/slug)))
-    (is (= (context/data ctx)
-           {:db/id 17592186046744, :task/title "Feed baby", :task/completed true}))
-    (is (= (context/eav ctx)
-           [nil :cookbook/markdown-table 17592186046744]))
-    #_(is (= (for [ctx [(context/row ctx 17592186046744)]
+    (let [ctx (-> (mock-fiddle! :cookbook/markdown-table)   ; FindColl
+                  (context/row 17592186046744)
+                  ;(context/element 0)                        ; required for FindRel
+                  #_(context/attribute :dustingetz.post/slug))]
+      (is (= (context/data ctx)
+             {:db/id 17592186046744, :task/title "Feed baby", :task/completed true}))
+      (is (= (context/eav ctx)
+             [nil :cookbook/markdown-table 17592186046744]))
+      (is (= (for [ctx [(context/row ctx 17592186046744)]
                    [_ ctx] (context/spread-elements ctx)
                    [_ ctx] (context/spread-attributes ctx)]
                (context/eav ctx))
              [[nil :db/id nil]
               [nil :cookbook/markdown-table nil]
               [nil :cookbook/markdown-table nil]]))
-    ))
+      ))
 
 (deftest findrel-with-nested-many
   (testing "aaa"
