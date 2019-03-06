@@ -1,8 +1,11 @@
 (ns contrib.datomic
   (:require
-    [contrib.data :refer [group-by-pred]]
+    [cats.core :refer [>>=]]
+    [cats.monad.either :as either]
     [clojure.spec.alpha :as s]
     [clojure.set]
+    [contrib.data :refer [group-by-pred]]
+    [contrib.try$ :refer [try-either]]
     [datascript.parser #?@(:cljs [:refer [FindRel FindColl FindTuple FindScalar Variable Aggregate Pull]])])
   #?(:clj (:import
             (datascript.parser FindRel FindColl FindTuple FindScalar Variable Aggregate Pull)
@@ -312,9 +315,10 @@ Shape is normalized to match the shape of the Datomic result, e.g. [:user/a-ref]
                                    (pull-enclosure schema (pull-shape schema pull-pattern) coll)))))
            vec))))
 
-(defn spread-elements' [f schemas qfind data]
+(defn spread-elements! [f schemas qfind data]
   (spread-elements (fn [schemas qfind ix e coll-normalized]
                      (let [dbname (str (get-in e [:source :symbol]))
+                           ; fmap the exception instead of throw?
                            schema (some-> (get schemas dbname) deref)]
                        (f schema e coll-normalized)))
                    schemas qfind data))
@@ -348,9 +352,7 @@ Shape is normalized to match the shape of the Datomic result, e.g. [:user/a-ref]
              (->> (pull-traverse schema (pull-shape schema pull-pattern))
                   (remove empty?)
                   (map last)
-                  (map (juxt identity #(some-> schema (attr %)))) ; dont crash
-                  (filter (comp nil? second))               ; reject good ones
-                  (map first)
+                  (filter #(nil? (some-> schema (attr %)))) ; dont crash; reject good ones
                   #_empty?)
              #_(tree-seq map?
                          (fn [m]
@@ -363,7 +365,15 @@ Shape is normalized to match the shape of the Datomic result, e.g. [:user/a-ref]
              ; collect the errors
              )))
 
-(defn validate-qfind-attrs "Validate the pull attributes against schema. Bug: doesn't see Datomic aliases."
+(defn validate-qfind-attrs! "Validate the pull attributes against schema. Bug: doesn't see Datomic aliases."
   [schemas qfind]
   (if qfind
-    (spread-elements' validate-element schemas qfind nil)))
+    (spread-elements! validate-element schemas qfind nil)))
+
+(defn validate-qfind-attrs+ "Validate the pull attributes against schema. Bug: doesn't see Datomic aliases."
+  [schemas qfind]
+  (>>= (try-either (validate-qfind-attrs! schemas qfind))
+       (fn [invalid-attrs]
+         (if (seq invalid-attrs)
+           (either/left (ex-info "Invalid attributes" {:attrs invalid-attrs}))
+           (either/right nil)))))

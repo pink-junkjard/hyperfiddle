@@ -57,8 +57,8 @@
 
   )
 
-(defn datascript-from-result [schemas qfind data]
-  (-> (contrib.datomic/spread-elements' (fn [schema element coll]
+(defn datascript-from-result! [schemas qfind data]
+  (-> (contrib.datomic/spread-elements! (fn [schema element coll]
                                           (let [{{db :symbol} :source {pull-pattern :value} :pattern} element]
                                             [db schema element coll])) schemas qfind data)
       (->> (group-by first))                                ; Collect results from same db

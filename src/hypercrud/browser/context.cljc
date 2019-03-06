@@ -42,7 +42,6 @@
                 :hypercrud.browser/fiddle
                 :hypercrud.browser/result-index             ; private, interpreted relative to result-path. never individually
                 :hypercrud.browser/qfind
-                :hypercrud.browser/qfind-invalid-attrs
                 :hypercrud.browser/eav                      ; V is scalar or nil. A is attr or fiddle-ident
                 :hypercrud.browser/validation-hints
                 :hypercrud.browser/element                  ; not included in EAV
@@ -69,15 +68,13 @@
 (s/def :hypercrud.browser/pull-path (s/coll-of keyword? :kind vector?))
 
 (defn valid+ [{:keys [:hypercrud.browser/qfind
-                      :hypercrud.browser/fiddle
-                      :hypercrud.browser/qfind-invalid-attrs]
+                      :hypercrud.browser/fiddle]
                :as ctx}]
   ; Accumulate issues, not just first issue
   (let [{:keys [:fiddle/type]} @fiddle]
     (cond
       (= type :blank) (right ctx)
       (not @qfind) (left (str "invalid qfind: " (pr-str @qfind))) ; impossible
-      (seq qfind-invalid-attrs) (left (str "invalid attrs: " (pr-str qfind-invalid-attrs)))
       :else (right ctx))))
 
 (defn clean [ctx]
@@ -516,19 +513,18 @@
   {:pre [r-fiddle]}
   (mlet [:let [r-fiddle (r/fmap hyperfiddle.fiddle/apply-defaults r-fiddle)]
          r-qparsed @(r/apply-inner-r (r/fmap hyperfiddle.fiddle/parse-fiddle-query+ r-fiddle))
-         :let [r-qfind (r/fmap :qfind r-qparsed)
-               r-fiddle (r/fmap->> (r/sequence [r-fiddle
+         _ @(r/apply contrib.datomic/validate-qfind-attrs+
+                     [(runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :schemas])
+                      (r/fmap :qfind r-qparsed)])
+         :let [r-fiddle (r/fmap->> (r/sequence [r-fiddle
                                                 (runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :schemas])
                                                 r-qparsed])
                                    (apply hyperfiddle.fiddle/apply-fiddle-links-defaults))
                ; Can't keep track of reaction types. Just set the key to (reactive nil) rather than omit the key.
                ctx (assoc ctx
                      :hypercrud.browser/fiddle r-fiddle
-                     :hypercrud.browser/qfind r-qfind
+                     :hypercrud.browser/qfind (r/fmap :qfind r-qparsed)
                      :hypercrud.browser/qparsed r-qparsed
-                     :hypercrud.browser/qfind-invalid-attrs (contrib.datomic/validate-qfind-attrs
-                                                              @(runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :schemas])
-                                                              @r-qfind)
                      :hypercrud.browser/link-index (r/fmap->> r-fiddle :fiddle/links (map link-identifiers))
                      :hypercrud.browser/eav (r/apply stable-eav-av
                                                      [(r/pure nil)

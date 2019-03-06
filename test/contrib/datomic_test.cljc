@@ -391,7 +391,7 @@
                                                         :dustingetz.reg/shirt-size [:db/ident]}])
                                                 (max ?tx)
                                                 :where [?e _ _ ?tx]]))
-  (is (= (validate-qfind-attrs fixtures.tank/schemas (:qfind qparsed))
+  (is (= (validate-qfind-attrs! fixtures.tank/schemas (:qfind qparsed))
          [:yo :foo :baz :buzz]))
 
   )
