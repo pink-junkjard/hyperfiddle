@@ -1,10 +1,15 @@
 (ns hyperfiddle.pprint
   (:require
+    [cats.core :as cats]
+    [cats.monad.either :refer [#?@(:cljs [Left Right])]]
+    [cats.monad.exception :refer [#?@(:cljs [Failure Success])]]
     [clojure.pprint]
     [hypercrud.types.ThinEntity :refer [#?(:cljs ThinEntity)]]
     #?(:cljs [reagent.ratom]))
   #?(:clj
      (:import
+       [cats.monad.either Left Right]
+       [cats.monad.exception Failure Success]
        hypercrud.types.ThinEntity.ThinEntity)))
 
 
@@ -15,6 +20,11 @@
     (#?(:clj .write :cljs -write) *out* " ")
     (clojure.pprint/pprint-newline :linear)
     (clojure.pprint/write-out (.-id o))))
+
+(defn pprint-cats-extractable [tag o]
+  (#?(:clj .write :cljs -write) *out* tag)
+  (#?(:clj .write :cljs -write) *out* " ")
+  (clojure.pprint/write-out (cats/extract o)))
 
 #?(:cljs
    (defn pprint-ratom [o s]
@@ -36,6 +46,10 @@
          reagent.ratom/Reaction (pprint-ratom o (str "Reaction " (hash o) ":"))
          reagent.ratom/Wrapper (pprint-ratom o "Wrap:")])
     ThinEntity (pprint-simple-thinentity o)
+    Right (pprint-cats-extractable "#right" o)
+    Left (pprint-cats-extractable "#left" o)
+    Failure (pprint-cats-extractable "#failure" o)
+    Success (pprint-cats-extractable "#success" o)
     (clojure.pprint/simple-dispatch o)))
 
 (comment
