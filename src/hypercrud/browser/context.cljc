@@ -67,16 +67,6 @@
 (s/def :hypercrud.browser/schema r/reactive?)
 (s/def :hypercrud.browser/pull-path (s/coll-of keyword? :kind vector?))
 
-(defn valid+ [{:keys [:hypercrud.browser/qfind
-                      :hypercrud.browser/fiddle]
-               :as ctx}]
-  ; Accumulate issues, not just first issue
-  (let [{:keys [:fiddle/type]} @fiddle]
-    (cond
-      (= type :blank) (right ctx)
-      (not @qfind) (left (str "invalid qfind: " (pr-str @qfind))) ; impossible
-      :else (right ctx))))
-
 (defn clean [ctx]
   ; Keeps the :peer which owns the schemas
   (dissoc ctx
@@ -513,6 +503,10 @@
   {:pre [r-fiddle]}
   (mlet [:let [r-fiddle (r/fmap hyperfiddle.fiddle/apply-defaults r-fiddle)]
          r-qparsed @(r/apply-inner-r (r/fmap hyperfiddle.fiddle/parse-fiddle-query+ r-fiddle))
+         _ (if (and (not= :blank @(r/cursor r-fiddle [:fiddle/type]))
+                    @(r/fmap (r/comp nil? :qfind) r-qparsed))
+             (either/left (ex-info "Invalid qfind" {}))     ; how would this ever happen?
+             (either/right nil))
          _ @(r/apply contrib.datomic/validate-qfind-attrs+
                      [(runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :schemas])
                       (r/fmap :qfind r-qparsed)])

@@ -99,7 +99,6 @@
            r-fiddle @(r/apply-inner-r (r/track hydrate-fiddle meta-fiddle-request ctx))
            ctx (context/fiddle+ ctx r-fiddle)
            fiddle-request @(r/apply-inner-r (r/track request-for-fiddle ctx))
-           ctx (context/valid+ ctx)
            ; result SHOULD be sorted out of jvm, though isn't yet
            r-result @(r/apply-inner-r (r/track nil-or-hydrate (:peer ctx) (:branch ctx) fiddle-request))
            :let [#_#_sort-fn (hyperfiddle.ui.sort/sort-fn % sort-col)
