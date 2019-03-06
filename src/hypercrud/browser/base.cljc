@@ -92,26 +92,20 @@
                        (if-let [?request @request]
                          @(hc/hydrate peer branch ?request)
                          (either/right nil)))]
-  (defn process-results "Initialize ctx internals, but doesn't focus anything into scope.
-    Not even the topfiddle"
-    [request ctx]
-    ; Blow mlet in case of (right _) -> (left _), but don't recompute if (right :a) -> (right :b).
-    (mlet [ctx (context/valid+ ctx)
+  (defn data-from-route "either ctx, ctx-from-route" [route ctx] ; todo rename
+    (mlet [ctx (-> (context/clean ctx)
+                   (routing/route+ route))
+           meta-fiddle-request @(r/apply-inner-r (r/track meta-request-for-fiddle ctx))
+           r-fiddle @(r/apply-inner-r (r/track hydrate-fiddle meta-fiddle-request ctx))
+           :let [ctx (context/fiddle ctx r-fiddle)]
+           fiddle-request @(r/apply-inner-r (r/track request-for-fiddle ctx))
+           ctx (context/valid+ ctx)
            ; result SHOULD be sorted out of jvm, though isn't yet
-           r-result @(r/apply-inner-r (r/track nil-or-hydrate (:peer ctx) (:branch ctx) request))
+           r-result @(r/apply-inner-r (r/track nil-or-hydrate (:peer ctx) (:branch ctx) fiddle-request))
            :let [#_#_sort-fn (hyperfiddle.ui.sort/sort-fn % sort-col)
                  ctx (hypercrud.browser.context/result ctx r-result)]]
+      ; fiddle request can be nil for no-arg pulls (just draw readonly form)
       (return ctx))))
-
-(defn data-from-route "either ctx, ctx-from-route" [route ctx] ; todo rename
-  (mlet [ctx (-> (context/clean ctx)
-                 (routing/route+ route))
-         meta-fiddle-request @(r/apply-inner-r (r/track meta-request-for-fiddle ctx))
-         r-fiddle @(r/apply-inner-r (r/track hydrate-fiddle meta-fiddle-request ctx))
-         :let [ctx (context/fiddle ctx r-fiddle)]
-         fiddle-request @(r/apply-inner-r (r/track request-for-fiddle ctx))]
-    ; fiddle request can be nil for no-arg pulls (just draw readonly form)
-    (process-results fiddle-request ctx)))
 
 (defn data-from-route! [route ctx]
   (unwrap (constantly nil) (data-from-route route ctx)))
