@@ -1,12 +1,10 @@
 (ns hyperfiddle.service.http
   (:require
     [cats.monad.either :as either]
-    [clojure.string :as string]
     [contrib.base-64-url-safe :as base-64-url-safe]
     [contrib.ednish :as ednish]
     [contrib.reader :refer [read-edn-string!]]
     [hypercrud.types.Err :refer [->Err]]
-    [hyperfiddle.domain :as domain]
     [hyperfiddle.io.core :as io]
     [hyperfiddle.route :as route]
     [promesa.core :as p]
@@ -89,12 +87,3 @@
       (timbre/error e)
       (p/resolved (e->platform-response e)))))
 
-(defn ssr-auth-hack [domain user-id path redirect next]
-  (if (and (= "demo" (:app-domain-ident domain))
-           (nil? user-id)
-           (not (string/starts-with? path "/:hyperfiddle.ide!please-login/")))
-    ; todo this logic should be injected into demo domain record
-    (let [inner-route (domain/url-decode domain path)
-          url (domain/url-encode domain [:hyperfiddle.ide/please-login inner-route])]
-      (redirect url))
-    (next)))
