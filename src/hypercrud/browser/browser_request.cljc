@@ -72,8 +72,8 @@
         #_(requests-here ctx)
         (doseq [[_ {el :hypercrud.browser/element :as ctx}] (context/spread-elements ctx)]
           (case (unqualify (contrib.datomic/parser-type @el))
-            :variable #_(requests-here ctx)
-            :aggregate #_(requests-here ctx)
+            :variable nil #_(requests-here ctx)
+            :aggregate nil #_(requests-here ctx)
             :pull (do (requests-here ctx)
                       ; Dependent attr links, slow af though, so disabled for now.
                       (request-attr-level ctx)))))
@@ -81,8 +81,8 @@
       ; no rows - independent
       (doseq [[_ {el :hypercrud.browser/element :as ctx}] (context/spread-elements ctx)]
         (case (unqualify (contrib.datomic/parser-type @el))
-          :variable #_(requests-here ctx)
-          :aggregate #_(requests-here ctx)
+          :variable nil #_(requests-here ctx)
+          :aggregate nil #_(requests-here ctx)
           :pull (do (requests-here ctx)
                     (request-attr-level ctx)))))
     (cross-streams ctx)))
