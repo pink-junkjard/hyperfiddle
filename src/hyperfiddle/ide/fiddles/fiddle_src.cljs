@@ -1,5 +1,6 @@
 (ns hyperfiddle.ide.fiddles.fiddle-src
   (:require
+    [cats.monad.either :as either]
     [clojure.spec.alpha :as s]
     [clojure.pprint]
     [contrib.data :refer [assoc-if]]
@@ -52,9 +53,12 @@
      [table
       (fn [ctx]
         (let [ctx (assoc-if ctx ::record (if-not (:hypercrud.browser/head-sentinel ctx)
-                                           (fiddle/auto-link @(runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :schemas])
-                                                             (:qin @(:hypercrud.browser/qparsed ctx))
-                                                             (context/data ctx))))]
+                                           ; todo shouldn't this be a meta-ctx? all these arguments look extremely suspect
+                                           (-> (fiddle/auto-link+ @(runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :schemas])
+                                                                  (:qin @(:hypercrud.browser/qparsed ctx))
+                                                                 (context/data ctx))
+                                               ; just throw, unlikely we can ever get this far if there was an issue
+                                               (either/branch (fn [e] (throw e)) identity))))]
           [(field [:link/path] ctx link-control)
            (field [:link/fiddle] ctx link-fiddle {:options :hyperfiddle.ide/fiddle-options
                                                   :option-label (r/comp pr-str :fiddle/ident)})
