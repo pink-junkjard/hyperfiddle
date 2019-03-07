@@ -510,22 +510,23 @@
          _ @(r/apply contrib.datomic/validate-qfind-attrs+
                      [(runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :schemas])
                       (r/fmap :qfind r-qparsed)])
-         :let [r-fiddle (r/fmap->> (r/sequence [r-fiddle
-                                                (runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :schemas])
-                                                r-qparsed])
-                                   (apply hyperfiddle.fiddle/apply-fiddle-links-defaults))
-               ; Can't keep track of reaction types. Just set the key to (reactive nil) rather than omit the key.
-               ctx (assoc ctx
-                     :hypercrud.browser/fiddle r-fiddle
-                     :hypercrud.browser/qfind (r/fmap :qfind r-qparsed)
-                     :hypercrud.browser/qparsed r-qparsed
-                     :hypercrud.browser/link-index (r/fmap->> r-fiddle :fiddle/links (map link-identifiers))
-                     :hypercrud.browser/eav (r/apply stable-eav-av
-                                                     [(r/pure nil)
-                                                      (r/fmap :fiddle/ident r-fiddle)
-                                                      (r/pure nil)])
-                     :hypercrud.browser/pull-path [])]]     ; push this down, it should be nil now
-    (return ctx)))
+         r-fiddle @(r/apply-inner-r (r/apply hyperfiddle.fiddle/apply-fiddle-links-defaults+
+                                             [r-fiddle
+                                              (runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :schemas])
+                                              r-qparsed]))]
+    (return
+      ; Can't keep track of reaction types. Just set the key to (reactive nil) rather than omit the key.
+      (assoc ctx
+        :hypercrud.browser/fiddle r-fiddle
+        :hypercrud.browser/qfind (r/fmap :qfind r-qparsed)
+        :hypercrud.browser/qparsed r-qparsed
+        :hypercrud.browser/link-index (r/fmap->> r-fiddle :fiddle/links (map link-identifiers))
+        :hypercrud.browser/eav (r/apply stable-eav-av
+                                        [(r/pure nil)
+                                         (r/fmap :fiddle/ident r-fiddle)
+                                         (r/pure nil)])
+        ; push this down, it should be nil now
+        :hypercrud.browser/pull-path []))))
 
 (defn result [ctx r-result]
   {:pre [r-result

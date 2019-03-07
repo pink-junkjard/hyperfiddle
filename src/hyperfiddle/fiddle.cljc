@@ -1,7 +1,8 @@
 (ns hyperfiddle.fiddle
   (:require
+    [cats.context]
     [cats.core :as cats :refer [>>=]]
-    [cats.monad.either :refer [right]]
+    [cats.monad.either :as either :refer [right]]
     [clojure.spec.alpha :as s]
     [contrib.ct :refer [unwrap]]
     [contrib.data :refer [update-existing]]
@@ -123,25 +124,27 @@
 
    :link/tx-fn (fn [schemas qin link]
                  ; Auto parent-child management for eav ref contexts
-                 (let [[src-db a] (read-a (contrib.string/blank->nil (:link/path link)) qin)
-                       ; Consider: ref, fiddle-ident, scalar (e.g. :streaker/date, :fiddle/ident, :db/ident)
-                       dbname (str src-db)
-                       schema (some-> (get schemas dbname) deref)
-                       is-identity (contrib.datomic/attr? schema a :db.unique/identity)
-                       is-ref (contrib.datomic/attr? schema a :db.type/ref)]
-                   (condp some (:link/class link)
-                     #{:hf/new :hf/affix} (cond
+                 (condp some (:link/class link)
+                   #{:hf/new :hf/affix} (let [[src-db a] (read-a (contrib.string/blank->nil (:link/path link)) qin)
+                                              ; Consider: ref, fiddle-ident, scalar (e.g. :streaker/date, :fiddle/ident, :db/ident)
+                                              dbname (str src-db)
+                                              schema (some-> (get schemas dbname) deref)]
+                                          (cond
                                             ; Need to know what context we in.
                                             ; Identity can be parent-child ref.
-                                            is-identity ":zero" ; hack to draw as popover
-                                            is-ref ":db/add"
-                                            :else ":zero")  ; nil a, or qfind-level
+                                            (contrib.datomic/attr? schema a :db.unique/identity) ":zero" ; hack to draw as popover
+                                            (contrib.datomic/attr? schema a :db.type/ref) ":db/add"
+                                            :else ":zero")) ; nil a, or qfind-level
 
-                     #{:hf/remove :hf/detach} (cond
-                                                is-identity ":db.fn/retractEntity"
-                                                is-ref ":db/retract"
-                                                :else ":db.fn/retractEntity") ; legacy compat, remove
-                     nil)))})
+                   #{:hf/remove :hf/detach} (let [[src-db a] (read-a (contrib.string/blank->nil (:link/path link)) qin)
+                                                  ; Consider: ref, fiddle-ident, scalar (e.g. :streaker/date, :fiddle/ident, :db/ident)
+                                                  dbname (str src-db)
+                                                  schema (some-> (get schemas dbname) deref)]
+                                              (cond
+                                                (contrib.datomic/attr? schema a :db.unique/identity) ":db.fn/retractEntity"
+                                                (contrib.datomic/attr? schema a :db.type/ref) ":db/retract"
+                                                :else ":db.fn/retractEntity")) ; legacy compat, remove
+                   nil))})
 
 (def fiddle-defaults
   {:fiddle/markdown (fn [fiddle] (str/fmt "### %s" (some-> fiddle :fiddle/ident str)))
@@ -153,11 +156,12 @@
                          :clj  nil))
    :fiddle/type (constantly :blank)})                       ; default is :query from new-fiddle; but from links panel, it's :entity
 
-(defn auto-link [schemas qin link]
-  (-> link
-      (update-existing :link/fiddle apply-defaults)
-      (update :link/formula or-str ((:link/formula link-defaults) link))
-      (update :link/tx-fn or-str ((:link/tx-fn link-defaults) schemas qin link))))
+(defn auto-link+ [schemas qin link]
+  (try-either                                               ; link/txfn could throw, todo wrap tighter
+    (-> link
+        (update-existing :link/fiddle apply-defaults)
+        (update :link/formula or-str ((:link/formula link-defaults) link))
+        (update :link/tx-fn or-str ((:link/tx-fn link-defaults) schemas qin link)))))
 
 (defn apply-defaults "Fiddle-level defaults but not links.
   Links need the qfind, but qfind needs the fiddle defaults.
@@ -172,9 +176,12 @@
     (update fiddle :fiddle/markdown or-str ((:fiddle/markdown fiddle-defaults) fiddle))
     (update fiddle :fiddle/renderer or-str ((:fiddle/renderer fiddle-defaults) fiddle))))
 
-(defn apply-fiddle-links-defaults "Link defaults require a parsed qfind, so has to be done separately later."
+(defn apply-fiddle-links-defaults+ "Link defaults require a parsed qfind, so has to be done separately later."
   [fiddle schemas qparsed]
-  (update fiddle :fiddle/links (partial map (partial auto-link schemas (:qin qparsed)))))
+  (let [link+s (map #(auto-link+ schemas (:qin qparsed) %) (:fiddle/links fiddle))
+        links+ (binding [cats.context/*context* either/context] ; need an inferable ctx when nil links
+                 (cats/sequence link+s))]
+    (cats/fmap #(assoc fiddle :fiddle/links %) links+)))
 
 (def browser-pull                                           ; synchronized with http://hyperfiddle.hyperfiddle.net/:hyperfiddle!ide/
   [:db/id
