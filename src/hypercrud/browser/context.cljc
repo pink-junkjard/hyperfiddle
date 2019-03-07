@@ -534,7 +534,10 @@
   (as-> ctx ctx
     (assoc ctx :hypercrud.browser/result r-result)          ; can be nil if no qfind
     (assoc ctx                                              ; uses result
-      :hypercrud.browser/result-enclosure (r/apply contrib.datomic/result-enclosure
+      ; result-enclosure! can throw on schema lookup, but it doesn't need handled in theory,
+      ; because how would you have data without a working schema?
+      ; this may not prove true with the laziness of reactions
+      :hypercrud.browser/result-enclosure (r/apply contrib.datomic/result-enclosure!
                                                    [(runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :schemas])
                                                     (:hypercrud.browser/qfind ctx)
                                                     (:hypercrud.browser/result ctx)])
@@ -547,7 +550,7 @@
     ; Conceptually, it should be after qfind and before EAV.
     (index-result ctx)))                                    ; in row case, now indexed, but path is not aligned yet
 
-(defn stable-element-schema [schemas element]
+(defn stable-element-schema! [schemas element]
   (let [{{db :symbol} :source} element]
     (some->> db str (get schemas) deref)))
 
@@ -556,11 +559,14 @@
 ; 2. Setting result and result related things
 (defn element-head [ctx i]
   (let [r-element (r/fmap-> (:hypercrud.browser/qfind ctx) datascript.parser/find-elements (get i))]
-    (as-> ctx ctx
-      (assoc ctx :hypercrud.browser/element r-element)
-      (assoc ctx :hypercrud.browser/schema (r/apply stable-element-schema
-                                                    [(runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :schemas])
-                                                     (:hypercrud.browser/element ctx)])))))
+    (assoc ctx
+      :hypercrud.browser/element r-element
+      ; stable-element-schema! can throw on schema lookup
+      ; this may need to be caught depending on when how/when this function is used
+      ; or with reactions; we may need to unlazily throw ASAP
+      :hypercrud.browser/schema (r/apply stable-element-schema!
+                                         [(runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :schemas])
+                                          r-element]))))
 
 (defn element [ctx i]                                       ; [nil :seattle/neighborhoods 1234345]
   {:pre []

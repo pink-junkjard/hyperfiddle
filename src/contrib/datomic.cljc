@@ -295,7 +295,7 @@ Shape is normalized to match the shape of the Datomic result, e.g. [:user/a-ref]
                    (map? attr-spec) (keys attr-spec))))     ; Could verify :ref against schema here
        #_(remove (partial = :db/id))))
 
-(defn result-enclosure "
+(defn result-enclosure! "
   no data is not a well-formed result - probably invalid query, but it's less confusing to users
   if the UI still works in this case, since tweaking a formshape does not require the form be populated"
   [schemas ?qfind ?data]
