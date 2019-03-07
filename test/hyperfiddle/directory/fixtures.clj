@@ -1,4 +1,4 @@
-(ns hyperfiddle.integration-fixtures
+(ns hyperfiddle.directory.fixtures
   (:require
     [contrib.uri :refer [->URI]]
     [datomic.api :as d]

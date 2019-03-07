@@ -45,6 +45,8 @@
                  (hydrate-requests [io local-basis staged-branches requests]
                    (p/do* (hydrate-requests/hydrate-requests domain local-basis requests staged-branches ?subject))))]
     (alet [schemas (schema/hydrate-schemas aux-io domain local-basis branch staged-branches)
+           ; schemas can NEVER short the whole request
+           ; if the fiddle-db is broken (duplicate datoms), then attr-renderers and project WILL short it
            attr-renderers (project/hydrate-attr-renderers aux-io domain local-basis branch staged-branches)
            project (project/hydrate-project-record aux-io domain local-basis branch staged-branches)]
       (let [db-with-lookup (atom {})

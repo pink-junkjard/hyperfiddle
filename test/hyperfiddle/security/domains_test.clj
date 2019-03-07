@@ -2,9 +2,9 @@
   (:require
     [clojure.test :refer [join-fixtures deftest is use-fixtures testing]]
     [datomic.api :as d]
+    [hyperfiddle.directory.fixtures :as fixtures]           ; todo these tests can run without a directory service
     [hyperfiddle.directory.provisioning :as dp]
     [hyperfiddle.domain :as domain]
-    [hyperfiddle.integration-fixtures :as fixtures]
     [hyperfiddle.io.datomic.transact :as transact]
     [hyperfiddle.security :as security]
     [hyperfiddle.security.domains])
