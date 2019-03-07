@@ -151,9 +151,10 @@
                       (map (fn [k]
                              {:id k
                               ; Fragments mess with routing, they throw away the file segment on click
-                              :href (str #_"#" #_(-> (pr-str k)
-                                                       contrib.ednish/encode-ednish
-                                                       contrib.rfc3986/encode-rfc3986-pchar))})))
+                              :href "" #_(->> (pr-str k)
+                                         contrib.ednish/encode-ednish
+                                         contrib.rfc3986/encode-rfc3986-pchar
+                                         (str js/document.location.pathname "#"))})))
            :id-fn :id
            :label-fn (comp name :id)
            :model tab-state
