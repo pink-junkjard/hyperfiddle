@@ -1,9 +1,9 @@
 (ns hyperfiddle.directory.provisioning
   (:require
+    [clojure.java.io :as io]
     [datomic.api :as d]
-    [hyperfiddle.domain :as domain]
     [contrib.reader :as reader]
-    [contrib.template :refer [load-resource]]
+    [hyperfiddle.domain :as domain]
     [hyperfiddle.domains.multi-datomic :as multi-datomic]
     [hyperfiddle.io.datomic.transact :as transact]
     [hyperfiddle.security :as security]
@@ -30,7 +30,7 @@
     (throw (ex-info "Database already exists" {:uri uri}))))
 
 ; todo drive both this AND prod from the same source, otherwise they will diverge over time
-(def directory-schema (reader/read-edn-string! (load-resource "schema/directory.edn")))
+(def directory-schema (-> (io/resource "schema/directory.edn") slurp reader/read-edn-string!))
 
 (defn provision-domains-db! [uri owners]
   (assert (d/create-database (str uri)) (str "Domains db already exists: " uri))
