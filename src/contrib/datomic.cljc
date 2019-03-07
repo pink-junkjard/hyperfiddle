@@ -295,6 +295,10 @@ Shape is normalized to match the shape of the Datomic result, e.g. [:user/a-ref]
                    (map? attr-spec) (keys attr-spec))))     ; Could verify :ref against schema here
        #_(remove (partial = :db/id))))
 
+
+(defn pull-seq [pull]
+  (tree-seq coll? seq pull))
+
 (defn result-enclosure! "
   no data is not a well-formed result - probably invalid query, but it's less confusing to users
   if the UI still works in this case, since tweaking a formshape does not require the form be populated"
@@ -309,10 +313,14 @@ Shape is normalized to match the shape of the Datomic result, e.g. [:user/a-ref]
                             Variable nil
                             Aggregate nil
                             Pull (let [{{db :symbol} :source {pull-pattern :value} :pattern} element
-                                       coll (mapv #(get % i) ?data)
                                        dbname (str db)
-                                       schema (some-> (get schemas dbname) deref)]
-                                   (pull-enclosure schema (pull-shape schema pull-pattern) coll)))))
+                                       schema (some-> (get schemas dbname) deref)
+                                       shape (pull-shape schema pull-pattern)
+                                       no-splat (->> (pull-seq pull-pattern) (filter (partial = '*)) count (= 0))]
+                                   (if no-splat
+                                     shape                  ; fast path, and doesn't muck with pull order
+                                     (let [coll (mapv #(get % i) ?data)]
+                                       (pull-enclosure schema shape coll)))))))
            vec))))
 
 (defn spread-elements! [f schemas qfind data]

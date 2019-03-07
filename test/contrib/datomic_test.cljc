@@ -3,7 +3,8 @@
     [clojure.test :refer [deftest is testing]]
     [contrib.datomic :refer [pull-shape tree-derivative pull-enclosure pull-level
                              pull-traverse pull-union normalize-result
-                             validate-qfind-attrs!]]
+                             validate-qfind-attrs! result-enclosure!
+                             pull-seq]]
     [contrib.datomic2 :refer []]
     [contrib.ct]
     [contrib.try$]
@@ -25,18 +26,25 @@
                         *]}
                       :db/id])
 
+(def pull-soup '[:a/a
+                 [:a/comp-one :as "comp-one"]
+                 :a/comp-many
+                 *
+                 (limit :a/v 1)
+                 {(default :a/s {}) [* :b/a :b/b {:c/a [*]} {:c/b [:d/a]}]
+                  [:a/t :as "T"] [*]
+                  (limit :a/u 2) [*]
+                  :a/x [*]}
+                 (default :a/z "a/z default")])
+
+(deftest pull-seq-
+  (is (= (->> (pull-seq pull-soup)
+              (filter (partial = '*))
+              count)
+         6)))
+
 (deftest pull-shape-
-  (is (= (pull-shape @(fixtures.tank/schemas "$soup")
-                     '[:a/a
-                       [:a/comp-one :as "comp-one"]
-                       :a/comp-many
-                       *
-                       (limit :a/v 1)
-                       {(default :a/s {}) [* :b/a :b/b {:c/a [*]} {:c/b [:d/a]}]
-                        [:a/t :as "T"] [*]
-                        (limit :a/u 2) [*]
-                        :a/x [*]}
-                       (default :a/z "a/z default")])
+  (is (= (pull-shape @(fixtures.tank/schemas "$soup") pull-soup)
          [:a/a
           #:a{:comp-one [:db/id]}
           #:a{:comp-many [:db/id]}
@@ -320,6 +328,31 @@
   (is (= (normalize-result (:qfind (qparsed FindTuple)) (results FindTuple))
          [[{:db/id 136, :fiddle/ident :dustingetz/games} 13194139536334 true]]))
   )
+
+(def q-with-nesting-order '[:find
+                            (pull ?e [:db/id
+                                      {:community/neighborhood
+                                       [:neighborhood/name
+                                        {:neighborhood/district
+                                         [:district/name
+                                          {:district/region
+                                           [:db/ident]}]}]}
+                                      :community/name])
+                            .
+                            :where
+                            [?e :community/name ?name]
+                            [(< ?name "A")]])
+
+(deftest pull-enclosure1
+  (testing "Doesn't muck with order if no splat"
+    (is (= (result-enclosure! fixtures.tank/schema
+                              (:qfind (parse-query q-with-nesting-order))
+                              [])
+           [[:db/id
+             #:community{:neighborhood [:neighborhood/name
+                                        #:neighborhood{:district [:district/name #:district{:region [:db/ident]}]}]}
+             :community/name]]))))
+
 
 (deftest pull-strata-
   (def pull [:dustingetz.reg/email
