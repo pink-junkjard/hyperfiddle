@@ -30,7 +30,7 @@
     [:span (let [[fiddle-ident :as route] @(runtime/state (:peer ctx) [::runtime/partitions foundation/root-branch :route])]
              (cond
                (= fiddle-ident :hyperfiddle.ide/edit) (let [[_ [user-fiddle-ident]] route]
-                                                        (str "edit: "
+                                                        (str #_"edit: "
                                                              (if (and (coll? user-fiddle-ident) (= :fiddle/ident (first user-fiddle-ident)))
                                                                (let [user-fiddle-ident (second user-fiddle-ident)]
                                                                  (if (keyword? user-fiddle-ident)
@@ -42,12 +42,6 @@
 
    [:div.right-nav {:key "right-nav"}                       ; CAREFUL; this key prevents popover flickering
     [loading-spinner ctx]
-    [staging/popover-button (:peer ctx) (:branch ctx)
-     (->> (runtime/domain (:peer ctx))
-          ::ide-domain/user-dbname->ide
-          (map (fn [[user-dbname ide-dbname]] {:id ide-dbname :label user-dbname}))
-          (sort-by :label))
-     :show-auto-tx true]
     (either/branch
       (hyperfiddle.data/browse+ ctx :hyperfiddle.ide/topnav-new) ; iframe wrapper for naked qfind color tag
       (fn [e] [:span (ex-message e)])                       ; todo fix this shit error handling, why not throw?

@@ -127,8 +127,7 @@
                                  [contrib.ui/radio-with-label
                                   (assoc props
                                     :checked (= (:value props) @(r/cursor preview-state [:display-mode]))
-                                    :on-change #(swap! preview-state assoc :display-mode %))]))))
-               [staging/popover-button rt user-branch (staging/default-dbname-labels rt) :show-auto-tx false]])
+                                    :on-change #(swap! preview-state assoc :display-mode %))]))))])
             (if @(r/cursor preview-state [:initial-render])
               [loading-page]
               (let [code+ (project/eval-domain-code!+ @(runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :project :project/code]))]
@@ -145,7 +144,8 @@
                   ^{:key "user-iframe"}
                   [iframe-cmp ctx
                    {:route route
-                    :class (some-> @(r/cursor preview-state [:display-mode]) name (->> (str "display-mode-")))}]]]))]))
+                    :class (some-> @(r/cursor preview-state [:display-mode]) name (->> (str "display-mode-")))}]]]))
+            [staging/inline-stage rt user-branch]]))
 
        :component-did-mount
        (fn [this]

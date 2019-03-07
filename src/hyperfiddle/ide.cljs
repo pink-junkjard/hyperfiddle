@@ -2,6 +2,7 @@
   (:require
     [cats.monad.either :as either]
     [contrib.base-64-url-safe :as base64-url-safe]
+    [contrib.data :refer [unqualify]]
     [contrib.ednish :as ednish]
     [contrib.reader :as reader]
     [hyperfiddle.domain :as domain]
@@ -18,8 +19,9 @@
 
 (defn parse-ide-fragment [s-fragment]
   (let [fragment (some-> s-fragment ednish/decode-ednish reader/read-edn-string+ (either/branch (constantly nil) identity))]
-    (when (= "hf.src" (some-> fragment namespace))
-      fragment)))
+    (when (and (keyword? fragment)
+               (#{"hf.src" "hf"} (namespace fragment)))
+      (keyword "hf" (unqualify fragment)))))
 
 (defn stateless-login-url
   ([ctx] (stateless-login-url ctx (domain/url-encode (runtime/domain (:peer ctx)) @(runtime/state (:peer ctx) [::runtime/partitions foundation/root-branch :route]))))
