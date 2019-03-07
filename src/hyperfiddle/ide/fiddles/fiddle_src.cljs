@@ -149,7 +149,9 @@
           [anchor-tabs
            :tabs (->> [:hf/query :hf/links :hf/markdown :hf/view :hf/cljs :hf/css :hf/fiddle :hf/edn]
                       (map (fn [k]
-                             {:id k :href (str "#" (-> (pr-str k)
+                             {:id k
+                              ; Fragments mess with routing, they throw away the file segment on click
+                              :href (str #_"#" #_(-> (pr-str k)
                                                        contrib.ednish/encode-ednish
                                                        contrib.rfc3986/encode-rfc3986-pchar))})))
            :id-fn :id
