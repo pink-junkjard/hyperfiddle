@@ -380,18 +380,18 @@
   )
 
 (deftest pull-validation
-  (def qparsed (datascript.parser/parse-query '[:find
-                                                (pull ?e
-                                                      [:db/id
-                                                       :dustingetz.reg/email
-                                                       :yo
-                                                       :dustingetz.reg/age
-                                                       {:dustingetz.reg/gender [:db/ident :foo]
-                                                        :baz [:db/id :buzz]
-                                                        :dustingetz.reg/shirt-size [:db/ident]}])
-                                                (max ?tx)
-                                                :where [?e _ _ ?tx]]))
-  (is (= (validate-qfind-attrs! fixtures.tank/schemas (:qfind qparsed))
-         [:yo :foo :baz :buzz]))
+  (let [qparsed (datascript.parser/parse-query '[:find
+                                                 (pull ?e
+                                                       [:db/id
+                                                        :dustingetz.reg/email
+                                                        :yo
+                                                        :dustingetz.reg/age
+                                                        {:dustingetz.reg/gender [:db/ident :foo]
+                                                         :baz [:db/id :buzz]
+                                                         :dustingetz.reg/shirt-size [:db/ident]}])
+                                                 (max ?tx)
+                                                 :where [?e _ _ ?tx]])]
+    (is (= (validate-qfind-attrs! fixtures.tank/schemas (:qfind qparsed))
+           [:yo :foo :baz :buzz])))
 
   )
