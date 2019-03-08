@@ -104,9 +104,10 @@
     (is (= @(:hypercrud.browser/result-enclosure ctx)
            [[:dustingetz.reg/email
              :dustingetz.reg/name                           ; name is absent from second row
-             :db/id
-             #:dustingetz.reg{:gender [:db/ident],
-                              :shirt-size [:db/ident]}]])))
+             #:dustingetz.reg{:gender [:db/ident]}
+             #:dustingetz.reg{:shirt-size  [:db/ident]}
+             :db/id]]))
+    )
   )
 
 (def ctx (mock-fiddle! :dustingetz/gender-shirtsize))
@@ -143,9 +144,9 @@
              [a])
            '([:dustingetz.reg/email]
               [:dustingetz.reg/name]
-              [:db/id]
               [:dustingetz.reg/gender]
-              [:dustingetz.reg/shirt-size]))))
+              [:dustingetz.reg/shirt-size]
+              [:db/id]))))
 
   (testing "infer element when find-element dimension=1"
     (is (= (for [[_ ctx] (context/spread-result ctx)
@@ -153,8 +154,11 @@
                  ; skip elements
                  [a ctx] (context/spread-attributes ctx)]
              [a])
-           '([:dustingetz.reg/email] [:dustingetz.reg/name] [:db/id]
-              [:dustingetz.reg/gender] [:dustingetz.reg/shirt-size]))))
+           '([:dustingetz.reg/email]
+              [:dustingetz.reg/name]
+              [:dustingetz.reg/gender]
+              [:dustingetz.reg/shirt-size]
+              [:db/id]))))
 
   (testing "depth"
     (is (= (for [[_ ctx] (context/spread-result ctx)
