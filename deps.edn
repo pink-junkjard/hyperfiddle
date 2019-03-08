@@ -1,11 +1,11 @@
 {:paths ["src"]
  :deps {
-        com.auth0/java-jwt {:mvn/version "3.4.0"}
+        com.auth0/java-jwt {:mvn/version "3.7.0"}
         com.cognitect/transit-clj {:mvn/version "0.8.313"}
         com.hyperfiddle/hyperfiddle {:mvn/version "0.3.0-SNAPSHOT"}
         com.taoensso/timbre {:mvn/version "4.10.0"}
         funcool/promesa {:mvn/version "1.9.0"}
-        io.pedestal/pedestal.service {:mvn/version "0.5.4"}
+        io.pedestal/pedestal.service {:mvn/version "0.5.5"}
         org.apache.commons/commons-lang3 {:mvn/version "3.8.1"}
         org.clojure/clojure {:mvn/version "1.9.0"}
         }}
