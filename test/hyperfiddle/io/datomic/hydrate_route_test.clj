@@ -23,8 +23,8 @@
   (reify domain/Domain
     (fiddle-dbname [domain] "$src")
     (databases [domain]
-      {"$" {:database/uri (->URI "datomic:mem://hyperfiddle.io.datomic.hydrate-route-test$")}
-       "$src" {:database/uri (->URI "datomic:mem://hyperfiddle.io.datomic.hydrate-route-test$src")}})
+      {"$" {:database/uri (->URI (str "datomic:mem://" 'hyperfiddle.io.datomic.hydrate-route-test "$"))}
+       "$src" {:database/uri (->URI (str "datomic:mem://" 'hyperfiddle.io.datomic.hydrate-route-test "$src"))}})
     (system-fiddle? [domain fiddle-ident] false)))
 
 (use-fixtures :each
