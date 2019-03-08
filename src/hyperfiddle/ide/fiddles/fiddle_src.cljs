@@ -13,7 +13,7 @@
     [hyperfiddle.ide.domain :as ide-domain]
     [hyperfiddle.runtime :as runtime]
     [hyperfiddle.ui :refer [anchor field value hyper-control link table]]
-    [hyperfiddle.ui.staging :as staging]
+
     ))
 
 
@@ -160,8 +160,4 @@
            :model tab-state
            :on-change (r/partial reset! tab-state)]
           [(get tabs @tab-state) val ctx {}]]
-         [staging/inline-stage (:peer ctx) (:branch ctx)
-          (->> (runtime/domain (:peer ctx))
-               ::ide-domain/user-dbname->ide
-               (map (fn [[user-dbname ide-dbname]] {:id ide-dbname :label user-dbname}))
-               (sort-by :label))]]))))
+         #_[hyperfiddle.ide/ide-stage ctx]]))))

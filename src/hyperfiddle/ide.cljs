@@ -14,7 +14,8 @@
     [hyperfiddle.ide.fiddles.schema-editor]
     [hyperfiddle.ide.fiddles.schema-attribute]
     [hyperfiddle.ide.fiddles.topnav]
-    [hyperfiddle.ide.preview.view]))
+    [hyperfiddle.ide.preview.view]
+    [hyperfiddle.ui.staging]))
 
 
 (defn parse-ide-fragment [s-fragment]
@@ -33,3 +34,12 @@
           "&scope=" "openid email profile"
           "&state=" (base64-url-safe/encode state)
           "&redirect_uri=" (str "http://" fqdn "/auth0")))))
+
+(defn ide-stage [ctx]
+  ; Could also be inlined:
+  ; http://hyperfiddle.hyperfiddle.site/:hyperfiddle.ide!edit/(:fiddle!ident,:hyperfiddle.ide!edit)
+  [hyperfiddle.ui.staging/inline-stage (:peer ctx) (:branch ctx)
+   (->> (hyperfiddle.runtime/domain (:peer ctx))
+        :hyperfiddle.ide.domain/user-dbname->ide
+        (map (fn [[user-dbname ide-dbname]] {:id ide-dbname :label user-dbname}))
+        (sort-by :label))])
