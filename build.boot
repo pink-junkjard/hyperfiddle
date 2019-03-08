@@ -1,5 +1,5 @@
 (set-env!
-  :dependencies '[[adzerk/boot-cljs "2.1.4" :scope "test"]
+  :dependencies '[[adzerk/boot-cljs "2.1.5" :scope "test"]
                   [adzerk/boot-test "1.2.0" :scope "test"]
                   [adzerk/bootlaces "0.1.13" :scope "test"]
                   [crisptrutski/boot-cljs-test "0.3.4" :scope "test"]

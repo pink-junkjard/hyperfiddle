@@ -1,13 +1,13 @@
 {:paths ["src" "resources"]
  :deps {
         aysylu/loom {:mvn/version "1.0.2"}
-        bidi {:mvn/version "2.1.4"}
+        bidi {:mvn/version "2.1.5"}
         com.cognitect/transit-clj {:mvn/version "0.8.313"}
         com.cognitect/transit-cljs {:mvn/version "0.8.256"}
         ;com.datomic/datomic-free {:mvn/version "0.9.5656"} ; test-cljs chokes on this for some reason
         com.taoensso/timbre {:mvn/version "4.10.0"}
-        datascript {:mvn/version "0.16.6"}
-        funcool/cats {:mvn/version "2.2.0"}
+        datascript {:mvn/version "0.18.1"}
+        funcool/cats {:mvn/version "2.3.2"}
         funcool/cuerdas {:mvn/version "2.0.6"}
         funcool/promesa {:mvn/version "1.9.0"}
         io.nervous/kvlt {:mvn/version "0.1.4"}
