@@ -160,4 +160,5 @@
            :model tab-state
            :on-change (r/partial reset! tab-state)]
           [(get tabs @tab-state) val ctx {}]]
-         #_[hyperfiddle.ide/ide-stage ctx]]))))
+         (when (exists? js/hyperfiddle_show_ide_stage)
+           [hyperfiddle.ide/ide-stage ctx])]))))
