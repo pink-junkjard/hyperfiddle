@@ -9,12 +9,13 @@
     [contrib.reactive :as r]
     [contrib.hfrecom :refer [anchor-tabs]]
     [hypercrud.browser.context :as context]
+    [hyperfiddle.api :as hf]
     [hyperfiddle.fiddle :as fiddle]
     [hyperfiddle.ide.domain :as ide-domain]
     [hyperfiddle.runtime :as runtime]
     [hyperfiddle.ui :refer [anchor field value hyper-control link table]]
 
-    ))
+    [hyperfiddle.ui.controls :as controls]))
 
 
 (defn with-fiddle-default [props fiddle-val attr]
@@ -41,38 +42,40 @@
         [hyper-control (context/v ctx) ctx (with-fiddle-default {:class "pull-database"} val :fiddle/pull-database)]))]
    [:span.schema "schema: " (schema-links ctx-fiddle-type)]])
 
-(let [link-fiddle (fn [val ctx props]
-                    [:<>
-                     [hyper-control val ctx props]
-                     [link :hyperfiddle.ide/new-fiddle ctx]])
-      empty-renderer (fn [val ctx props]
-                       [:<>
-                        (link #{:fiddle/links :hf/remove} ctx)])
-      link-control (fn [val ctx props]
-                     (let [props (assoc props :default-value (get (::record ctx) (context/a ctx)))]
-                       (hyper-control val ctx props)))]
-  (defn links-renderer [val ctx props]
-    [:div
-     (link #{:fiddle/links :hyperfiddle.ide/new-link} ctx)
-     [table
-      (fn [ctx]
-        (let [ctx (assoc-if ctx ::record (if-not (:hypercrud.browser/head-sentinel ctx)
-                                           ; todo shouldn't this be a meta-ctx? all these arguments look extremely suspect
-                                           (-> (fiddle/auto-link+ @(runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :schemas])
-                                                                  (:qin @(:hypercrud.browser/qparsed ctx))
-                                                                 (context/data ctx))
-                                               ; just throw, unlikely we can ever get this far if there was an issue
-                                               (either/branch (fn [e] (throw e)) identity))))]
-          [(field [:link/path] ctx link-control)
-           (field [:link/fiddle] ctx link-fiddle {:options :hyperfiddle.ide/fiddle-options
-                                                  :option-label (r/comp pr-str :fiddle/ident)})
-           (field [:link/class] ctx link-control)
-           (field [:link/tx-fn] ctx link-control)
-           (when (exists? js/show_formulas)
-             (field [:link/formula] ctx link-control))
-           (field [:db/id] ctx)]))
-      ctx
-      props]]))
+(defmethod hf/render :link/fiddle [ctx props]
+  [:<>
+   [controls/ref
+    (context/data ctx) ctx
+    {:options :hyperfiddle.ide/fiddle-options
+     :option-label (r/comp pr-str :fiddle/ident)}]
+   [link :hyperfiddle.ide/new-fiddle ctx]])
+
+(defn link-control [val ctx props]
+  (let [props (assoc props :default-value (get (::record ctx) (context/a ctx)))]
+    (hyper-control val ctx props)))
+
+(defmethod hf/render :fiddle/links [ctx props]
+  ; Shouldn't be necessary! Use default renderer with multimethod extensions and modified ctx.
+  [:div
+   (link #{:fiddle/links :hyperfiddle.ide/new-link} ctx)
+   [table
+    (fn [ctx]
+      (let [ctx (assoc-if ctx ::record (if-not (:hypercrud.browser/head-sentinel ctx)
+                                         ; todo shouldn't this be a meta-ctx? all these arguments look extremely suspect
+                                         (-> (fiddle/auto-link+ @(runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :schemas])
+                                                                (:qin @(:hypercrud.browser/qparsed ctx))
+                                                                (context/data ctx))
+                                             ; just throw, unlikely we can ever get this far if there was an issue
+                                             (either/branch (fn [e] (throw e)) identity))))]
+        [(field [:link/path] ctx link-control)
+         (field [:link/fiddle] ctx)
+         (field [:link/class] ctx link-control)
+         (field [:link/tx-fn] ctx link-control)
+         (when (exists? js/show_formulas) (field [:link/formula] ctx))
+         (field [:db/id] ctx)]))
+    ctx props]])
+
+;(defmethod hf/render :fiddle/type [ctx props])
 
 (def tabs
   {:hf/query
@@ -88,32 +91,30 @@
 
    :hf/links
    (fn [val ctx props]
-     (value [:fiddle/links] ctx links-renderer props))
+     (value [:fiddle/links] ctx nil props))
 
    :hf/cljs
    (fn [val ctx props]
-     (value [:fiddle/cljs-ns] ctx hyper-control (with-fiddle-default props val :fiddle/cljs-ns)))
+     (value [:fiddle/cljs-ns] ctx nil (with-fiddle-default props val :fiddle/cljs-ns)))
 
    :hf/view
    (fn [val ctx props]
-     (value [:fiddle/renderer] ctx hyper-control (with-fiddle-default props val :fiddle/renderer)))
+     (value [:fiddle/renderer] ctx nil (with-fiddle-default props val :fiddle/renderer)))
 
    :hf/markdown
    (fn [val ctx props]
-     (let [props (with-fiddle-default props val :fiddle/markdown)]
-       (value [:fiddle/markdown] ctx hyper-control props)))
+     (value [:fiddle/markdown] ctx nil (with-fiddle-default props val :fiddle/markdown)))
 
    :hf/css
    (fn [val ctx props]
-     (let [props (with-fiddle-default props val :fiddle/css)]
-       (value [:fiddle/css] ctx hyper-control props)))
+     (value [:fiddle/css] ctx nil (with-fiddle-default props val :fiddle/css)))
 
    :hf/fiddle
    (fn [val ctx props]
      [:<>
-      (field [:fiddle/ident] ctx hyper-control)
-      (field [:fiddle/uuid] ctx hyper-control)
-      (field [:fiddle/hydrate-result-as-fiddle] ctx hyper-control)
+      (field [:fiddle/ident] ctx)
+      (field [:fiddle/uuid] ctx)
+      (field [:fiddle/hydrate-result-as-fiddle] ctx)
       [:div.p "Additional attributes"]
       (doall
         (for [[k _] (hypercrud.browser.context/spread-attributes ctx)
@@ -152,9 +153,9 @@
                              {:id k
                               ; Fragments mess with routing, they throw away the file segment on click
                               :href "" #_(->> (pr-str k)
-                                         contrib.ednish/encode-ednish
-                                         contrib.rfc3986/encode-rfc3986-pchar
-                                         (str js/document.location.pathname "#"))})))
+                                              contrib.ednish/encode-ednish
+                                              contrib.rfc3986/encode-rfc3986-pchar
+                                              (str js/document.location.pathname "#"))})))
            :id-fn :id
            :label-fn (comp name :id)
            :model tab-state
