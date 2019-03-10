@@ -232,10 +232,9 @@
   (defn ^:export edn-many [val ctx & [props]]
     [:div.hyperfiddle-input-group
      ; Links aren't handled, we need to isolate individual values for that
-     (let [[_ a _] @(:hypercrud.browser/eav ctx)
-           val (set (if (contrib.datomic/valueType? @(:hypercrud.browser/schema ctx) a :db.type/ref)
-                      (map (r/partial context/smart-entity-identifier ctx) val)
-                      val))
+     (let [val (if (context/attr? ctx :db.type/ref)
+                 (->> val (map (r/partial context/smart-entity-identifier ctx)) distinct)
+                 val)
            props (-> (assoc props
                        :value val
                        :mode "clojure"
