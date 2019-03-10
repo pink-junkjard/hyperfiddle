@@ -94,7 +94,8 @@
            {:style {:border-color (domain/database-color (runtime/domain rt) @dbname-ref)}}
            (let [props {:value @(runtime/state rt [::runtime/partitions branch :stage @dbname-ref])
                         :readOnly @(runtime/state rt [::runtime/auto-transact @dbname-ref])
-                        :on-change (r/partial on-change rt branch dbname-ref)}]
+                        :on-change (r/partial on-change rt branch dbname-ref)
+                        :typewriterScrolling true}]
              ^{:key (str @dbname-ref)}
              [debounced props validated-cmp parse-string to-string code])]
           children)))
