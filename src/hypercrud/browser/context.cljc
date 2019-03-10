@@ -420,16 +420,25 @@
   ([ctx a corcs]
    (some-> (:hypercrud.browser/schema ctx) deref (contrib.datomic/attr? a corcs))))
 
-(defn identity? [ctx a]                                     ; might not be same a when checking children
-  (let [[e _ _] (eav ctx)                                   ; Wrong in child case
-        attr (and a (attr ctx a))]
-    (cond
-      (= :db/id a) true
-      ; For first time entity creation only, use e.g. keyword editor to set the identity
-      (= :db/ident a) (not (underlying-tempid ctx e))
-      ; need to check v also. If there isn't a v (underlying), you are also allowed to set it.
-      (attr? ctx a :db.unique/identity) (not (underlying-tempid ctx e)) ; this logic in wrong place?
-      :else false)))
+(defn el [ctx]                                              ; "element" sets it, this gets it. Todo fix bad names
+  (some-> (:hypercrud.browser/element ctx) deref))
+
+(defn qfind [ctx]
+  (some-> (:hypercrud.browser/qfind ctx) deref))
+
+(defn identity?
+  ([ctx]
+   (identity? ctx (a ctx)))
+  ([ctx a]                                                  ; might not be same a when checking children
+   (let [[e _ _] (eav ctx)                                  ; Wrong in child case
+         attr (and a (attr ctx a))]
+     (cond
+       (= :db/id a) true
+       ; For first time entity creation only, use e.g. keyword editor to set the identity
+       (= :db/ident a) (not (underlying-tempid ctx e))
+       ; need to check v also. If there isn't a v (underlying), you are also allowed to set it.
+       (attr? ctx a :db.unique/identity) (not (underlying-tempid ctx e)) ; this logic in wrong place?
+       :else false))))
 
 (defn row "Row does not set E. E is the parent, not the child, and row is analogous to :ref :many child."
   [ctx & [k]]
@@ -675,6 +684,10 @@
     (contrib.datomic/pullshape-get-in
       @(:hypercrud.browser/pull-enclosure ctx)
       (:hypercrud.browser/pull-path ctx))))
+
+(defn children [ctx]
+  (contrib.datomic/pull-level
+    (pull-enclosure-here ctx)))
 
 (defn focus "Unwind or go deeper, to where we need to be, within same dimension.
     Throws if you focus a higher dimension.

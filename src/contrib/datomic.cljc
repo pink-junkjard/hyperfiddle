@@ -31,13 +31,13 @@
       nil                                                   ; This is an entity but you didn't pull any identity - error?
       )))
 
-(def -parser-types {FindRel ::find-rel
-                    FindColl ::find-coll
-                    FindTuple ::find-tuple
-                    FindScalar ::find-scalar
-                    Pull ::pull
-                    Variable ::variable
-                    Aggregate ::aggregate})
+(def -parser-types {FindRel :hf/find-rel
+                    FindColl :hf/find-coll
+                    FindTuple :hf/find-tuple
+                    FindScalar :hf/find-scalar
+                    Pull :hf/pull
+                    Variable :hf/variable
+                    Aggregate :hf/aggregate})
 
 (defn parser-type "element or qfind" [?p]                   ; not reactive
   (-parser-types (if ?p
@@ -354,9 +354,9 @@ Shape is normalized to match the shape of the Datomic result, e.g. [:user/a-ref]
 
 (defn validate-element [schema element _]
   (case (parser-type element)
-    ::variable []
-    ::aggregate []
-    ::pull (let [{{pull-pattern :value} :pattern} element]
+    :hf/variable []
+    :hf/aggregate []
+    :hf/pull (let [{{pull-pattern :value} :pattern} element]
              (->> (pull-traverse schema (pull-shape schema pull-pattern))
                   (remove empty?)
                   (map last)

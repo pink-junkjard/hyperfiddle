@@ -23,6 +23,7 @@
     [hypercrud.browser.routing :as routing]
     [hypercrud.ui.error :as ui-error]
     [hypercrud.ui.stale :as stale]
+    [hyperfiddle.api :as hf]
     [hyperfiddle.data :as data]
     [hyperfiddle.domain :as domain]
     [hyperfiddle.route :as route]
@@ -81,61 +82,75 @@
   (let [props (-> props (dissoc :class) (assoc :label-fn (r/constantly nil) #_[:div "nested pull iframes"]))]
     [field [] ctx entity-links-iframe props]))
 
-(defn control "this is a function, which returns component"
-  [val ctx & [props]]                                       ; returns Func[(ref, props, ctx) => DOM]
-  {:pre [ctx]}
-  (let [element @(:hypercrud.browser/element ctx)
-        [_ a _] (context/eav ctx)                           ; what about fiddle-level
-        value-type (some-> (:hypercrud.browser/schema ctx) deref (contrib.datomic/valueType a)) ; put protocol on ctx to remove guard
-        cardinality (some-> (:hypercrud.browser/schema ctx) deref (contrib.datomic/cardinality a))
-        element-type (contrib.datomic/parser-type element)]
-    (match* [(unqualify element-type) (unqualify value-type) (unqualify cardinality)]
-      [:variable _ _] controls/string
-      [:aggregate _ _] controls/string
-      [:pull :boolean :one] controls/boolean
-      [:pull :keyword :one] controls/keyword
-      [:pull :string :one] controls/string
-      [:pull :long :one] controls/long
-      [:pull :instant :one] controls/instant
-      [:pull :ref :one] controls/ref
-      [:pull :ref :many] controls/ref-many
-      [_ _ :one] controls/edn
-      [_ _ :many] controls/edn-many)))
+(defn render-ref [ctx props]
+  (let [children (context/children ctx)]
+    (cond
+      (and (seq children)
+           (= 1 (count children))
+           (every? (partial context/identity? ctx) children))
+      ; This if statement is needed to flatten test case: http://hyperfiddle.hyperfiddle.site/:databases/
+      ; Dude i have no idea why this if statement is necessary
+      (if (context/attr? ctx :db.cardinality/many)
+        [controls/ref-many (context/data ctx) ctx props]
+        (let [[a] children                                  ; pick one, best if there is only one
+              ctx (context/focus ctx [a])]
+          (hf/render ctx props)))
+
+      (seq children)
+      (let [ctx (dissoc ctx ::layout)]
+        [:div                                               ; wrapper div: https://github.com/hyperfiddle/hyperfiddle/issues/541
+         [pull (context/data ctx) ctx props]                               ; account for hf/new at parent ref e.g. :community/neighborhood
+         [iframe-field-default (context/data ctx) ctx props]])
+
+      (context/attr? ctx :db.cardinality/one)
+      [controls/ref (context/data ctx) ctx props]
+
+      (context/attr? ctx :db.cardinality/many)
+      [controls/ref-many (context/data ctx) ctx props])))
+
+(defmethod hf/render #{:db.type/ref :db.cardinality/one} [ctx props] (render-ref ctx props))
+(defmethod hf/render #{:db.type/ref :db.cardinality/many} [ctx props] (render-ref ctx props))
+
+(defmethod hf/render :hf/variable [ctx props]
+  [controls/string (context/data ctx) ctx props])
+
+(defmethod hf/render :hf/variable [ctx props]
+  [controls/string (context/data ctx) ctx props])
+
+(defmethod hf/render :db.unique/identity [ctx props]
+  [controls/identity-control (context/data ctx) ctx props])
+
+(defmethod hf/render #{:db.type/boolean :db.cardinality/one} [ctx props]
+  [controls/boolean (context/data ctx) ctx props])
+
+(defmethod hf/render #{:db.type/keyword :db.cardinality/one} [ctx props]
+  [controls/keyword (context/data ctx) ctx props])
+
+(defmethod hf/render #{:db.type/string :db.cardinality/one} [ctx props]
+  [controls/string (context/data ctx) ctx props])
+
+(defmethod hf/render #{:db.type/long :db.cardinality/one} [ctx props]
+  [controls/long (context/data ctx) ctx props])
+
+(defmethod hf/render #{:db.type/instant :db.cardinality/one} [ctx props]
+  [controls/instant (context/data ctx) ctx props])
+
+(defmethod hf/render :default [ctx props]
+  (cond
+    (context/attr? ctx :db.cardinality/one)
+    [controls/edn (context/data ctx) ctx props]
+
+    (context/attr? ctx :db.cardinality/many)
+    [controls/edn-many (context/data ctx) ctx props]
+
+    :else
+    [:pre (pr-str "render: no match for eav: " (context/eav ctx))]))
 
 (defn ^:export hyper-control "Val is for userland field renderers, our builtin controls use ctx and ignore val."
   [val ctx & [props]]
   {:post [%]}
-  (or (attr-renderer-control val ctx props)
-      (let [[_ a _] (context/eav ctx)
-            children (contrib.datomic/pull-level (hypercrud.browser.context/pull-enclosure-here ctx))]
-        (cond                                               ; Duplicate options test to avoid circular dependency in controls/ref
-          (:options props)
-          [(control val ctx props) val ctx props]
-
-          (context/identity? ctx a)
-          [controls/identity-control val ctx props]
-
-          ; flatten useless nesting
-          (and (seq children)
-               (= 1 (count children))
-               (every? (partial context/identity? ctx) children))
-          ; This if statement is needed to flatten test case: http://hyperfiddle.hyperfiddle.site/:databases/
-          ; Dude i have no idea why this if statement is necessary
-          (if (contrib.datomic/attr? @(:hypercrud.browser/schema ctx) a #{:db.type/ref :db.cardinality/many})
-            (let [W (control val ctx props)]
-              [W val ctx props])
-            (let [[a] children                              ; pick one, best if there is only one
-                  ctx (context/focus ctx [a])]
-              [controls/identity-control (context/data ctx) ctx props]))
-
-          (seq children)
-          (let [ctx (dissoc ctx ::layout)]
-            [:div                                           ; wrapper div: https://github.com/hyperfiddle/hyperfiddle/issues/541
-             [pull val ctx props]                           ; account for hf/new at parent ref e.g. :community/neighborhood
-             [iframe-field-default val ctx props]])
-
-          :else
-          [(control val ctx props) val ctx props]))))
+  (or (attr-renderer-control val ctx props)               ; compat
+      (hf/render ctx props)))
 
 (defn ^:export hyper-label [_ ctx & [props]]
   (let [?element (:hypercrud.browser/element ctx)
@@ -367,6 +382,15 @@ User renderers should not be exposed to the reaction."
                                 cs (columns ctx)]
                             (into [:tr {:key (str k)}] cs))))]))))
 
+(defn table2 [ctx as ])
+
+(comment
+  [table2 ctx
+   [:neighborhood/name
+    :neighborhood/district
+    :district/region]
+   {:sort nil}])
+
 (defn hint [val {:keys [hypercrud.browser/fiddle] :as ctx} props]
   (if (and (-> (:fiddle/type @fiddle) (= :entity))
            (empty? val))
@@ -433,8 +457,24 @@ nil. call site must wrap with a Reagent component"          ; is this just hyper
           [table table-column-product ctx props]
 
           #{FindTuple FindScalar}
-          [form table-column-product val ctx props])]))
-   [iframe-field-default val ctx props]])
+          [form table-column-product val ctx props])]))])
+
+;(defmethod render :hf/blank [ctx props]
+;  [iframe-field-default val ctx props])
+;
+;(defmethod render :hf/find-rel [ctx props]
+;  [table table-column-product ctx props])
+;
+;(defmethod render :hf/find-coll [ctx props]
+;  [table table-column-product ctx props])
+;
+;(defmethod render :hf/find-tuple [ctx props]
+;  [form table-column-product val ctx props])
+;
+;(defmethod render :hf/find-scalar [ctx props]
+;  [:<>
+;   (hint val ctx props)
+;   [form table-column-product val ctx props]])
 
 (def ^:dynamic markdown)                                    ; this should be hf-contrib or something
 
@@ -444,7 +484,8 @@ nil. call site must wrap with a Reagent component"          ; is this just hyper
   [:div (select-keys props [:class :on-click])
    [:h3 (pr-str @(:hypercrud.browser/route ctx))]
    ;(for [ctx (hyperfiddle.api/spread-fiddle ctx)])
-   [result val ctx {}]])
+   [result val ctx {}]
+   [iframe-field-default val ctx props]])
 
 (letfn [(render-edn [data]
           (let [edn-str (pprint-str data 160)]
