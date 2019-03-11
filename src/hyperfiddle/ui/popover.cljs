@@ -24,7 +24,7 @@
 
 (let [safe-eval-string #(try-either (eval/eval-expr-str! %))
       memoized-read-string (memoize safe-eval-string)]
-  (defn memoized-read-txfn+ [kw-str]                              ; TODO migrate type to keyword
+  (defn memoized-read-txfn+ [kw-str]                        ; TODO migrate type to keyword
     (if (blank->nil kw-str)
       (memoized-read-string kw-str)
       (either/right (constantly nil)))))
