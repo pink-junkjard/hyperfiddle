@@ -307,7 +307,7 @@
 (deftest context-d
   (testing "focus attribute isolated"
     (is (= (let [ctx (context/row ctx-genders [:dustingetz.reg/email "dustin@example.com"] #_17592186046196)
-                 ctx (context/element ctx 0)
+                 ctx (context/browse-element ctx 0)
                  ctx (context/attribute ctx :dustingetz.reg/gender)]
              (context/data ctx))
            #:db{:ident :dustingetz.gender/male})))
@@ -411,7 +411,7 @@
     #_(:hypercrud.browser/result (context/row ctx 17592186046196))
     ; not sure if element can be inferred in data. Row does not infer.
     (is (= (context/data (-> ctx-genders
-                             (context/element 0)
+                             (context/browse-element 0)
                              (context/row [:dustingetz.reg/email "dustin@example.com"] #_17592186046196)))
            {:db/id 17592186046196,
             :dustingetz.reg/email "dustin@example.com",
@@ -473,7 +473,7 @@
 (deftest refocus-a
   (testing "refocus to :ref :one from row"
     (is (= (let [ctx (context/row ctx-genders [:dustingetz.reg/email "dustin@example.com"] #_17592186046196)
-                 ctx (context/element ctx 0)
+                 ctx (context/browse-element ctx 0)
                  ctx (extract (context/refocus+ ctx :dustingetz.reg/gender))]
              (context/data ctx))
            #:db{:ident :dustingetz.gender/male}))
@@ -490,7 +490,7 @@
             #:db{:ident :dustingetz.gender/male}]))
 
     (is (= (let [ctx (context/row ctx-genders [:dustingetz.reg/email "dustin@example.com"] #_17592186046196)
-                 ctx (context/element ctx 0)
+                 ctx (context/browse-element ctx 0)
                  ctx (extract (context/refocus+ ctx :dustingetz.reg/gender))]
              @(:hypercrud.browser/eav ctx))
            (let [ctx (context/row ctx-genders [:dustingetz.reg/email "dustin@example.com"] #_17592186046196)
@@ -530,7 +530,7 @@
             #:db{:ident :dustingetz.gender/male}]))
 
     (is (= (let [ctx (context/row ctx-genders [:dustingetz.reg/email "dustin@example.com"] #_17592186046196)
-                 ctx (context/element ctx 0)
+                 ctx (context/browse-element ctx 0)
                  ctx (extract (context/refocus+ ctx :dustingetz.reg/gender))]
              @(:hypercrud.browser/eav ctx))
            [[:dustingetz.reg/email "dustin@example.com"] :dustingetz.reg/gender :dustingetz.gender/male]))
@@ -589,8 +589,8 @@
               :dustingetz.post/published-date #inst"2018-11-19T00:00:00.000-00:00"}))
 
       ; needs element to know schema, otherwise can't be done
-      (is (= (context/smart-entity-identifier (context/element ctx 0) e) [:dustingetz.post/slug :asdf]))
-      (is (= (context/smart-entity-identifier (context/element ctx 1) e) 17592186047000)) ; Untangle, this should probably assert
+      (is (= (context/smart-entity-identifier (context/browse-element ctx 0) e) [:dustingetz.post/slug :asdf]))
+      (is (= (context/smart-entity-identifier (context/browse-element ctx 1) e) 17592186047000)) ; Untangle, this should probably assert
       (is (= (context/smart-entity-identifier ctx e) 17592186047000)) ; Untangle, this should probably assert
       ))
   )
@@ -599,7 +599,7 @@
 (def ctx-blog (mock-fiddle! :dustingetz.tutorial/blog))
 (def ctx-blog-slug (-> (mock-fiddle! :dustingetz.tutorial/blog)
                        (context/row [[:dustingetz.post/slug :automatic-CRUD-links]])
-                       (context/element 0)
+                       (context/browse-element 0)
                        (context/attribute :dustingetz.post/slug)))
 
 (deftest formulas
@@ -701,13 +701,13 @@
     (is (let [ctx (mock-fiddle! :dustingetz/slack-storm)
               ctx (context/row ctx [[:dustingetz.post/slug :asdf] 13194139535895])]
           (is (= (context/eav ctx) [nil :dustingetz/slack-storm nil])) ; could potentially set v to the rowkey here
-          (is (= (context/data (context/element ctx 0))
+          (is (= (context/data (context/browse-element ctx 0))
                  {:db/id 17592186047000,
                   :dustingetz.post/title "is js/console.log syntax future proof?",
                   :dustingetz.post/slug :asdf,
                   :dustingetz.storm/channel "#clojurescript",
                   :dustingetz.post/published-date #inst "2018-11-19T00:00:00.000-00:00"}))
-          (is (= (context/data (context/element ctx 1)) 13194139535895)))))
+          (is (= (context/data (context/browse-element ctx 1)) 13194139535895)))))
 
   (testing "element level does set value, it is not ambigous due to set semantics in FindRel"
     (is (let [ctx (mock-fiddle! :dustingetz/slack-storm)
@@ -718,13 +718,13 @@
           ; Can't set v to 5895 because A is ambiguous.
           ; NO, wrong.
           ; Arguably this is NOT ambiguous due to set semantics. The same entity can't be pulled twice in a find relation.
-          (is (= (context/eav (context/element ctx 0)) [nil :dustingetz/slack-storm [:dustingetz.post/slug :asdf]]))
-          (is (= (context/eav (context/element ctx 1)) [nil :dustingetz/slack-storm 13194139535895])))))
+          (is (= (context/eav (context/browse-element ctx 0)) [nil :dustingetz/slack-storm [:dustingetz.post/slug :asdf]]))
+          (is (= (context/eav (context/browse-element ctx 1)) [nil :dustingetz/slack-storm 13194139535895])))))
 
   (testing "key all the way and then attributes"
     (let [ctx (mock-fiddle! :dustingetz/slack-storm)
           ctx (context/row ctx [[:dustingetz.post/slug :asdf] 13194139535895])
-          ctx (context/element ctx 0)]
+          ctx (context/browse-element ctx 0)]
       (is (= (context/eav ctx) [nil :dustingetz/slack-storm [:dustingetz.post/slug :asdf]]))
       (is (= (context/data ctx)
              {:db/id 17592186047000,
@@ -821,7 +821,7 @@
 
 (def ctx-blog1 (-> (mock-fiddle! :dustingetz.tutorial/blog)
                    (context/row [[:dustingetz.post/slug :automatic-CRUD-links]])
-                   (context/element 0)))
+                   (context/browse-element 0)))
 
 (deftest identity-focusing
   (testing "identity focusing"
@@ -887,7 +887,7 @@
     (is (= (context/eav ctx-blog1)
            [nil :dustingetz.tutorial/blog [:dustingetz.post/slug :automatic-CRUD-links]]))
 
-    #_(let [#_#_ctx (context/element ctx 0)]
+    #_(let [#_#_ctx (context/browse-element ctx 0)]
         (is (= (context/eav ctx) [nil :dustingetz/slack-storm [:dustingetz.post/slug :asdf]]))
         (is (= (context/data ctx)
                {:db/id 17592186047000,
@@ -911,7 +911,7 @@
 
 (def ctx-blog2 (-> (mock-fiddle! :dustingetz.tutorial/blog)
                    (context/row [[:dustingetz.post/slug :automatic-CRUD-links]])
-                   (context/element 0)
+                   (context/browse-element 0)
                    (context/attribute :dustingetz.post/slug)))
 
 (def ctx-seattle1 (-> (mock-fiddle! :dustingetz.seattle/communities)
@@ -949,7 +949,7 @@
 #_(testing "refocus link from tupled qfind, identity focused from element ctx"
     (def ctx (-> (mock-fiddle! :dustingetz.tutorial/blog)
                  (context/row [[:dustingetz.post/slug :automatic-CRUD-links]])
-                 #_(context/element 0)
+                 #_(context/browse-element 0)
                  (context/attribute :dustingetz.post/slug)))
     (def r-link (->> (hyperfiddle.data/select-here+ ctx :hf/new) (unwrap (constantly nil))))
     (testing "at fiddle level, link :hf/new eav does not have a parent"
@@ -961,7 +961,7 @@
 
 (def ctx-blog3 (-> (mock-fiddle! :dustingetz.tutorial/blog) ; FindRel-1
                    (context/row [[:dustingetz.post/slug :automatic-CRUD-links]])
-                   #_(context/element 0)                    ; Specifically no element
+                   #_(context/browse-element 0)                    ; Specifically no element
                    ))
 
 (testing "refocus link from tupled qfind, identity focused from result ctx"
@@ -998,11 +998,11 @@
            :db.sys/partiallyIndexed))
 
     (is (= (let [ctx (context/row ctx-schema :db.sys/partiallyIndexed)
-                 ctx (context/element ctx 0)]
+                 ctx (context/browse-element ctx 0)]
              (context/eav ctx))
            [nil :seattle/neighborhoods :db.sys/partiallyIndexed]))
     (is (= (let [ctx (context/row ctx-schema :db.sys/partiallyIndexed)
-                 ctx (context/element ctx 0)]
+                 ctx (context/browse-element ctx 0)]
              (context/data ctx))
            #:db{:ident :db.sys/partiallyIndexed}))
 

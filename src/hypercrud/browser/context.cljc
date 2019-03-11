@@ -420,8 +420,11 @@
   ([ctx a corcs]
    (some-> (:hypercrud.browser/schema ctx) deref (contrib.datomic/attr? a corcs))))
 
-(defn el [ctx]                                              ; "element" sets it, this gets it. Todo fix bad names
-  (some-> (:hypercrud.browser/element ctx) deref))
+(defn element [ctx]
+  (some-> ctx -infer-implicit-element :hypercrud.browser/element deref))
+
+(defn element-type [ctx]
+  (some-> ctx element contrib.datomic/parser-type))
 
 (defn qfind [ctx]
   (some-> (:hypercrud.browser/qfind ctx) deref))
@@ -537,6 +540,9 @@
         ; push this down, it should be nil now
         :hypercrud.browser/pull-path []))))
 
+(defn fiddle [ctx]
+  (-> ctx :hypercrud.browser/fiddle deref :fiddle/ident))
+
 (defn result [ctx r-result]
   {:pre [r-result
          (:hypercrud.browser/fiddle ctx)]}
@@ -577,7 +583,7 @@
                                          [(runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :schemas])
                                           r-element]))))
 
-(defn element [ctx i]                                       ; [nil :seattle/neighborhoods 1234345]
+(defn browse-element [ctx i]                                       ; [nil :seattle/neighborhoods 1234345]
   {:pre []
    :post [(s/assert r/reactive? (:hypercrud.browser/qfind %)) ; qfind set in base if it is available
           (s/assert r/reactive? (:hypercrud.browser/schema %))]}
@@ -612,7 +618,7 @@
       ctx
 
       (#{FindColl FindScalar} (if ?qfind (type ?qfind)))
-      (element ctx 0)
+      (browse-element ctx 0)
 
       ; Can't infer this because the result index is not the right shape
       ;(and (#{FindRel FindTuple} (type qfind))
@@ -699,7 +705,7 @@
   ; Is this legacy compat?
   (reduce (fn [ctx p]
             (cond
-              (int? p) (element ctx p)
+              (int? p) (browse-element ctx p)
               ;(#{:db/id #_:db/ident} p) ctx                 ; v is already properly set
               ; db/id is renderable, address it. The controls will unwind to parent ctx. Tangled
               (keyword? p) (attribute ctx p)
@@ -726,7 +732,7 @@
   (let [r-qfind (:hypercrud.browser/qfind ctx)]
     ; No unsequence here? What if find elements change? Can we use something other than (range) as keyfn?
     (for [i (range (count (datascript.parser/find-elements @r-qfind)))]
-      [i ((or f element) ctx i)])))
+      [i ((or f browse-element) ctx i)])))
 
 (defn ^:export spread-attributes "not recursive, just one entity level"
   [ctx]
@@ -853,7 +859,7 @@
     (let [qfind @(:hypercrud.browser/qfind ctx)]
       (and (#{FindRel FindTuple} (type qfind))
            (= 1 (count (datascript.parser/find-elements qfind)))))
-    (refocus-in-element+ (element ctx 0) a')
+    (refocus-in-element+ (browse-element ctx 0) a')
 
     :else
     ; This never happens in autogrids, only in custom views.
@@ -861,7 +867,7 @@
     ; If the custom view is a FindRel-N, then this needs to tuple all the way up.
     ; It is probably not what they want. They should make an element ctx and place
     ; each link individually. This hack probably never needs to get fixed.
-    (refocus-in-element+ (element ctx 0) a')))
+    (refocus-in-element+ (browse-element ctx 0) a')))
 
 (defn id->tempid+ [route ctx]
   (let [invert-id (fn [dbname id]

@@ -21,17 +21,28 @@
 (declare render-dispatch)
 
 (defmulti txfn (fn [user-txfn e a v ctx] user-txfn))
+
+; Dispatch is a set
 (defmulti render (fn [ctx props]
                    (render-dispatch ctx props)))
 
+(defn extract-set [ctx & fs]
+  (->> ctx ((apply juxt fs)) set))
+
 (defn render-dispatch [ctx props]
+  ; Is there a method which is a subset of what we've got?
   (or
-    (if (contains? (methods render) (context/a ctx)) (context/a ctx)) ; user override
-    (if (context/identity? ctx) :db.unique/identity)
+    (let [d (extract-set ctx context/fiddle context/a)]
+      (if (contains? (methods render) d)
+        d))
+    (let [d (extract-set ctx context/a)]
+      (if (contains? (methods render) d)
+        d))
+    (if (context/identity? ctx) #{:db.unique/identity})
     (if-let [attr (context/attr ctx)]
-      (set ((juxt :db/valueType :db/cardinality) attr)))
-    ;(if (context/a ctx) :hf/attribute)
-    ;(contrib.datomic/parser-type (context/el ctx))          ; :hf/variable, :hf/aggregate, :hf/pull
+      (extract-set attr :db/valueType :db/cardinality))
+    (if (context/element ctx)
+      (extract-set ctx context/element-type))               ; :hf/variable, :hf/aggregate, :hf/pull
     ;(contrib.datomic/parser-type (context/qfind ctx))       ; :hf/find-rel :hf/find-scalar
     ;:hf/blank
     ))

@@ -74,7 +74,8 @@
 ; :db/id is currently addressable (e.g. user wants to render that column)
 (def dbid {:db/ident :db/id
            :db/cardinality :db.cardinality/one
-           :db/valueType :db.type/long})
+           :db/valueType :db.type/long
+           #_#_:db/unique :db.unique/identity})
 
 (deftype Schema [schema-pulledtree schema-by-attr]
   #?@(:clj

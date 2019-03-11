@@ -111,13 +111,13 @@
 (defmethod hf/render #{:db.type/ref :db.cardinality/one} [ctx props] (render-ref ctx props))
 (defmethod hf/render #{:db.type/ref :db.cardinality/many} [ctx props] (render-ref ctx props))
 
-(defmethod hf/render :hf/variable [ctx props]
+(defmethod hf/render #{:hf/variable} [ctx props]
   [controls/string (context/data ctx) ctx props])
 
-(defmethod hf/render :hf/variable [ctx props]
+(defmethod hf/render #{:hf/aggregate} [ctx props]
   [controls/string (context/data ctx) ctx props])
 
-(defmethod hf/render :db.unique/identity [ctx props]
+(defmethod hf/render #{:db.unique/identity} [ctx props]
   [controls/identity-control (context/data ctx) ctx props])
 
 (defmethod hf/render #{:db.type/boolean :db.cardinality/one} [ctx props]
