@@ -163,10 +163,11 @@
 (defn stage-popover [rt branch tx-groups & {:keys [route on-start]}] ; todo rewrite in terms of with-groups
   {:pre [(domain/valid-dbnames? (runtime/domain rt) (keys tx-groups))]}
   (fn [dispatch! get-state]
-    (let [with-actions (mapv (fn [[dbname tx]]
-                               (let [tx (update-to-tempids! get-state branch dbname tx)]
-                                 [:with branch dbname tx]))
-                             tx-groups)
+    (let [with-actions (->> tx-groups
+                            (remove (fn [[dbname tx]] (empty? tx)))
+                            (mapv (fn [[dbname tx]]
+                                    (let [tx (update-to-tempids! get-state branch dbname tx)]
+                                      [:with branch dbname tx]))))
           parent-branch (branch/parent-branch-id branch)]
       ; should the tx fn not be withd? if the transact! fails, do we want to run it again?
       (dispatch! (apply batch (concat with-actions on-start)))
