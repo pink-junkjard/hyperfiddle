@@ -102,7 +102,7 @@
       (let [ctx (dissoc ctx ::layout)]
         [:div                                               ; wrapper div: https://github.com/hyperfiddle/hyperfiddle/issues/541
          [pull (context/data ctx) ctx props]                               ; account for hf/new at parent ref e.g. :community/neighborhood
-         [iframe-field-default (context/data ctx) ctx props]])
+         #_[iframe-field-default (context/data ctx) ctx props]])
 
       (context/attr? ctx :db.cardinality/one)
       [controls/ref (context/data ctx) ctx props]
@@ -478,7 +478,7 @@ nil. call site must wrap with a Reagent component"          ; is this just hyper
    [:h3 (pr-str @(:hypercrud.browser/route ctx))]
    ;(for [ctx (hyperfiddle.api/spread-fiddle ctx)])
    [result val ctx {}]
-   [iframe-field-default val ctx props]])
+   #_[iframe-field-default val ctx props]])
 
 (letfn [(render-edn [data]
           (let [edn-str (pprint-str data 160)]
