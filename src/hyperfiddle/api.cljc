@@ -38,6 +38,9 @@
     (let [d (extract-set ctx context/a)]
       (if (contains? (methods render) d)
         d))
+    ; Legacy compat - options by fiddle/renderer explicit props route to select via ref renderer
+    (if (:options props)
+      (extract-set (context/attr ctx) :db/valueType :db/cardinality))
     (if (context/identity? ctx) #{:db.unique/identity})
     (if-let [attr (context/attr ctx)]
       (extract-set attr :db/valueType :db/cardinality))
