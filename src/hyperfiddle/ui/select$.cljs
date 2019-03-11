@@ -123,14 +123,16 @@
 
 (defn select "This arity should take a selector string (class) instead of Right[Reaction[Link]],
   blocked on removing path backdoor"
-  [val ctx props]
-  {:pre [ctx]}
-  (assert (:options props) "select: :options prop is required")
-  (-> (mlet [options-ref (data/select+ ctx (keyword (:options props)))] ; coerce somewhere else tho
-        (return
-          ; http://hyperfiddle.hyperfiddle.net/:database!options-list/
-          ; http://hyperfiddle.hyperfiddle.site/:hyperfiddle.ide!domain/~entity('$domains',(:domain!ident,'hyperfiddle'))
-          (let [props (assoc props :user-renderer (r/partial options-value-bridge select-html ctx))
-                ctx (assoc ctx :hypercrud.ui/display-mode (r/track identity :hypercrud.browser.browser-ui/user))]
-            [hyperfiddle.ui/ui-from-link options-ref ctx props])))
-      (either/branch select-error-cmp identity)))
+  ([ctx props]
+   (select nil ctx props))
+  ([_ ctx props]
+   {:pre [ctx]}
+   (assert (:options props) "select: :options prop is required")
+   (-> (mlet [options-ref (data/select+ ctx (keyword (:options props)))] ; coerce somewhere else tho
+         (return
+           ; http://hyperfiddle.hyperfiddle.net/:database!options-list/
+           ; http://hyperfiddle.hyperfiddle.site/:hyperfiddle.ide!domain/~entity('$domains',(:domain!ident,'hyperfiddle'))
+           (let [props (assoc props :user-renderer (r/partial options-value-bridge select-html ctx))
+                 #_#_ctx (assoc ctx :hypercrud.ui/display-mode (r/pure :hypercrud.browser.browser-ui/user))]
+             [hyperfiddle.ui/ui-from-link options-ref ctx props])))
+       (either/branch select-error-cmp identity))))

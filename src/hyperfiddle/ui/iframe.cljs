@@ -56,7 +56,13 @@
                                             ; If userland crashes (fiddle/renderer OR cljs-ns), reactions don't take hold, we need to reset here.
                                             ; Cheaper to pass this as a prop than to hash everything
                                             [fiddle-renderer-cmp value ctx view-props @(:hypercrud.browser/fiddle ctx)])
-       :hypercrud.browser.browser-ui/xray [hyperfiddle.ui/fiddle-xray value ctx view-props]
+
+       ; TODO cljs-ns is valid in xray mode (for defmethod)
+       :hypercrud.browser.browser-ui/xray (if-let [user-renderer (:user-renderer props)]
+                                            ; Select user-renderer is valid in xray mode now
+                                            [user-renderer value ctx view-props]
+                                            [hyperfiddle.ui/fiddle-xray value ctx view-props])
+
        :hypercrud.browser.browser-ui/api [hyperfiddle.ui/fiddle-api value ctx view-props])]))
 
 (defn- fiddle-css-renderer [s] [:style {:dangerouslySetInnerHTML {:__html @s}}])
