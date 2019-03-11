@@ -42,7 +42,7 @@
         [hyper-control (context/v ctx) ctx (with-fiddle-default {:class "pull-database"} val :fiddle/pull-database)]))]
    [:span.schema "schema: " (schema-links ctx-fiddle-type)]])
 
-(defmethod hf/render :link/fiddle [ctx props]
+(defmethod hf/render #{:hyperfiddle/ide :link/fiddle} [ctx props]
   [:<>
    [controls/ref
     (context/data ctx) ctx
@@ -54,7 +54,7 @@
   (let [props (assoc props :default-value (get (::record ctx) (context/a ctx)))]
     (hyper-control val ctx props)))
 
-(defmethod hf/render :fiddle/links [ctx props]
+(defmethod hf/render #{:hyperfiddle/ide :fiddle/links} [ctx props]
   ; Shouldn't be necessary! Use default renderer with multimethod extensions and modified ctx.
   [:div
    (link #{:fiddle/links :hyperfiddle.ide/new-link} ctx)
@@ -143,7 +143,7 @@
 (defn ^:export fiddle-src-renderer [_ ctx props]
   (let [tab-state (r/atom (if (contains? tabs (:initial-tab props)) (:initial-tab props) :hf/query))]
     (fn [_ ctx props]
-      (let [ctx (hypercrud.browser.context/element ctx 0)
+      (let [ctx (hypercrud.browser.context/browse-element ctx 0)
             val (hypercrud.browser.context/data ctx)]
         [:<>
          [:div.container-fluid (into {:key (str (:fiddle/ident val))} (select-keys props [:class]))
