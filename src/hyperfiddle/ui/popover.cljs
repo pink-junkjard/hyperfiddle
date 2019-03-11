@@ -42,12 +42,7 @@
                 (if (p/promise? result)
                   result
                   (p/resolved result)))
-              (catch js/Error e (p/rejected e)))))
-        (p/catch (fn [e]
-                   ; todo something better with these exceptions (could be user error)
-                   (timbre/warn e)
-                   (js/alert (pprint-str e))
-                   (throw e))))))
+              (catch js/Error e (p/rejected e))))))))
 
 (defn stage! [link-ref popover-id child-branch ctx r-popover-data props]
   (-> (run-txfn! link-ref ctx)
@@ -57,7 +52,12 @@
                   (->> (actions/stage-popover (:peer ctx) child-branch tx-groups
                                               :route (when-let [f (::redirect props)] (f @r-popover-data))
                                               :on-start [(actions/close-popover (:branch ctx) popover-id)])
-                       (runtime/dispatch! (:peer ctx))))))))
+                       (runtime/dispatch! (:peer ctx))))))
+      (p/catch (fn [e]
+                 ; todo something better with these exceptions (could be user error)
+                 (timbre/error e)
+                 (js/alert (cond-> (ex-message e)
+                             (ex-data e) (str "\n" (pprint-str (ex-data e)))))))))
 
 (defn close! [popover-id ctx]
   (runtime/dispatch! (:peer ctx) (actions/close-popover (:branch ctx) popover-id)))
@@ -109,7 +109,12 @@
         (fn [tx]
           (->> (actions/with-groups (:peer ctx) (:branch ctx) {(hypercrud.browser.context/dbname ctx) tx}
                                     :route (when-let [f (::redirect props)] (f nil)))
-               (runtime/dispatch! (:peer ctx)))))))
+               (runtime/dispatch! (:peer ctx)))))
+      (p/catch (fn [e]
+                 ; todo something better with these exceptions (could be user error)
+                 (timbre/error e)
+                 (js/alert (cond-> (ex-message e)
+                             (ex-data e) (str "\n" (pprint-str (ex-data e)))))))))
 
 (defn effect-cmp [link-ref ctx props label]
   (let [props (-> props
