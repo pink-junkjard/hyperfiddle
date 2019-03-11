@@ -384,15 +384,6 @@ User renderers should not be exposed to the reaction."
                                 cs (columns ctx)]
                             (into [:tr {:key (str k)}] cs))))]))))
 
-(defn table2 [ctx as ])
-
-(comment
-  [table2 ctx
-   [:neighborhood/name
-    :neighborhood/district
-    :district/region]
-   {:sort nil}])
-
 (defn hint [val {:keys [hypercrud.browser/fiddle] :as ctx} props]
   (if (and (-> (:fiddle/type @fiddle) (= :entity))
            (empty? val))
