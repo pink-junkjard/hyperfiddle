@@ -48,7 +48,7 @@
     (context/data ctx) ctx
     {:options :hyperfiddle.ide/fiddle-options
      :option-label (r/comp pr-str :fiddle/ident)}]
-   [link :hyperfiddle.ide/new-fiddle ctx]])
+   [link :hyperfiddle.ide/new-fiddle ctx "new"]])
 
 (defn link-control [val ctx props]
   (let [props (assoc props :default-value (get (::record ctx) (context/a ctx)))]
@@ -56,24 +56,22 @@
 
 (defmethod hf/render #{:hyperfiddle/ide :fiddle/links} [ctx props]
   ; Shouldn't be necessary! Use default renderer with multimethod extensions and modified ctx.
-  [:div
-   (link #{:fiddle/links :hyperfiddle.ide/new-link} ctx)
-   [table
-    (fn [ctx]
-      (let [ctx (assoc-if ctx ::record (if-not (:hypercrud.browser/head-sentinel ctx)
-                                         ; todo shouldn't this be a meta-ctx? all these arguments look extremely suspect
-                                         (-> (fiddle/auto-link+ @(runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :schemas])
-                                                                (:qin @(:hypercrud.browser/qparsed ctx))
-                                                                (context/data ctx))
-                                             ; just throw, unlikely we can ever get this far if there was an issue
-                                             (either/branch (fn [e] (throw e)) identity))))]
-        [(field [:link/path] ctx link-control)
-         (field [:link/fiddle] ctx)
-         (field [:link/class] ctx link-control)
-         (field [:link/tx-fn] ctx link-control)
-         (when (exists? js/show_formulas) (field [:link/formula] ctx))
-         (field [:db/id] ctx)]))
-    ctx props]])
+  [table
+   (fn [ctx]
+     (let [ctx (assoc-if ctx ::record (if-not (:hypercrud.browser/head-sentinel ctx)
+                                        ; todo shouldn't this be a meta-ctx? all these arguments look extremely suspect
+                                        (-> (fiddle/auto-link+ @(runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :schemas])
+                                                               (:qin @(:hypercrud.browser/qparsed ctx))
+                                                               (context/data ctx))
+                                            ; just throw, unlikely we can ever get this far if there was an issue
+                                            (either/branch (fn [e] (throw e)) identity))))]
+       [(field [:link/path] ctx link-control)
+        (field [:link/fiddle] ctx)
+        (field [:link/class] ctx link-control)
+        (field [:link/tx-fn] ctx link-control)
+        (when (exists? js/show_formulas) (field [:link/formula] ctx))
+        (field [:db/id] ctx)]))
+   ctx props])
 
 ;(defmethod hf/render :fiddle/type [ctx props])
 
