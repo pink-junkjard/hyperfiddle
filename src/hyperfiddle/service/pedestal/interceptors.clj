@@ -65,7 +65,7 @@
    "application/transit+json"
    (fn [body]
      (fn [^OutputStream output-stream]
-       (transit/write (transit/writer output-stream :json-verbose
+       (transit/write (transit/writer output-stream :json
                                       {:handlers hc-t/write-handlers}) body)
        (.flush output-stream)))
 
