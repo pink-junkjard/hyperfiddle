@@ -17,7 +17,7 @@
   ; todo there are a subset of requests that are cacheable
   ; todo retry-after on 503
   {:status (or (:hyperfiddle.io/http-status-code (ex-data e)) 500)
-   :body (->Err #?(:cljs (ex-message e) :clj (.getMessage e)))})
+   :body (->Err (ex-message e))})
 
 (defn global-basis-handler [->IO & {:keys [domain user-id jwt]}]
   (-> (->IO domain jwt user-id)
