@@ -210,7 +210,12 @@ User renderers should not be exposed to the reaction."
 
 (letfn [(prompt [link-ref ?label]
           (or ?label
-              (->> (set @(r/fmap :link/class link-ref)) (map name) (interpose " ") (apply str) blank->nil)
+              (->> (set @(r/fmap :link/class link-ref))
+                   (remove #(= "hf" (namespace %)))         ; "iframe" is not a good name
+                   (map name)
+                   (interpose " ")
+                   (apply str)
+                   blank->nil)
               (some-> @link-ref :link/fiddle :fiddle/ident name)
               (some-> @link-ref :link/tx-fn name)))
         (link-tooltip [{:link/keys [class path]} ?route ctx] ; Show how it routed. The rest is obvious from data mode
