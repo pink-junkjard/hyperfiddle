@@ -28,6 +28,7 @@
 
 (declare hf-new)
 (declare hf-remove)
+(declare hf-iframe)
 
 (defn identity-label [_ {:keys [:hypercrud.browser/element] :as ctx} & [props]]
   {:pre [element (:hypercrud.browser/schema ctx) (not (context/qfind-level? ctx))]}
@@ -79,6 +80,12 @@
       ^{:key k}
       [hyperfiddle.ui/ui-from-link r-link ctx])))
 
+(defn hf-iframe [_ ctx]
+  (doall
+    (for [[k r-link] (hyperfiddle.data/spread-links-here ctx :hf/iframe)]
+      ^{:key k}
+      [hyperfiddle.ui/ui-from-link r-link ctx {:iframe-as-popover true}])))
+
 (defn hf-remove [val ctx]
   ; (if-not (:hypercrud.browser/head-sentinel ctx))
   (if val
@@ -106,7 +113,7 @@
         (interpose "·")
         doall)])
 
-(defn entity-links [val ctx &  more-links]
+(defn entity-links [val ctx & more-links]
   (let [[[k rv] :as rkvs] (related-links val ctx)]
     (cond
       (= 1 (count rkvs))
@@ -114,7 +121,9 @@
       ; There is almost always only one. This conserves a lot of width.
       [:<>
        [:div.input [hyperfiddle.ui/ui-from-link rv ctx nil (id-prompt ctx val)]]
-       more-links]
+       (->> (filter seq more-links)
+            (interpose "·")
+            doall)]
 
       :else
       ; Disambiguate the links with link labels
@@ -124,7 +133,8 @@
              ^{:key k}
              [hyperfiddle.ui/ui-from-link rv ctx])
            (concat more-links)
-           (->> (interpose "·"))
+           (->> (filter seq)
+                (interpose "·"))
            doall)])))
 
 (defn ^:export ref [val ctx & [props]]
@@ -136,7 +146,8 @@
     [:div.hyperfiddle-input-group
      (entity-links val ctx
                    (hf-new val ctx)                         ; new child
-                   (hf-remove val ctx))]))
+                   (hf-remove val ctx)
+                   (hf-iframe nil ctx))]))
 
 (declare edn)
 
@@ -170,7 +181,8 @@
                  ; http://alexandrkozyrev.hyperfiddle.site/:codeq/
                  #_(hf-new val ctx) ; in table context, only a ref if this attr is ref.
                  (if-not (context/underlying-tempid ctx (context/e ctx)) ; val can be part of lookup ref scalar
-                   (hf-remove val ctx)))])
+                   (hf-remove val ctx))
+                 (hf-iframe val ctx))])
 
 (defn ^:export instant [val ctx & [props]]
   (let [props (assoc props :value val :on-change (with-entity-change! ctx))]

@@ -1,6 +1,7 @@
 (ns hyperfiddle.api                                         ; cljs can always import this
   (:require
     [contrib.data :refer [unqualify]]
+    [contrib.reactive :as r]
     [hypercrud.browser.context :as context]))
 
 
@@ -32,12 +33,14 @@
 (defn render-dispatch [ctx props]
   ; Is there a method which is a subset of what we've got?
   (or
-    (let [d (extract-set ctx context/fiddle context/a)]
-      (if (contains? (methods render) d)
-        d))
-    (let [d (extract-set ctx context/a)]
-      (if (contains? (methods render) d)
-        d))
+    (if (= :hypercrud.browser.browser-ui/user @(get ctx :hypercrud.ui/display-mode (r/pure :hypercrud.browser.browser-ui/user)))
+      (or
+        (let [d (extract-set ctx context/fiddle context/a)]
+          (if (contains? (methods render) d)
+            d))
+        (let [d (extract-set ctx context/a)]
+          (if (contains? (methods render) d)
+            d))))
     ; Legacy compat - options by fiddle/renderer explicit props route to select via ref renderer
     (if (:options props)
       (extract-set (context/attr ctx) :db/valueType :db/cardinality))
