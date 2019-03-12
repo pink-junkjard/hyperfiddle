@@ -12,7 +12,7 @@
 
 (defn- serializable-error [e]
   ; need errors to be serializable, so crapily pr-str
-  (let [?message #?(:clj (.getMessage e) :cljs (ex-message e))]
+  (let [?message (ex-message e)]
     (cond
       (string? e) e
       ?message (assoc (->Err (str ?message)) :data (pprint-str (ex-data e)))

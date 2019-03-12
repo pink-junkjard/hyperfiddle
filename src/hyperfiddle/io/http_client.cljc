@@ -62,17 +62,17 @@
                                     (Err/Err? response-body)
                                     (throw (ex-info (:msg response-body)
                                                     (assoc data :hyperfiddle.io/http-status-code (:status data))
-                                                    #?(:clj (.getCause e) :cljs (ex-cause e))))
+                                                    (ex-cause e)))
 
-                                    (and (= 502 (:status data)) (not #?(:clj (.getMessage e) :cljs (ex-message e))))
+                                    (and (= 502 (:status data)) (not (ex-message e)))
                                     (throw (ex-info "Service Unavailable"
                                                     (assoc data :hyperfiddle.io/http-status-code 502)
-                                                    #?(:clj (.getCause e) :cljs (ex-cause e))))
+                                                    (ex-cause e)))
 
-                                    (and (= 504 (:status data)) (not #?(:clj (.getMessage e) :cljs (ex-message e))))
+                                    (and (= 504 (:status data)) (not (ex-message e)))
                                     (throw (ex-info "Service timed out"
                                                     (assoc data :hyperfiddle.io/http-status-code 504)
-                                                    #?(:clj (.getCause e) :cljs (ex-cause e))))
+                                                    (ex-cause e)))
 
                                     (= (:status data) 0) (throw (ex-info (ex-message e) data (ex-cause e)))
 
