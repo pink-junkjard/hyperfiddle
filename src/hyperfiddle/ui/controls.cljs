@@ -73,10 +73,8 @@
 
 (defn hf-new [_ ctx]
   (doall
-    (for [[k r-link] (hyperfiddle.data/spread-links-here ctx :hf/new)
-          ; db/id should not draw other links' hf/new in col head
-          ; https://github.com/hyperfiddle/hyperfiddle/issues/888
-          :when (= (context/a ctx) (fiddle/read-path (:link/path @r-link)))]
+    ; https://github.com/hyperfiddle/hyperfiddle/issues/888
+    (for [[k r-link] (hyperfiddle.data/spread-links-here ctx :hf/new)]
       ^{:key k}
       [hyperfiddle.ui/ui-from-link r-link ctx])))
 
