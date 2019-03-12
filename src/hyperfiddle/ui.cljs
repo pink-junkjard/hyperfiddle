@@ -479,7 +479,7 @@ nil. call site must wrap with a Reagent component"          ; is this just hyper
 (def ^:export fiddle (-build-fiddle))
 
 (defn ^:export fiddle-xray [val ctx & [props]]
-  [:div (select-keys props [:class :on-click])
+  [:div.container-fluid (select-keys props [:class :on-click])
    [:h3 (pr-str @(:hypercrud.browser/route ctx))]
    ;(for [ctx (hyperfiddle.api/spread-fiddle ctx)])
    [result val ctx {}]

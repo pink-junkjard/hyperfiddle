@@ -5,7 +5,7 @@
 
 (def expr
   '(let [{:keys [:hypercrud.browser/fiddle]} ctx]
-     [:div props
+     [:div.container-fluid props
       [hyperfiddle.ui/markdown (:fiddle/markdown @fiddle) ctx]
       [hyperfiddle.ui/result val ctx {}]]))
 
@@ -16,7 +16,7 @@
   ; embedded newline lets this pass the cursive clojure formatter
   "
 (let [{:keys [:hypercrud.browser/fiddle]} ctx]
-  [:div props
+  [:div.container-fluid props
    [hyperfiddle.ui/markdown (:fiddle/markdown @fiddle) ctx]
    [hyperfiddle.ui/result val ctx {}]])")
 
