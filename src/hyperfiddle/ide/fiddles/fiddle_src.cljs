@@ -50,6 +50,13 @@
      :option-label (r/comp pr-str :fiddle/ident)}]
    [link :hyperfiddle.ide/new-fiddle ctx "new"]])
 
+(defmethod hf/tx :hyperfiddle.ide/new-fiddle [ctx [e a v] props]
+  ; This is the right default for most links that traverse the graph
+  ; For options, sometimes it is not. They will have to fix it in that case.
+  ; The UX is more smooth this way, especially to do the right thing for beginners in tutorial.
+  [[:db/add e a v]
+   [:db/add v :fiddle/type :entity]])
+
 (defn link-control [val ctx props]
   (let [props (assoc props :default-value (get (::record ctx) (context/a ctx)))]
     (hyper-control val ctx props)))
