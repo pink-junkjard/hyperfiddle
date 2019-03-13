@@ -208,16 +208,16 @@ User renderers should not be exposed to the reaction."
                   (select-keys [:class :href :style]))]
     (into [:a props] children)))
 
-(letfn [(prompt [link-ref ?label]
+(letfn [(prompt [ctx ?label]
           (or ?label
-              (->> (set @(r/fmap :link/class link-ref))
+              (->> (set (context/link-class ctx))
                    (remove #(= "hf" (namespace %)))         ; "iframe" is not a good name
                    (map name)
                    (interpose " ")
                    (apply str)
                    blank->nil)
-              (some-> @link-ref :link/fiddle :fiddle/ident name)
-              (some-> @link-ref :link/tx-fn name)))
+              (some-> (context/link-fiddle ctx) :fiddle/ident name)
+              (some-> (context/link-tx ctx) name)))
         (link-tooltip [?route ctx] ; Show how it routed. The rest is obvious from data mode
           (if-let [[fiddle-ident args] ?route]
             (->> (concat #_[fiddle-ident] args)
@@ -250,10 +250,11 @@ User renderers should not be exposed to the reaction."
     {:pre [link-ref (r/reactive? link-ref)]}
     ; Once this link changes, pretty much everything below here needs to recompute
     ; Reactions are unlikely to be faster than render-tree-pruning.
-    (let [visual-ctx ctx
-          +route-and-ctx (context/refocus-to-link+ ctx link-ref) ; This ctx should directly contain the txfn, etc
+    (let [visual-ctx ctx                                    ; visual-ctx should be tracked in the link context.
+          +route-and-ctx (context/refocus-to-link+ ctx link-ref) ; Can fail if formula dependency isn't satisfied
           +route (fmap second +route-and-ctx)
           ?ctx (branch +route-and-ctx (constantly nil) first)
+          ; Changed behavior: if the link failed to focus, there isn't a txfn or iframe now.
           has-tx-fn (boolean (context/link-tx ?ctx))
           is-iframe (some #{:hf/iframe} (context/link-class ?ctx))]
       ;(assert ?ctx "not sure what there is that can be done")
@@ -262,14 +263,14 @@ User renderers should not be exposed to the reaction."
         (let [props (-> props
                         (update :class css "hyperfiddle")
                         (update :disabled #(or % (disabled? link-ref ?ctx))))]
-          [effect-cmp ?ctx props @(r/track prompt link-ref ?label)])
+          [effect-cmp ?ctx props (prompt ?ctx ?label)])
 
         (or has-tx-fn (and is-iframe (:iframe-as-popover props)))
         (let [props (-> (validated-route-tooltip-props +route link-ref ?ctx props)
                         (dissoc :iframe-as-popover)
                         (update :class css "hyperfiddle")   ; should this be in popover-cmp? unify with semantic css
                         (update :disabled #(or % (disabled? link-ref ?ctx))))
-              label @(r/track prompt link-ref ?label)]
+              label (prompt ?ctx ?label)]
           [popover-cmp ?ctx visual-ctx props label])
 
         is-iframe
@@ -281,7 +282,7 @@ User renderers should not be exposed to the reaction."
              [iframe ?ctx (-> props                          ; flagged - :class
                              (assoc :route route)
                              (dissoc props ::custom-iframe)
-                             (update :class css (->> @(r/fmap :link/class link-ref)
+                             (update :class css (->> (context/link-class ?ctx)
                                                      (string/join " ")
                                                      css-slugify)))]))]
 
@@ -290,7 +291,7 @@ User renderers should not be exposed to the reaction."
                  (let [props (dissoc props :tooltip)]
                    ; what about class - flagged
                    ; No eav, the route is the same info
-                   [anchor ?ctx props @(r/track prompt link-ref ?label)])])))))
+                   [anchor ?ctx props (prompt ?ctx ?label)])])))))
 
 (defn ^:export link "Relation level link renderer. Works in forms and lists but not tables.
   path should be optional, for disambiguation only. Naked can be hard-linked in markdown?

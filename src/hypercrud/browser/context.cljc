@@ -991,10 +991,6 @@
 (defn link [ctx]
   (some-> (:hypercrud.browser/link ctx) deref))
 
-(defn link-tx [?ctx]
-  (if-let [link-ref (:hypercrud.browser/link ?ctx)]
-    @(r/fmap-> link-ref :link/tx-fn blank->nil)))
-
 (defn link-class [?ctx]
   (if-let [link-ref (:hypercrud.browser/link ?ctx)]
     @(r/fmap-> link-ref :link/class)))
@@ -1008,7 +1004,15 @@
   (defn link-tx-read-memoized+ [kw-str]                     ; TODO migrate type to keyword
     (if (blank->nil kw-str)
       (memoized-read-string kw-str)
-      (either/right (constantly nil)))))
+      (either/right nil))))
+
+(defn link-tx [?ctx]
+  {:post [(or (keyword? %)
+              (nil? %))]}
+  (if-let [link-ref (:hypercrud.browser/link ?ctx)]
+    ; Parse the keyword here and ignore the error, once migrated to keyword this doesn't happen
+    (->> (link-tx-read-memoized+ @(r/fmap-> link-ref :link/tx-fn))
+         (unwrap (constantly nil)))))
 
 (defn- fix-param [ctx param]
   (if (instance? ThinEntity param)

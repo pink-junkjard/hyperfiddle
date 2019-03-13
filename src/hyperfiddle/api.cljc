@@ -23,10 +23,7 @@
 (declare render-dispatch)
 
 (defmulti tx (fn [ctx eav props]
-               (unwrap
-                 (constantly nil)                           ; already handled upstream, wonky legacy code compat
-                 (context/link-tx-read-memoized+            ; handle legacy string valueType (todo fix)
-                   (context/link-tx ctx)))))
+               (context/link-tx ctx)))
 
 ; Dispatch is a set
 (defmulti render (fn [ctx props]

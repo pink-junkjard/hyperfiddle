@@ -23,12 +23,15 @@
 
 
 (defn- run-txfn! [ctx props]
-  (-> (either->promise (context/link-tx-read-memoized+ (context/link-tx ctx)))
+  (-> (p/resolved (context/link-tx ctx))
       (p/then
         (fn [user-txfn]
           (runtime/dispatch! (:peer ctx) [:txfn (context/link-class ctx) (context/a ctx)])
           (try
-            (let [result (hyperfiddle.api/tx ctx (context/eav ctx) props)]
+            (let [result (if (contains? (methods hyperfiddle.api/txfn) user-txfn) ; legacy
+                           (let [[e a v] (context/eav ctx)]
+                             (hyperfiddle.api/txfn user-txfn e a v ctx))
+                           (hyperfiddle.api/tx ctx (context/eav ctx) props))]
               ; txfn may be sync or async
               (if (p/promise? result)
                 result
@@ -111,11 +114,10 @@
   (let [props (-> props
                   (assoc :on-click (r/partial run-effect! ctx props))
                   ; use twbs btn coloring but not "btn" itself
-                  (update :class css (let [txfn (->> (context/link-tx ctx)
-                                                     context/link-tx-read-memoized+ (unwrap (constantly nil)))]
-                                       (if-not (contains? (methods hyperfiddle.api/tx) txfn)
-                                         "btn-outline-danger"
-                                         "btn-warning"))))]
+                  (update :class css (if-not (contains? (methods hyperfiddle.api/tx)
+                                                        (context/link-tx ctx))
+                                       "btn-outline-danger"
+                                       "btn-warning")))]
     [:button (select-keys props [:class :style :disabled :on-click])
      [:span (str label "!")]]))
 
@@ -126,7 +128,7 @@
   ; - visual-ctx's data & path (where this popover is being drawn NOT its dependencies)
   (let [link-ref (:hypercrud.browser/link ctx)
         child-branch-id (let [relative-id (-> [(if (:hypercrud.browser/qfind ctx) ; guard crash on :blank fiddles
-                                                 #_(context/eav visual-ctx) ; if this is nested table head, [e a nil] is ambiguous
+                                                 (context/eav visual-ctx) ; If
                                                  (:hypercrud.browser/result-path ctx))
                                                @(r/fmap :db/id link-ref)
                                                (:route props)
