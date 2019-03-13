@@ -1,5 +1,6 @@
 {:paths ["src" "resources"]
  :deps {
+        com.auth0/auth0 {:mvn/version "1.10.0"}
         com.hyperfiddle/hyperfiddle {:local/root "../hyperfiddle"}
         }
  :aliases {:lein {:extra-deps {com.hyperfiddle/hyperfiddle {:mvn/version "0.3.0-SNAPSHOT"}}}}}

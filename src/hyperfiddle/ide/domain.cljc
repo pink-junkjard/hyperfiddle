@@ -30,7 +30,7 @@
         "api-user/" {(str build "/") (routes/api "user")
                      [[#"[^/]*" :build] "/"] {true :force-refresh}
                      true :404}
-        "auth0" {:get :auth0-redirect
+        "auth0" {:get :hyperfiddle.ide/auth0-redirect
                  #".+" :404
                  true :405}
         "logout" {:post :hyperfiddle.ide/logout
