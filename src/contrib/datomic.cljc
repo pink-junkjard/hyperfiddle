@@ -109,7 +109,7 @@
               (contrib.data/update-existing :db/isComponent smart-lookup-ref-no-tempids)
               (contrib.data/update-existing :db/unique smart-lookup-ref-no-tempids))))))
   (attr? [this a corcs]
-    (let [haystack (into #{} (vals (attr this a)))
+    (let [haystack (into #{} (vals (attr this a)))          ; component
           needles (contrib.data/xorxs corcs #{})]
       ; haystack must have all the needles
       (clojure.set/superset? haystack needles)))
