@@ -33,6 +33,9 @@
         "auth0" {:get :auth0-redirect
                  #".+" :404
                  true :405}
+        "logout" {:post :hyperfiddle.ide/logout
+                  #".+" :404
+                  true :405}
         true {:get :ssr
               true :405}}])
 
@@ -40,10 +43,6 @@
   ["/" {"api-user/" {(str build "/") (routes/api nil)
                      [[#"[^/]*" :build] "/"] {true :force-refresh}
                      true :404}
-        ; user domain auth not implemented
-        #_#_"auth0" {:get :auth0-redirect
-                     #".+" :404
-                     true :405}
         true {:get :ssr
               true :405}}])
 
