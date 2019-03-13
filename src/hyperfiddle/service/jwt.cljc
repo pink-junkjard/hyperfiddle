@@ -22,5 +22,8 @@
                      (js->clj :keywordize-keys true)))))
 
 (defn sign [claims secret & [options]]
-  #?(:clj  (throw (RuntimeException. "Not Implemented"))    ; todo
+  #?(:clj  (let [jwt-builder (JWT/create)]
+             (doseq [[k v] claims]
+               (.withClaim jwt-builder (name k) v))
+             (.sign jwt-builder (Algorithm/HMAC256 secret)))
      :cljs (.sign jwt (clj->js claims) secret (clj->js options))))
