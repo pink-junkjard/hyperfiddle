@@ -218,15 +218,15 @@ User renderers should not be exposed to the reaction."
                    blank->nil)
               (some-> @link-ref :link/fiddle :fiddle/ident name)
               (some-> @link-ref :link/tx-fn name)))
-        (link-tooltip [{:link/keys [class path]} ?route ctx] ; Show how it routed. The rest is obvious from data mode
+        (link-tooltip [?route ctx] ; Show how it routed. The rest is obvious from data mode
           (if-let [[fiddle-ident args] ?route]
-            (->> (concat #_class #_[fiddle-ident] args)
+            (->> (concat #_[fiddle-ident] args)
                  (map pr-str) (interpose " ") (apply str))))
-        (validated-route-tooltip-props [+?route link ctx props] ; link is for validation
+        (validated-route-tooltip-props [+?route link-ref ctx props] ; link is for validation
           ; this is a fine place to eval, put error message in the tooltip prop
           ; each prop might have special rules about his default, for example :visible is default true,
           ; does this get handled here?
-          (let [+route (>>= +?route #(routing/validated-route+ (:link/fiddle link) % ctx))
+          (let [+route (>>= +?route #(routing/validated-route+ (:link/fiddle @link-ref) % ctx))
                 errors (->> [+route] (filter either/left?) (map cats/extract) (into #{}))
                 ?route (unwrap (constantly nil) +route)]
             (-> props
@@ -235,7 +235,7 @@ User renderers should not be exposed to the reaction."
                                    (if-not (empty? errors)
                                      [:warning (pprint-str errors)]
                                      (if (:hyperfiddle.ui/debug-tooltips ctx)
-                                       [nil (link-tooltip link ?route ctx)]
+                                       [nil (link-tooltip ?route ctx)]
                                        existing-tooltip))))
                 (update :class css (when-not (empty? errors) "invalid")))))
         (disabled? [link-ref ctx]
@@ -250,28 +250,27 @@ User renderers should not be exposed to the reaction."
     {:pre [link-ref (r/reactive? link-ref)]}
     ; Once this link changes, pretty much everything below here needs to recompute
     ; Reactions are unlikely to be faster than render-tree-pruning.
-    (let [link @link-ref
-          visual-ctx ctx
-          has-tx-fn @(r/fmap-> link-ref :link/tx-fn blank->nil boolean)
-          is-iframe @(r/fmap->> link-ref :link/class (some #{:hf/iframe}))
-          +route-and-ctx (context/refocus-to-link+ ctx link)
+    (let [visual-ctx ctx
+          +route-and-ctx (context/refocus-to-link+ ctx link-ref) ; This ctx should directly contain the txfn, etc
           +route (fmap second +route-and-ctx)
-          ?ctx (branch +route-and-ctx (constantly nil) first)]
+          ?ctx (branch +route-and-ctx (constantly nil) first)
+          has-tx-fn (boolean (context/link-tx ?ctx))
+          is-iframe (some #{:hf/iframe} (context/link-class ?ctx))]
       ;(assert ?ctx "not sure what there is that can be done")
       (cond
-        (and has-tx-fn @(r/fmap-> link-ref :link/fiddle nil?))
+        (and has-tx-fn (nil? (context/link-fiddle ?ctx)))
         (let [props (-> props
                         (update :class css "hyperfiddle")
                         (update :disabled #(or % (disabled? link-ref ?ctx))))]
-          [effect-cmp link-ref ?ctx props @(r/track prompt link-ref ?label)])
+          [effect-cmp ?ctx props @(r/track prompt link-ref ?label)])
 
         (or has-tx-fn (and is-iframe (:iframe-as-popover props)))
-        (let [props (-> (validated-route-tooltip-props +route link ?ctx props)
+        (let [props (-> (validated-route-tooltip-props +route link-ref ?ctx props)
                         (dissoc :iframe-as-popover)
                         (update :class css "hyperfiddle")   ; should this be in popover-cmp? unify with semantic css
                         (update :disabled #(or % (disabled? link-ref ?ctx))))
               label @(r/track prompt link-ref ?label)]
-          [popover-cmp link-ref ?ctx visual-ctx props label])
+          [popover-cmp ?ctx visual-ctx props label])
 
         is-iframe
         [stale/loading (stale/can-be-loading? visual-ctx)          ; was just ctx before
@@ -286,7 +285,7 @@ User renderers should not be exposed to the reaction."
                                                      (string/join " ")
                                                      css-slugify)))]))]
 
-        :else (let [props (validated-route-tooltip-props +route link ?ctx props)]
+        :else (let [props (validated-route-tooltip-props +route link-ref ?ctx props)]
                 [tooltip (tooltip-props (:tooltip props))
                  (let [props (dissoc props :tooltip)]
                    ; what about class - flagged

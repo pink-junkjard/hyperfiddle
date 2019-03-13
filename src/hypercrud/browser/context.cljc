@@ -11,7 +11,7 @@
     [contrib.datomic2]
     [contrib.eval :as eval]
     [contrib.reactive :as r]
-    [contrib.string]
+    [contrib.string :refer [blank->nil]]
     [contrib.try$ :refer [try-either]]
     [contrib.validation]
     [datascript.parser #?@(:cljs [:refer [FindRel FindColl FindTuple FindScalar Variable Aggregate Pull]])]
@@ -967,11 +967,12 @@
     (return route)))
 
 (defn refocus-to-link+ "focus a link ctx, accounting for link/formula which occludes the natural eav"
-  [ctx {:keys [:link/fiddle :link/tx-fn :link/path] :as link}]
+  [ctx link-ref]
   {:pre [(s/assert :hypercrud/context ctx)]
    :post [(s/assert either? %)]
    #_#_:post [(s/assert (s/cat :ctx :hypercrud/context :route r/reactive?) %)]}
-  (let [target-a (hyperfiddle.fiddle/read-path path)]
+  (let [{:keys [:link/fiddle :link/tx-fn :link/path] :as link} @link-ref
+        target-a (hyperfiddle.fiddle/read-path path)]
     (mlet [ctx (refocus+ ctx target-a)
            [v' & vs :as args] (build-args+ ctx link)
            ; :hf/remove doesn't have route by default, :hf/new does, both can be customized
@@ -979,11 +980,35 @@
                     (right nil)
                     (build-route+ args ctx link))
            ; EAV sugar is not interested in tuple case, that txfn is way off happy path
-           :let [ctx (assoc ctx :hypercrud.browser/eav (r/apply stable-eav-v
-                                                                [(:hypercrud.browser/eav ctx)
-                                                                 (r/track identity v')]))]]
+           :let [ctx (assoc ctx
+                       :hypercrud.browser/link link-ref
+                       :hypercrud.browser/eav (r/apply stable-eav-v
+                                                       [(:hypercrud.browser/eav ctx)
+                                                        (r/track identity v')]))]]
       (right
         [ctx ?route]))))
+
+(defn link [ctx]
+  (some-> (:hypercrud.browser/link ctx) deref))
+
+(defn link-tx [?ctx]
+  (if-let [link-ref (:hypercrud.browser/link ?ctx)]
+    @(r/fmap-> link-ref :link/tx-fn blank->nil)))
+
+(defn link-class [?ctx]
+  (if-let [link-ref (:hypercrud.browser/link ?ctx)]
+    @(r/fmap-> link-ref :link/class)))
+
+(defn link-fiddle [?ctx]
+  (if-let [link-ref (:hypercrud.browser/link ?ctx)]
+    @(r/fmap-> link-ref :link/fiddle)))
+
+(let [safe-eval-string #(try-either (eval/eval-expr-str! %))
+      memoized-read-string (memoize safe-eval-string)]
+  (defn link-tx-read-memoized+ [kw-str]                     ; TODO migrate type to keyword
+    (if (blank->nil kw-str)
+      (memoized-read-string kw-str)
+      (either/right (constantly nil)))))
 
 (defn- fix-param [ctx param]
   (if (instance? ThinEntity param)

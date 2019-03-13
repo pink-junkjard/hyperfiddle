@@ -924,13 +924,13 @@
   (testing ":identity link refocus v is lookup-ref"
     (def r-link (->> (hyperfiddle.data/select-here+ ctx-blog2 :dustingetz.tutorial/view-post)
                      (unwrap #(throw (ex-info % {})))))
-    (is (= (mlet [[ctx ?route] (context/refocus-to-link+ ctx-blog2 @r-link)]
+    (is (= (mlet [[ctx ?route] (context/refocus-to-link+ ctx-blog2 r-link)]
              (context/eav ctx))
            [nil :dustingetz.tutorial/blog [:dustingetz.post/slug :automatic-CRUD-links]]))
     )
 
   (testing "at fiddle level, link :hf/new eav does not have a parent"
-    (let [link1 @(extract (hyperfiddle.data/select-here+ ctx-blog2 :hf/new))]
+    (let [link1 (extract (hyperfiddle.data/select-here+ ctx-blog2 :hf/new))]
       (is (= (mlet [[ctx r+route] (context/refocus-to-link+ ctx-blog2 link1)]
                (context/eav ctx))
              ; should it be [nil nil "479925454"] from the txfn perspective?
@@ -969,7 +969,7 @@
   ; So select post/slug from a row ctx, as can happen in a view but not an autogrid.
   ; This exercises tag-v-with-color edge cases
 
-  (def link @(hyperfiddle.data/select ctx-blog3 :hf/new))
+  (def link (hyperfiddle.data/select ctx-blog3 :hf/new))
   (is (= (mlet [[ctx route] (context/refocus-to-link+ ctx-blog3 link)]
            (context/eav ctx))
          [nil :dustingetz.tutorial/blog "hyperfiddle.tempid--2017569654"]))

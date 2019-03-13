@@ -22,30 +22,21 @@
     [taoensso.timbre :as timbre]))
 
 
-(let [safe-eval-string #(try-either (eval/eval-expr-str! %))
-      memoized-read-string (memoize safe-eval-string)]
-  (defn memoized-read-txfn+ [kw-str]                        ; TODO migrate type to keyword
-    (if (blank->nil kw-str)
-      (memoized-read-string kw-str)
-      (either/right (constantly nil)))))
+(defn- run-txfn! [ctx props]
+  (-> (either->promise (context/link-tx-read-memoized+ (context/link-tx ctx)))
+      (p/then
+        (fn [user-txfn]
+          (runtime/dispatch! (:peer ctx) [:txfn (context/link-class ctx) (context/a ctx)])
+          (try
+            (let [result (hyperfiddle.api/tx ctx (context/eav ctx) props)]
+              ; txfn may be sync or async
+              (if (p/promise? result)
+                result
+                (p/resolved result)))
+            (catch js/Error e (p/rejected e)))))))
 
-(defn- run-txfn! [link-ref ctx]
-  (let [{:keys [:link/tx-fn] :as link} @link-ref]
-    (-> (either->promise (memoized-read-txfn+ tx-fn))
-        (p/then
-          (fn [user-txfn]
-            (runtime/dispatch! (:peer ctx) [:txfn (:link/class link) (:link/path link)])
-            (try
-              (let [[e a v] @(:hypercrud.browser/eav ctx)
-                    result (hyperfiddle.api/txfn user-txfn e a v ctx)]
-                ; txfn may be sync or async
-                (if (p/promise? result)
-                  result
-                  (p/resolved result)))
-              (catch js/Error e (p/rejected e))))))))
-
-(defn stage! [link-ref popover-id child-branch ctx r-popover-data props]
-  (-> (run-txfn! link-ref ctx)
+(defn stage! [popover-id child-branch ctx r-popover-data props]
+  (-> (run-txfn! ctx props)
       (p/then (fn [tx]
                 (let [tx-groups {(or (hypercrud.browser.context/dbname ctx) "$") ; https://github.com/hyperfiddle/hyperfiddle/issues/816
                                  tx}]
@@ -69,7 +60,7 @@
                                             (actions/close-popover (:branch ctx) popover-id)
                                             (actions/discard-partition get-state child-branch))))))
 
-(defn- branched-popover-body [route popover-id child-branch-id link-ref ctx props]
+(defn- branched-popover-body [route popover-id child-branch-id ctx props]
   (let [popover-ctx-pre (-> (context/clean ctx)             ; hack clean for block level errors
                             (assoc :branch child-branch-id
                                    :hyperfiddle.ui/error-with-stage? true))
@@ -78,7 +69,7 @@
         popover-invalid (->> +popover-ctx-post (unwrap (constantly nil)) context/tree-invalid?)]
     [:<>
      [iframe-cmp popover-ctx-pre {:route route}]            ; cycle
-     [:button {:on-click (r/partial stage! link-ref popover-id child-branch-id ctx r-popover-data props)
+     [:button {:on-click (r/partial stage! popover-id child-branch-id ctx r-popover-data props)
                :disabled popover-invalid} "stage"]
      [:button {:on-click #(cancel! popover-id child-branch-id ctx)} "cancel"]]))
 
@@ -103,8 +94,8 @@
     child
     [tooltip (tooltip-props (:tooltip props)) child]))
 
-(defn run-effect! [link-ref ctx props]
-  (-> (run-txfn! link-ref ctx)
+(defn run-effect! [ctx props]
+  (-> (run-txfn! ctx props)
       (p/then
         (fn [tx]
           (->> (actions/with-groups (:peer ctx) (:branch ctx) {(hypercrud.browser.context/dbname ctx) tx}
@@ -116,23 +107,25 @@
                  (js/alert (cond-> (ex-message e)
                              (ex-data e) (str "\n" (pprint-str (ex-data e)))))))))
 
-(defn effect-cmp [link-ref ctx props label]
+(defn effect-cmp [ctx props label]
   (let [props (-> props
-                  (assoc :on-click (r/partial run-effect! link-ref ctx props))
+                  (assoc :on-click (r/partial run-effect! ctx props))
                   ; use twbs btn coloring but not "btn" itself
-                  (update :class css (let [txfn (->> @(r/fmap :link/tx-fn link-ref) memoized-read-txfn+ (unwrap (constantly nil)))]
-                                       (if-not (contains? (methods hyperfiddle.api/txfn) txfn)
+                  (update :class css (let [txfn (->> (context/link-tx ctx)
+                                                     context/link-tx-read-memoized+ (unwrap (constantly nil)))]
+                                       (if-not (contains? (methods hyperfiddle.api/tx) txfn)
                                          "btn-outline-danger"
                                          "btn-warning"))))]
     [:button (select-keys props [:class :style :disabled :on-click])
      [:span (str label "!")]]))
 
-(defn popover-cmp [link-ref ctx visual-ctx props label]
+(defn popover-cmp [ctx visual-ctx props label]
   ; try to auto-generate branch/popover-id from the product of:
   ; - link's :db/id
   ; - route
   ; - visual-ctx's data & path (where this popover is being drawn NOT its dependencies)
-  (let [child-branch-id (let [relative-id (-> [(if (:hypercrud.browser/qfind ctx) ; guard crash on :blank fiddles
+  (let [link-ref (:hypercrud.browser/link ctx)
+        child-branch-id (let [relative-id (-> [(if (:hypercrud.browser/qfind ctx) ; guard crash on :blank fiddles
                                                  #_(context/eav visual-ctx) ; if this is nested table head, [e a nil] is ambiguous
                                                  (:hypercrud.browser/result-path ctx))
                                                @(r/fmap :db/id link-ref)
@@ -165,5 +158,5 @@
                  :no-clip? true
                  :body [:div.hyperfiddle-popover-body       ; wrpaper helps with popover max-width, hard to layout without this
                         (if should-branch
-                          [branched-popover-body (:route props) popover-id child-branch-id link-ref ctx props]
+                          [branched-popover-body (:route props) popover-id child-branch-id ctx props]
                           [non-branched-popover-body (:route props) popover-id ctx])]]]]]))

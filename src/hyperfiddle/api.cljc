@@ -1,5 +1,6 @@
 (ns hyperfiddle.api                                         ; cljs can always import this
   (:require
+    [contrib.ct :refer [unwrap]]
     [contrib.data :refer [unqualify]]
     [contrib.reactive :as r]
     [hypercrud.browser.context :as context]))
@@ -21,7 +22,11 @@
 
 (declare render-dispatch)
 
-(defmulti txfn (fn [user-txfn e a v ctx] user-txfn))
+(defmulti tx (fn [ctx eav props]
+               (unwrap
+                 (constantly nil)                           ; already handled upstream, wonky legacy code compat
+                 (context/link-tx-read-memoized+            ; handle legacy string valueType (todo fix)
+                   (context/link-tx ctx)))))
 
 ; Dispatch is a set
 (defmulti render (fn [ctx props]
@@ -52,6 +57,32 @@
     ;(contrib.datomic/parser-type (context/qfind ctx))       ; :hf/find-rel :hf/find-scalar
     ;:hf/blank
     ))
+
+
+(defmethod tx :default [ctx eav props]
+  nil)
+
+(defmethod tx :default [ctx eav props]
+  nil)
+
+(defmethod tx :zero [ctx eav props]
+  [])                                                       ; hack to draw as popover
+
+(defmethod tx :db/add [ctx [e a v] props]
+  {:pre [e a v]}
+  [[:db/add e a v]])
+
+(defmethod tx :db/retract [ctx [e a v] props]
+  {:pre [e a v]}
+  [[:db/retract e a v]])
+
+(defmethod tx :db.fn/retractEntity [ctx [e a v] props]
+  {:pre [v]}
+  [[:db.fn/retractEntity v]])
+
+; Compat
+
+(defmulti txfn (fn [user-txfn e a v ctx] user-txfn))
 
 (defmethod txfn :default [_ e a v ctx]
   nil)
