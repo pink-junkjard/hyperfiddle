@@ -27,7 +27,8 @@
   (or (:database/color (database domain dbname)) (color/color-for-name dbname)))
 
 (defn api-url-for [domain handler & {:as params}]
-  (str (service-uri domain) (apply bidi/path-for (api-routes domain) handler (apply concat params))))
+  (some->> (apply bidi/path-for (api-routes domain) handler (apply concat params))
+           (str (service-uri domain))))
 
 (defn api-match-path [domain path & {:as options}]
   (apply bidi/match-route (api-routes domain) path (apply concat options)))
