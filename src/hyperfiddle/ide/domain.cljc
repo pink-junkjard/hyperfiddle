@@ -36,6 +36,7 @@
         "logout" {:post :hyperfiddle.ide/logout
                   #".+" :404
                   true :405}
+        "favicon.ico" :favicon
         true {:get :ssr
               true :405}}])
 
