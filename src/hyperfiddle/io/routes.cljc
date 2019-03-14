@@ -34,6 +34,11 @@
   ["/" {"api/" {(str build "/") (api nil)
                 [[#"[^/]*" :build] "/"] {true :force-refresh}
                 true :404}
+        "static/" {(str build "/") {[[#".+" :resource-name]] {:get :static-resource
+                                                              true :405}
+                                    true :404}
+                   [:build "/"] {true :force-refresh}
+                   true :404}
         "favicon.ico" :favicon
         true {:get :ssr
               true :405}}])
