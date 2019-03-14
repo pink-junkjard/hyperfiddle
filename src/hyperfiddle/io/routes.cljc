@@ -34,5 +34,6 @@
   ["/" {"api/" {(str build "/") (api nil)
                 [[#"[^/]*" :build] "/"] {true :force-refresh}
                 true :404}
+        "favicon.ico" :favicon
         true {:get :ssr
               true :405}}])
