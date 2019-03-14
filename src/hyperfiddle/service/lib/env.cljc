@@ -30,7 +30,6 @@
                     :AUTH0_CLIENT_SECRET
                     :SERVICE_HOST
                     :SERVICE_PORT
-                    :STATIC_RESOURCES
                     :NODE_PORT}
          optional #{:ANALYTICS :HF_ALIAS_HOSTNAMES :SERVICE_HOST
 
