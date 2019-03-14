@@ -282,11 +282,11 @@
          (condp = (type qfind)
            FindRel
            (assoc ctx :hypercrud.browser/result-index
-                      (r/fmap->> r-ordered-result (contrib.data/group-by-unique (partial row-key-v ctx))))
+                      (r/fmap->> r-ordered-result (contrib.data/group-by-unique (r/partial row-key-v ctx))))
 
            FindColl
            (assoc ctx :hypercrud.browser/result-index
-                      (r/fmap->> r-ordered-result (contrib.data/group-by-unique (partial row-key-v ctx))))
+                      (r/fmap->> r-ordered-result (contrib.data/group-by-unique (r/partial row-key-v ctx))))
 
            FindTuple
            ; Vectors are already indexed
@@ -316,7 +316,7 @@
                             (update-in (:hypercrud.browser/result-path ctx)
                                        (cond
                                          (contrib.datomic/ref? @(:hypercrud.browser/schema ctx) a)
-                                         (partial contrib.data/group-by-unique (partial entity-key-v ctx))
+                                         (r/partial contrib.data/group-by-unique (r/partial entity-key-v ctx))
 
                                          :scalar
                                          ; Sets are an index that evaluate to the key.
@@ -761,7 +761,7 @@
   The index internals are reactive."
   [r-link-index criterias]                                  ; criterias can contain nil, meaning toptop
   (r/fmap->> r-link-index
-             (filter (partial link-criteria-match? criterias))
+             (filter (r/partial link-criteria-match? criterias))
              (mapv second)
              #_(mapv (juxt :db/id identity))))
 
