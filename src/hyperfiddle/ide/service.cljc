@@ -15,31 +15,33 @@
 
 ; todo support express?
 ; todo this defmulti is overly complex
-(defmethod service-domain/route IdeDomain [domain env req]
-  (let [path (:path-info req)
-        request-method (:request-method req)
+(defmethod service-domain/route IdeDomain [domain env context]
+  (let [path (get-in context [:request :path-info])
+        request-method (get-in context [:request :request-method])
         {:keys [handler route-params]} (domain/api-match-path domain path :request-method request-method)]
     (timbre/debug "ide-router:" (pr-str handler) (pr-str request-method) (pr-str path))
     (cond
       (= (some-> handler namespace) "user")
       (either/branch
-        (ide-domain/build-user+ (:domain req))
+        (ide-domain/build-user+ (get-in context [:request :domain]))
         (fn [e]
           (timbre/error e)
           (throw e))
         (fn [user-domain]
-          (let [req (-> req
-                        (dissoc :jwt)                       ; this is brittle
-                        (assoc :domain user-domain))]
-            (handle-route (keyword (name handler)) env (assoc-in req [:route-params] route-params)))))
+          (let [context (update context :request #(-> (dissoc % :jwt) ; this is brittle
+                                                      (assoc :domain user-domain
+                                                             :route-params route-params)))]
+            (handle-route (keyword (name handler)) env context))))
 
       (and (= :ssr handler)
            (= "demo" (:app-domain-ident domain))
-           (nil? (:user-id req))
+           (nil? (get-in context [:request :user-id]))
            (not (string/starts-with? path "/:hyperfiddle.ide!please-login/")))
       ; todo this logic should be injected into demo domain record
       (let [inner-route (domain/url-decode domain path)
             url (domain/url-encode domain [:hyperfiddle.ide/please-login inner-route])]
-        {:status 302 :headers {"Location" url}})
+        (-> context
+            (assoc-in [:request :status] 302)
+            (assoc-in [:request :headers "Location"] url)))
 
-      :else (handle-route handler env (assoc-in req [:route-params] route-params)))))
+      :else (handle-route handler env (assoc-in context [:request :route-params] route-params)))))
