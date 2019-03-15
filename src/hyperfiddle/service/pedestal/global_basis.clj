@@ -4,8 +4,8 @@
     [hyperfiddle.io.core :as io]
     [hyperfiddle.io.datomic.sync :refer [sync]]
     [hyperfiddle.io.global-basis :refer [global-basis]]
-    [hyperfiddle.service.http :as http-service :refer [handle-route]]
-    [hyperfiddle.service.pedestal.interceptors :refer [platform->pedestal-req-handler]]
+    [hyperfiddle.service.http :as http-service]
+    [hyperfiddle.service.pedestal.interceptors :refer [def-data-route platform->pedestal-req-handler]]
     [promesa.core :as p]))
 
 
@@ -17,5 +17,5 @@
   (sync [io dbnames]
     (p/do* (sync domain dbnames))))
 
-(defmethod handle-route :global-basis [handler env req]
+(def-data-route :global-basis [handler env req]
   (platform->pedestal-req-handler env (partial http-service/global-basis-handler ->IOImpl) req))

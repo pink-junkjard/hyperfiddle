@@ -1,7 +1,6 @@
 (ns hyperfiddle.service.pedestal.interceptors
   (:require
     [clojure.core.async :refer [chan >!!]]
-    [clojure.string :as string]
     [cognitect.transit :as transit]
     [hypercrud.transit :as hc-t]
     [hypercrud.types.Err :refer [->Err]]
@@ -11,7 +10,8 @@
     [hyperfiddle.service.http :refer [handle-route]]
     [hyperfiddle.service.jwt :as jwt]
     [io.pedestal.http :as pedestal-http]
-    [io.pedestal.interceptor.chain :refer [terminate]]
+    [io.pedestal.http.content-negotiation :as content-negotiation]
+    [io.pedestal.interceptor.chain :refer [enqueue terminate]]
     [io.pedestal.interceptor.helpers :as interceptor]
     [promesa.core :as p]
     [taoensso.timbre :as timbre])
@@ -51,9 +51,12 @@
         (prn-fn))
       (.flush writer))))
 
-;; Used for serializing the response body only; not used for parsing the request
-(def content-types
-  {"application/json"
+(def content-transformers
+  {"text/plain"
+   (fn [body]
+     (print-fn #(pr body)))
+
+   "application/json"
    (fn [body]
      (print-fn #(pedestal-http/json-print body)))
 
@@ -76,42 +79,49 @@
 
    "text/html"
    (fn [body]
-     (if (string? body)
-       body
-       (binding [clojure.pprint/*print-right-margin* 140]
-         (let [body-str (as-> (with-out-str (clojure.pprint/pprint body)) $
-                          (StringEscapeUtils/escapeHtml4 $)
-                          (format "<html><body><pre>%s</pre></body></html>" $))]
-           (print-fn #(.write *out* body-str))))))})
+     (binding [clojure.pprint/*print-right-margin* 140]
+       (let [body-str (->> (with-out-str (contrib.pprint/pprint body))
+                           (StringEscapeUtils/escapeHtml4)
+                           (format "<html><body><pre>%s</pre></body></html>"))]
+         (print-fn #(.write *out* body-str)))))})
+
+(defn coerce-to [response content-type]
+  (-> response
+      (update :body (get content-transformers content-type))
+      (assoc-in [:headers "Content-Type"] content-type)))
 
 (def auto-content-type
   (interceptor/after
     ::auto-content-type
-    (fn [{:keys [request response] :as context}]
-      (let [accepts (-> (or (get-in request [:headers "accept"]) "")
-                        (string/split #",")
-                        (#(into #{} %)))
-            accept (-> (some accepts (keys content-types))
-                       #_(or "application/transit+json; charset=utf-8"))
-            content-renderer (get content-types accept)]
-        #_(assert content-renderer (str "invalid Accept " (get-in request [:headers "accept"])))
-        (-> context
-            (update-in [:response :body] (or content-renderer str))
-            (update-in [:response :headers] assoc "Content-Type" accept))))))
+    (fn [context]
+      (cond-> context
+        (nil? (get-in context [:response :headers "Content-Type"]))
+        (update :response coerce-to (get-in context [:request :accept :field] "text/plain"))))))
 
 (def promise->chan
-  {:name ::promise->chan
-   :leave (fn [{:keys [response] :as context}]
-            (if-not (p/promise? response)
-              context
-              (let [channel (chan)]
-                (-> response
-                    (p/then (fn [response]
-                              (>!! channel (assoc context :response response))))
-                    (p/catch (fn [err]
-                               (timbre/error err)
-                               (>!! channel (assoc context :response {:status 500 :body (pr-str err)})))))
-                channel)))})
+  (interceptor/after
+    ::promise->chan
+    (fn [{:keys [response] :as context}]
+      (if-not (p/promise? response)
+        context
+        (let [channel (chan)]
+          (-> response
+              (p/then (fn [response]
+                        (>!! channel (assoc context :response response))))
+              (p/catch (fn [err]
+                         (timbre/error err)
+                         (>!! channel (assoc context :response {:status 500 :body (pr-str err)})))))
+          channel)))))
+
+(defn data-route [context with-request]
+  (enqueue context [(content-negotiation/negotiate-content (keys content-transformers))
+                    auto-content-type
+                    promise->chan
+                    (interceptor/handler with-request)]))
+
+(defmacro def-data-route [dispatch-val & fn-tail]
+  `(defmethod handle-route ~dispatch-val [~'handler ~'env context#]
+     (data-route context# (fn [~'req] ~@(rest fn-tail)))))
 
 (defn domain [domain-for-fqdn]
   {:name ::domain
@@ -166,11 +176,13 @@
                   :else (-> (terminate context)
                             (assoc :response {:status 400 :body (->Err "Conflicting cookies and auth bearer")}))))))})
 
-(defn build-router [env] (fn [req] (service-domain/route (:domain req) env req)))
+(defn build-router [env]
+  {:name ::router
+   :enter (fn [context] (service-domain/route (get-in context [:request :domain]) env context))})
 
-(defmethod service-domain/route :default [domain env req]
-  (let [path (:path-info req)
-        request-method (:request-method req)
+(defmethod service-domain/route :default [domain env context]
+  (let [path (get-in context [:request :path-info])
+        request-method (get-in context [:request :request-method])
         {:keys [handler route-params]} (domain/api-match-path domain path :request-method request-method)]
     (timbre/debug "router:" (pr-str handler) (pr-str request-method) (pr-str path))
-    (handle-route handler env (assoc-in req [:route-params] route-params))))
+    (handle-route handler env (assoc-in context [:request :route-params] route-params))))
