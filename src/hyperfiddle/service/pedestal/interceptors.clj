@@ -98,25 +98,22 @@
         (nil? (get-in context [:response :headers "Content-Type"]))
         (update :response coerce-to (get-in context [:request :accept :field] "text/plain"))))))
 
-(def promise->chan
-  (interceptor/after
-    ::promise->chan
-    (fn [{:keys [response] :as context}]
-      (if-not (p/promise? response)
-        context
-        (let [channel (chan)]
-          (-> response
-              (p/then (fn [response]
-                        (>!! channel (assoc context :response response))))
-              (p/catch (fn [err]
-                         (timbre/error err)
-                         (>!! channel (assoc context :response {:status 500 :body (pr-str err)})))))
-          channel)))))
+(defn promise->chan [context]
+  (if-not (p/promise? (:response context))
+    context
+    (let [channel (chan)]
+      (-> (:response context)
+          (p/then (fn [response]
+                    (>!! channel (assoc context :response response))))
+          (p/catch (fn [err]
+                     (timbre/error err)
+                     (>!! channel (assoc context :response {:status 500 :body (pr-str err)})))))
+      channel)))
 
 (defn data-route [context with-request]
   (enqueue context [(content-negotiation/negotiate-content (keys content-transformers))
                     auto-content-type
-                    promise->chan
+                    (interceptor/after ::promise->chan promise->chan)
                     (interceptor/handler with-request)]))
 
 (defmacro def-data-route [dispatch-val & fn-tail]
