@@ -1,50 +1,28 @@
 (ns hyperfiddle.service.ssr
   (:require
-    ["react-dom/server" :as dom-server]
     [cats.monad.either :as either]
     [contrib.data :as data]
     [contrib.reactive :as r]
     [contrib.template :refer [load-resource]]
-    [goog.object :as object]
-    [hypercrud.browser.context :as context]
     [hypercrud.client.core :as hc]
     [hypercrud.client.peer :as peer]
-    [hypercrud.transit :as transit]
-    [hypercrud.ui.error :as error]
+    [hypercrud.transit :as hc-t]
+    #?(:cljs [hypercrud.ui.error :as error])
     [hyperfiddle.actions :as actions]
     [hyperfiddle.domain :as domain]
     [hyperfiddle.foundation :as foundation]
-    [hyperfiddle.io.core :as io]
-    [hyperfiddle.io.http-client :as http-client]
-    [hyperfiddle.io.local-basis :as local-basis]
     [hyperfiddle.reducers :as reducers]
     [hyperfiddle.runtime :as runtime]
     [hyperfiddle.security.client :as security]
     [hyperfiddle.state :as state]
+    [hyperfiddle.ui.loading :as loading]
     [promesa.core :as p]
-    [reagent.dom.server :as reagent-server]
-    [reagent.impl.template :as tmpl]
-    [reagent.impl.util :as rutil]
-    [reagent.ratom :as ratom]
+    #?(:cljs [reagent.dom.server :as reagent-server])
+
+
+
     [taoensso.timbre :as timbre]))
 
-
-(deftype IOImpl [domain ?jwt]
-  io/IO
-  (global-basis [io]
-    (http-client/global-basis! domain ?jwt))
-
-  (local-basis [io global-basis route]
-    (p/resolved (local-basis/local-basis io global-basis route)))
-
-  (hydrate-requests [io local-basis staged-branches requests]
-    (http-client/hydrate-requests! domain local-basis staged-branches requests ?jwt))
-
-  (hydrate-route [io local-basis route branch-id stage]
-    (http-client/hydrate-route! domain local-basis route branch-id stage ?jwt))
-
-  (sync [io dbnames]
-    (http-client/sync! domain dbnames ?jwt)))
 
 (deftype RT [domain io state-atom root-reducer]
   runtime/State
@@ -57,32 +35,34 @@
   (io [rt] io)
 
   hc/Peer
-  (hydrate [this branch request]
-    (peer/hydrate state-atom branch request))
-
-  IHash
-  (-hash [this] (goog/getUid this)))
-
-(defn render-to-node-stream
-  [component]
-  (ratom/flush!)
-  (binding [rutil/*non-reactive* true]
-    (dom-server/renderToNodeStream (tmpl/as-element component))))
+  (hydrate [this branch request] (peer/hydrate state-atom branch request)))
 
 (def analytics (load-resource "analytics.html"))
+
+(defn- inner-html
+  ([tag html]
+   (inner-html tag {} html))
+  ([tag props html]
+    #?(:clj  [tag props html]
+       :cljs [tag (assoc-in props [:dangerouslySetInnerHTML :__html] html)])))
 
 (defn root-html-str [rt]
   (let [ctx {:peer rt
              :branch foundation/root-branch}]
-    (try
-      (reagent-server/render-to-static-markup [foundation/view ctx])
-      (catch :default e
-        (reagent-server/render-to-string [:<>
-                                          [:h1 "Javascript mounting..."]
-                                          [:h2 "SSR failed on:"]
-                                          [error/error-block e]])))))
+    #?(:clj  (if-let [e (or @(runtime/state (:peer ctx) [::runtime/fatal-error])
+                            (some-> @(runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :error])))]
+               ; error handling copied from foundation
+               (foundation/error-cmp e)
+               (loading/loading-page))
+       :cljs (try
+               (reagent-server/render-to-static-markup [foundation/view ctx])
+               (catch :default e
+                 (reagent-server/render-to-string [:<>
+                                                   [:h1 "Javascript mounting..."]
+                                                   [:h2 "SSR failed on:"]
+                                                   [error/error-block e]]))))))
 
-(defn full-html [build analytics rt client-params]
+(defn- full-html [build analytics rt client-params]
   [:html {:lang "en"}
    [:head
     [:title "Hyperfiddle" #_(str (domain/ident (runtime/domain rt)) " - " (first @(runtime/state rt [::runtime/partitions foundation/root-branch :route])))]
@@ -90,24 +70,21 @@
     [:link {:rel "stylesheet" :href (domain/api-url-for (runtime/domain rt) :static-resource :resource-name "styles.css")}]
     [:meta {:name "viewport" :content "width=device-width, initial-scale=1"}]
     [:meta {:charset "UTF-8"}]
-    [:script {:id "build" :type "text/plain" :dangerouslySetInnerHTML {:__html build}}]]
-   [:body
-    [:div {:id (or (:html-root-id (runtime/domain rt)) "root") :dangerouslySetInnerHTML {:__html (root-html-str rt)}}]
-    (when analytics
-      [:div {:dangerouslySetInnerHTML {:__html analytics}}])
-    (when-not (-> (runtime/domain rt) domain/environment :domain/disable-javascript)
-      [:<>
-       ; env vars for client side rendering
-       [:script {:id "params" :type "application/transit-json"
-                 :dangerouslySetInnerHTML {:__html (transit/encode client-params)}}]
-       [:script {:id "domain" :type "application/transit-json"
-                 :dangerouslySetInnerHTML {:__html (let [domain (runtime/domain rt)
-                                                         f (or (:hack-transit-serializer domain) transit/encode)]
-                                                     (f domain))}}]
-       [:script {:id "state" :type "application/transit-json"
-                 :dangerouslySetInnerHTML {:__html (transit/encode @(runtime/state rt))}}]
-       [:script {:id "preamble" :src (domain/api-url-for (runtime/domain rt) :static-resource :resource-name "preamble.js")}]
-       [:script {:id "main" :src (domain/api-url-for (runtime/domain rt) :static-resource :resource-name "main.js")}]])]])
+    (inner-html :script {:id "build" :type "text/plain"} build)]
+   (cond-> [:body
+            (inner-html :div {:id (or (:html-root-id (runtime/domain rt)) "root")} (root-html-str rt))]
+     analytics
+     (conj (inner-html :div analytics))
+
+     (-> (runtime/domain rt) domain/environment :domain/disable-javascript not)
+     (into [(inner-html :script {:id "params" :type "application/transit-json"} (hc-t/encode client-params))
+            (inner-html :script {:id "domain" :type "application/transit-json"}
+                        (let [domain (runtime/domain rt)
+                              f (or (:hack-transit-serializer domain) hc-t/encode)]
+                          (f domain)))
+            (inner-html :script {:id "state" :type "application/transit-json"} (hc-t/encode @(runtime/state rt)))
+            [:script {:id "preamble" :src (domain/api-url-for (runtime/domain rt) :static-resource :resource-name "preamble.js")}]
+            [:script {:id "main" :src (domain/api-url-for (runtime/domain rt) :static-resource :resource-name "main.js")}]]))])
 
 (defn bootstrap-html-cmp [env domain io path user-id]
   (let [build (:BUILD env)
