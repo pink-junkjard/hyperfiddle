@@ -63,12 +63,12 @@
         get-state #(deref (runtime/state rt))
         io (runtime/io rt)]
     (cond-> (p/resolved nil)
-      (< init-level LEVEL-GLOBAL-BASIS) (p/then #(refresh-global-basis io nil dispatch! get-state))
-      (< init-level LEVEL-LOCAL-BASIS) (-> (p/then #(refresh-partition-basis io branch dispatch! get-state))
-                                           (p/then #(dispatch! [:hydrate!-start branch])))
-      (< init-level LEVEL-HYDRATE-PAGE) (p/then #(if (hydrate-page?)
-                                                   (hydrate-partition io branch dispatch! get-state)
-                                                   (p/resolved (dispatch! [:hydrate!-shorted branch])))))))
+      (< init-level LEVEL-GLOBAL-BASIS) (p/then (fn [_] (refresh-global-basis io nil dispatch! get-state)))
+      (< init-level LEVEL-LOCAL-BASIS) (-> (p/then (fn [_] (refresh-partition-basis io branch dispatch! get-state)))
+                                           (p/then (fn [_] (dispatch! [:hydrate!-start branch]))))
+      (< init-level LEVEL-HYDRATE-PAGE) (p/then (fn [_] (if (hydrate-page?)
+                                                          (hydrate-partition io branch dispatch! get-state)
+                                                          (p/resolved (dispatch! [:hydrate!-shorted branch]))))))))
 
 (declare discard-partition)
 
