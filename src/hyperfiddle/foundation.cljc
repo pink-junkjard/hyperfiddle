@@ -1,6 +1,7 @@
 (ns hyperfiddle.foundation
   (:require
     [cats.monad.either :as either]
+    [clojure.string :as string]
     #?(:cljs [contrib.reactive :as r])
     [hypercrud.types.Err :as Err]
     [hyperfiddle.project :as project]
@@ -12,22 +13,22 @@
 
 (def root-branch ["root"])
 
-#?(:cljs
-   (defn error-cmp [e]
+(defn error-cmp [e]
+  [:div
+   [:h1 "Fatal error"]
+   (if (Err/Err? e)
      [:div
-      [:h1 "Fatal error"]
-      (if (Err/Err? e)
-        [:div
-         [:h3 (:msg e)]
-         (when-let [data (:data e)]
-           [:pre data])]
-        [:div
-         [:fieldset [:legend "(pr-str e)"]
-          [:pre (pr-str e)]]
-         [:fieldset [:legend "(ex-data e)"]                 ; network error
-          [:pre (str (:data e))]]                           ; includes :body key
-         [:fieldset [:legend "(.-stack e)"]                 ; network error
-          [:pre (.-stack e)]]])]))
+      [:h3 (:msg e)]
+      (when-let [data (:data e)]
+        [:pre data])]
+     [:div
+      [:fieldset [:legend "(pr-str e)"]
+       [:pre (pr-str e)]]
+      [:fieldset [:legend "(ex-data e)"]                    ; network error
+       [:pre (str (:data e))]]                              ; includes :body key
+      [:fieldset [:legend "stack"]                          ; network error
+       [:pre #?(:clj  (string/join "\n" (.getStackTrace (ex-info "foo" {})))
+                :cljs [:pre (.-stack e)])]]])])
 
 #?(:cljs
    (defn- error-cmp-with-stage [ctx e]
