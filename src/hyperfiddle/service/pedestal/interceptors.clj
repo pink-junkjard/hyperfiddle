@@ -181,5 +181,5 @@
   (let [path (get-in context [:request :path-info])
         request-method (get-in context [:request :request-method])
         {:keys [handler route-params]} (domain/api-match-path domain path :request-method request-method)]
-    (timbre/debug "router:" (pr-str handler) (pr-str request-method) (pr-str path))
+    (timbre/info "router:" (pr-str handler) (pr-str request-method) (pr-str path))
     (handle-route handler env (assoc-in context [:request :route-params] route-params))))
