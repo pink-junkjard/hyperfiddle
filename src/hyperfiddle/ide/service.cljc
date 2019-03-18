@@ -1,13 +1,13 @@
 (ns hyperfiddle.ide.service
   (:require
+    [cats.monad.either :as either]
     [clojure.core.async :refer [chan >!!]]
     [clojure.string :as string]
     [hyperfiddle.domain :as domain]
     [hyperfiddle.ide.domain :as ide-domain :refer [#?(:cljs IdeDomain)]]
     [hyperfiddle.service.domain :as service-domain]
     [hyperfiddle.service.http :refer [handle-route]]
-    [taoensso.timbre :as timbre]
-    [cats.monad.either :as either])
+    [taoensso.timbre :as timbre])
   #?(:clj
      (:import
        [hyperfiddle.ide.domain IdeDomain])))
@@ -19,7 +19,7 @@
   (let [path (get-in context [:request :path-info])
         request-method (get-in context [:request :request-method])
         {:keys [handler route-params]} (domain/api-match-path domain path :request-method request-method)]
-    (timbre/debug "ide-router:" (pr-str handler) (pr-str request-method) (pr-str path))
+    (timbre/info "ide-router:" (pr-str handler) (pr-str request-method) (pr-str path))
     (cond
       (= (some-> handler namespace) "user")
       (either/branch
