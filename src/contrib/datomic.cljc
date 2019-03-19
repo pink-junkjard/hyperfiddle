@@ -208,6 +208,7 @@ Shape is normalized to match the shape of the Datomic result, e.g. [:user/a-ref]
 (defn pull-enclosure "Union the requested pull-pattern-shape with the actual result shape"
   [schema shape coll]
   {:pre [schema]}
+  (println (type schema))
   ; Only do this if the pull contains splat
   (apply pull-union shape (map (partial tree-derivative schema) coll)))
 
@@ -317,11 +318,13 @@ Shape is normalized to match the shape of the Datomic result, e.g. [:user/a-ref]
                                        dbname (str db)
                                        schema (some-> (get schemas dbname) deref)
                                        shape (pull-shape schema pull-pattern)
-                                       no-splat (->> (pull-seq pull-pattern) (filter (partial = '*)) count (= 0))]
+                                       no-splat (->> (pull-seq pull-pattern) (filter (partial = '*)) count (= 0))
+                                       enclosure #_(delay)    ; Delay this to repro https://github.com/hyperfiddle/hyperfiddle/issues/892
+                                       (let [coll (mapv #(get % i) ?data)]
+                                         (pull-enclosure schema shape coll))]
                                    (if no-splat
                                      shape                  ; fast path, and doesn't muck with pull order
-                                     (let [coll (mapv #(get % i) ?data)]
-                                       (pull-enclosure schema shape coll)))))))
+                                     enclosure)))))
            vec))))
 
 (defn spread-elements! [f schemas qfind data]
