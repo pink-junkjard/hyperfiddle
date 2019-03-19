@@ -345,7 +345,7 @@
 
 (deftest pull-enclosure1
   (testing "Doesn't muck with order if no splat"
-    (is (= (result-enclosure! fixtures.tank/schema
+    (is (= (result-enclosure! fixtures.tank/schemas
                               (:qfind (parse-query q-with-nesting-order))
                               [])
            [[:db/id
