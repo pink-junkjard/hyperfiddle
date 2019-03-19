@@ -17,11 +17,7 @@
     [hyperfiddle.state :as state]
     [hyperfiddle.ui.loading :as loading]
     [promesa.core :as p]
-    #?(:cljs [reagent.dom.server :as reagent-server])
-
-
-
-    [taoensso.timbre :as timbre]))
+    #?(:cljs [reagent.dom.server :as reagent-server])))
 
 
 (deftype RT [domain io state-atom root-reducer]
