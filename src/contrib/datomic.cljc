@@ -208,7 +208,6 @@ Shape is normalized to match the shape of the Datomic result, e.g. [:user/a-ref]
 (defn pull-enclosure "Union the requested pull-pattern-shape with the actual result shape"
   [schema shape coll]
   {:pre [schema]}
-  (println (type schema))
   ; Only do this if the pull contains splat
   (apply pull-union shape (map (partial tree-derivative schema) coll)))
 
