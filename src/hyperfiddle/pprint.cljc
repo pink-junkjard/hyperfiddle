@@ -13,7 +13,7 @@
        hypercrud.types.ThinEntity.ThinEntity)))
 
 
-(defn pprint-simple-thinentity [o]
+(defn pprint-simple-thinentity [^ThinEntity o]
   (clojure.pprint/pprint-logical-block
     :prefix "#entity[" :suffix "]"
     (clojure.pprint/write-out (.-dbname o))
@@ -21,7 +21,7 @@
     (clojure.pprint/pprint-newline :linear)
     (clojure.pprint/write-out (.-id o))))
 
-(defn pprint-cats-extractable [tag o]
+(defn pprint-cats-extractable [^String tag o]
   (#?(:clj .write :cljs -write) *out* tag)
   (#?(:clj .write :cljs -write) *out* " ")
   (clojure.pprint/write-out (cats/extract o)))

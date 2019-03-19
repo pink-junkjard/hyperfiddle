@@ -4,19 +4,16 @@
               [clojure.core.protocols IKVReduce])))
 
 
-(defn- impl-hash [o]
-  (hash [(.-dbname o) (.-id o)]))
-
-(defn- impl-print [o]
-  (str "#entity" (pr-str [(.-dbname o) (.-id o)])))
+(declare impl-hash)
+(declare impl-print)
 
 ; dbname = $, for URIs
 (deftype ThinEntity [dbname id]                             ; id can be db/ident and lookup ref
   #?@(:clj  [Object
              (equals [o other]
                (and (instance? ThinEntity other)
-                    (= (.-dbname o) (.-dbname other))
-                    (= (.-id o) (.-id other))))
+                    (= (.-dbname o) (.-dbname ^ThinEntity other))
+                    (= (.-id o) (.-id ^ThinEntity other))))
 
              IHashEq
              (hasheq [o] (impl-hash o))
@@ -73,13 +70,19 @@
              (-invoke [o k] ({:db/id id} k))
              (-invoke [o k not-found] ({:db/id id} k not-found))]))
 
+(defn- impl-hash [^ThinEntity o]
+  (hash [(.-dbname o) (.-id o)]))
+
+(defn- impl-print ^String [^ThinEntity o]
+  (str "#entity" (pr-str [(.-dbname o) (.-id o)])))
+
 #?(:clj
    (defmethod print-method ThinEntity [o ^java.io.Writer w]
      (.write w (impl-print o))))
 
 #?(:clj
-   (defmethod print-dup ThinEntity [o w]
-     (print-method o w)))
+   (defmethod print-dup ThinEntity [o ^java.io.Writer w]
+     (.write w (impl-print o))))
 
 (def read-ThinEntity #(apply ->ThinEntity %))
 

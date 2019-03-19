@@ -1,10 +1,13 @@
 (ns contrib.uri)
 
 
+(defn- impl-print ^String [s-rep]
+  (str "#uri " (pr-str s-rep)))
+
 #?(:cljs
    (deftype URI [uri-str]
      Object (toString [_] uri-str)
-     IPrintWithWriter (-pr-writer [o writer _] (-write writer (str "#uri " (pr-str uri-str))))
+     IPrintWithWriter (-pr-writer [o writer _] (-write writer (impl-print uri-str)))
      IComparable (-compare [this other]
                    (and (instance? URI other)
                         (compare (.-uri-str this) (.-uri-str other))))
@@ -18,11 +21,11 @@
 
 #?(:clj
    (defmethod print-method java.net.URI [o ^java.io.Writer w]
-     (.write w (str "#uri " (pr-str (str o))))))
+     (.write w (impl-print (str o)))))
 
 #?(:clj
-   (defmethod print-dup java.net.URI [o w]
-     (print-method o w)))
+   (defmethod print-dup java.net.URI [o ^java.io.Writer w]
+     (.write w (impl-print (str o)))))
 
 (def read-URI #(->URI %))
 
