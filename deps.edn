@@ -5,6 +5,7 @@
         com.cognitect/transit-clj {:mvn/version "0.8.313"}
         com.cognitect/transit-cljs {:mvn/version "0.8.256"}
         ;com.datomic/datomic-free {:mvn/version "0.9.5656" :exclusions [org.slf4j/slf4j-nop]} ; test-cljs chokes on this for some reason
+        com.taoensso/encore {:mvn/version "2.107.0"}
         com.taoensso/timbre {:mvn/version "4.10.0"}
         datascript {:mvn/version "0.18.1"}
         funcool/cats {:mvn/version "2.3.2"}
