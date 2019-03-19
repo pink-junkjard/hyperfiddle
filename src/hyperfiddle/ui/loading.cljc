@@ -5,6 +5,6 @@
   [:div.loading-page
    [:div.logo-callout
     [:img {:src "https://i.imgur.com/DtMAeuM.png"}]
-    [:span.brand ":hyperfiddle"]
+    #_[:span.brand ":hyperfiddle"]
     (when children
       (into [:div.additional-content] children))]])
