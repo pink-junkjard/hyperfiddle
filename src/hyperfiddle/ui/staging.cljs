@@ -92,10 +92,11 @@
   (defn- tab-content [rt branch dbname-ref & children]
     (into [:div.hyperfiddle-stage-content
            {:style {:border-color (domain/database-color (runtime/domain rt) @dbname-ref)}}
-           (let [props {:value @(runtime/state rt [::runtime/partitions branch :stage @dbname-ref])
+           (let [props {:value (reverse @(runtime/state rt [::runtime/partitions branch :stage @dbname-ref]))
                         :readOnly @(runtime/state rt [::runtime/auto-transact @dbname-ref])
                         :on-change (r/partial on-change rt branch dbname-ref)
-                        :typewriterScrolling true}]
+                        :lineNumbers false
+                        #_#_:typewriterScrolling true}]
              ^{:key (str @dbname-ref)}
              [debounced props validated-cmp parse-string to-string code])]
           children)))
