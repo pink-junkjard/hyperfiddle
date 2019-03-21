@@ -32,7 +32,13 @@
 (defn service-uri [env req]
   ; we are partially trusting the request for generating a service uri which is brittle
   ; todo there should be no dependency on the request once the domain is acquired
-  (->URI (str (:PUBLIC_SERVICE_HTTP_SCHEME env) "://" (.-hostname req) ":" (:PUBLIC_SERVICE_HTTP_PORT env))))
+  (let [scheme (:PUBLIC_SERVICE_HTTP_SCHEME env)
+        port (:PUBLIC_SERVICE_HTTP_PORT env)]
+    (-> (str scheme "://" (.-hostname req))
+        (cond-> (or (and (= scheme :http) (not= port 80))
+                    (and (= scheme :https) (not= port 443)))
+                (str ":" port))
+        ->URI)))
 
 (defn platform->express-req-handler [env platform-req-handler req res]
   (-> (platform-req-handler
