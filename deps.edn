@@ -2,5 +2,7 @@
  :deps {
         com.auth0/auth0 {:mvn/version "1.10.0"}
         com.hyperfiddle/hyperfiddle {:local/root "../hyperfiddle"}
+        com.hyperfiddle/hyperfiddle-server {:local/root "../hyperfiddle-server"}
         }
- :aliases {:lein {:extra-deps {com.hyperfiddle/hyperfiddle {:mvn/version "0.3.0-SNAPSHOT"}}}}}
+ :aliases {:lein {:extra-deps {com.hyperfiddle/hyperfiddle {:mvn/version "0.3.0-SNAPSHOT"}
+                               com.hyperfiddle/hyperfiddle-server {:mvn/version "0.0.1-SNAPSHOT"}}}}}
