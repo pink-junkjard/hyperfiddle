@@ -67,7 +67,7 @@
 (defn hack-login-renderer [value ctx props]
   [:div props
    [:div.left-nav
-    [tooltip {:label "Home"} [:a (domain/ident (runtime/domain (:peer ctx)))]]]
+    [tooltip {:label "Home"} [:a (:app-domain-ident (runtime/domain (:peer ctx)))]]]
    [:div.right-nav {:key "right-nav"}                       ; CAREFUL; this key prevents popover flickering
     [loading-spinner ctx]]])
 
