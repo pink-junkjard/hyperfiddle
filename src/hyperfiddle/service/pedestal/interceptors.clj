@@ -167,44 +167,42 @@
                   (>!! channel (assoc (terminate context) :response (e->response e)))))
               channel))})
 
-(defn with-user-id [jwt-secret jwt-issuer]
+(defn with-user-id [cookie-name jwt-secret jwt-issuer]
   {:name ::with-user-id
    :enter (fn [context]
-            (if-not (= "hyperfiddle" (domain/ident (get-in context [:request :domain])))
-              context
-              (let [#_#_{:keys [jwt-secret jwt-issuer]} (-> (get-in context [:request :domain])
-                                                            domain/environment-secure :jwt)
-                    verify (jwt/build-verifier jwt-secret jwt-issuer)
-                    jwt-cookie (get-in context [:request :cookies "jwt" :value])
-                    jwt-header (some->> (get-in context [:request :headers "authorization"])
-                                        (re-find #"^Bearer (.+)$")
-                                        (second))
-                    with-jwt (fn [jwt]
-                               (-> context
-                                   (assoc-in [:request :user-id] (some-> jwt (verify) :user-id UUID/fromString))
-                                   (assoc-in [:request :jwt] jwt)))]
-                (cond
-                  (or (nil? jwt-header) (= jwt-cookie jwt-header))
-                  (try (with-jwt jwt-cookie)
-                       (catch JWTVerificationException e
-                         (timbre/error e)
-                         (-> (terminate context)
-                             (assoc :response {:status 401
-                                               :cookies {"jwt" (-> (get-in context [:request :domain :ide-domain])
-                                                                   (cookie/jwt-options-pedestal)
-                                                                   (assoc :value jwt-cookie
-                                                                          :expires "Thu, 01 Jan 1970 00:00:00 GMT"))}
-                                               :body (->Err (.getMessage e))}))))
+            (let [#_#_{:keys [cookie-name jwt-secret jwt-issuer]} (-> (get-in context [:request :domain])
+                                                                      domain/environment-secure :jwt)
+                  verify (jwt/build-verifier jwt-secret jwt-issuer)
+                  jwt-cookie (get-in context [:request :cookies cookie-name :value])
+                  jwt-header (some->> (get-in context [:request :headers "authorization"])
+                                      (re-find #"^Bearer (.+)$")
+                                      (second))
+                  with-jwt (fn [jwt]
+                             (-> context
+                                 (assoc-in [:request :user-id] (some-> jwt (verify) :user-id UUID/fromString))
+                                 (assoc-in [:request :jwt] jwt)))]
+              (cond
+                (or (nil? jwt-header) (= jwt-cookie jwt-header))
+                (try (with-jwt jwt-cookie)
+                     (catch JWTVerificationException e
+                       (timbre/error e)
+                       (-> (terminate context)
+                           (assoc :response {:status 401
+                                             :cookies {cookie-name (-> (get-in context [:request :domain :ide-domain])
+                                                                       (cookie/jwt-options-pedestal)
+                                                                       (assoc :value jwt-cookie
+                                                                              :expires "Thu, 01 Jan 1970 00:00:00 GMT"))}
+                                             :body (->Err (.getMessage e))}))))
 
-                  (nil? jwt-cookie)
-                  (try (with-jwt jwt-header)
-                       (catch JWTVerificationException e
-                         (timbre/error e)
-                         (-> (terminate context)
-                             (assoc :response {:status 401 :body (->Err (.getMessage e))}))))
+                (nil? jwt-cookie)
+                (try (with-jwt jwt-header)
+                     (catch JWTVerificationException e
+                       (timbre/error e)
+                       (-> (terminate context)
+                           (assoc :response {:status 401 :body (->Err (.getMessage e))}))))
 
-                  :else (-> (terminate context)
-                            (assoc :response {:status 400 :body (->Err "Conflicting cookies and auth bearer")}))))))})
+                :else (-> (terminate context)
+                          (assoc :response {:status 400 :body (->Err "Conflicting cookies and auth bearer")})))))})
 
 (defn build-router [env]
   {:name ::router
