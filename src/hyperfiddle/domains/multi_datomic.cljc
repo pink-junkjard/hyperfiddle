@@ -3,7 +3,6 @@
     [cats.core :as cats :refer [mlet]]
     [cats.monad.either :as either]
     [contrib.reader :as reader]
-    [contrib.uri :refer [->URI]]
     [hypercrud.types.DbRef :refer [->DbRef]]
     [hypercrud.types.EntityRequest :refer [->EntityRequest]]
     [hyperfiddle.domain :as domain]
@@ -46,7 +45,7 @@
     (either/left (ex-info "Invalid :domain/fiddle-database. Missing :db/id"
                           (select-keys datomic-record [:domain/ident :domain/fiddle-database])))))
 
-(defn hydrate-app-domain [io local-basis domain-eid service-uri build]
+(defn hydrate-app-domain [io local-basis domain-eid build]
   (-> (io/hydrate-one! io local-basis nil (->EntityRequest domain-eid (->DbRef "$domains" foundation/root-branch) domain-pull))
       (p/then (fn [datomic-record]
                 (if (nil? (:db/id datomic-record))
@@ -60,7 +59,6 @@
                                                                    (map (juxt :domain.database/name :domain.database/record))
                                                                    (into {}))
                                                    :environment (assoc environment :domain/disable-javascript (:domain/disable-javascript datomic-record))
-                                                   :service-uri service-uri
                                                    :build build}]]
                         (if (:domain/router datomic-record)
                           (->> (reader/read-edn-string+ (:domain/router datomic-record))
@@ -72,19 +70,17 @@
 
 ; app-domains = #{"bar.com"}
 ; fqdn = "foo.bar.com" or "myfancyfoo.com"
-(defn domain-for-fqdn [io app-domains build protocol fqdn]
+(defn domain-for-fqdn [io app-domains build fqdn]
   (-> (io/sync io #{"$domains"})
       (p/then (fn [local-basis]
                 (let [domain-eid (if-let [domain-ident (some #(second (re-find (re-pattern (str "^(.*)\\." % "$")) fqdn)) app-domains)]
                                    [:domain/ident domain-ident]
-                                   [:domain/aliases fqdn])
-                      service-uri (->URI (str protocol "://" fqdn))]
-                  (hydrate-app-domain io local-basis domain-eid service-uri build))))))
+                                   [:domain/aliases fqdn])]
+                  (hydrate-app-domain io local-basis domain-eid build))))))
 
-(defn domains-domain [domains-transactor-uri service-uri build]
+(defn domains-domain [domains-transactor-uri build]
   (let [api-routes (routes/build build)]
     (reify domain/Domain
       (databases [domain] {"$domains" {:database/uri domains-transactor-uri}})
       (environment [domain] {})
-      (api-routes [domain] api-routes)
-      (service-uri [domain] service-uri))))
+      (api-routes [domain] api-routes))))

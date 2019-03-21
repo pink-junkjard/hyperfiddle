@@ -6,7 +6,7 @@
     [hyperfiddle.system-fiddle :as system-fiddle]))
 
 
-(defrecord EdnishDomain [basis ident fiddle-dbname databases environment home-route service-uri build]
+(defrecord EdnishDomain [basis ident fiddle-dbname databases environment home-route build]
   domain/Domain
   (basis [domain] basis)
   (ident [domain] ident)
@@ -16,7 +16,6 @@
   (url-decode [domain s] (route/url-decode s home-route))
   (url-encode [domain route] (route/url-encode route home-route))
   (api-routes [domain] (routes/build build))
-  (service-uri [domain] service-uri)
   (system-fiddle? [domain fiddle-ident] (system-fiddle/system-fiddle? fiddle-ident))
   (hydrate-system-fiddle [domain fiddle-ident] (system-fiddle/hydrate fiddle-ident))
   )

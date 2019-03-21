@@ -93,15 +93,15 @@
       (fn [_ get-total-time]
         (timbre/debug "Request succeeded" (str "[" @req-hash "]") "total time:" (get-total-time))))))
 
-(defn global-basis! [domain & [jwt]]
-  (-> {:url (domain/api-url-for domain :global-basis)
+(defn global-basis! [domain ?service-uri & [jwt]]
+  (-> {:url (str ?service-uri (domain/api-path-for domain :global-basis))
        :accept :application/transit+json :as :auto
        :method :get}
       (http-request! jwt)
       (p/then :body)))
 
-(defn hydrate-requests! [domain local-basis staged-branches requests & [jwt]]
-  (let [req {:url (domain/api-url-for domain :hydrate-requests :local-basis (ednish/encode-uri local-basis)) ; serialize kvseq
+(defn hydrate-requests! [domain ?service-uri local-basis staged-branches requests & [jwt]]
+  (let [req {:url (str ?service-uri (domain/api-path-for domain :hydrate-requests :local-basis (ednish/encode-uri local-basis))) ; serialize kvseq
              :accept :application/transit+json :as :auto
              :method :post                                  ; hydrate-requests always has a POST body, though it has a basis and is cachable
              :form {:staged-branches staged-branches :request requests}
@@ -112,17 +112,18 @@
                   (assert (= (count requests) (count (:pulled-trees body))) "Server contract violation; mismatched counts")
                   body)))))
 
-(defn hydrate-route! [domain local-basis route branch stage & [jwt]]
+(defn hydrate-route! [domain ?service-uri local-basis route branch stage & [jwt]]
   {:pre [domain local-basis route]}
   (let [stage (->> stage
                    (remove (comp empty? second))
                    (into {}))]
-    (-> (merge {:url (domain/api-url-for domain :hydrate-route
-                                         :local-basis (ednish/encode-uri local-basis)
-                                         ; todo this needs work
-                                         #_#_:encoded-route (subs (foundation/route-encode rt route) 1) ; includes "/"
-                                         :encoded-route (base-64-url-safe/encode (pr-str route))
-                                         :branch (base-64-url-safe/encode (pr-str branch)))
+    (-> (merge {:url (str ?service-uri
+                          (domain/api-path-for domain :hydrate-route
+                                               :local-basis (ednish/encode-uri local-basis)
+                                               ; todo this needs work
+                                               #_#_:encoded-route (subs (foundation/route-encode rt route) 1) ; includes "/"
+                                               :encoded-route (base-64-url-safe/encode (pr-str route))
+                                               :branch (base-64-url-safe/encode (pr-str branch))))
                 :accept :application/transit+json :as :auto}
                (if (empty? stage)
                  {:method :get}                             ; Try to hit CDN
@@ -132,27 +133,27 @@
         (http-request! jwt)
         (p/then :body))))
 
-(defn local-basis! [domain global-basis route & [jwt]]
-  (-> {:url (domain/api-url-for domain :local-basis
-                                :global-basis (ednish/encode-uri global-basis)
-                                ; todo this needs work
-                                #_#_:encoded-route (subs (foundation/route-encode rt route) 1) ; includes "/"
-                                :encoded-route (base-64-url-safe/encode (pr-str route)))
+(defn local-basis! [domain ?service-uri global-basis route & [jwt]]
+  (-> {:url (str ?service-uri (domain/api-path-for domain :local-basis
+                                                   :global-basis (ednish/encode-uri global-basis)
+                                                   ; todo this needs work
+                                                   #_#_:encoded-route (subs (foundation/route-encode rt route) 1) ; includes "/"
+                                                   :encoded-route (base-64-url-safe/encode (pr-str route))))
        :accept :application/transit+json :as :auto
        :method :get}
       (http-request! jwt)
       (p/then :body)))
 
-(defn sync! [domain dbnames & [jwt]]
-  (-> {:url (domain/api-url-for domain :sync)
+(defn sync! [domain ?service-uri dbnames & [jwt]]
+  (-> {:url (str ?service-uri (domain/api-path-for domain :sync))
        :accept :application/transit+json :as :auto
        :method :post :form dbnames
        :content-type :application/transit+json}
       (http-request! jwt)
       (p/then :body)))
 
-(defn transact! [domain tx-groups & [jwt]]
-  (-> {:url (domain/api-url-for domain :transact)
+(defn transact! [domain ?service-uri tx-groups & [jwt]]
+  (-> {:url (str ?service-uri (domain/api-path-for domain :transact))
        :accept :application/transit+json :as :auto
        :method :post :form tx-groups
        :content-type :application/transit+json}

@@ -9,7 +9,7 @@
     [hyperfiddle.system-fiddle :as system-fiddle]))
 
 
-(defrecord BidiDomain [basis ident fiddle-dbname databases environment router service-uri build]
+(defrecord BidiDomain [basis ident fiddle-dbname databases environment router build]
   domain/Domain
   (basis [domain] basis)
   (ident [domain] ident)
@@ -23,7 +23,6 @@
       identity))
   (url-encode [domain route] (router-bidi/encode router route))
   (api-routes [domain] (routes/build build))
-  (service-uri [domain] service-uri)
   (system-fiddle? [domain fiddle-ident] (system-fiddle/system-fiddle? fiddle-ident))
   (hydrate-system-fiddle [domain fiddle-ident] (system-fiddle/hydrate fiddle-ident))
   )

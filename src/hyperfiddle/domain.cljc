@@ -14,7 +14,6 @@
   (url-decode [domain s])
   (url-encode [domain route])
   (api-routes [domain])
-  (service-uri [domain])
 
   (system-fiddle? [domain fiddle-ident])
   (hydrate-system-fiddle [domain fiddle-ident])
@@ -26,9 +25,8 @@
 (defn database-color [domain dbname]
   (or (:database/color (database domain dbname)) (color/color-for-name dbname)))
 
-(defn api-url-for [domain handler & {:as params}]
-  (some->> (apply bidi/path-for (api-routes domain) handler (apply concat params))
-           (str (service-uri domain))))
+(defn api-path-for [domain handler & {:as params}]
+  (apply bidi/path-for (api-routes domain) handler (apply concat params)))
 
 (defn api-match-path [domain path & {:as options}]
   (apply bidi/match-route (api-routes domain) path (apply concat options)))
