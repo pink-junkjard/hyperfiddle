@@ -15,6 +15,7 @@
     [io.pedestal.interceptor.chain :refer [enqueue terminate]]
     [io.pedestal.interceptor.helpers :as interceptor]
     [promesa.core :as p]
+    [ring.middleware.file :as file]
     [taoensso.timbre :as timbre])
   (:import
     [com.auth0.jwt.exceptions JWTVerificationException]
@@ -132,6 +133,25 @@
 (defmacro def-data-route [dispatch-val & fn-tail]
   `(defmethod handle-route ~dispatch-val [~'handler ~'env context#]
      (data-route context# (fn [~'req] ~@(rest fn-tail)))))
+
+(defn static-resource [mime-type-by-extension root-path context]
+  (let [filename (str "/" (get-in context [:request :route-params :resource-name]))
+        mime-type (or (mime-type-by-extension filename) "application/octet-stream")
+        accept (get-in context [:request :headers "accept"])]
+    (assoc context
+      :response
+      (if (or (nil? accept)                                 ; nil accept headers are ok
+              (content-negotiation/best-match
+                (content-negotiation/best-match-fn [mime-type])
+                (content-negotiation/parse-accept-* accept)))
+        (-> (file/file-request
+              {:request-method (get-in context [:request :request-method])
+               :path-info filename}
+              root-path)
+            (assoc-in [:headers "Content-Type"] mime-type))
+        {:status 406
+         :body "Not Acceptable"
+         :headers {}}))))
 
 (defn domain [domain-for-fqdn]
   {:name ::domain
