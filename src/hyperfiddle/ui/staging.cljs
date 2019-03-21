@@ -85,14 +85,14 @@
                      (let [v (read-edn-string! s)]
                        (assert (and (or (nil? v) (vector? v) (seq? v))
                                     (every? (fn [v] (or (map? v) (vector? v) (seq? v))) v)))
-                       v))
-      to-string pprint-datoms-str
+                       (some-> v reverse vec)))
+      to-string (fn [v] (pprint-datoms-str (some-> v reverse)))
       on-change (fn [rt branch dbname-ref o n]
                   (runtime/dispatch! rt (actions/reset-stage-db rt branch @dbname-ref n)))]
   (defn- tab-content [rt branch dbname-ref & children]
     (into [:div.hyperfiddle-stage-content
            {:style {:border-color (domain/database-color (runtime/domain rt) @dbname-ref)}}
-           (let [props {:value (reverse @(runtime/state rt [::runtime/partitions branch :stage @dbname-ref]))
+           (let [props {:value @(runtime/state rt [::runtime/partitions branch :stage @dbname-ref])
                         :readOnly @(runtime/state rt [::runtime/auto-transact @dbname-ref])
                         :on-change (r/partial on-change rt branch dbname-ref)
                         :lineNumbers false
