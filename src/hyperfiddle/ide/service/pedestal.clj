@@ -7,7 +7,7 @@
     [contrib.base-64-url-safe :as base64-url-safe]
     [hyperfiddle.domain :as domain]
     [hyperfiddle.ide.authenticate :as auth]
-    [hyperfiddle.ide.domain :as ide-domain :refer [#?(:cljs IdeDomain)]]
+    [hyperfiddle.ide.domain :as ide-domain]
     [hyperfiddle.ide.service.core :as ide-service]
     [hyperfiddle.io.core :as io]
     [hyperfiddle.io.datomic.hydrate-requests :refer [hydrate-requests]]
