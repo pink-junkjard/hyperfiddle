@@ -1,6 +1,7 @@
 (ns hyperfiddle.service.express-js.ssr
   (:require
     [goog.object :as object]
+    [hyperfiddle.service.express-js.middleware :as middleware]
     [hyperfiddle.service.http :refer [handle-route]]
     [hyperfiddle.service.node.ssr :as node-ssr]
     [hyperfiddle.service.ssr :as ssr]
@@ -11,7 +12,7 @@
 
 (defmethod handle-route :ssr [handler env req res]
   (let [domain (object/get req "domain")
-        io (node-ssr/->IOImpl domain (object/get req "jwt"))
+        io (node-ssr/->IOImpl domain (middleware/service-uri env req) (object/get req "jwt"))
         path (.-path req)
         user-id (object/get req "user-id")]
     (-> (ssr/bootstrap-html-cmp env domain io path user-id)

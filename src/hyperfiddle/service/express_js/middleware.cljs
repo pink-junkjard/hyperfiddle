@@ -1,5 +1,6 @@
 (ns hyperfiddle.service.express-js.middleware
   (:require
+    [contrib.uri :refer [->URI]]
     [contrib.uuid :refer [read-uuid]]
     [goog.object :as object]
     [hypercrud.transit :as transit]
@@ -28,11 +29,17 @@
                                   (.send express-res (:body platform-response))
                                   (.send express-res (pr-str (:body platform-response)))))})))
 
+(defn service-uri [env req]
+  ; we are partially trusting the request for generating a service uri which is brittle
+  ; todo there should be no dependency on the request once the domain is acquired
+  (->URI (str (:PUBLIC_SERVICE_HTTP_SCHEME env) "://" (.-hostname req) ":" (:PUBLIC_SERVICE_HTTP_PORT env))))
+
 (defn platform->express-req-handler [env platform-req-handler req res]
   (-> (platform-req-handler
         :domain (object/get req "domain")
         :route-params (object/get req "route-params")
         :request-body (some-> req .-body hack-buggy-express-body-text-parser transit/decode)
+        :service-uri (service-uri env req)
         :jwt (object/get req "jwt")
         :user-id (object/get req "user-id"))
       (p/then (partial send-platform-response res))))
@@ -40,7 +47,7 @@
 (defn domain [domain-for-fqdn]
   (fn [req res next]
     (p/branch
-      (domain-for-fqdn (.-protocol req) (.-hostname req))
+      (domain-for-fqdn (.-hostname req))
       (fn [domain]
         (object/set req "domain" domain)
         (next))

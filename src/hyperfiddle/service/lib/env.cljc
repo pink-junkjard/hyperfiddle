@@ -28,6 +28,8 @@
                     :AUTH0_DOMAIN
                     :AUTH0_CLIENT_ID
                     :AUTH0_CLIENT_SECRET
+                    :PUBLIC_SERVICE_HTTP_SCHEME
+                    :PUBLIC_SERVICE_HTTP_PORT
                     :SERVICE_HOST
                     :SERVICE_PORT
                     :NODE_PORT}

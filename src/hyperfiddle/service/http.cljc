@@ -19,8 +19,8 @@
   {:status (or (:hyperfiddle.io/http-status-code (ex-data e)) 500)
    :body (->Err (ex-message e))})
 
-(defn global-basis-handler [->IO & {:keys [domain user-id jwt]}]
-  (-> (->IO domain jwt user-id)
+(defn global-basis-handler [->IO & {:keys [domain service-uri user-id jwt]}]
+  (-> (->IO domain service-uri jwt user-id)
       (io/global-basis)
       (p/then (fn [global-basis]
                 {:status 200

@@ -10,22 +10,22 @@
     [reagent.ratom :as ratom]))
 
 
-(deftype IOImpl [domain ?jwt]
+(deftype IOImpl [domain service-uri ?jwt]
   io/IO
   (global-basis [io]
-    (http-client/global-basis! domain ?jwt))
+    (http-client/global-basis! domain service-uri ?jwt))
 
   (local-basis [io global-basis route]
     (p/resolved (local-basis/local-basis io global-basis route)))
 
   (hydrate-requests [io local-basis staged-branches requests]
-    (http-client/hydrate-requests! domain local-basis staged-branches requests ?jwt))
+    (http-client/hydrate-requests! domain service-uri local-basis staged-branches requests ?jwt))
 
   (hydrate-route [io local-basis route branch-id stage]
-    (http-client/hydrate-route! domain local-basis route branch-id stage ?jwt))
+    (http-client/hydrate-route! domain service-uri local-basis route branch-id stage ?jwt))
 
   (sync [io dbnames]
-    (http-client/sync! domain dbnames ?jwt)))
+    (http-client/sync! domain service-uri dbnames ?jwt)))
 
 (defn render-to-node-stream
   [component]

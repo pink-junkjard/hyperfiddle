@@ -2,6 +2,7 @@
   (:require
     [clojure.core.async :refer [chan >!!]]
     [cognitect.transit :as transit]
+    [contrib.uri :refer [->URI]]
     [hypercrud.transit :as hc-t]
     [hypercrud.types.Err :refer [->Err]]
     [hyperfiddle.domain :as domain]
@@ -28,12 +29,18 @@
    :headers {}                                              ; todo retry-after on 503
    :body (->Err (.getMessage e))})
 
+(defn service-uri [env req]
+  ; we are partially trusting the request for generating a service uri which is brittle
+  ; todo there should be no dependency on the request once the domain is acquired
+  (->URI (str (:PUBLIC_SERVICE_HTTP_SCHEME env) "://" (:server-name req) ":" (:PUBLIC_SERVICE_HTTP_PORT env))))
+
 (defn platform->pedestal-req-handler [env platform-req-handler req]
   (platform-req-handler
     :domain (:domain req)
     :route-params (:route-params req)
     :request-body (:body-params req)
     :jwt (:jwt req)
+    :service-uri (service-uri env req)
     :user-id (:user-id req)))
 
 (def combine-body-params
@@ -125,7 +132,7 @@
    :enter (fn [context]
             (let [channel (chan)]
               (p/branch
-                (domain-for-fqdn (name (get-in context [:request :scheme])) (get-in context [:request :server-name]))
+                (domain-for-fqdn (get-in context [:request :server-name]))
                 (fn [domain]
                   (>!! channel (assoc-in context [:request :domain] domain)))
                 (fn [e]

@@ -9,7 +9,7 @@
     [promesa.core :as p]))
 
 
-(deftype IOImpl [domain jwt ?subject]
+(deftype IOImpl [domain service-uri jwt ?subject]
   io/IO
   (global-basis [io]
     (global-basis io domain))
