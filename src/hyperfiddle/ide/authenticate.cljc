@@ -17,8 +17,10 @@
        (java.util Date UUID))))
 
 
-(defn fetch-id-token [env domain oauth-authorization-code]
-  (let [redirect-uri (domain/api-url-for domain :hyperfiddle.ide/auth0-redirect)]
+(defn fetch-id-token [env domain service-uri oauth-authorization-code]
+  (let [redirect-path (domain/api-path-for domain :hyperfiddle.ide/auth0-redirect)
+        _ (assert redirect-path)
+        redirect-uri (str service-uri redirect-path)]
     #?(:clj  (let [auth (AuthAPI. (:AUTH0_DOMAIN env) (:AUTH0_CLIENT_ID env) (:AUTH0_CLIENT_SECRET env))
                    req (.exchangeCode auth oauth-authorization-code redirect-uri)]
                ; todo async api?
@@ -38,8 +40,8 @@
                               (fn [e access_token refresh_token params]
                                 (if e (reject! e) (resolve! (object/get params "id_token")))))))))))
 
-(defn login [env domain io oauth-authorization-code]
-  (mlet [encoded-id-token (fetch-id-token env domain oauth-authorization-code)
+(defn login [env domain service-uri io oauth-authorization-code]
+  (mlet [encoded-id-token (fetch-id-token env domain service-uri oauth-authorization-code)
          id-token (let [verify (jwt/build-verifier (:AUTH0_CLIENT_SECRET env) (str (:AUTH0_DOMAIN env) "/"))]
                     (p/do* (verify encoded-id-token)))
          basis (io/sync io #{"$users"})

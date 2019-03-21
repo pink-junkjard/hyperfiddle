@@ -4,7 +4,6 @@
     [cats.monad.either :as either]
     [cognitect.transit :as t]
     [contrib.reader :as reader]
-    [contrib.uri :refer [->URI]]
     [hypercrud.browser.base :as base]
     [hypercrud.transit :as transit]
     [hypercrud.types.DbRef :refer [->DbRef]]
@@ -52,7 +51,7 @@
         true {:get :ssr
               true :405}}])
 
-(defrecord IdeDomain [basis ident fiddle-dbname databases environment home-route service-uri build user-domain-record
+(defrecord IdeDomain [basis ident fiddle-dbname databases environment home-route build user-domain-record
                       html-root-id]
   domain/Domain
   (basis [domain] basis)
@@ -79,7 +78,6 @@
             (route/url-encode home-route)))))
 
   (api-routes [domain] (build-routes build))
-  (service-uri [domain] service-uri)
   (system-fiddle? [domain fiddle-ident]
     (or (and (keyword? fiddle-ident) (= "hyperfiddle.ide.schema" (namespace fiddle-ident)))
         (system-fiddle/system-fiddle? fiddle-ident)))
@@ -96,7 +94,7 @@
 
 (defn from-rep [rep] (-> (map->IdeDomain rep) with-serializer))
 
-(defn build+ [domains-basis ide-datomic-record service-uri build user-datomic-record]
+(defn build+ [domains-basis ide-datomic-record build user-datomic-record]
   (mlet [environment (reader/read-edn-string+ (:domain/environment ide-datomic-record))
          :let [environment (assoc environment :domain/disable-javascript (:domain/disable-javascript ide-datomic-record))]
          home-route (reader/read-edn-string+ (:domain/home-route ide-datomic-record))
@@ -136,7 +134,6 @@
                         (into user-dbs ide-dbs))
            :environment environment
            :home-route home-route
-           :service-uri service-uri
            :build build
            ::user-dbname->ide (->> (:domain/databases user-datomic-record)
                                    (map (fn [db]
@@ -153,7 +150,7 @@
           with-serializer))))
 
 ; shitty code duplication because we cant pass our api-routes data structure as props (no regex equality)
-(defrecord EdnishDomain [basis ident fiddle-dbname databases environment home-route service-uri build]
+(defrecord EdnishDomain [basis ident fiddle-dbname databases environment home-route build]
   domain/Domain
   (basis [domain] basis)
   (ident [domain] ident)
@@ -163,7 +160,6 @@
   (url-decode [domain s] (route/url-decode s home-route))
   (url-encode [domain route] (route/url-encode route home-route))
   (api-routes [domain] (nested-user-routes build))
-  (service-uri [domain] service-uri)
   (system-fiddle? [domain fiddle-ident] (system-fiddle/system-fiddle? fiddle-ident))
   (hydrate-system-fiddle [domain fiddle-ident] (system-fiddle/hydrate fiddle-ident))
   )
@@ -182,42 +178,40 @@
                                                 (map (juxt :domain.database/name :domain.database/record))
                                                 (into {}))
                                 :environment (assoc environment :domain/disable-javascript (:domain/disable-javascript user-domain-record))
-                                :service-uri (:service-uri ide-domain)
                                 :build (:build ide-domain)}]]
      (->> (reader/read-edn-string+ (:domain/home-route user-domain-record))
           (cats/=<< route/validate-route+)
           (cats/fmap (fn [home-route] (map->EdnishDomain (assoc partial-domain :home-route home-route))))))))
 
-(defn hydrate-ide-domain [io local-basis app-domain-ident service-uri build]
+(defn hydrate-ide-domain [io local-basis app-domain-ident build]
   (let [requests [(->EntityRequest [:domain/ident "hyperfiddle"] (->DbRef "$domains" foundation/root-branch) multi-datomic/domain-pull)
                   (->EntityRequest [:domain/ident app-domain-ident] (->DbRef "$domains" foundation/root-branch) multi-datomic/domain-pull)]]
     (-> (io/hydrate-all-or-nothing! io local-basis nil requests)
         (p/then (fn [[ide-domain user-domain]]
                   (if (nil? (:db/id ide-domain))
                     (p/rejected (ex-info "IDE domain not found" {:hyperfiddle.io/http-status-code 404}))
-                    (-> (build+ (get local-basis "$domains") ide-domain service-uri build user-domain)
+                    (-> (build+ (get local-basis "$domains") ide-domain build user-domain)
                         (either/branch p/rejected p/resolved))))))))
 
 ; app-domains = #{"hyperfiddle.com"}
 ; ide-domains = #{"hyperfiddle.net"}
 ; fqdn = "foo.hyperfiddle.net" or "foo.hyperfiddle.com" or "myfancyfoo.com"
 ; todo app-domains and ide-domains can just be a regex with one capture group
-(defn domain-for-fqdn [io app-domains ide-domains build protocol fqdn]
+(defn domain-for-fqdn [io app-domains ide-domains build fqdn]
   (assert (first app-domains) "Ide service must have app-domains configured")
   (-> (io/sync io #{"$domains"})
       (p/then (fn [local-basis]
-                (let [service-uri (->URI (str protocol "://" fqdn))]
-                  (if-let [app-domain-ident (some #(second (re-find (re-pattern (str "^(.*)\\." % "$")) fqdn)) app-domains)]
-                    (multi-datomic/hydrate-app-domain io local-basis [:domain/ident app-domain-ident] service-uri build)
-                    (if-let [[app-domain-ident ide-domain] (->> ide-domains
-                                                                (map #(re-pattern (str "^(.*)\\.(" % ")$")))
-                                                                (some #(re-find % fqdn))
-                                                                next)]
-                      (if (= "www" app-domain-ident)        ; todo this check is NOT ide
-                        (multi-datomic/hydrate-app-domain io local-basis [:domain/ident "www"] service-uri build)
-                        (-> (hydrate-ide-domain io local-basis app-domain-ident service-uri build)
-                            (p/then #(assoc %
-                                       :hyperfiddle.ide/fqdn fqdn
-                                       :ide-domain ide-domain
-                                       :app-domain-ident app-domain-ident))))
-                      (multi-datomic/hydrate-app-domain io local-basis [:domain/aliases fqdn] service-uri build))))))))
+                (if-let [app-domain-ident (some #(second (re-find (re-pattern (str "^(.*)\\." % "$")) fqdn)) app-domains)]
+                  (multi-datomic/hydrate-app-domain io local-basis [:domain/ident app-domain-ident] build)
+                  (if-let [[app-domain-ident ide-domain] (->> ide-domains
+                                                              (map #(re-pattern (str "^(.*)\\.(" % ")$")))
+                                                              (some #(re-find % fqdn))
+                                                              next)]
+                    (if (= "www" app-domain-ident)          ; todo this check is NOT ide
+                      (multi-datomic/hydrate-app-domain io local-basis [:domain/ident "www"] build)
+                      (-> (hydrate-ide-domain io local-basis app-domain-ident build)
+                          (p/then #(assoc %
+                                     :hyperfiddle.ide/fqdn fqdn
+                                     :ide-domain ide-domain
+                                     :app-domain-ident app-domain-ident))))
+                    (multi-datomic/hydrate-app-domain io local-basis [:domain/aliases fqdn] build)))))))
