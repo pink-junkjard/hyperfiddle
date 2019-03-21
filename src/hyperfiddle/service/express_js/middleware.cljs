@@ -93,4 +93,4 @@
         {:keys [handler route-params]} (domain/api-match-path domain path :request-method request-method)]
     (timbre/debug "router:" (pr-str handler) (pr-str request-method) (pr-str path))
     (object/set req "route-params" route-params)
-    (handle-route handler env req res route-params)))
+    (handle-route handler env req res)))
