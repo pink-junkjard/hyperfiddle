@@ -78,6 +78,9 @@
               (handle-route handler env req res)))))
 
 (defmethod service-domain/route IdeDomain [domain env req res]
-  (let [mw (middleware/with-user-id ide-service/cookie-name (:AUTH0_CLIENT_SECRET env) (str (:AUTH0_DOMAIN env) "/"))
+  (let [#_#_{:keys [cookie-name jwt-secret jwt-issuer]} (-> (get-in context [:request :domain])
+                                                            domain/environment-secure :jwt)
+        cookie-domain (:ide-domain domain)
+        mw (middleware/with-user-id ide-service/cookie-name cookie-domain (:AUTH0_CLIENT_SECRET env) (str (:AUTH0_DOMAIN env) "/"))
         next (fn [] (ide-routing domain env req res))]
     (mw req res next)))

@@ -90,8 +90,11 @@
       :else (handle-route handler env (assoc-in context [:request :route-params] route-params)))))
 
 (defmethod service-domain/route IdeDomain [domain env context]
-  (enqueue context [(interceptor/interceptor
-                      (interceptors/with-user-id ide-service/cookie-name (:AUTH0_CLIENT_SECRET env) (str (:AUTH0_DOMAIN env) "/")))
+  (enqueue context [(let [#_#_{:keys [cookie-name jwt-secret jwt-issuer]} (-> (get-in context [:request :domain])
+                                                                              domain/environment-secure :jwt)
+                          cookie-domain (:ide-domain domain)]
+                      (interceptor/interceptor
+                        (interceptors/with-user-id ide-service/cookie-name cookie-domain (:AUTH0_CLIENT_SECRET env) (str (:AUTH0_DOMAIN env) "/"))))
                     (interceptor/interceptor
                       {:name :ide-routing
                        :enter (partial ide-routing domain env)})]))
