@@ -51,11 +51,10 @@
         true {:get :ssr
               true :405}}])
 
-(defrecord IdeDomain [basis ident fiddle-dbname databases environment home-route build user-domain-record
+(defrecord IdeDomain [basis fiddle-dbname databases environment home-route build user-domain-record
                       html-root-id]
   domain/Domain
   (basis [domain] basis)
-  (ident [domain] ident)
   (fiddle-dbname [domain] fiddle-dbname)
   (databases [domain] databases)
   (environment [domain] environment)
@@ -102,7 +101,6 @@
          fiddle-dbname (multi-datomic/fiddle-dbname+ ide-datomic-record)]
     (return
       (-> {:basis domains-basis
-           :ident (:domain/ident ide-datomic-record)
            :fiddle-dbname fiddle-dbname
            :databases (let [user-dbs (->> (:domain/databases user-datomic-record)
                                           (remove (fn [db]
@@ -150,10 +148,9 @@
           with-serializer))))
 
 ; shitty code duplication because we cant pass our api-routes data structure as props (no regex equality)
-(defrecord EdnishDomain [basis ident fiddle-dbname databases environment home-route build]
+(defrecord EdnishDomain [basis fiddle-dbname databases environment home-route build]
   domain/Domain
   (basis [domain] basis)
-  (ident [domain] ident)
   (fiddle-dbname [domain] fiddle-dbname)
   (databases [domain] databases)
   (environment [domain] environment)
@@ -172,7 +169,6 @@
    (mlet [environment (reader/read-edn-string+ (:domain/environment user-domain-record))
           fiddle-dbname (multi-datomic/fiddle-dbname+ user-domain-record)
           :let [partial-domain {:basis (:basis ide-domain)
-                                :ident (:domain/ident user-domain-record)
                                 :fiddle-dbname fiddle-dbname
                                 :databases (->> (:domain/databases user-domain-record)
                                                 (map (juxt :domain.database/name :domain.database/record))
