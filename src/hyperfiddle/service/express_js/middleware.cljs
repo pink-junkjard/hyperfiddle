@@ -5,7 +5,7 @@
     [goog.object :as object]
     [hypercrud.transit :as transit]
     [hypercrud.types.Err :refer [->Err]]
-    [hyperfiddle.domain :as domain]
+    [hyperfiddle.domain :as domain :refer [Domain]]
     [hyperfiddle.service.cookie :as cookie]
     [hyperfiddle.service.domain :as service-domain]
     [hyperfiddle.service.http :as http-service :refer [handle-route]]
@@ -50,17 +50,22 @@
         :user-id (object/get req "user-id"))
       (p/then (partial send-platform-response res))))
 
-(defn domain [domain-for-fqdn]
-  (fn [req res next]
-    (p/branch
-      (domain-for-fqdn (.-hostname req))
-      (fn [domain]
-        (object/set req "domain" domain)
-        (next))
-      (fn [e]
-        (timbre/error e)
-        (->> (http-service/e->platform-response e)
-             (send-platform-response res))))))
+(defn domain [domain-provider]
+  (cond
+    (instance? Domain domain-provider) (fn [req res next]
+                                         (object/set req "domain" domain-provider)
+                                         (next))
+    (fn? domain-provider) (fn [req res next]
+                            (p/branch
+                              (domain-provider (.-hostname req))
+                              (fn [domain]
+                                (object/set req "domain" domain)
+                                (next))
+                              (fn [e]
+                                (timbre/error e)
+                                (->> (http-service/e->platform-response e)
+                                     (send-platform-response res)))))
+    :else (throw (ex-info "Must supply domain value or function" {:value domain-provider}))))
 
 (defn with-user-id [cookie-name jwt-secret jwt-issuer]
   (fn [req res next]

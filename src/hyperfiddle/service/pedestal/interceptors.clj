@@ -1,6 +1,7 @@
 (ns hyperfiddle.service.pedestal.interceptors
   (:require
     [clojure.core.async :refer [chan >!!]]
+    [clojure.string :as string]
     [cognitect.transit :as transit]
     [contrib.uri :refer [->URI]]
     [hypercrud.transit :as hc-t]
@@ -19,6 +20,7 @@
     [taoensso.timbre :as timbre])
   (:import
     [com.auth0.jwt.exceptions JWTVerificationException]
+    (hyperfiddle.domain Domain)
     [java.io OutputStreamWriter OutputStream]
     java.util.UUID
     org.apache.commons.lang3.StringEscapeUtils))
@@ -153,19 +155,22 @@
          :body "Not Acceptable"
          :headers {}}))))
 
-(defn domain [domain-for-fqdn]
+(defn domain [domain-provider]
   {:name ::domain
-   :enter (fn [context]
-            (let [channel (chan)]
-              (p/branch
-                (domain-for-fqdn (get-in context [:request :server-name]))
-                (fn [domain]
-                  (>!! channel (assoc-in context [:request :domain] domain)))
-                (fn [e]
-                  (timbre/error e)
-                  ; todo are we sure we want to terminate completely? what about auto content type?
-                  (>!! channel (assoc (terminate context) :response (e->response e)))))
-              channel))})
+   :enter (cond
+            (instance? Domain domain-provider) #(assoc-in % [:request :domain] domain-provider)
+            (fn? domain-provider) (fn [context]
+                                    (let [channel (chan)]
+                                      (p/branch
+                                        (domain-provider (get-in context [:request :server-name]))
+                                        (fn [domain]
+                                          (>!! channel (assoc-in context [:request :domain] domain)))
+                                        (fn [e]
+                                          (timbre/error e)
+                                          ; todo content type negotiation on this error
+                                          (>!! channel (assoc (terminate context) :response (e->response e)))))
+                                      channel))
+            :else (throw (ex-info "Must supply domain value or function" {:value domain-provider})))})
 
 (defn with-user-id [cookie-name jwt-secret jwt-issuer]
   {:name ::with-user-id
@@ -203,6 +208,20 @@
 
                 :else (-> (terminate context)
                           (assoc :response {:status 400 :body (->Err "Conflicting cookies and auth bearer")})))))})
+
+(def log-request
+  (interceptor/on-request
+    ::log-request
+    (fn [request]
+      (timbre/info {:remote-addr (:remote-addr request)
+                    :host (:server-name request)
+                    :port (:server-port request)
+                    :method (string/upper-case (name (:request-method request)))
+                    :uri (:uri request)
+                    :protocol (:protocol request)
+                    :referer (get-in request [:headers "referer"])
+                    :user-agent (get-in request [:headers "user-agent"])})
+      request)))
 
 (defn build-router [env]
   {:name ::router
