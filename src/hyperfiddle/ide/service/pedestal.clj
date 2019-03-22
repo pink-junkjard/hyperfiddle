@@ -84,8 +84,8 @@
       (let [inner-route (domain/url-decode domain path)
             url (domain/url-encode domain [:hyperfiddle.ide/please-login inner-route])]
         (-> context
-            (assoc-in [:request :status] 302)
-            (assoc-in [:request :headers "Location"] url)))
+            (assoc-in [:response :status] 302)
+            (assoc-in [:response :headers "Location"] url)))
 
       :else (handle-route handler env (assoc-in context [:request :route-params] route-params)))))
 
