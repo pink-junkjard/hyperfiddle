@@ -4,6 +4,8 @@
     [reagent.ratom :refer [IReactiveAtom]]))
 
 
+; a writeable adapted view of an ratom
+; e.g. a record that writes through to some sideways record
 (deftype FAtom [^:mutable ratom to from]
   IAtom
   IReactiveAtom
