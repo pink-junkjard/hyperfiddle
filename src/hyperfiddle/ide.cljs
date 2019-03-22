@@ -15,6 +15,7 @@
     [hyperfiddle.ide.fiddles.schema-attribute]
     [hyperfiddle.ide.fiddles.topnav]
     [hyperfiddle.ide.preview.view]
+    [hyperfiddle.ide.edit]
     [hyperfiddle.ui.staging]))
 
 

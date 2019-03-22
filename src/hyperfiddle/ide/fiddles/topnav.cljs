@@ -20,7 +20,7 @@
   (if @(r/track any-loading? (:peer ctx))
     [:div.display-inline-flex [re-com.core/throbber]]))
 
-(defn renderer' [value ctx props]
+(defn renderer' [_ ctx props]
   [:div props
    [:div.left-nav
     [tooltip {:label "Home"} [:a {:href "/"} (:app-domain-ident (runtime/domain (:peer ctx)))]]
@@ -64,15 +64,15 @@
           [ui/link :hyperfiddle.ide/account ctx @(r/fmap :user/name result) props]))
       [:a {:href (hyperfiddle.ide/stateless-login-url ctx)} "login"])]])
 
-(defn hack-login-renderer [value ctx props]
+(defn hack-login-renderer [_ ctx props]
   [:div props
    [:div.left-nav
     [tooltip {:label "Home"} [:a (:app-domain-ident (runtime/domain (:peer ctx)))]]]
    [:div.right-nav {:key "right-nav"}                       ; CAREFUL; this key prevents popover flickering
     [loading-spinner ctx]]])
 
-(defn renderer [value ctx props]
+(defn renderer [_ ctx props]
   (let [f (if (= :hyperfiddle.ide/please-login (first @(runtime/state (:peer ctx) [::runtime/partitions foundation/root-branch :route])))
             hack-login-renderer
             renderer')]
-    [f value ctx props]))
+    [f _ ctx props]))
