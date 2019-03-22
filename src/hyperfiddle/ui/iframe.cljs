@@ -13,7 +13,7 @@
     [hyperfiddle.runtime :as runtime]))
 
 
-(defn- auto-ui-css-class [ctx]                              ; semantic css
+(defn auto-ui-css-class [ctx]                               ; semantic css
   (let [ident @(r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/ident])]
     (->> ["hyperfiddle"
           (css-slugify (some-> ident namespace))
