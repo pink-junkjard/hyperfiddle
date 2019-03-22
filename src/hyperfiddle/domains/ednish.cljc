@@ -9,7 +9,6 @@
 (defrecord EdnishDomain [basis ident fiddle-dbname databases environment home-route build]
   domain/Domain
   (basis [domain] basis)
-  (ident [domain] ident)
   (fiddle-dbname [domain] fiddle-dbname)
   (databases [domain] databases)
   (environment [domain] environment)

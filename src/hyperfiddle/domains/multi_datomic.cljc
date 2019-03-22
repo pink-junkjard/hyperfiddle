@@ -53,7 +53,6 @@
                   (-> (mlet [environment (reader/read-edn-string+ (:domain/environment datomic-record))
                              fiddle-dbname (fiddle-dbname+ datomic-record)
                              :let [partial-domain {:basis (get local-basis "$domains")
-                                                   :ident (:domain/ident datomic-record)
                                                    :fiddle-dbname fiddle-dbname
                                                    :databases (->> (:domain/databases datomic-record)
                                                                    (map (juxt :domain.database/name :domain.database/record))

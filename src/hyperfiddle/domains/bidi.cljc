@@ -9,10 +9,9 @@
     [hyperfiddle.system-fiddle :as system-fiddle]))
 
 
-(defrecord BidiDomain [basis ident fiddle-dbname databases environment router build]
+(defrecord BidiDomain [basis fiddle-dbname databases environment router build]
   domain/Domain
   (basis [domain] basis)
-  (ident [domain] ident)
   (fiddle-dbname [domain] fiddle-dbname)
   (databases [domain] databases)
   (environment [domain] environment)
