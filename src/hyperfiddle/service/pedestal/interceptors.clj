@@ -172,12 +172,10 @@
                                       channel))
             :else (throw (ex-info "Must supply domain value or function" {:value domain-provider})))})
 
-(defn with-user-id [cookie-name jwt-secret jwt-issuer]
+(defn with-user-id [cookie-name cookie-domain jwt-secret jwt-issuer]
   {:name ::with-user-id
    :enter (fn [context]
-            (let [#_#_{:keys [cookie-name jwt-secret jwt-issuer]} (-> (get-in context [:request :domain])
-                                                                      domain/environment-secure :jwt)
-                  verify (jwt/build-verifier jwt-secret jwt-issuer)
+            (let [verify (jwt/build-verifier jwt-secret jwt-issuer)
                   jwt-cookie (get-in context [:request :cookies cookie-name :value])
                   jwt-header (some->> (get-in context [:request :headers "authorization"])
                                       (re-find #"^Bearer (.+)$")
@@ -193,8 +191,7 @@
                        (timbre/error e)
                        (-> (terminate context)
                            (assoc :response {:status 401
-                                             :cookies {cookie-name (-> (get-in context [:request :domain :ide-domain])
-                                                                       (cookie/jwt-options-pedestal)
+                                             :cookies {cookie-name (-> (cookie/jwt-options-pedestal cookie-domain)
                                                                        (assoc :value jwt-cookie
                                                                               :expires "Thu, 01 Jan 1970 00:00:00 GMT"))}
                                              :body (->Err (.getMessage e))}))))

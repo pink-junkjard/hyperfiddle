@@ -67,11 +67,9 @@
                                      (send-platform-response res)))))
     :else (throw (ex-info "Must supply domain value or function" {:value domain-provider}))))
 
-(defn with-user-id [cookie-name jwt-secret jwt-issuer]
+(defn with-user-id [cookie-name cookie-domain jwt-secret jwt-issuer]
   (fn [req res next]
-    (let [#_#_{:keys [cookie-name jwt-secret jwt-issuer]} (-> (get-in context [:request :domain])
-                                                              domain/environment-secure :jwt)
-          verify (jwt/build-verifier jwt-secret jwt-issuer)]
+    (let [verify (jwt/build-verifier jwt-secret jwt-issuer)]
       ; todo support auth bearer
       (try
         (let [jwt-cookie (some-> req .-cookies (object/get cookie-name))]
@@ -82,10 +80,7 @@
           (timbre/error e)
           (doto res
             (.status 401)
-            (.clearCookie cookie-name (-> (object/get req "domain")
-                                          (get :ide-domain)
-                                          cookie/jwt-options-express
-                                          clj->js))
+            (.clearCookie cookie-name (clj->js (cookie/jwt-options-express cookie-domain)))
             (.format #js {"application/transit+json" #(.send res (transit/encode (->Err (ex-message e))))
                           ; todo flesh out a real session expiration page
                           "text/html" #(.send res "Session expired, please refresh and login")})))))))
