@@ -6,7 +6,7 @@
     [hyperfiddle.system-fiddle :as system-fiddle]))
 
 
-(defrecord EdnishDomain [basis ident fiddle-dbname databases environment home-route build]
+(defrecord EdnishDomain [basis fiddle-dbname databases environment home-route build]
   domain/Domain
   (basis [domain] basis)
   (fiddle-dbname [domain] fiddle-dbname)
