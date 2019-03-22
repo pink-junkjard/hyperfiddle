@@ -86,13 +86,6 @@
       (system-fiddle/hydrate fiddle-ident)))
   )
 
-(defn with-serializer [ide-domain]
-  (->> (let [rep-fn #(-> (into {} %) (dissoc :hack-transit-serializer))]
-         #(transit/encode % :opts {:handlers (assoc transit/write-handlers IdeDomain (t/write-handler (constantly "IdeDomain") rep-fn))}))
-       (assoc ide-domain :hack-transit-serializer)))
-
-(defn from-rep [rep] (-> (map->IdeDomain rep) with-serializer))
-
 ; shitty code duplication because we cant pass our api-routes data structure as props (no regex equality)
 (defrecord EdnishDomain [basis fiddle-dbname databases environment home-route build]
   domain/Domain
@@ -107,7 +100,21 @@
   (hydrate-system-fiddle [domain fiddle-ident] (system-fiddle/hydrate fiddle-ident))
   )
 
-(defn build-user+ [basis build user-domain-record]          ; this api is clumsy, should just use single arity (hydrate with ide) so bases are sensical
+(defn with-serializer [ide-domain]
+  (->> (let [rep-fn #(-> (into {} %) (dissoc :hack-transit-serializer))]
+         (fn [domain]
+           (-> domain
+               (update ::user-domain+ #(cats/fmap (partial into {}) %))
+               (transit/encode :opts {:handlers (assoc transit/write-handlers
+                                                  IdeDomain (t/write-handler (constantly "IdeDomain") rep-fn))}))))
+       (assoc ide-domain :hack-transit-serializer)))
+
+(defn from-rep [rep]
+  (-> (map->IdeDomain rep)
+      (update ::user-domain+ #(cats/fmap map->EdnishDomain %))
+      with-serializer))
+
+(defn build-user+ [basis build user-domain-record]
   ; shitty code duplication because we cant pass our api-routes data structure as props (no regex equality)
   (mlet [environment (reader/read-edn-string+ (:domain/environment user-domain-record))
          fiddle-dbname (multi-datomic/fiddle-dbname+ user-domain-record)
