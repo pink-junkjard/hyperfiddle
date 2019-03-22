@@ -66,7 +66,7 @@
     (cond
       (= (some-> handler namespace) "user")
       (either/branch
-        (ide-domain/build-user+ (get-in context [:request :domain]))
+        (get-in context [:request :domain ::ide-domain/user-domain+])
         (fn [e]
           (timbre/error e)
           (throw e))

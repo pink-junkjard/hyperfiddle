@@ -54,7 +54,7 @@
     (cond
       (= (some-> handler namespace) "user")
       (either/branch
-        (ide-domain/build-user+ (object/get req "domain"))
+        (::ide-domain/user-domain+ (object/get req "domain"))
         (fn [e]
           (timbre/error e)
           (throw e))

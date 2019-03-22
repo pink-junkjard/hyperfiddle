@@ -208,10 +208,10 @@
         (update-in [::runtime/partitions (build-user-branch-id ide-branch)] #(or % {})) ; branch MUST exist in state
         (reducers/root-reducer nil))))
 
-(defn view-cmp [user-domain-record ctx props]
+(defn view-cmp [_ ctx props]
   [:div (select-keys props [:class])
    (either/branch
-     (ide-domain/build-user+ (runtime/domain (:peer ctx)) user-domain-record)
+     (::ide-domain/user-domain+ (runtime/domain (:peer ctx)))
      (fn [e]
        [:<>
         [:h2 "Domain misconfigured"]                        ; todo improve me

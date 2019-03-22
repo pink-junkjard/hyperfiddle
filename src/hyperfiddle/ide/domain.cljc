@@ -93,6 +93,35 @@
 
 (defn from-rep [rep] (-> (map->IdeDomain rep) with-serializer))
 
+; shitty code duplication because we cant pass our api-routes data structure as props (no regex equality)
+(defrecord EdnishDomain [basis fiddle-dbname databases environment home-route build]
+  domain/Domain
+  (basis [domain] basis)
+  (fiddle-dbname [domain] fiddle-dbname)
+  (databases [domain] databases)
+  (environment [domain] environment)
+  (url-decode [domain s] (route/url-decode s home-route))
+  (url-encode [domain route] (route/url-encode route home-route))
+  (api-routes [domain] (nested-user-routes build))
+  (system-fiddle? [domain fiddle-ident] (system-fiddle/system-fiddle? fiddle-ident))
+  (hydrate-system-fiddle [domain fiddle-ident] (system-fiddle/hydrate fiddle-ident))
+  )
+
+(defn build-user+ [basis build user-domain-record]          ; this api is clumsy, should just use single arity (hydrate with ide) so bases are sensical
+  ; shitty code duplication because we cant pass our api-routes data structure as props (no regex equality)
+  (mlet [environment (reader/read-edn-string+ (:domain/environment user-domain-record))
+         fiddle-dbname (multi-datomic/fiddle-dbname+ user-domain-record)
+         :let [partial-domain {:basis basis
+                               :fiddle-dbname fiddle-dbname
+                               :databases (->> (:domain/databases user-domain-record)
+                                               (map (juxt :domain.database/name :domain.database/record))
+                                               (into {}))
+                               :environment (assoc environment :domain/disable-javascript (:domain/disable-javascript user-domain-record))
+                               :build build}]]
+    (->> (reader/read-edn-string+ (:domain/home-route user-domain-record))
+         (cats/=<< route/validate-route+)
+         (cats/fmap (fn [home-route] (map->EdnishDomain (assoc partial-domain :home-route home-route)))))))
+
 (defn build+ [domains-basis ide-datomic-record build user-datomic-record]
   (mlet [environment (reader/read-edn-string+ (:domain/environment ide-datomic-record))
          :let [environment (assoc environment :domain/disable-javascript (:domain/disable-javascript ide-datomic-record))]
@@ -141,43 +170,11 @@
                                              "$"
                                              (str user-dbname-prefix (:domain.database/name db)))]))
                                    (into {}))
-           ::user-domain-record user-datomic-record
+           ::user-domain+ (build-user+ domains-basis build user-datomic-record)
            :html-root-id "ide-root"
            }
           map->IdeDomain
           with-serializer))))
-
-; shitty code duplication because we cant pass our api-routes data structure as props (no regex equality)
-(defrecord EdnishDomain [basis fiddle-dbname databases environment home-route build]
-  domain/Domain
-  (basis [domain] basis)
-  (fiddle-dbname [domain] fiddle-dbname)
-  (databases [domain] databases)
-  (environment [domain] environment)
-  (url-decode [domain s] (route/url-decode s home-route))
-  (url-encode [domain route] (route/url-encode route home-route))
-  (api-routes [domain] (nested-user-routes build))
-  (system-fiddle? [domain fiddle-ident] (system-fiddle/system-fiddle? fiddle-ident))
-  (hydrate-system-fiddle [domain fiddle-ident] (system-fiddle/hydrate fiddle-ident))
-  )
-
-(defn build-user+
-  ([ide-domain]
-   (build-user+ ide-domain (::user-domain-record ide-domain)))
-  ([ide-domain user-domain-record]                          ; this api is clumsy, should just use single arity (hydrate with ide) so bases are sensical
-    ; shitty code duplication because we cant pass our api-routes data structure as props (no regex equality)
-   (mlet [environment (reader/read-edn-string+ (:domain/environment user-domain-record))
-          fiddle-dbname (multi-datomic/fiddle-dbname+ user-domain-record)
-          :let [partial-domain {:basis (:basis ide-domain)
-                                :fiddle-dbname fiddle-dbname
-                                :databases (->> (:domain/databases user-domain-record)
-                                                (map (juxt :domain.database/name :domain.database/record))
-                                                (into {}))
-                                :environment (assoc environment :domain/disable-javascript (:domain/disable-javascript user-domain-record))
-                                :build (:build ide-domain)}]]
-     (->> (reader/read-edn-string+ (:domain/home-route user-domain-record))
-          (cats/=<< route/validate-route+)
-          (cats/fmap (fn [home-route] (map->EdnishDomain (assoc partial-domain :home-route home-route))))))))
 
 (defn hydrate-ide-domain [io local-basis app-domain-ident build]
   (let [requests [(->EntityRequest [:domain/ident "hyperfiddle"] (->DbRef "$domains" foundation/root-branch) multi-datomic/domain-pull)
