@@ -193,21 +193,22 @@
 ; ide-domains = #{"hyperfiddle.net"}
 ; fqdn = "foo.hyperfiddle.net" or "foo.hyperfiddle.com" or "myfancyfoo.com"
 ; todo app-domains and ide-domains can just be a regex with one capture group
-(defn domain-for-fqdn [io app-domains ide-domains build fqdn]
+(defn build-domain-provider [io app-domains ide-domains build]
   (assert (first app-domains) "Ide service must have app-domains configured")
-  (-> (io/sync io #{"$domains"})
-      (p/then (fn [local-basis]
-                (if-let [app-domain-ident (some #(second (re-find (re-pattern (str "^(.*)\\." % "$")) fqdn)) app-domains)]
-                  (multi-datomic/hydrate-app-domain io local-basis [:domain/ident app-domain-ident] build)
-                  (if-let [[app-domain-ident ide-domain] (->> ide-domains
-                                                              (map #(re-pattern (str "^(.*)\\.(" % ")$")))
-                                                              (some #(re-find % fqdn))
-                                                              next)]
-                    (if (= "www" app-domain-ident)          ; todo this check is NOT ide
-                      (multi-datomic/hydrate-app-domain io local-basis [:domain/ident "www"] build)
-                      (-> (hydrate-ide-domain io local-basis app-domain-ident build)
-                          (p/then #(assoc %
-                                     :hyperfiddle.ide/fqdn fqdn
-                                     :ide-domain ide-domain
-                                     :app-domain-ident app-domain-ident))))
-                    (multi-datomic/hydrate-app-domain io local-basis [:domain/aliases fqdn] build)))))))
+  (fn [fqdn]
+    (-> (io/sync io #{"$domains"})
+        (p/then (fn [local-basis]
+                  (if-let [app-domain-ident (some #(second (re-find (re-pattern (str "^(.*)\\." % "$")) fqdn)) app-domains)]
+                    (multi-datomic/hydrate-app-domain io local-basis [:domain/ident app-domain-ident] build)
+                    (if-let [[app-domain-ident ide-domain] (->> ide-domains
+                                                                (map #(re-pattern (str "^(.*)\\.(" % ")$")))
+                                                                (some #(re-find % fqdn))
+                                                                next)]
+                      (if (= "www" app-domain-ident)        ; todo this check is NOT ide
+                        (multi-datomic/hydrate-app-domain io local-basis [:domain/ident "www"] build)
+                        (-> (hydrate-ide-domain io local-basis app-domain-ident build)
+                            (p/then #(assoc %
+                                       :hyperfiddle.ide/fqdn fqdn
+                                       :ide-domain ide-domain
+                                       :app-domain-ident app-domain-ident))))
+                      (multi-datomic/hydrate-app-domain io local-basis [:domain/aliases fqdn] build))))))))
