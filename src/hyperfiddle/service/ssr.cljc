@@ -58,7 +58,7 @@
                                                    [:h2 "SSR failed on:"]
                                                    [error/error-block e]]))))))
 
-(defn- full-html [build analytics rt client-params]
+(defn- full-html [build env-analytics-enabled rt client-params]
   [:html {:lang "en"}
    [:head
     [:title "Hyperfiddle" #_(str (domain/ident (runtime/domain rt)) " - " (first @(runtime/state rt [::runtime/partitions foundation/root-branch :route])))]
@@ -69,7 +69,7 @@
     (inner-html :script {:id "build" :type "text/plain"} build)]
    (cond-> [:body
             (inner-html :div {:id (or (:html-root-id (runtime/domain rt)) "root")} (root-html-str rt))]
-     analytics
+     (and env-analytics-enabled (-> (runtime/domain rt) domain/environment :hyperfiddle/-analytics-enabled))
      (conj (inner-html :div analytics))
 
      (-> (runtime/domain rt) domain/environment :domain/disable-javascript not)
@@ -95,9 +95,7 @@
                                                  (domain/databases domain))
                        ::runtime/partitions {foundation/root-branch {:route (domain/url-decode domain path)}}
                        ::runtime/user-id user-id}
-        rt (->RT domain io (r/atom (reducers/root-reducer initial-state nil)) reducers/root-reducer)
-        analytics (when (and (:ANALYTICS env) (contains? #{"www" "hyperfiddle"} (domain/ident (runtime/domain rt))))
-                    analytics)]
+        rt (->RT domain io (r/atom (reducers/root-reducer initial-state nil)) reducers/root-reducer)]
     (-> (actions/bootstrap-data rt foundation/root-branch actions/LEVEL-NONE)
         (p/catch #(or (:hyperfiddle.io/http-status-code (ex-data %)) 500))
         (p/then (fn [http-status-code]
@@ -105,4 +103,4 @@
                                                 :environment (:SENTRY_ENV env)
                                                 :release (:BUILD env)}}]
                     {:http-status-code (or http-status-code 200)
-                     :component [full-html build analytics rt client-params]}))))))
+                     :component [full-html build (:ANALYTICS env) rt client-params]}))))))
