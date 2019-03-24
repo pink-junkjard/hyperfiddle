@@ -44,7 +44,7 @@
       [:<>
        (let [ctx (hyperfiddle.data/browse ctx :hyperfiddle/topnav)]
          ; Presence of ::user-domain signals to topnav to render preview controls
-         [hyperfiddle.ide.fiddles.topnav/renderer ctx
+         [hyperfiddle.ide.fiddles.topnav/renderer _ ctx
           {:class (hyperfiddle.ui.iframe/auto-ui-css-class ctx)}
           (if (::preview/user-domain ctx)
             [preview/preview-toolbar user-ctx preview-state])])

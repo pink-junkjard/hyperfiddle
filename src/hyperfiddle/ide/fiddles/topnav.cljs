@@ -72,7 +72,7 @@
    [:div.right-nav {:key "right-nav"}                       ; CAREFUL; this key prevents popover flickering
     [loading-spinner ctx]]])
 
-(defn renderer [ctx props left-child]
+(defn renderer [_ ctx props left-child]
   (let [f (if (= :hyperfiddle.ide/please-login (first @(runtime/state (:peer ctx) [::runtime/partitions foundation/root-branch :route])))
             hack-login-renderer
             renderer')]
