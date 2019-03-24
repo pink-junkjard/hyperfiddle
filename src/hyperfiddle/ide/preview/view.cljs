@@ -27,10 +27,11 @@
     [hyperfiddle.ui.iframe :refer [iframe-cmp]]
     [hyperfiddle.ui.loading :refer [loading-page]]
     [hyperfiddle.ui.staging :as staging]
-    [re-com.core :as re-com]
+
     [reagent.core :as reagent]
     [promesa.core :as p]
-    [taoensso.timbre :as timbre]))
+    [taoensso.timbre :as timbre]
+    [re-com.core :as re-com]))
 
 
 (def keypress (code-for-browser (js/keypress.Listener. js/document.body)))
@@ -59,15 +60,18 @@
           @(runtime/state rt [::runtime/partitions user-branch :local-basis])
           @(runtime/state rt [::runtime/partitions ide-branch :local-basis]))))
 
-(defn is-stale? [preview-state rt user-branch ide-branch]
+(defn preview-stale? [user-ctx preview-state]
   #_(println (pr-str {:initial-render @(r/cursor preview-state [:initial-render])
                       :staleness-not= (not= @(r/cursor preview-state [:staleness]) (ide-branch-reference rt ide-branch))
                       :stale-gb? (stale-global-basis?)
                       :stale-lb (stale-local-basis?)}))
-  (and (not @(r/cursor preview-state [:initial-render]))
-       (or (not= @(r/cursor preview-state [:staleness]) (ide-branch-reference rt ide-branch))
-           (stale-global-basis? rt)
-           (stale-local-basis? rt user-branch ide-branch))))
+  (let [rt (:peer user-ctx)
+        user-branch (:branch user-ctx)
+        ide-branch (::ide-branch user-ctx)]
+    (and (not @(r/cursor preview-state [:initial-render]))
+         (or (not= @(r/cursor preview-state [:staleness]) (ide-branch-reference rt ide-branch))
+             (stale-global-basis? rt)
+             (stale-local-basis? rt user-branch ide-branch)))))
 
 (defn refresh! [ctx preview-state]
   (when-not (or @(r/cursor preview-state [:is-refreshing])
@@ -85,12 +89,12 @@
       (-> (actions/bootstrap-data rt user-branch init-level)
           (p/finally (fn [] (swap! preview-state assoc :is-refreshing false)))))))
 
-(defn preview-toolbar [ctx preview-state]
-  (let [stale @(r/track is-stale? preview-state (:peer ctx) (:branch ctx) (::ide-branch ctx))]
-    [:div.preview-toolbar (when stale {:class "stale"})
+(defn preview-toolbar [user-ctx preview-state]
+  (let [stale @(r/track preview-stale? user-ctx preview-state)]
+    [:span.preview-toolbar (when stale {:class "stale"})
      ; todo animation
      (let [is-hovering-refresh-button (r/cursor preview-state [:is-hovering-refresh-button])]
-       [:button {:class "refresh" :on-click #(refresh! ctx preview-state)
+       [:button {:class "refresh" :on-click #(refresh! user-ctx preview-state)
                  :disabled @(r/cursor preview-state [:is-refreshing])
                  :on-mouse-over #(do (reset! is-hovering-refresh-button true) nil)
                  :on-mouse-out #(do (reset! is-hovering-refresh-button false) nil)}
