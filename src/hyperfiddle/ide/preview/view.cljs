@@ -50,6 +50,91 @@
   (-> @(runtime/state rt [::runtime/partitions ide-branch])
       (select-keys [:stage :local-basis])))
 
+(defn stale-global-basis? [rt]
+  (= -1 (basis/compare-uri-maps @(runtime/state rt [::runtime/global-basis :user])
+                                @(runtime/state rt [::ide-user-global-basis]))))
+
+(defn stale-local-basis? [rt user-branch ide-branch]
+  (= -1 (basis/compare-uri-maps
+          @(runtime/state rt [::runtime/partitions user-branch :local-basis])
+          @(runtime/state rt [::runtime/partitions ide-branch :local-basis]))))
+
+(defn is-stale? [preview-state rt user-branch ide-branch]
+  #_(println (pr-str {:initial-render @(r/cursor preview-state [:initial-render])
+                      :staleness-not= (not= @(r/cursor preview-state [:staleness]) (ide-branch-reference rt ide-branch))
+                      :stale-gb? (stale-global-basis?)
+                      :stale-lb (stale-local-basis?)}))
+  (and (not @(r/cursor preview-state [:initial-render]))
+       (or (not= @(r/cursor preview-state [:staleness]) (ide-branch-reference rt ide-branch))
+           (stale-global-basis? rt)
+           (stale-local-basis? rt user-branch ide-branch))))
+
+(defn refresh! [ctx preview-state]
+  (when-not (or @(r/cursor preview-state [:is-refreshing])
+                @(r/cursor preview-state [:initial-render]))
+    (let [user-branch (:branch ctx)
+          ide-branch (::ide-branch ctx)
+          rt (:peer ctx)
+          init-level (cond
+                       (stale-global-basis? rt) actions/LEVEL-NONE
+                       (stale-local-basis? rt user-branch ide-branch) actions/LEVEL-GLOBAL-BASIS
+                       :else actions/LEVEL-LOCAL-BASIS)]
+      (swap! preview-state assoc
+             :staleness (ide-branch-reference rt ide-branch)
+             :is-refreshing true)
+      (-> (actions/bootstrap-data rt user-branch init-level)
+          (p/finally (fn [] (swap! preview-state assoc :is-refreshing false)))))))
+
+(defn preview-toolbar [ctx preview-state]
+  (let [stale @(r/track is-stale? preview-state (:peer ctx) (:branch ctx) (::ide-branch ctx))]
+    [:div.preview-toolbar (when stale {:class "stale"})
+     ; todo animation
+     (let [is-hovering-refresh-button (r/cursor preview-state [:is-hovering-refresh-button])]
+       [:button {:class "refresh" :on-click #(refresh! ctx preview-state)
+                 :disabled @(r/cursor preview-state [:is-refreshing])
+                 :on-mouse-over #(do (reset! is-hovering-refresh-button true) nil)
+                 :on-mouse-out #(do (reset! is-hovering-refresh-button false) nil)}
+        [re-com/popover-tooltip
+         :showing? (r/atom (and @is-hovering-refresh-button (not @(r/cursor preview-state [:is-refreshing]))))
+         :anchor "↻"
+         :label (if stale
+                  "Currently stale, refresh to see changes (or press alt+enter)"
+                  "Refresh preview to see changes")]])
+     [:span.url]
+     #_[contrib.ui/text
+        {:value (domain/url-encode (runtime/domain rt) route)
+         :disabled true
+         :class "url"
+         :on-change (fn [s] (println s))}]
+     (into [:span]
+           (->> [{:label "edn" :tooltip "What the API client sees" :value :hypercrud.browser.browser-ui/api}
+                 {:label "data" :tooltip "Ignore :fiddle/renderer" :value :hypercrud.browser.browser-ui/xray}
+                 {:label "view" :tooltip "Use :fiddle/renderer" :value :hypercrud.browser.browser-ui/user}]
+                (map (fn [props]
+                       [contrib.ui/radio-with-label
+                        (assoc props
+                          :checked (= (:value props) @(r/cursor preview-state [:display-mode]))
+                          :on-change #(swap! preview-state assoc :display-mode %))]))))]))
+
+(defn preview-content [ctx preview-state route]
+  (if @(r/cursor preview-state [:initial-render])
+    [loading-page]
+    (let [code+ (project/eval-domain-code!+ @(runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :project :project/code]))]
+      [:<>
+       (when (either/left? code+)
+         (let [e @code+]
+           (timbre/error e)
+           (let [href (domain/url-encode (runtime/domain (:peer ctx)) [:hyperfiddle.ide/env])
+                 message (or (some-> (ex-cause e) ex-message) (ex-message e))]
+             [:h6 {:style {:text-align "center" :background-color "lightpink" :margin 0 :padding "0.5em 0"}}
+              "Exception evaluating " [:a {:href href} [:code ":domain/code"]] ": " message])))
+       [:div#root (when @(r/cursor preview-state [:alt-key-pressed]) {:style {:cursor "pointer"}})
+        [:style {:dangerouslySetInnerHTML {:__html @(runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :project :project/css])}}]
+        ^{:key "user-iframe"}
+        [iframe-cmp ctx
+         {:route route
+          :class (some-> @(r/cursor preview-state [:display-mode]) name (->> (str "display-mode-")))}]]])))
+
 (defn with-rt [rt route ide-branch]
   (let [user-branch (build-user-branch-id ide-branch)
         ls (atom (map->LocalStorageSync {:rt rt :branch-id user-branch :ls-key :USER-STATE}))
@@ -62,90 +147,19 @@
                                ; specifically deref and re-wrap this ref on mount because we are tracking deviation from this value
                                :staleness (ide-branch-reference rt ide-branch)
                                })
-        stale-global-basis? (fn []
-                              (= -1 (basis/compare-uri-maps @(runtime/state rt [::runtime/global-basis :user])
-                                                            @(runtime/state rt [::ide-user-global-basis]))))
-        stale-local-basis? (fn []
-                             (= -1 (basis/compare-uri-maps
-                                     @(runtime/state rt [::runtime/partitions user-branch :local-basis])
-                                     @(runtime/state rt [::runtime/partitions ide-branch :local-basis]))))
-        is-stale? (fn []
-                    #_(println (pr-str {:initial-render @(r/cursor preview-state [:initial-render])
-                                        :staleness-not= (not= @(r/cursor preview-state [:staleness]) (ide-branch-reference rt ide-branch))
-                                        :stale-gb? (stale-global-basis?)
-                                        :stale-lb (stale-local-basis?)}))
-                    (and (not @(r/cursor preview-state [:initial-render]))
-                         (or (not= @(r/cursor preview-state [:staleness]) (ide-branch-reference rt ide-branch))
-                             (stale-global-basis?)
-                             (stale-local-basis?))))
-        refresh! (fn []
-                   (when-not (or @(r/cursor preview-state [:is-refreshing])
-                                 @(r/cursor preview-state [:initial-render]))
-                     (let [init-level (cond
-                                        (stale-global-basis?) actions/LEVEL-NONE
-                                        (stale-local-basis?) actions/LEVEL-GLOBAL-BASIS
-                                        :else actions/LEVEL-LOCAL-BASIS)]
-                       (swap! preview-state assoc
-                              :staleness (ide-branch-reference rt ide-branch)
-                              :is-refreshing true)
-                       (-> (actions/bootstrap-data rt user-branch init-level)
-                           (p/finally (fn [] (swap! preview-state assoc :is-refreshing false)))))))]
+        ctx {:peer rt
+             :branch user-branch
+             ::ide-branch ide-branch
+             :hyperfiddle.ui/debug-tooltips true
+             :hypercrud.ui/display-mode (r/cursor preview-state [:display-mode])
+             :hyperfiddle.ui.iframe/on-click (r/partial frame-on-click rt)}]
     (reagent/create-class
       {:reagent-render
        (fn [rt route ide-branch]
-         (let [ctx {:peer rt
-                    :branch user-branch
-                    :hyperfiddle.ui/debug-tooltips true
-                    :hypercrud.ui/display-mode (r/cursor preview-state [:display-mode])
-                    :hyperfiddle.ui.iframe/on-click (r/partial frame-on-click rt)}]
-           [:<>
-            (let [stale @(r/track is-stale?)]
-              [:div.preview-toolbar (when stale {:class "stale"})
-               ; todo animation
-               (let [is-hovering-refresh-button (r/cursor preview-state [:is-hovering-refresh-button])]
-                 [:button {:class "refresh" :on-click #(refresh!)
-                           :disabled @(r/cursor preview-state [:is-refreshing])
-                           :on-mouse-over #(do (reset! is-hovering-refresh-button true) nil)
-                           :on-mouse-out #(do (reset! is-hovering-refresh-button false) nil)}
-                  [re-com/popover-tooltip
-                   :showing? (r/atom (and @is-hovering-refresh-button (not @(r/cursor preview-state [:is-refreshing]))))
-                   :anchor "↻"
-                   :label (if stale
-                            "Currently stale, refresh to see changes (or press alt+enter)"
-                            "Refresh preview to see changes")]])
-               [:span.url]
-               #_[contrib.ui/text
-                  {:value (domain/url-encode (runtime/domain rt) route)
-                   :disabled true
-                   :class "url"
-                   :on-change (fn [s] (println s))}]
-               (into [:span]
-                     (->> [{:label "edn" :tooltip "What the API client sees" :value :hypercrud.browser.browser-ui/api}
-                           {:label "data" :tooltip "Ignore :fiddle/renderer" :value :hypercrud.browser.browser-ui/xray}
-                           {:label "view" :tooltip "Use :fiddle/renderer" :value :hypercrud.browser.browser-ui/user}]
-                          (map (fn [props]
-                                 [contrib.ui/radio-with-label
-                                  (assoc props
-                                    :checked (= (:value props) @(r/cursor preview-state [:display-mode]))
-                                    :on-change #(swap! preview-state assoc :display-mode %))]))))])
-            (if @(r/cursor preview-state [:initial-render])
-              [loading-page]
-              (let [code+ (project/eval-domain-code!+ @(runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :project :project/code]))]
-                [:<>
-                 (when (either/left? code+)
-                   (let [e @code+]
-                     (timbre/error e)
-                     (let [href (domain/url-encode (runtime/domain (:peer ctx)) [:hyperfiddle.ide/env])
-                           message (or (some-> (ex-cause e) ex-message) (ex-message e))]
-                       [:h6 {:style {:text-align "center" :background-color "lightpink" :margin 0 :padding "0.5em 0"}}
-                        "Exception evaluating " [:a {:href href} [:code ":domain/code"]] ": " message])))
-                 [:div#root (when @(r/cursor preview-state [:alt-key-pressed]) {:style {:cursor "pointer"}})
-                  [:style {:dangerouslySetInnerHTML {:__html @(runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :project :project/css])}}]
-                  ^{:key "user-iframe"}
-                  [iframe-cmp ctx
-                   {:route route
-                    :class (some-> @(r/cursor preview-state [:display-mode]) name (->> (str "display-mode-")))}]]]))
-            [staging/inline-stage rt user-branch]]))
+         [:<>
+          [staging/inline-stage rt user-branch]
+          [preview-toolbar ctx preview-state]
+          [preview-content ctx preview-state route]])
 
        :component-did-mount
        (fn [this]
@@ -155,7 +169,7 @@
                                                "on_keydown" #(swap! preview-state assoc :alt-key-pressed true)
                                                "on_keyup" #(swap! preview-state assoc :alt-key-pressed false)}
                                               {"keys" "alt enter"
-                                               "on_keydown" #(refresh!)}
+                                               "on_keydown" #(refresh! ctx preview-state)}
                                               {"keys" "ctrl `"
                                                "on_keydown" (fn []
                                                               (swap! preview-state update :display-mode
@@ -208,24 +222,16 @@
         (update-in [::runtime/partitions (build-user-branch-id ide-branch)] #(or % {})) ; branch MUST exist in state
         (reducers/root-reducer nil))))
 
-(defn view-cmp [_ ctx props]
-  [:div (select-keys props [:class])
-   (either/branch
-     (::ide-domain/user-domain+ (runtime/domain (:peer ctx)))
-     (fn [e]
-       [:<>
-        [:h2 "Domain misconfigured"]                        ; todo improve me
-        [error-cmps/error-block e]])
-     (fn [user-domain]
-       (let [ide-branch (:branch ctx)
-             user-route (let [[_ [fiddle-lookup-ref & datomic-args] service-args encoded-fragment] @(runtime/state (:peer ctx) [::runtime/partitions ide-branch :route])]
-                          (route/canonicalize
-                            (base/legacy-lookup-ref->fiddle-ident fiddle-lookup-ref)
-                            (vec datomic-args)
-                            service-args
-                            (when-not (hyperfiddle.ide/parse-ide-fragment encoded-fragment)
-                              encoded-fragment)))
-             user-state (->FAtom (runtime/state (:peer ctx)) to (r/partial from (runtime/domain (:peer ctx)) ide-branch))
-             user-io (->IOImpl user-domain)
-             user-runtime (->Runtime user-domain user-io user-state reducers/root-reducer)]
-         [with-rt user-runtime user-route ide-branch])))])
+(defn with-user-rt [ctx user-domain]
+  (let [ide-branch (:branch ctx)
+        user-route (let [[_ [fiddle-lookup-ref & datomic-args] service-args encoded-fragment] @(runtime/state (:peer ctx) [::runtime/partitions ide-branch :route])]
+                     (route/canonicalize
+                       (base/legacy-lookup-ref->fiddle-ident fiddle-lookup-ref)
+                       (vec datomic-args)
+                       service-args
+                       (when-not (hyperfiddle.ide/parse-ide-fragment encoded-fragment)
+                         encoded-fragment)))
+        user-state (->FAtom (runtime/state (:peer ctx)) to (r/partial from (runtime/domain (:peer ctx)) ide-branch))
+        user-io (->IOImpl user-domain)
+        user-runtime (->Runtime user-domain user-io user-state reducers/root-reducer)]
+    [with-rt user-runtime user-route ide-branch]))
