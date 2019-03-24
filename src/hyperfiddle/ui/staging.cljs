@@ -181,28 +181,29 @@
        (map first)
        set))
 
+(defn inline-stage' [rt branch dbname-labels]
+  (let [tabs-definition (mapv (fn [{:keys [id] s-label :label}]
+                                {:id id
+                                 :href "#"
+                                 :label [:span
+                                         {:style {:border-color (domain/database-color (runtime/domain rt) id)}
+                                          :class (when (contains? (dirty-dbs rt branch) id) "stage-dirty")}
+                                         s-label]})
+                              dbname-labels)
+        selected-dbname (runtime/state rt [:staging/selected-uri])
+        selected-dbname' (r/fmap-> selected-dbname (default-tab-model (mapv :id dbname-labels)))
+        label (->> dbname-labels (some #(when (= (:id %) @selected-dbname') (:label %))))]
+    [:div.hyperfiddle-staging-editor-cmp
+     [tab-content rt branch selected-dbname']
+     [:div {:style {:display "flex"}}
+      [transact-button rt branch selected-dbname' label]
+      [:div {:style {:margin-left "auto"}} "stage: "
+       [anchor-tabs
+        :model selected-dbname'
+        :tabs tabs-definition
+        :on-change (r/partial reset! selected-dbname)]]]]))
+
 (defn inline-stage
-  ([rt user-branch]
-   (inline-stage rt user-branch (default-dbname-labels rt)))
-  ([rt branch dbname-labels]
-   (let [tabs-definition (mapv (fn [{:keys [id] s-label :label}]
-                                 {:id id
-                                  :href "#"
-                                  :label [:span
-                                          {:style {:border-color (domain/database-color (runtime/domain rt) id)}
-                                           :class (when (contains? (dirty-dbs rt branch) id) "stage-dirty")}
-                                          s-label]})
-                               dbname-labels)
-         selected-dbname (runtime/state rt [:staging/selected-uri])
-         selected-dbname' (r/fmap-> selected-dbname (default-tab-model (mapv :id dbname-labels)))
-         label (->> dbname-labels (some #(when (= (:id %) @selected-dbname') (:label %))))]
-     [:div.hyperfiddle-staging-editor-cmp
-      [tab-content rt branch selected-dbname']
-      [:div {:style {:display "flex"}}
-       [transact-button rt branch selected-dbname' label]
-       [:div {:style {:margin-left "auto"}} "stage: "
-        [anchor-tabs
-         :model selected-dbname'
-         :tabs tabs-definition
-         :on-change (r/partial reset! selected-dbname)]]]]
-     )))
+  ([ctx] (inline-stage ctx (default-dbname-labels (:peer ctx))))
+  ([ctx dbname-labels]
+   (inline-stage' (:peer ctx) (:branch ctx) dbname-labels)))
