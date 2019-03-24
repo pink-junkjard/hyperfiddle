@@ -20,7 +20,7 @@
   (if @(r/track any-loading? (:peer ctx))
     [:div.display-inline-flex [re-com.core/throbber]]))
 
-(defn renderer' [_ ctx props]
+(defn renderer' [ctx props left-child]
   [:div props
    [:div.left-nav
     [tooltip {:label "Home"} [:a {:href "/"} (:app-domain-ident (runtime/domain (:peer ctx)))]]
@@ -38,7 +38,8 @@
                                                                    user-fiddle-ident))
                                                                user-fiddle-ident)))
                (keyword? fiddle-ident) (name fiddle-ident)
-               :else fiddle-ident))]]
+               :else fiddle-ident))]
+    left-child]
 
    [:div.right-nav {:key "right-nav"}                       ; CAREFUL; this key prevents popover flickering
     [loading-spinner ctx]
@@ -64,15 +65,15 @@
           [ui/link :hyperfiddle.ide/account ctx @(r/fmap :user/name result) props]))
       [:a {:href (hyperfiddle.ide/stateless-login-url ctx)} "login"])]])
 
-(defn hack-login-renderer [_ ctx props]
+(defn hack-login-renderer [ctx props _]
   [:div props
    [:div.left-nav
     [tooltip {:label "Home"} [:a (:app-domain-ident (runtime/domain (:peer ctx)))]]]
    [:div.right-nav {:key "right-nav"}                       ; CAREFUL; this key prevents popover flickering
     [loading-spinner ctx]]])
 
-(defn renderer [_ ctx props]
+(defn renderer [ctx props left-child]
   (let [f (if (= :hyperfiddle.ide/please-login (first @(runtime/state (:peer ctx) [::runtime/partitions foundation/root-branch :route])))
             hack-login-renderer
             renderer')]
-    [f _ ctx props]))
+    [f ctx props left-child]))

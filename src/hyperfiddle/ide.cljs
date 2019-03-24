@@ -39,7 +39,7 @@
 (defn ide-stage [ctx]
   ; Could also be inlined:
   ; http://hyperfiddle.hyperfiddle.site/:hyperfiddle.ide!edit/(:fiddle!ident,:hyperfiddle.ide!edit)
-  [hyperfiddle.ui.staging/inline-stage (:peer ctx) (:branch ctx)
+  [hyperfiddle.ui.staging/inline-stage ctx
    (->> (hyperfiddle.runtime/domain (:peer ctx))
         :hyperfiddle.ide.domain/user-dbname->ide
         (map (fn [[user-dbname ide-dbname]] {:id ide-dbname :label user-dbname}))

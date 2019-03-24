@@ -40,7 +40,7 @@
     (if (= val :entity)
       (let [ctx (context/focus ctx-top [:fiddle/pull-database])]
         [hyper-control (context/v ctx) ctx (with-fiddle-default {:class "pull-database"} val :fiddle/pull-database)]))]
-   [:span.schema "schema: " (schema-links ctx-fiddle-type)]])
+   #_[:span.schema "schema: " (schema-links ctx-fiddle-type)]])
 
 (defmethod hf/render #{:hyperfiddle/ide :link/fiddle} [ctx props]
   [:<>
@@ -151,7 +151,7 @@
       (let [ctx (hypercrud.browser.context/browse-element ctx 0)
             val (hypercrud.browser.context/data ctx)]
         [:<>
-         [:div.container-fluid (into {:key (str (:fiddle/ident val))} (select-keys props [:class]))
+         [:div (into {:key (str (:fiddle/ident val))} (select-keys props [:class]))
           [anchor-tabs
            :tabs (->> [:hf/query :hf/links :hf/markdown :hf/view :hf/cljs :hf/css :hf/fiddle :hf/edn]
                       (map (fn [k]
@@ -165,6 +165,7 @@
            :label-fn (comp name :id)
            :model tab-state
            :on-change (r/partial reset! tab-state)]
+          [:span.schema "schema: " (schema-links ctx)]
           [(get tabs @tab-state) val ctx {}]]
          (when (exists? js/hyperfiddle_show_ide_stage)
            [hyperfiddle.ide/ide-stage ctx])]))))
