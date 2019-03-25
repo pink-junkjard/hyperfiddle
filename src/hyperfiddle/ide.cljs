@@ -42,5 +42,6 @@
   [hyperfiddle.ui.staging/inline-stage ctx
    (->> (hyperfiddle.runtime/domain (:peer ctx))
         :hyperfiddle.ide.domain/user-dbname->ide
-        (map (fn [[user-dbname ide-dbname]] {:id ide-dbname :label user-dbname}))
+        (map (fn [[user-dbname ide-dbname]] {:id ide-dbname
+                                             :label (domain/dbname-label user-dbname)}))
         (sort-by :label))])

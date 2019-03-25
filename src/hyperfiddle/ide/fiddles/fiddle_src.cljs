@@ -10,11 +10,11 @@
     [contrib.hfrecom :refer [anchor-tabs]]
     [hypercrud.browser.context :as context]
     [hyperfiddle.api :as hf]
+    [hyperfiddle.domain]
     [hyperfiddle.fiddle :as fiddle]
     [hyperfiddle.ide.domain :as ide-domain]
     [hyperfiddle.runtime :as runtime]
     [hyperfiddle.ui :refer [anchor field value hyper-control link table]]
-
     [hyperfiddle.ui.controls :as controls]))
 
 
@@ -27,11 +27,9 @@
   (->> (runtime/domain (:peer ctx)) ::ide-domain/user-dbname->ide keys sort
        (map (fn [user-dbname]
               (let [props {:route [(keyword "hyperfiddle.ide.schema" user-dbname)]
-                           #_#_:target "_blank"}
-                    label (if (= "$" user-dbname)
-                            "$ ")]
+                           #_#_:target "_blank"}]
                 ^{:key user-dbname}
-                [anchor ctx props user-dbname])))
+                [anchor ctx props (hyperfiddle.domain/dbname-label user-dbname)])))
        (doall)))
 
 (defn query-composite-stable [ctx-top val ctx-fiddle-type props]
