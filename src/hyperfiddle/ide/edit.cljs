@@ -52,20 +52,20 @@
        [:div (select-keys props [:class])
         (let [ctx (hyperfiddle.data/browse ctx :hyperfiddle.ide/preview)]
           [:div {:class (hyperfiddle.ui.iframe/auto-ui-css-class ctx)}
-           [staging/inline-stage user-ctx]
            (cond
              (::preview/user-domain ctx)
              [preview/preview-effects user-ctx (preview/compute-user-route ctx)]
 
              (::domain-misconfigured ctx)
-             [domain-error-display ctx])])
+             [domain-error-display ctx])
+           [staging/inline-stage user-ctx]])
 
         (let [ctx (hyperfiddle.data/browse ctx :hyperfiddle/ide)]
           [:div.fiddle-editor-col
-           [hyperfiddle.ide/ide-stage ctx]
            [hyperfiddle.ide.fiddles.fiddle-src/fiddle-src-renderer
             nil ctx
             {:initial-tab (-> @(:hypercrud.browser/route ctx) (get 3) hyperfiddle.ide/parse-ide-fragment)
              ;:initial-tab @(contrib.reactive/fmap-> (:hypercrud.browser/route ctx) (get 3) hyperfiddle.ide/parse-ide-fragment)
-             :class (css "fiddle-editor devsrc" (hyperfiddle.ui.iframe/auto-ui-css-class ctx))}]])
+             :class (css "fiddle-editor devsrc" (hyperfiddle.ui.iframe/auto-ui-css-class ctx))}]
+           [hyperfiddle.ide/ide-stage ctx]])
         ]])))

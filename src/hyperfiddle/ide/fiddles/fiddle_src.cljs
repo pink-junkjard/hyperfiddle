@@ -27,7 +27,9 @@
   (->> (runtime/domain (:peer ctx)) ::ide-domain/user-dbname->ide keys sort
        (map (fn [user-dbname]
               (let [props {:route [(keyword "hyperfiddle.ide.schema" user-dbname)]
-                           #_#_:target "_blank"}]
+                           #_#_:target "_blank"}
+                    label (if (= "$" user-dbname)
+                            "$ ")]
                 ^{:key user-dbname}
                 [anchor ctx props user-dbname])))
        (doall)))
@@ -40,7 +42,7 @@
     (if (= val :entity)
       (let [ctx (context/focus ctx-top [:fiddle/pull-database])]
         [hyper-control (context/v ctx) ctx (with-fiddle-default {:class "pull-database"} val :fiddle/pull-database)]))]
-   #_[:span.schema "schema: " (schema-links ctx-fiddle-type)]])
+   [:span.schema "schema: " (schema-links ctx-fiddle-type)]])
 
 (defmethod hf/render #{:hyperfiddle/ide :link/fiddle} [ctx props]
   [:<>
@@ -165,7 +167,6 @@
            :label-fn (comp name :id)
            :model tab-state
            :on-change (r/partial reset! tab-state)]
-          [:span.schema "schema: " (schema-links ctx)]
           [(get tabs @tab-state) val ctx {}]]
          (when (exists? js/hyperfiddle_show_ide_stage)
            [hyperfiddle.ide/ide-stage ctx])]))))
