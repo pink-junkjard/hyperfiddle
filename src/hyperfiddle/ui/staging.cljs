@@ -87,17 +87,16 @@
       to-string (fn [v] (pprint-datoms-str (some-> v reverse)))
       on-change (fn [rt branch dbname-ref o n]
                   (runtime/dispatch! rt (actions/reset-stage-db rt branch @dbname-ref n)))]
-  (defn- tab-content [rt branch dbname-ref & children]
-    (into [:div.hyperfiddle-stage-content
-           {:style {:border-color (domain/database-color (runtime/domain rt) @dbname-ref)}}
-           children
-           (let [props {:value @(runtime/state rt [::runtime/partitions branch :stage @dbname-ref])
-                        :readOnly @(runtime/state rt [::runtime/auto-transact @dbname-ref])
-                        :on-change (r/partial on-change rt branch dbname-ref)
-                        :lineNumbers false}]
-             ^{:key (str @dbname-ref)}
-             [debounced props validated-cmp parse-string to-string code])]
-          )))
+  (defn- tab-content [rt branch dbname-ref child]
+    [:div.hyperfiddle-stage-content
+     {:style {:border-color (domain/database-color (runtime/domain rt) @dbname-ref)}}
+     child
+     (let [props {:value @(runtime/state rt [::runtime/partitions branch :stage @dbname-ref])
+                  :readOnly @(runtime/state rt [::runtime/auto-transact @dbname-ref])
+                  :on-change (r/partial on-change rt branch dbname-ref)
+                  :lineNumbers false}]
+       ^{:key (str @dbname-ref)}
+       [debounced props validated-cmp parse-string to-string code])]))
 
 (defn default-dbname-labels [rt]
   (->> (runtime/domain rt) domain/databases keys sort
@@ -106,7 +105,7 @@
 (defn ^:export editor-cmp
   ([selected-dbname ctx]
    [editor-cmp selected-dbname (:peer ctx) (:branch ctx) (default-dbname-labels (:peer ctx))])
-  ([selected-dbname rt branch dbname-labels & children]
+  ([selected-dbname rt branch dbname-labels child]
    (let [dirty-dbs (->> @(runtime/state rt [::runtime/partitions branch :stage])
                         (remove (comp empty? second))
                         (map first)
@@ -124,7 +123,7 @@
        :model selected-dbname'
        :tabs tabs-definition
        :on-change (r/partial reset! selected-dbname)]
-      (into [tab-content rt branch selected-dbname'] children)])))
+      [tab-content rt branch selected-dbname' child]])))
 
 (defn- tooltip-content [rt dbname-labels]
   [:div {:style {:text-align "left"}}
@@ -168,10 +167,11 @@
                       :body (let [selected-dbname' (r/fmap-> selected-dbname (default-tab-model (mapv :id dbname-labels)))]
                               [:div.hyperfiddle-popover-body
                                [editor-cmp selected-dbname rt branch dbname-labels
-                                [transact-button rt branch selected-dbname']
-                                (when show-auto-tx
-                                  [auto-transact-control rt branch selected-dbname'])
-                                [:button.close-popover {:on-click (r/partial reset! show-stage false)} "close"]]])]])]))))
+                                [:<>
+                                 [transact-button rt branch selected-dbname']
+                                 (when show-auto-tx
+                                   [auto-transact-control rt branch selected-dbname'])
+                                 [:button.close-popover {:on-click (r/partial reset! show-stage false)} "close"]]]])]])]))))
 
 (defn dirty-dbs [rt branch]
   (->> @(runtime/state rt [::runtime/partitions branch :stage])
