@@ -45,7 +45,7 @@
       (with-tx! ctx tx))))
 
 (defn ident-with-tx! [special-attrs-state ctx tx]
-  (let [entity (context/data ctx)
+  (let [entity (context/data (context/unwind ctx 1))        ; ctx is focused to :db/ident
         dbname (context/dbname ctx)
         schema @@(runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :schemas dbname])
         new-entity (merge-in-tx entity tx ctx)]
