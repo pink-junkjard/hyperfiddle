@@ -161,13 +161,11 @@
    :on-change (r/partial reset! tab-state)])
 
 (defn ^:export fiddle-src-renderer [_ ctx props]
-  (let []
-    (fn [_ ctx props]
-      (let [ctx (hypercrud.browser.context/browse-element ctx 0)
-            val (hypercrud.browser.context/data ctx)
-            tab-state (::tab-state props)]
-        [:<>
-         [:div (into {:key (str (:fiddle/ident val))} (select-keys props [:class]))
-          [(get tabs @tab-state) val ctx {}]]
-         (when (exists? js/hyperfiddle_show_ide_stage)
-           [hyperfiddle.ide/ide-stage ctx])]))))
+  (let [ctx (hypercrud.browser.context/browse-element ctx 0)
+        val (hypercrud.browser.context/data ctx)
+        tab-state (::tab-state props)]
+    [:<>
+     [:div (into {:key (str (:fiddle/ident val))} (select-keys props [:class]))
+      [(get tabs @tab-state) val ctx {}]]
+     (when (exists? js/hyperfiddle_show_ide_stage)
+       [hyperfiddle.ide/ide-stage ctx])]))
