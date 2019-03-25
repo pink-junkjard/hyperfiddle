@@ -33,3 +33,8 @@
 (defn valid-dbname? [domain dbname] (some? (database domain dbname)))
 
 (defn valid-dbnames? [domain dbnames] (set/subset? (set dbnames) (set (keys (databases domain)))))
+
+(defn dbname-label [dbname]
+  (if (= "$" dbname)
+    "$ (default)"
+    dbname))

@@ -101,7 +101,7 @@
 
 (defn default-dbname-labels [rt]
   (->> (runtime/domain rt) domain/databases keys sort
-       (map (fn [%] {:id % :label %}))))
+       (map (fn [%] {:id % :label (domain/dbname-label %)}))))
 
 (defn ^:export editor-cmp
   ([selected-dbname ctx]
