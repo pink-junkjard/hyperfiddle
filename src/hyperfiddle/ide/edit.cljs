@@ -50,31 +50,37 @@
         tab-state (r/atom (if (contains? fiddle-src/tabs initial-tab)
                             (:initial-tab props)
                             :hf/query))]
-    (fn [_ _ props]
-      [:<>
-       (let [ctx (hyperfiddle.data/browse ctx :hyperfiddle/topnav)]
-         [hyperfiddle.ide.fiddles.topnav/renderer _ ctx
-          {:class (hyperfiddle.ui.iframe/auto-ui-css-class ctx)}
-          (if (::preview/user-domain ctx)
-            [preview/preview-toolbar user-ctx preview-state])
-          [fiddle-src/fiddle-src-tabs tab-state]])
+    (fn [_ ctx props]
+      (println (str "view render" (pr-str (preview/compute-user-route ctx))))
+      (let [ctx (load-user-domain-without-crashing ctx)]
+        [:<>
+         (let [ctx (hyperfiddle.data/browse ctx :hyperfiddle/topnav)]
+           [hyperfiddle.ide.fiddles.topnav/renderer _ ctx
+            {:class (hyperfiddle.ui.iframe/auto-ui-css-class ctx)}
+            (if (::preview/user-domain ctx)
+              [preview/preview-toolbar user-ctx preview-state])
+            [fiddle-src/fiddle-src-tabs tab-state]])
 
-       [:div (select-keys props [:class])
-        (let [ctx (hyperfiddle.data/browse ctx :hyperfiddle.ide/preview)]
-          [:div {:class (hyperfiddle.ui.iframe/auto-ui-css-class ctx)}
-           (cond
-             (::preview/user-domain ctx)
-             [preview/preview-effects user-ctx (preview/compute-user-route ctx)]
+         [:div (select-keys props [:class])
+          (let [ctx (hyperfiddle.data/browse ctx :hyperfiddle.ide/preview)]
+            [:div {:class (hyperfiddle.ui.iframe/auto-ui-css-class ctx)}
+             (cond
+               (::preview/user-domain ctx)
+               [preview/preview-effects user-ctx (preview/compute-user-route ctx)]
 
-             :else
-             [domain-error-display ctx])
-           [staging/inline-stage user-ctx]])
+               :else
+               [domain-error-display ctx])
+             [staging/inline-stage user-ctx]])
 
-        (let [ctx (hyperfiddle.data/browse ctx :hyperfiddle/ide)]
-          [:div.fiddle-editor-col
-           [hyperfiddle.ide.fiddles.fiddle-src/fiddle-src-renderer
-            nil ctx
-            {::fiddle-src/tab-state tab-state
-             :class (css "fiddle-editor devsrc" (hyperfiddle.ui.iframe/auto-ui-css-class ctx))}]
-           [hyperfiddle.ide/ide-stage ctx]])
-        ]])))
+          (hyperfiddle.ui/link
+            :hyperfiddle/ide ctx nil
+            {:user-renderer
+             (fn [_ ctx props]
+               [:div.fiddle-editor-col
+                [hyperfiddle.ide.fiddles.fiddle-src/fiddle-src-renderer
+                 nil ctx
+                 {::fiddle-src/tab-state tab-state
+                  :class (css "fiddle-editor devsrc" (hyperfiddle.ui.iframe/auto-ui-css-class ctx))}]
+                [hyperfiddle.ide/ide-stage ctx]]
+               )})
+          ]]))))
