@@ -293,9 +293,7 @@ User renderers should not be exposed to the reaction."
                    ; No eav, the route is the same info
                    [anchor ?ctx props (prompt ?ctx ?label)])])))))
 
-(defn ^:export link "Relation level link renderer. Works in forms and lists but not tables.
-  path should be optional, for disambiguation only. Naked can be hard-linked in markdown?
-  This is dumb, use a field-renderer"
+(defn ^:export link "Render a link. :hf/iframes have managed loading component."
   [corcs ctx & [?label props]]
   (either/branch
     (data/select+ ctx corcs)
