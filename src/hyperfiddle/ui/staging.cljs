@@ -42,16 +42,14 @@
                        (not writes-allowed?) {:status :warning :label "Writes restricted"}
                        (empty? @stage) {:status :warning :label "no changes"})))
      (let [color (domain/database-color (runtime/domain rt) selected-dbname)
-           disabled? (either/branch
-                       writes-allowed?+
-                       (constantly true)
-                       (fn [writes-allowed?] (or (not writes-allowed?) (empty? @stage))))]
-       [:button {:disabled disabled?
-                 :class "btn btn-outline-secondary btn-sm hf-btn-xs"
-                 :style (cond-> {:color color
-                                 :border-color color
-                                 #_#_ :background-color color}
-                          disabled? (assoc :pointer-events "none"))
+           is-disabled (either/branch writes-allowed?+ (constantly true)
+                                      (fn [writes-allowed?]
+                                        (or (not writes-allowed?) (empty? @stage))))]
+       [:button {:disabled is-disabled
+                 :class (css "btn btn-sm hf-btn-xs" (if is-disabled "btn-outline-secondary" "btn-secondary"))
+                 :style (cond-> {(if is-disabled :color :background-color) color
+                                 :border-color color}
+                                is-disabled (assoc :pointer-events "none"))
                  :on-click (fn []
                              (let [action (actions/manual-transact-db! rt branch-id selected-dbname)]
                                (runtime/dispatch! rt action)))}
@@ -92,14 +90,14 @@
   (defn- tab-content [rt branch dbname-ref & children]
     (into [:div.hyperfiddle-stage-content
            {:style {:border-color (domain/database-color (runtime/domain rt) @dbname-ref)}}
+           children
            (let [props {:value @(runtime/state rt [::runtime/partitions branch :stage @dbname-ref])
                         :readOnly @(runtime/state rt [::runtime/auto-transact @dbname-ref])
                         :on-change (r/partial on-change rt branch dbname-ref)
-                        :lineNumbers false
-                        #_#_:typewriterScrolling true}]
+                        :lineNumbers false}]
              ^{:key (str @dbname-ref)}
              [debounced props validated-cmp parse-string to-string code])]
-          children)))
+          )))
 
 (defn default-dbname-labels [rt]
   (->> (runtime/domain rt) domain/databases keys sort
@@ -181,29 +179,27 @@
        (map first)
        set))
 
-(defn inline-stage' [rt branch dbname-labels]
-  (let [tabs-definition (mapv (fn [{:keys [id] s-label :label}]
-                                {:id id
-                                 :href "#"
-                                 :label [:span
-                                         {:style {:border-color (domain/database-color (runtime/domain rt) id)}
-                                          :class (when (contains? (dirty-dbs rt branch) id) "stage-dirty")}
-                                         s-label]})
-                              dbname-labels)
-        selected-dbname (runtime/state rt [:staging/selected-uri])
-        selected-dbname' (r/fmap-> selected-dbname (default-tab-model (mapv :id dbname-labels)))
-        label (->> dbname-labels (some #(when (= (:id %) @selected-dbname') (:label %))))]
-    [:div.hyperfiddle-staging-editor-cmp
-     [tab-content rt branch selected-dbname']
-     [:div {:style {:display "flex"}}
-      [transact-button rt branch selected-dbname' label]
-      [:div {:style {:margin-left "auto"}} "stage: "
-       [anchor-tabs
-        :model selected-dbname'
-        :tabs tabs-definition
-        :on-change (r/partial reset! selected-dbname)]]]]))
-
-(defn inline-stage
+(defn inline-stage "ctx needs :peer and :branch only"
   ([ctx] (inline-stage ctx (default-dbname-labels (:peer ctx))))
   ([ctx dbname-labels]
-   (inline-stage' (:peer ctx) (:branch ctx) dbname-labels)))
+   (let [rt (:peer ctx) branch (:branch ctx)
+         tabs-definition (mapv (fn [{:keys [id] s-label :label}]
+                                 {:id id
+                                  :href "#"
+                                  :label [:span
+                                          {:style {:border-color (domain/database-color (runtime/domain rt) id)}
+                                           :class (when (contains? (dirty-dbs rt branch) id) "stage-dirty")}
+                                          s-label]})
+                               dbname-labels)
+         selected-dbname (runtime/state rt [:staging/selected-uri])
+         selected-dbname' (r/fmap-> selected-dbname (default-tab-model (mapv :id dbname-labels)))
+         label (->> dbname-labels (some #(when (= (:id %) @selected-dbname') (:label %))))]
+     [:div.hyperfiddle-staging-editor-cmp
+      [tab-content rt branch selected-dbname'
+       [:div.hyperfiddle-stage-actions {:style {:display "flex"}}
+        [:div {:style {:margin-left "auto"}} "stage: "
+         [anchor-tabs
+          :model selected-dbname'
+          :tabs tabs-definition
+          :on-change (r/partial reset! selected-dbname)]
+         [transact-button rt branch selected-dbname' label]]]]])))
