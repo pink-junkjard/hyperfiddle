@@ -20,7 +20,7 @@
   (if @(r/track any-loading? (:peer ctx))
     [:div.display-inline-flex [re-com.core/throbber]]))
 
-(defn renderer' [ctx props left-child]
+(defn renderer' [ctx props left-child right-child]
   [:div props
    [:div.left-nav
     [tooltip {:label "Home"} [:a {:href "/"} (:app-domain-ident (runtime/domain (:peer ctx)))]]
@@ -42,6 +42,7 @@
     left-child]
 
    [:div.right-nav {:key "right-nav"}                       ; CAREFUL; this key prevents popover flickering
+    right-child
     [loading-spinner ctx]
     (either/branch
       (hyperfiddle.data/browse+ ctx :hyperfiddle.ide/topnav-new) ; iframe wrapper for naked qfind color tag
@@ -65,15 +66,15 @@
           [ui/link :hyperfiddle.ide/account ctx @(r/fmap :user/name result) props]))
       [:a {:href (hyperfiddle.ide/stateless-login-url ctx)} "login"])]])
 
-(defn hack-login-renderer [ctx props _]
+(defn hack-login-renderer [ctx props _ _]
   [:div props
    [:div.left-nav
     [tooltip {:label "Home"} [:a (:app-domain-ident (runtime/domain (:peer ctx)))]]]
    [:div.right-nav {:key "right-nav"}                       ; CAREFUL; this key prevents popover flickering
     [loading-spinner ctx]]])
 
-(defn renderer [_ ctx props left-child]
+(defn renderer [_ ctx props left-child right-child]
   (let [f (if (= :hyperfiddle.ide/please-login (first @(runtime/state (:peer ctx) [::runtime/partitions foundation/root-branch :route])))
             hack-login-renderer
             renderer')]
-    [f ctx props left-child]))
+    [f ctx props left-child right-child]))
