@@ -2,7 +2,6 @@
   (:refer-clojure :exclude [sync])
   (:require
     [cats.monad.either :as either]
-    [clojure.core.async :refer [chan >!!]]
     [clojure.string :as string]
     [contrib.base-64-url-safe :as base64-url-safe]
     [hyperfiddle.domain :as domain]
