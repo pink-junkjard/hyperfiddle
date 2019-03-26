@@ -146,19 +146,21 @@
      [contrib.ui/code {:value (contrib.pprint/pprint-str v 50) :read-only true}])})
 
 (defn fiddle-src-tabs [tab-state]
-  [anchor-tabs
-   :tabs (->> [:hf/query :hf/links :hf/markdown :hf/view :hf/cljs :hf/css :hf/fiddle :hf/edn]
-              (map (fn [k]
-                     {:id k
-                      ; Fragments mess with routing, they throw away the file segment on click
-                      :href "" #_(->> (pr-str k)
-                                      contrib.ednish/encode-ednish
-                                      contrib.rfc3986/encode-rfc3986-pchar
-                                      (str js/document.location.pathname "#"))})))
-   :id-fn :id
-   :label-fn (comp name :id)
-   :model tab-state
-   :on-change (r/partial reset! tab-state)])
+  [:<>
+   [anchor-tabs
+    :tabs (->> [:hf/query :hf/links :hf/markdown :hf/view :hf/cljs :hf/css :hf/fiddle :hf/edn]
+               (map (fn [k]
+                      {:id k
+                       ; Fragments mess with routing, they throw away the file segment on click
+                       :href "" #_(->> (pr-str k)
+                                       contrib.ednish/encode-ednish
+                                       contrib.rfc3986/encode-rfc3986-pchar
+                                       (str js/document.location.pathname "#"))})))
+    :id-fn :id
+    :label-fn (comp name :id)
+    :model tab-state
+    :on-change (r/partial reset! tab-state)]
+   "·"])
 
 (defn ^:export fiddle-src-renderer [_ ctx props]
   (let [ctx (hypercrud.browser.context/browse-element ctx 0)
