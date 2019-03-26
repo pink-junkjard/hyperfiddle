@@ -28,7 +28,7 @@
           local-basis (ednish/decode-uri (:local-basis route-params))
           {staged-branches :staged-branches requests :request} body-params
           r (perf/time
-              (fn [get-total-time] (timbre/debugf "hydrate-requests: count %s, has stage? %s, total time: %s" (count requests) (not (empty? staged-branches)) (get-total-time)))
+              (fn [total-time] (timbre/debugf "hydrate-requests: count %s, has stage? %s, total time: %sms" (count requests) (not (empty? staged-branches)) total-time))
               (hydrate-requests domain local-basis requests staged-branches (:user-id req)))]
       (ring-resp/response r))
     (catch Exception e
