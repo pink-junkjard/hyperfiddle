@@ -121,21 +121,22 @@
     [:button (select-keys props [:class :style :disabled :on-click])
      [:span (str label "!")]]))
 
-(defn popover-cmp [ctx visual-ctx props label]
+(defn popover-cmp [ctx props label]
   ; try to auto-generate branch/popover-id from the product of:
   ; - link's :db/id
   ; - route
   ; - visual-ctx's data & path (where this popover is being drawn NOT its dependencies)
   (let [link-ref (:hypercrud.browser/link ctx)
         child-branch-id (let [relative-id (-> [(if (:hypercrud.browser/qfind ctx) ; guard crash on :blank fiddles
-                                                 (context/eav visual-ctx) ; If
+                                                 (context/eav ctx) ; if this is nested table head, [e a nil] is ambiguous. test: /:intents/
                                                  (:hypercrud.browser/result-path ctx))
                                                @(r/fmap :db/id link-ref)
                                                (:route props)
                                                @(r/fmap (r/partial context/reagent-entity-key ctx)
                                                         (:hypercrud.browser/fiddle ctx))]
-                                              hash str)]
+                                              #_hash str)]
                           (branch/child-branch-id (:branch ctx) relative-id))
+        ;_ (println (context/eav ctx) "; " child-branch-id)
         popover-id child-branch-id                          ; just use child-branch as popover-id
         should-branch @(r/fmap (r/comp some? blank->nil :link/tx-fn) link-ref)
         btn-props (-> props

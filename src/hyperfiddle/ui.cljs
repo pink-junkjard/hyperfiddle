@@ -271,7 +271,7 @@ User renderers should not be exposed to the reaction."
                         (update :class css "hyperfiddle")   ; should this be in popover-cmp? unify with semantic css
                         (update :disabled #(or % (disabled? link-ref ?ctx))))
               label (prompt ?ctx ?label)]
-          [popover-cmp ?ctx visual-ctx props label])
+          [popover-cmp ?ctx props label])
 
         is-iframe
         [stale/loading (stale/can-be-loading? visual-ctx)          ; was just ctx before
