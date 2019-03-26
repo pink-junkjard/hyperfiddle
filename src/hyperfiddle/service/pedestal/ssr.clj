@@ -1,6 +1,6 @@
 (ns hyperfiddle.service.pedestal.ssr
   (:require
-    [clojure.core.async :refer [chan >!!]]
+    [clojure.core.async :refer [chan put!]]
     [hiccup.core :as hiccup]
     [hyperfiddle.io.core :as io]
     [hyperfiddle.io.datomic.hydrate-requests :refer [hydrate-requests]]
@@ -47,5 +47,5 @@
                    {:status (or (:hyperfiddle.io/http-status-code (ex-data e)) 500)
                     :headers {"Content-Type" "text/html"}
                     :body (str "<h2>Fatal error:</h2><h4>" (ex-message e) "</h4>")}))
-        (p/then #(>!! channel (assoc context :response %))))
+        (p/then #(put! channel (assoc context :response %))))
     channel))

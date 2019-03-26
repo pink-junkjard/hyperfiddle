@@ -1,6 +1,6 @@
 (ns hyperfiddle.service.pedestal.interceptors
   (:require
-    [clojure.core.async :refer [chan >!!]]
+    [clojure.core.async :refer [chan put!]]
     [clojure.string :as string]
     [cognitect.transit :as transit]
     [contrib.uri :refer [->URI]]
@@ -120,10 +120,10 @@
     (let [channel (chan)]
       (-> (:response context)
           (p/then (fn [response]
-                    (>!! channel (assoc context :response response))))
+                    (put! channel (assoc context :response response))))
           (p/catch (fn [err]
                      (timbre/error err)
-                     (>!! channel (assoc context :response {:status 500 :body (pr-str err)})))))
+                     (put! channel (assoc context :response {:status 500 :body (pr-str err)})))))
       channel)))
 
 (defn data-route [context with-request]
@@ -164,11 +164,11 @@
                                       (p/branch
                                         (domain-provider (get-in context [:request :server-name]))
                                         (fn [domain]
-                                          (>!! channel (assoc-in context [:request :domain] domain)))
+                                          (put! channel (assoc-in context [:request :domain] domain)))
                                         (fn [e]
                                           (timbre/error e)
                                           ; todo content type negotiation on this error
-                                          (>!! channel (assoc (terminate context) :response (e->response e)))))
+                                          (put! channel (assoc (terminate context) :response (e->response e)))))
                                       channel))
             :else (throw (ex-info "Must supply domain value or function" {:value domain-provider})))})
 
