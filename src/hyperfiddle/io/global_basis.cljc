@@ -15,10 +15,10 @@
     (->> (domain/databases domain) keys set
          (io/sync io)
          (cats/fmap (fn [user-basis] {:domain (domain/basis domain) :user user-basis})))
-    (fn [err get-total-time]
-      (timbre/debug "global-basis failure;" "total time:" (get-total-time)))
-    (fn [success get-total-time]
-      (timbre/debug "global-basis;" "total time:" (get-total-time)))))
+    (fn [err total-time]
+      (timbre/debugf "global-basis failure;" "total time: %sms" total-time))
+    (fn [success total-time]
+      (timbre/debugf "global-basis;" "total time: %sms" total-time))))
 
 (letfn [(zero->nil [i] (when-not (= 0 i) i))]
   (defn compare [x y]

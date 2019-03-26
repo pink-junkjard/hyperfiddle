@@ -51,7 +51,7 @@
            project (project/hydrate-project-record aux-io domain local-basis branch staged-branches)]
       (let [db-with-lookup (atom {})
             get-secure-db-with+ (hydrate-requests/build-get-secure-db-with+ domain staged-branches db-with-lookup local-basis)]
-        (perf/time (fn [get-total-time] (timbre/debug "Hydrate-route::d/with" "total time: " (get-total-time)))
+        (perf/time (fn [total-time] (timbre/debugf "d/with total time: %sms" total-time))
                    ; must d/with at the beginning otherwise tempid reversal breaks
                    (doseq [[branch-ident branch-content] stage
                            [dbname _] branch-content]
@@ -70,6 +70,9 @@
                                     stage)
               state-atom (r/atom (reducers/root-reducer initial-state nil))
               rt (->RT domain db-with-lookup get-secure-db-with+ state-atom ?subject)]
-          (perf/time (fn [get-total-time] (timbre/debug "Hydrate-route::request-fn" "total time: " (get-total-time)))
+          (perf/time (fn [total-time]
+                       (timbre/debugf "request function %sms" total-time)
+                       (when (> total-time 500)
+                         (timbre/warnf "Slow request function %sms :: route: %s" total-time route)))
                      (browser-request/request-from-route route {:branch branch :peer rt}))
           (select-keys @(runtime/state rt [::runtime/partitions branch]) [:local-basis :attr-renderers :project :ptm :schemas :tempid-lookups]))))))

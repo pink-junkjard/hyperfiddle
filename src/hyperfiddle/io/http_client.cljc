@@ -51,7 +51,7 @@
         req-hash (delay (hash req))]
     (perf/time-promise
       (do
-        (timbre/debug "Issuing request" (str "[" @req-hash "]") (:url req))
+        (timbre/debugf "Request[%s] issued to %s" @req-hash (:url req))
         ; todo inject a request-id to track on backend
         #?(:clj  (assert false "kvlt broken on jvm")
            :cljs (-> (kvlt/request! req)
@@ -88,10 +88,10 @@
                                                                    (ex-cause e)))
 
                                     :else (throw e))))))))
-      (fn [_ get-total-time]
-        (timbre/debug "Request failed" (str "[" @req-hash "]") "total time:" (get-total-time)))
-      (fn [_ get-total-time]
-        (timbre/debug "Request succeeded" (str "[" @req-hash "]") "total time:" (get-total-time))))))
+      (fn [_ total-time]
+        (timbre/debugf "Request[%s] failed, total time: %sms" @req-hash total-time))
+      (fn [_ total-time]
+        (timbre/debugf "Request[%s] succeeded, total time: %sms" @req-hash total-time)))))
 
 (defn global-basis! [domain ?service-uri & [jwt]]
   (-> {:url (str ?service-uri (domain/api-path-for domain :global-basis))
