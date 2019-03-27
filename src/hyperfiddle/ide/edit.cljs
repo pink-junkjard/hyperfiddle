@@ -51,7 +51,6 @@
                             initial-tab
                             :hf/query))]
     (fn [_ ctx props]
-      (println (str "view render" (pr-str (preview/compute-user-route ctx))))
       (let [ctx (load-user-domain-without-crashing ctx)]
         [:<>
          (let [ctx (hyperfiddle.data/browse ctx :hyperfiddle/topnav)]
@@ -73,14 +72,11 @@
              [staging/inline-stage user-ctx]])
 
           [:div.fiddle-editor-col
-           (hyperfiddle.ui/link
-             :hyperfiddle/ide ctx nil
-             {:user-renderer
-              (fn [_ ctx props]
-                [hyperfiddle.ide.fiddles.fiddle-src/fiddle-src-renderer
-                 nil ctx
-                 {::fiddle-src/tab-state tab-state
-                  :class (css "fiddle-editor devsrc" (hyperfiddle.ui.iframe/auto-ui-css-class ctx))}])})
+           [hyperfiddle.ui/link
+            :hyperfiddle/ide ctx nil
+            {::fiddle-src/tab-state tab-state
+             :class (css "fiddle-editor devsrc" #_(hyperfiddle.ui.iframe/auto-ui-css-class ctx))
+             :user-renderer hyperfiddle.ide.fiddles.fiddle-src/fiddle-src-renderer}]
            ; In case of datoms-conflict, render outside the :hyperfiddle/ide iframe
            [hyperfiddle.ide/ide-stage ctx]]
           ]]))))
