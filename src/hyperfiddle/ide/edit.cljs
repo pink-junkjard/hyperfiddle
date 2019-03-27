@@ -72,15 +72,15 @@
                [domain-error-display ctx])
              [staging/inline-stage user-ctx]])
 
-          (hyperfiddle.ui/link
-            :hyperfiddle/ide ctx nil
-            {:user-renderer
-             (fn [_ ctx props]
-               [:div.fiddle-editor-col
+          [:div.fiddle-editor-col
+           (hyperfiddle.ui/link
+             :hyperfiddle/ide ctx nil
+             {:user-renderer
+              (fn [_ ctx props]
                 [hyperfiddle.ide.fiddles.fiddle-src/fiddle-src-renderer
                  nil ctx
                  {::fiddle-src/tab-state tab-state
-                  :class (css "fiddle-editor devsrc" (hyperfiddle.ui.iframe/auto-ui-css-class ctx))}]
-                [hyperfiddle.ide/ide-stage ctx]]
-               )})
+                  :class (css "fiddle-editor devsrc" (hyperfiddle.ui.iframe/auto-ui-css-class ctx))}])})
+           ; In case of datoms-conflict, render outside the :hyperfiddle/ide iframe
+           [hyperfiddle.ide/ide-stage ctx]]
           ]]))))
