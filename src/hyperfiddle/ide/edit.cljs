@@ -48,7 +48,7 @@
         initial-tab (-> @(:hypercrud.browser/route ctx) (get 3) hyperfiddle.ide/parse-ide-fragment)
         ;:initial-tab @(contrib.reactive/fmap-> (:hypercrud.browser/route ctx) (get 3) hyperfiddle.ide/parse-ide-fragment)
         tab-state (r/atom (if (contains? fiddle-src/tabs initial-tab)
-                            (:initial-tab props)
+                            initial-tab
                             :hf/query))]
     (fn [_ ctx props]
       (println (str "view render" (pr-str (preview/compute-user-route ctx))))
