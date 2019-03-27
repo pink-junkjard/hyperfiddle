@@ -51,7 +51,7 @@
         true {:get :ssr
               true :405}}])
 
-(defrecord IdeDomain [basis fiddle-dbname databases environment home-route build user-domain-record
+(defrecord IdeDomain [basis fiddle-dbname databases environment home-route build
                       html-root-id]
   domain/Domain
   (basis [domain] basis)
