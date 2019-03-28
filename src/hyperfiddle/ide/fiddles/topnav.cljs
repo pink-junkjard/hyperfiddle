@@ -42,11 +42,12 @@
     left-child]
 
    [:div.right-nav {:key "right-nav"}                       ; CAREFUL; this key prevents popover flickering
-    right-child
     [loading-spinner ctx]
+    right-child
     (either/branch
       (hyperfiddle.data/browse+ ctx :hyperfiddle.ide/topnav-new) ; iframe wrapper for naked qfind color tag
       (fn [e]
+        #_(println "topnav-new error: " e)
         [:span (ex-message e)])                       ; todo fix this shit error handling, why not throw?
       (fn [ctx]
         (ui/link :hyperfiddle.ide/new-fiddle ctx "new"
