@@ -60,8 +60,8 @@
     [:<>
      (label-with-docs label (semantic-docstring ctx) props)
      #_(if (= 1 (context/pull-depth ctx))
-       ; :community/neighborhood gets new-neighborhood? NO
-       (hf-new _ ctx))]))
+         ; :community/neighborhood gets new-neighborhood? NO
+         (hf-new _ ctx))]))
 
 (defn id-prompt [ctx val]
   ; pr-str here to disambiguate `"tempid"` from `17592186046396` and `:gender/male`
@@ -151,12 +151,12 @@
 
 ; Not working yet
 #_(defn ^:export ref-keyword [val ctx & [props]]
-  (cond
-    (context/underlying-tempid ctx (context/e ctx))
-    [edn val ctx props]
+    (cond
+      (context/underlying-tempid ctx (context/e ctx))
+      [edn val ctx props]
 
-    :else
-    [ref val ctx props]))
+      :else
+      [ref val ctx props]))
 
 (defn ^:export keyword [val ctx & [props]]
   [:div.hyperfiddle-input-group
@@ -177,7 +177,7 @@
    (entity-links val ctx
                  ; http://tank.hyperfiddle.site/:dustingetz!gender-shirtsize/
                  ; http://alexandrkozyrev.hyperfiddle.site/:codeq/
-                 #_(hf-new val ctx) ; in table context, only a ref if this attr is ref.
+                 #_(hf-new val ctx)                         ; in table context, only a ref if this attr is ref.
                  (if-not (context/underlying-tempid ctx (context/e ctx)) ; val can be part of lookup ref scalar
                    (hf-remove val ctx))
                  (hf-iframe val ctx))])
