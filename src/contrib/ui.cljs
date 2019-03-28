@@ -76,37 +76,6 @@
                    (reset! os-ref {:old-values [b] :value b}))
                  (swap! os-ref assoc :old-values (vec rest))))))}))))
 
-(let [on-change (fn [os-ref f n]                            ; letfn not working #470
-                  (let [o (last (:old-values @os-ref))]
-                    (swap! os-ref (fn [m]
-                                    (-> (assoc m :value n)
-                                        (update :old-values conj n))))
-                    (when f (f o n))))]
-  (defn optimistic-updates [props comp & args]
-    (let [os-ref (r/atom {:value (:value props)
-                          :old-values [(:value props)]})]
-      (reagent/create-class
-        {:reagent-render
-         (fn [props comp & args]
-           (let [props (-> props
-                           (assoc :value @(r/cursor os-ref [:value]))
-                           (update :on-change #(r/partial on-change os-ref %)))]
-             (into [comp props] args)))
-         :component-did-update
-         (fn [this]
-           (let [[_ props comp & args] (reagent/argv this)
-                 b (:value props)
-                 {os :old-values a :value} @os-ref]
-             (let [[discards rest] (split-with #(not= % b) os)]
-               (if (empty? rest)
-                 (do
-                   (when (< 1 (count discards))
-                     ; this is either not a big deal, e.g. default values have been applied
-                     ; or multiple users are editing the same value and changes are probably being lost
-                     (timbre/warn "Potential conflicting concurrent edits detected, discarding local state" {:a a :b b :os os}))
-                   (reset! os-ref {:old-values [b] :value b}))
-                 (swap! os-ref assoc :old-values (vec rest))))))}))))
-
 (let [on-change (fn [f state parse-string new-s-value]
                   (swap! state assoc :s-value new-s-value)
                   (->> (try-either
