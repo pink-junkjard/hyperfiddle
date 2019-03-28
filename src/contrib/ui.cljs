@@ -203,7 +203,7 @@
                   :autoCloseBrackets true
                   :viewportMargin js/Infinity}
         props (-> props
-                  (assoc :read-only (:disabled props))      ; (if (:disabled props) "nocursor" false) -- nocursor disables copy/paste
+                  (update :read-only #(or % (:disabled props))) ; (if (:disabled props) "nocursor" false) -- nocursor disables copy/paste
                   (dissoc :disabled))
         props (into defaults props)]
     ; There is nothing to be done about invalid css down here.
