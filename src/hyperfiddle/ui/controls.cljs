@@ -197,7 +197,7 @@
                        (with-tx! ctx)))]
   (defn ^:export code [val ctx & [props]]
     (let [props (-> (assoc props
-                      :value (str val)
+                      :value val
                       :on-change (r/partial on-change ctx)
                       :parinfer (:contrib.ui/parinfer ctx))
                     (update :mode #(or % "clojure")))]
@@ -208,7 +208,7 @@
                        (with-tx! ctx)))]
   (defn ^:export css [val ctx & [props]]
     (let [props (-> (assoc props
-                      :value (str val)
+                      :value val
                       :on-change (r/partial on-change ctx))
                     (update :mode #(or % "css")))]
       [debounced props (code-comp ctx)])))
@@ -218,7 +218,7 @@
                        (with-tx! ctx)))]
   (defn ^:export markdown-editor [val ctx & [props]]        ; This is legacy; :mode=markdown should be bound in userland
     (let [props (-> (assoc props
-                      :value (str val)
+                      :value val
                       :on-change (r/partial on-change ctx)
                       :mode "markdown"
                       :lineWrapping true))]
@@ -324,7 +324,7 @@
   (defn ^:export string [val ctx & [props]]
     [:div.hyperfiddle-input-group
      (let [props (assoc props
-                   :value (str val)
+                   :value val
                    :on-change (r/partial on-change ctx))]
        [debounced props contrib.ui/text #_contrib.ui/textarea])
      (render-related-links val ctx)]))
