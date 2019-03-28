@@ -6,7 +6,8 @@
     [hypercrud.browser.context :as context]
     [hyperfiddle.security.client :as security]
     [hyperfiddle.actions :as actions]
-    [hyperfiddle.runtime :as runtime]))
+    [hyperfiddle.runtime :as runtime]
+    [taoensso.timbre :as timbre]))
 
 
 (defn entity-change->tx                                     ; :Many editor is probably not idiomatic
@@ -23,8 +24,10 @@
   ([ctx o n]
    (let [[e a v] @(:hypercrud.browser/eav ctx)
          attribute (context/hydrate-attribute! ctx a)
-         n (empty->nil n)]                                  ; hack for garbage string controls
-     (tx/edit-entity e attribute o n))))
+         n' (empty->nil n)]                                 ; hack for garbage string controls
+     (when (and (some? n) (nil? n'))
+       (timbre/warn "Trimming empty value to nil. This will be removed in a future release"))
+     (tx/edit-entity e attribute o n'))))
 
 (defn with-tx!
   ([ctx tx]

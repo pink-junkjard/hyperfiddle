@@ -7,6 +7,7 @@
     [contrib.pprint :refer [pprint-str]]
     [contrib.reactive :as r]
     [contrib.reader :as reader]
+    [contrib.string :refer [empty->nil]]
     [contrib.ui :refer [debounced]]                         ; avoid collisions
     [contrib.ui.recom-date :refer [recom-date]]
     [contrib.ui.tooltip :refer [tooltip-thick]]
@@ -17,7 +18,7 @@
     #_[hyperfiddle.ui]
     [hyperfiddle.ui.docstring :refer [semantic-docstring]]
     [hyperfiddle.ui.select$ :refer [select]]
-    [hyperfiddle.ui.util :refer [with-entity-change! with-tx!]]
+    [hyperfiddle.ui.util :refer [entity-change->tx with-entity-change! with-tx!]]
     [taoensso.timbre]
     [hyperfiddle.fiddle :as fiddle]))
 
@@ -191,28 +192,37 @@
     :hyperfiddle.ui.layout/block contrib.ui/code
     :hyperfiddle.ui.layout/table contrib.ui/code-inline-block))
 
-(defn ^:export code [val ctx & [props]]
-  (let [props (-> (assoc props
-                    :value val
-                    :on-change (with-entity-change! ctx)
-                    :parinfer (:contrib.ui/parinfer ctx))
-                  (update :mode #(or % "clojure")))]
-    [debounced props (code-comp ctx)]))
+(let [on-change (fn [ctx o n]
+                  (->> (entity-change->tx ctx (empty->nil o) (empty->nil n))
+                       (with-tx! ctx)))]
+  (defn ^:export code [val ctx & [props]]
+    (let [props (-> (assoc props
+                      :value (str val)
+                      :on-change (r/partial on-change ctx)
+                      :parinfer (:contrib.ui/parinfer ctx))
+                    (update :mode #(or % "clojure")))]
+      [debounced props (code-comp ctx)])))
 
-(defn ^:export css [val ctx & [props]]
-  (let [props (-> (assoc props
-                    :value val
-                    :on-change (with-entity-change! ctx))
-                  (update :mode #(or % "css")))]
-    [debounced props (code-comp ctx)]))
+(let [on-change (fn [ctx o n]
+                  (->> (entity-change->tx ctx (empty->nil o) (empty->nil n))
+                       (with-tx! ctx)))]
+  (defn ^:export css [val ctx & [props]]
+    (let [props (-> (assoc props
+                      :value (str val)
+                      :on-change (r/partial on-change ctx))
+                    (update :mode #(or % "css")))]
+      [debounced props (code-comp ctx)])))
 
-(defn ^:export markdown-editor [val ctx & [props]]          ; This is legacy; :mode=markdown should be bound in userland
-  (let [props (-> (assoc props
-                    :value val
-                    :on-change (with-entity-change! ctx)
-                    :mode "markdown"
-                    :lineWrapping true))]
-    [debounced props (code-comp ctx)]))
+(let [on-change (fn [ctx o n]
+                  (->> (entity-change->tx ctx (empty->nil o) (empty->nil n))
+                       (with-tx! ctx)))]
+  (defn ^:export markdown-editor [val ctx & [props]]        ; This is legacy; :mode=markdown should be bound in userland
+    (let [props (-> (assoc props
+                      :value (str val)
+                      :on-change (r/partial on-change ctx)
+                      :mode "markdown"
+                      :lineWrapping true))]
+      [debounced props (code-comp ctx)])))
 
 (defn value-validator [ctx]
   (let [[_ a _] @(:hypercrud.browser/eav ctx)]
@@ -308,11 +318,16 @@
          ; Cardinality :many not needed, because as soon as we assoc one value, we rehydrate typed
          [contrib.ui/edn props])])))
 
-(defn ^:export string [val ctx & [props]]
-  [:div.hyperfiddle-input-group
-   (let [props (assoc props :value val :on-change (with-entity-change! ctx))]
-     [debounced props contrib.ui/text #_contrib.ui/textarea])
-   (render-related-links val ctx)])
+(let [on-change (fn [ctx o n]
+                  (->> (entity-change->tx ctx (empty->nil o) (empty->nil n))
+                       (with-tx! ctx)))]
+  (defn ^:export string [val ctx & [props]]
+    [:div.hyperfiddle-input-group
+     (let [props (assoc props
+                   :value (str val)
+                   :on-change (r/partial on-change ctx))]
+       [debounced props contrib.ui/text #_contrib.ui/textarea])
+     (render-related-links val ctx)]))
 
 (defn ^:export long [val ctx & [props]]
   [:div.hyperfiddle-input-group
