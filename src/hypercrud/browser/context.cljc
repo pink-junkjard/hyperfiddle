@@ -771,11 +771,12 @@
 
 (defn links-in-dimension' [ctx criterias]
   {:post [(not (r/reactive? %))]}
-  (let [index @(:hypercrud.browser/link-index ctx)
+  ; https://github.com/hyperfiddle/hyperfiddle/issues/909
+  (let [index @(:hypercrud.browser/link-index ctx)          ; lift to top #909
         ?element (some-> ctx :hypercrud.browser/element deref)
         ?schema (some-> ctx :hypercrud.browser/schema deref)
         ?pullpath (:hypercrud.browser/pull-path ctx)]
-    (if-not (and ?element ?schema ?pullpath)
+    (if-not (and ?element ?schema ?pullpath)                ; this if statement was causing chaos #909
       (links-at index criterias)
       (let [as (contrib.datomic2/reachable-attrs ctx)       ; scan for anything reachable ?
             links (->> as
