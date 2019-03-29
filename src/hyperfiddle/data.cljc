@@ -18,8 +18,8 @@
          (:hypercrud.browser/link-index ctx)
          (s/assert :hypercrud/context ctx)
          #_(:hypercrud.browser/eav ctx)] ; it can be Reaction of [nil nil nil]
-   :post [(r/reactive? %)]}                                 ; its also a vector, associative by index
-  (->> (context/links-in-dimension-r
+   :post [#_(r/reactive? %)]}                                 ; its also a vector, associative by index
+  (->> (context/links-in-dimension
          ctx (contrib.data/xorxs ?corcs #{}))
        #_(map second)))
 
@@ -32,7 +32,7 @@
 
 (defn ^:export select+ [ctx & [?corcs]]                     ; Right[Reaction[Link]] or Left[String]
   {:pre [(s/assert :hypercrud/context ctx)]}
-  (->> (select-many ctx ?corcs)
+  (->> (r/track select-many ctx ?corcs)
        (validate-one+r ?corcs)
        #_#_r/apply-inner-r deref))
 
@@ -42,7 +42,7 @@
   (->> (select+ ctx ?corcs)
        (unwrap (constantly (r/pure nil)))))
 
-(defn select-many-here' [ctx & [?corcs]]
+(defn select-many-here' [ctx & [?corcs]]                    ; There's not a lot of value of shorting the reaction sooner than the link-index; it all must be checked
   (let [cs (contrib.data/xorxs ?corcs #{})
         a (context/a ctx)]
     ; links "here" means all possible links that apply. Can be lots of things!
@@ -56,13 +56,13 @@
       (let [ctx (context/unwind ctx 1)]
         (->> (for [[a ctx] (context/spread-attributes ctx)
                    :when (context/identity? ctx a) #_(context/attr? ctx :db.unique/identity)]
-               @(select-many ctx (conj cs a)))
+               (select-many ctx (conj cs a)))
              (sequence cat)
-             (concat @(select-many ctx (conj cs (context/a ctx))))))
+             (concat (select-many ctx (conj cs (context/a ctx))))))
 
       ; Otherwise just check here.
       :else
-      @(select-many ctx (conj cs a)))))
+      (select-many ctx (conj cs a)))))
 
 (defn ^:export select-many-here "reactive" ; collapses if eav is part of corcs
   [ctx & [?corcs]]
@@ -94,5 +94,5 @@
        (r/unsequence :db/id)))
 
 (defn spread-links-in-dimension [ctx & [?corcs]]            ; rename: layer
-  (->> (select-many ctx ?corcs)
+  (->> (r/track select-many ctx ?corcs)
        (r/unsequence :db/id)))

@@ -759,7 +759,11 @@
 (defn links-at "where criterias is some of #{ident txfn class class2}.
   Links include all links reachable by navigating :ref :one. (Change this by specifying an :ident)
   The index internals are reactive."
-  [r-link-index criterias]                                  ; criterias can contain nil, meaning toptop
+  [index criterias]
+  (->> index
+       (filter #(link-criteria-match? criterias %))
+       (mapv second))
+  #_#_[r-link-index criterias]                                  ; criterias can contain nil, meaning toptop
   (r/fmap->> r-link-index
              (filter (r/partial link-criteria-match? criterias))
              (mapv second)
@@ -767,24 +771,26 @@
 
 (defn links-in-dimension' [ctx criterias]
   {:post [(not (r/reactive? %))]}
-  (let [?element (some-> ctx :hypercrud.browser/element deref)
+  (let [index @(:hypercrud.browser/link-index ctx)
+        ?element (some-> ctx :hypercrud.browser/element deref)
         ?schema (some-> ctx :hypercrud.browser/schema deref)
         ?pullpath (:hypercrud.browser/pull-path ctx)]
     (if-not (and ?element ?schema ?pullpath)
-      @(links-at (:hypercrud.browser/link-index ctx) criterias)
+      (links-at index criterias)
       (let [as (contrib.datomic2/reachable-attrs ctx)       ; scan for anything reachable ?
             links (->> as
                        ; Places within reach
                        (mapcat (fn [a]
-                                 @(links-at (:hypercrud.browser/link-index ctx) (conj criterias a))))
+                                 (links-at index (conj criterias a))))
 
                        ; This place is where we are now
-                       (concat @(links-at (:hypercrud.browser/link-index ctx) criterias)))] ; this causes duplicates, there are bugs here
+                       (concat (links-at index criterias)))] ; this causes duplicates, there are bugs here
         (vec (distinct links))                              ; associative by index
         #_(->> links r/sequence (r/fmap vec))))))
 
-(defn links-in-dimension-r [ctx criterias]
-  (r/track links-in-dimension' ctx criterias))
+(defn links-in-dimension [ctx criterias]
+  ; r/track
+  (links-in-dimension' ctx criterias))
 
 (defn unwind [ctx n]
   ((apply comp (repeat n :hypercrud.browser/parent)) ctx))

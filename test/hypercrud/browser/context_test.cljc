@@ -1073,10 +1073,10 @@
 
   (testing "race shirt-sizes iframe"
     (let [ctx (mock-fiddle! :tutorial.race/submission)]
-      (is (-> @(hyperfiddle.data/select-many ctx :dustingetz.reg/gender)
+      (is (-> (hyperfiddle.data/select-many ctx :dustingetz.reg/gender)
               first :link/fiddle :fiddle/ident (= :tutorial.race/shirt-sizes)))
       ;(println @(hyperfiddle.data/select-many ctx :tutorial.race/submission))
-      (is (= 2 (count @(hyperfiddle.data/select-many ctx :hf/iframe)))))
+      (is (= 2 (count (hyperfiddle.data/select-many ctx :hf/iframe)))))
     )
 
   (testing "seattle neighborhood districts iframe"
@@ -1092,8 +1092,8 @@
 
   (testing "indexed-links"
     (is @(:hypercrud.browser/link-index ctx-neighborhoods))
-    (is @(context/links-at (:hypercrud.browser/link-index ctx-neighborhoods) #{}))
-    (is @(context/links-in-dimension-r ctx-neighborhoods #{}))
+    (is (context/links-at @(:hypercrud.browser/link-index ctx-neighborhoods) #{}))
+    (is (context/links-in-dimension ctx-neighborhoods #{}))
     )
   )
 

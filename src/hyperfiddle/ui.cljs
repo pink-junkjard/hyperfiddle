@@ -404,8 +404,9 @@ User renderers should not be exposed to the reaction."
 (defn columns [ctx & [props]]
   {:pre [(s/assert :hypercrud/context ctx)]}
   #_(cons (field relpath ctx nil props))
-  (doall (for [[k _] (hypercrud.browser.context/spread-attributes ctx)]
-           (field [k] ctx nil props))))
+  (doall
+    (for [[k _] (hypercrud.browser.context/spread-attributes ctx)]
+      [field [k] ctx nil props])))
 
 (defn pull "handles any datomic result that isn't a relation, recursively"
   [val ctx & [props]]
@@ -432,10 +433,10 @@ User renderers should not be exposed to the reaction."
   (->> (for [[i {el :hypercrud.browser/element :as ctx-e}] (hypercrud.browser.context/spread-elements ctx)]
          #_(cons (field [i] ctx props))
          (case (unqualify (contrib.datomic/parser-type @el))
-           :variable [(field [i] ctx props)]
-           :aggregate [(field [i] ctx props)]
+           :variable [[field [i] ctx props]]
+           :aggregate [[field [i] ctx props]]
            :pull (for [[a ctx-a] (hypercrud.browser.context/spread-attributes ctx-e)]
-                   (field [i a] ctx props))))
+                   [field [i a] ctx props])))
        (mapcat identity)                                    ; Don't flatten the hiccup
        doall))
 
@@ -450,7 +451,7 @@ nil. call site must wrap with a Reagent component"          ; is this just hyper
         (condp some [(type @(:hypercrud.browser/qfind ctx))] ; spread-rows
 
           #{FindRel FindColl}
-          [table table-column-product ctx props]
+          [table table-column-product ctx props]            ; identical result?
 
           #{FindTuple FindScalar}
           [form table-column-product val ctx props])]))])
@@ -492,7 +493,7 @@ nil. call site must wrap with a Reagent component"          ; is this just hyper
       [:dl
        [:dt "route"] [:dd (pr-str @(:hypercrud.browser/route ctx))]]]
      (render-edn (some-> (:hypercrud.browser/result ctx) deref))
-     (->> @(hyperfiddle.data/select-many ctx #{:hf/iframe}) ; this omits deep dependent iframes fixme
+     (->> (hyperfiddle.data/select-many ctx #{:hf/iframe}) ; this omits deep dependent iframes fixme
           (map #(base/data-from-link! % ctx))
           (concat (when @(r/fmap :fiddle/hydrate-result-as-fiddle (:hypercrud.browser/fiddle ctx))
                     (let [[_ [inner-fiddle & inner-args]] @(:hypercrud.browser/route ctx)
