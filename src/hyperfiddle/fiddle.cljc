@@ -53,7 +53,7 @@
 (s/def :fiddle/cljs-ns string?)
 (s/def :fiddle/hydrate-result-as-fiddle string?)
 
-(s/def :link/class (s/coll-of keyword?))
+(s/def :link/class (s/coll-of keyword?))                    ; hf/new is not allowed on FindScalar at the top (no parent)
 ;(s/def :link/fiddle (s/keys))
 (s/def :link/path string?)
 (s/def :link/formula string?)
