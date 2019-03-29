@@ -543,7 +543,13 @@
 (defn fiddle [ctx]
   (-> ctx :hypercrud.browser/fiddle deref :fiddle/ident))
 
-(defn result [ctx r-result]
+(defn result-enclosure! [ctx]
+  (contrib.datomic/result-enclosure!
+    @(runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :schemas])
+    @(:hypercrud.browser/qfind ctx)
+    @(:hypercrud.browser/result ctx)))
+
+(defn result [ctx r-result]                                 ; r-result must not be loading
   {:pre [r-result
          (:hypercrud.browser/fiddle ctx)]}
   (as-> ctx ctx
@@ -552,10 +558,7 @@
       ; result-enclosure! can throw on schema lookup, but it doesn't need handled in theory,
       ; because how would you have data without a working schema?
       ; this may not prove true with the laziness of reactions
-      :hypercrud.browser/result-enclosure (r/apply contrib.datomic/result-enclosure!
-                                                   [(runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :schemas])
-                                                    (:hypercrud.browser/qfind ctx)
-                                                    (:hypercrud.browser/result ctx)])
+      :hypercrud.browser/result-enclosure (r/track result-enclosure! ctx)
       :hypercrud.browser/validation-hints (contrib.validation/validate
                                             (s/get-spec @(r/fmap-> (:hypercrud.browser/fiddle ctx) :fiddle/ident))
                                             @(:hypercrud.browser/result ctx)
