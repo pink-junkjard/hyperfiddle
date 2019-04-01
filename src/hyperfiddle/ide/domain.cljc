@@ -188,10 +188,11 @@
                   (->EntityRequest [:domain/ident app-domain-ident] (->DbRef "$domains" foundation/root-branch) multi-datomic/domain-pull)]]
     (-> (io/hydrate-all-or-nothing! io local-basis nil requests)
         (p/then (fn [[ide-domain user-domain]]
-                  (if (nil? (:db/id ide-domain))
-                    (p/rejected (ex-info "IDE domain not found" {:hyperfiddle.io/http-status-code 404}))
-                    (-> (build+ (get local-basis "$domains") ide-domain build user-domain)
-                        (either/branch p/rejected p/resolved))))))))
+                  (cond
+                    (nil? (:db/id ide-domain)) (p/rejected (ex-info "IDE misconfigured; ide domain not found" {:hyperfiddle.io/http-status-code 500}))
+                    (nil? (:db/id user-domain)) (p/rejected (ex-info "Domain not found" {:hyperfiddle.io/http-status-code 404}))
+                    :else (-> (build+ (get local-basis "$domains") ide-domain build user-domain)
+                              (either/branch p/rejected p/resolved))))))))
 
 ; app-domains = #{"hyperfiddle.com"}
 ; ide-domains = #{"hyperfiddle.net"}
