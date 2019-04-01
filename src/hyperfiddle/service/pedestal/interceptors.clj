@@ -106,13 +106,12 @@
       (update :body (get content-transformers content-type))
       (assoc-in [:headers "Content-Type"] content-type)))
 
-(def auto-content-type
-  (interceptor/after
-    ::auto-content-type
-    (fn [context]
-      (cond-> context
-        (nil? (get-in context [:response :headers "Content-Type"]))
-        (update :response coerce-to (get-in context [:request :accept :field] "text/plain"))))))
+(defn auto-content-type [context]
+  (cond-> context
+    (nil? (get-in context [:response :headers "Content-Type"]))
+    (update :response coerce-to (get-in context [:request :accept :field] "text/plain"))))
+
+(def auto-content-type-interceptor (interceptor/after ::auto-content-type auto-content-type))
 
 (defn promise->chan [context]
   (if-not (p/promise? (:response context))
@@ -128,7 +127,7 @@
 
 (defn data-route [context with-request]
   (enqueue context [(content-negotiation/negotiate-content (keys content-transformers))
-                    auto-content-type
+                    auto-content-type-interceptor
                     (interceptor/after ::promise->chan promise->chan)
                     (interceptor/handler with-request)]))
 
@@ -167,8 +166,15 @@
                                           (put! channel (assoc-in context [:request :domain] domain)))
                                         (fn [e]
                                           (timbre/error e)
-                                          ; todo content type negotiation on this error
-                                          (put! channel (assoc (terminate context) :response (e->response e)))))
+                                          (let [context (-> context
+                                                            terminate
+                                                            ; todo idomatic way of handling this
+                                                            ; http://pedestal.io/reference/error-handling
+                                                            ; (io.pedestal.interceptor.chain/execute [...])
+                                                            ((:enter (content-negotiation/negotiate-content (keys content-transformers))))
+                                                            (assoc :response (e->response e))
+                                                            auto-content-type)]
+                                            (put! channel context))))
                                       channel))
             :else (throw (ex-info "Must supply domain value or function" {:value domain-provider})))})
 
