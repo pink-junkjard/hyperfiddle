@@ -109,7 +109,7 @@
   {:link/formula (fn [link]
                    (cond
 
-                     (some #{:hf/new :hf/affix} (:link/class link)) "(constantly (hyperfiddle.api/tempid! ctx))"
+                     (some #{:hf/new} (:link/class link)) "(constantly (hyperfiddle.api/tempid! ctx))"
 
                      (:link/fiddle link)                    ; If there is a fiddle-target, infer the expected :in shape
                      (case (get-in link [:link/fiddle :fiddle/type] ((:fiddle/type fiddle-defaults) (:link/fiddle link)))
@@ -125,26 +125,26 @@
    :link/tx-fn (fn [schemas qin link]
                  ; Auto parent-child management for eav ref contexts
                  (condp some (:link/class link)
-                   #{:hf/new :hf/affix} (let [[src-db a] (read-a (contrib.string/blank->nil (:link/path link)) qin)
-                                              ; Consider: ref, fiddle-ident, scalar (e.g. :streaker/date, :fiddle/ident, :db/ident)
-                                              dbname (str src-db)
-                                              schema (some-> (get schemas dbname) deref)]
-                                          (cond
-                                            ; Need to know what context we in.
-                                            ; Identity can be parent-child ref.
-                                            (contrib.datomic/attr? schema a :db.unique/identity) ":zero" ; hack to draw as popover
-                                            (contrib.datomic/attr? schema a :db.type/ref) ":db/add"
-                                            :else ":zero")) ; nil a, or qfind-level
+                   #{:hf/new} (let [[src-db a] (read-a (contrib.string/blank->nil (:link/path link)) qin)
+                                    ; Consider: ref, fiddle-ident, scalar (e.g. :streaker/date, :fiddle/ident, :db/ident)
+                                    dbname (str src-db)
+                                    schema (some-> (get schemas dbname) deref)]
+                                (cond
+                                  ; Need to know what context we in.
+                                  ; Identity can be parent-child ref.
+                                  (contrib.datomic/attr? schema a :db.unique/identity) ":zero" ; hack to draw as popover
+                                  (contrib.datomic/attr? schema a :db.type/ref) ":db/add"
+                                  :else ":zero"))           ; nil a, or qfind-level
 
-                   #{:hf/remove :hf/detach} (let [[src-db a] (read-a (contrib.string/blank->nil (:link/path link)) qin)
-                                                  ; Consider: ref, fiddle-ident, scalar (e.g. :streaker/date, :fiddle/ident, :db/ident)
-                                                  dbname (str src-db)
-                                                  schema (some-> (get schemas dbname) deref)]
-                                              (cond
-                                                (contrib.datomic/attr? schema a :db.unique/identity) ":db.fn/retractEntity"
-                                                (contrib.datomic/isComponent schema a) ":db.fn/retractEntity"
-                                                (contrib.datomic/attr? schema a :db.type/ref) ":db/retract"
-                                                :else ":db.fn/retractEntity")) ; legacy compat, remove
+                   #{:hf/remove} (let [[src-db a] (read-a (contrib.string/blank->nil (:link/path link)) qin)
+                                       ; Consider: ref, fiddle-ident, scalar (e.g. :streaker/date, :fiddle/ident, :db/ident)
+                                       dbname (str src-db)
+                                       schema (some-> (get schemas dbname) deref)]
+                                   (cond
+                                     (contrib.datomic/attr? schema a :db.unique/identity) ":db.fn/retractEntity"
+                                     (contrib.datomic/isComponent schema a) ":db.fn/retractEntity"
+                                     (contrib.datomic/attr? schema a :db.type/ref) ":db/retract"
+                                     :else ":db.fn/retractEntity")) ; legacy compat, remove
                    nil))})
 
 (def fiddle-defaults
