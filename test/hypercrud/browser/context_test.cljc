@@ -1139,9 +1139,9 @@
 (deftest ide-domain-databases
   (testing "yaaa"
     ; issue could be isComponent, or multiple maps in the pull
-    (let [+ctx (context/refocus+ ctx-ide-domain :domain/databases)]
-      (is (left? +ctx))
-      #_(= (context/eav ctx) [17592186046196 :dustingetz.reg/age 102]))))
+    (let [ctx (extract (context/refocus+ ctx-ide-domain :domain/databases))]
+      (= (context/eav ctx)
+         [[:domain/ident "hyperfiddle"] :domain/databases nil]))))
 
 (deftest txfn
   (testing "counter button at scalar"
@@ -1177,7 +1177,7 @@
                (context/attribute :domain/databases)
                (context/row 17592186046511)
                (context/attribute :db/id)
-               (contrib.datomic2/reachable-pullpaths))
+               (context/reachable-pullpaths))
            [[:db/id]
             [:domain/ident]
             [:domain/environment]
@@ -1216,7 +1216,7 @@
              (context/attribute :domain/databases)
              (context/row 17592186046511)
              (context/attribute :db/id)
-             (contrib.datomic2/reachable-attrs))
+             (context/reachable-attrs))
          [:db/id
           :domain/ident
           :domain/environment

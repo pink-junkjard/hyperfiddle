@@ -5,7 +5,6 @@
                              pull-traverse pull-union normalize-result
                              validate-qfind-attrs! result-enclosure!
                              pull-seq]]
-    [contrib.datomic2 :refer []]
     [contrib.ct]
     [contrib.try$]
     [fixtures.ctx]

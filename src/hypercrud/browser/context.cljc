@@ -8,7 +8,6 @@
     [contrib.ct :refer [unwrap]]
     [contrib.data :refer [ancestry-common ancestry-divergence unqualify]]
     [contrib.datomic]
-    [contrib.datomic2]
     [contrib.eval :as eval]
     [contrib.reactive :as r]
     [contrib.string :refer [blank->nil]]
@@ -772,6 +771,29 @@
              (mapv second)
              #_(mapv (juxt :db/id identity))))
 
+(defn reachable-pullpaths "
+  txfn can be on scalar and it is harmless to allow this."
+  [ctx]
+  (let [result-path (:hypercrud.browser/result-path ctx)    ; [:domain/databases 17592186046511 :db/id]
+        schema @(:hypercrud.browser/schema ctx)
+        root-pullshape @(:hypercrud.browser/root-pull-enclosure ctx)]
+    ; Start at the top. Traverse. Are we satisfied?
+    ; :one is satisfied; :many is satisfied if we have it in the dependency path
+    ; So turn result-path into {:domain/databases 17592186046511} ?
+    ; This fails in complex pulls
+    (let [one? #(contrib.datomic/cardinality? schema % :db.cardinality/one)
+          satisfied? (set (filter keyword? result-path))
+          child? (set (children ctx))]
+      (contrib.datomic/pull-traverse schema root-pullshape #(or (one? %)
+                                                                (satisfied? %)
+                                                                (child? %))))))
+
+(defn reachable-attrs [ctx]
+  (->> (reachable-pullpaths ctx)
+       (map last)
+       (remove nil?)
+       distinct))
+
 (defn links-in-dimension' [ctx criterias]
   {:post [(not (r/reactive? %))]}
   ; https://github.com/hyperfiddle/hyperfiddle/issues/909
@@ -781,7 +803,7 @@
         ?pullpath (:hypercrud.browser/pull-path ctx)]
     (if-not (and ?element ?schema ?pullpath)                ; this if statement was causing chaos #909
       (links-at index criterias)
-      (let [as (contrib.datomic2/reachable-attrs ctx)       ; scan for anything reachable ?
+      (let [as (reachable-attrs ctx)       ; scan for anything reachable ?
             links (->> as
                        ; Places within reach
                        (mapcat (fn [a]
@@ -818,7 +840,7 @@
           ;   me->mother ; me->sister->mother ; closest ctx is selected
           ; What if there is more than one?  me->sister->mother; me->father->mother
           ; Ambiguous, how did we even select this link? Probably need full datascript query language.
-          path-solutions (->> (contrib.datomic2/reachable-pullpaths ctx)
+          path-solutions (->> (reachable-pullpaths ctx)
                               ; xs is like '([] [:dustingetz.reg/gender] [:dustingetz.reg/shirt-size])
                               (filter #(= a (last %))))]
       ; In tuple cases (off happy path) there might not be a solution. Can be fixed by tupling all the way up.
