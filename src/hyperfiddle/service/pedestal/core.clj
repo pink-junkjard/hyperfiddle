@@ -54,7 +54,7 @@
   (assoc context :response (ring-resp/not-found "Not found")))
 
 (defmethod handle-route :405 [handler env context]
-  (assoc context :response (ring-resp/not-found "Method Not Allowed")))
+  (assoc context :response {:status 405 :headers {} :body "Method Not Allowed"}))
 
 (defmethod handle-route :force-refresh [handler env context]
   (assoc context :response {:status 404 #_410 :body "Please refresh your browser"}))
