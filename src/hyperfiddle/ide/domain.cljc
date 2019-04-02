@@ -159,10 +159,11 @@
       map->IdeDomain
       with-serializer))
 
-(defn build [basis build user-domain $src-uri]
+(defn build [user-domain $src-uri]
   {:pre [(instance? EdnishDomain user-domain)]}
   (build-impl
-    basis build
+    (domain/basis user-domain)
+    (:build user-domain)
     (domain/databases user-domain)
     (domain/fiddle-dbname user-domain)
     (-> user-domain map->IdeEdnishDomain either/right)
