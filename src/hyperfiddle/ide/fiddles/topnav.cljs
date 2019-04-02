@@ -3,6 +3,7 @@
     [cats.monad.either :as either]
     [contrib.reactive :as r]
     [contrib.ui.tooltip :refer [tooltip]]
+    [hyperfiddle.api :as hf]
     [hyperfiddle.data]
     [hyperfiddle.domain :as domain]
     [hyperfiddle.foundation :as foundation]
@@ -19,6 +20,11 @@
 (defn loading-spinner [ctx & [?class]]
   (if @(r/track any-loading? (:peer ctx))
     [:div.display-inline-flex [re-com.core/throbber]]))
+
+(defmethod hf/tx ::new-fiddle-tx #_#{:hyperfiddle.ide/topnav-new
+                                   :hyperfiddle.ide/new-fiddle}
+  [ctx [e a v] props]
+  [[:db/add v :fiddle/type :query]])
 
 (defn renderer' [ctx props left-child right-child]
   [:div props
