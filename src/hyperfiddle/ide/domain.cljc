@@ -4,12 +4,14 @@
     [cats.monad.either :as either]
     [cognitect.transit :as t]
     [contrib.reader :as reader]
+    [contrib.uri :refer [->URI]]
     [hypercrud.browser.base :as base]
     [hypercrud.transit :as transit]
     [hypercrud.types.DbRef :refer [->DbRef]]
     [hypercrud.types.EntityRequest :refer [->EntityRequest]]
     [hyperfiddle.database.color :as color]
     [hyperfiddle.domain :as domain]
+    [hyperfiddle.domains.ednish :refer [#?(:cljs EdnishDomain)]]
     [hyperfiddle.domains.multi-datomic :as multi-datomic]
     [hyperfiddle.foundation :as foundation]
     [hyperfiddle.ide.system-fiddle :as ide-system-fiddle]
@@ -17,7 +19,10 @@
     [hyperfiddle.io.routes :as routes]
     [hyperfiddle.route :as route]
     [hyperfiddle.system-fiddle :as system-fiddle]
-    [promesa.core :as p]))
+    [promesa.core :as p])
+  #?(:clj
+     (:import
+       (hyperfiddle.domains.ednish EdnishDomain))))
 
 
 (def user-dbname-prefix "$user.")
@@ -87,7 +92,7 @@
   )
 
 ; shitty code duplication because we cant pass our api-routes data structure as props (no regex equality)
-(defrecord EdnishDomain [basis fiddle-dbname databases environment home-route build]
+(defrecord IdeEdnishDomain [basis fiddle-dbname databases environment home-route build]
   domain/Domain
   (basis [domain] basis)
   (fiddle-dbname [domain] fiddle-dbname)
@@ -111,10 +116,60 @@
 
 (defn from-rep [rep]
   (-> (map->IdeDomain rep)
-      (update ::user-domain+ #(cats/fmap map->EdnishDomain %))
+      (update ::user-domain+ #(cats/fmap map->IdeEdnishDomain %))
       with-serializer))
 
-(defn build-user+ [basis build user-domain-record]
+(defn- build-impl [basis build
+                   user-databases user-fiddle-dbname user-domain+
+                   ide-databases ide-fiddle-dbname & {:keys [ide-environment ide-home-route]
+                                                      :or {ide-environment {}
+                                                           ide-home-route [:hyperfiddle.ide/home]}}]
+  (-> {:basis basis
+       :fiddle-dbname ide-fiddle-dbname
+       :databases (let [user-dbs (->> (dissoc user-databases user-fiddle-dbname)
+                                      (map (fn [[dbname db]]
+                                             [(str user-dbname-prefix dbname)
+                                              (assoc db
+                                                :database/auto-transact false
+                                                :database/color (color/color-for-name dbname))]))
+                                      (into {}))
+                        ide-dbs (->> ide-databases
+                                     (map (fn [[dbname db]]
+                                            [dbname
+                                             (assoc db
+                                               :database/auto-transact true
+                                               :database/color "#777")]))
+                                     (into {}))]
+                    (-> (into user-dbs ide-dbs)
+                        (assoc "$" (assoc (get user-databases user-fiddle-dbname)
+                                     :database/auto-transact false
+                                     :database/color (color/color-for-name user-fiddle-dbname)))))
+       :environment ide-environment
+       :home-route ide-home-route
+       :build build
+       ::user-dbname->ide (->> user-databases
+                               (map (fn [[dbname db]]
+                                      [dbname
+                                       (if (= user-fiddle-dbname dbname)
+                                         "$"
+                                         (str user-dbname-prefix dbname))]))
+                               (into {}))
+       ::user-domain+ user-domain+
+       :html-root-id "ide-root"}
+      map->IdeDomain
+      with-serializer))
+
+(defn build [basis build user-domain $src-uri]
+  {:pre [(instance? EdnishDomain user-domain)]}
+  (build-impl
+    basis build
+    (domain/databases user-domain)
+    (domain/fiddle-dbname user-domain)
+    (-> user-domain map->IdeEdnishDomain either/right)
+    {"$src" {:database/uri $src-uri}}
+    "$src"))
+
+(defn- build-user+ [basis build user-domain-record]
   ; shitty code duplication because we cant pass our api-routes data structure as props (no regex equality)
   (mlet [environment (reader/read-edn-string+ (:domain/environment user-domain-record))
          fiddle-dbname (multi-datomic/fiddle-dbname+ user-domain-record)
@@ -127,61 +182,32 @@
                                :build build}]]
     (->> (reader/read-edn-string+ (:domain/home-route user-domain-record))
          (cats/=<< route/validate-route+)
-         (cats/fmap (fn [home-route] (map->EdnishDomain (assoc partial-domain :home-route home-route)))))))
+         (cats/fmap (fn [home-route] (map->IdeEdnishDomain (assoc partial-domain :home-route home-route)))))))
 
-(defn build+ [domains-basis ide-datomic-record build user-datomic-record]
+(defn- build+ [domains-basis ide-datomic-record build user-datomic-record]
   (mlet [environment (reader/read-edn-string+ (:domain/environment ide-datomic-record))
          :let [environment (assoc environment :domain/disable-javascript (:domain/disable-javascript ide-datomic-record))]
          home-route (reader/read-edn-string+ (:domain/home-route ide-datomic-record))
          home-route (route/validate-route+ home-route)
-         fiddle-dbname (multi-datomic/fiddle-dbname+ ide-datomic-record)]
+         fiddle-dbname (multi-datomic/fiddle-dbname+ ide-datomic-record)
+         :let [user-fiddle-dbname (either/branch
+                                    (multi-datomic/fiddle-dbname+ user-datomic-record)
+                                    (constantly nil)        ; user domains can be misconfigured, can just leave ide-$ unbound
+                                    identity)]]
     (return
-      (-> {:basis domains-basis
-           :fiddle-dbname fiddle-dbname
-           :databases (let [user-dbs (->> (:domain/databases user-datomic-record)
-                                          (remove (fn [db]
-                                                    (= (get-in db [:domain.database/record :db/id])
-                                                       (get-in user-datomic-record [:domain/fiddle-database :db/id]))))
-                                          (map (fn [db]
-                                                 (-> db
-                                                     (update :domain.database/record assoc
-                                                             :database/auto-transact false
-                                                             :database/color (color/color-for-name (:domain.database/name db)))
-                                                     (update :domain.database/name #(str user-dbname-prefix %)))))
-                                          (map (juxt :domain.database/name :domain.database/record))
-                                          (into {}))
-                            user-fiddle-dbname (some (fn [db]
-                                                       (when (= (get-in db [:domain.database/record :db/id])
-                                                                (get-in user-datomic-record [:domain/fiddle-database :db/id]))
-                                                         (:domain.database/name db)))
-                                                     (:domain/databases user-datomic-record))
-                            ide-$ (assoc (:domain/fiddle-database user-datomic-record)
-                                    :database/auto-transact false
-                                    :database/color (color/color-for-name user-fiddle-dbname))
-                            ide-dbs (-> (->> (concat (->> (:domain/databases ide-datomic-record)
-                                                          (map (fn [db] (update db :domain.database/record assoc
-                                                                                :database/auto-transact true
-                                                                                :database/color "#777")))))
-                                             (map (juxt :domain.database/name :domain.database/record))
-                                             (into {}))
-                                        (assoc "$" ide-$))]
-                        (into user-dbs ide-dbs))
-           :environment environment
-           :home-route home-route
-           :build build
-           ::user-dbname->ide (->> (:domain/databases user-datomic-record)
-                                   (map (fn [db]
-                                          [(:domain.database/name db)
-                                           (if (= (get-in db [:domain.database/record :db/id])
-                                                  (get-in user-datomic-record [:domain/fiddle-database :db/id]))
-                                             "$"
-                                             (str user-dbname-prefix (:domain.database/name db)))]))
-                                   (into {}))
-           ::user-domain+ (build-user+ domains-basis build user-datomic-record)
-           :html-root-id "ide-root"
-           }
-          map->IdeDomain
-          with-serializer))))
+      (build-impl
+        domains-basis build
+        (->> (:domain/databases user-datomic-record)
+             (map (juxt :domain.database/name :domain.database/record))
+             (into {}))
+        user-fiddle-dbname
+        (build-user+ domains-basis build user-datomic-record)
+        (->> (:domain/databases ide-datomic-record)
+             (map (juxt :domain.database/name :domain.database/record))
+             (into {}))
+        fiddle-dbname
+        :ide-environment environment
+        :ide-home-route home-route))))
 
 (defn hydrate-ide-domain [io local-basis app-domain-ident build]
   (let [requests [(->EntityRequest [:domain/ident "hyperfiddle"] (->DbRef "$domains" foundation/root-branch) multi-datomic/domain-pull)
