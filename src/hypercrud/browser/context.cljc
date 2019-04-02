@@ -1033,18 +1033,19 @@
 
 (let [safe-eval-string #(try-either (eval/eval-expr-str! %))
       memoized-read-string (memoize safe-eval-string)]
-  (defn link-tx-read-memoized+ [kw-str]                     ; TODO migrate type to keyword
-    (if (blank->nil kw-str)
-      (memoized-read-string kw-str)
-      (either/right nil))))
+  (defn link-tx-read-memoized! "Parse the keyword here and ignore the error, once migrated to keyword
+  this doesn't happen"
+    [kw-str]                     ; TODO migrate type to keyword
+    (let [x (if (blank->nil kw-str)
+              (memoized-read-string kw-str)
+              (either/right nil))]
+      (unwrap (constantly nil) x))))
 
 (defn link-tx [?ctx]
   {:post [(or (keyword? %)
               (nil? %))]}
   (if-let [link-ref (:hypercrud.browser/link ?ctx)]
-    ; Parse the keyword here and ignore the error, once migrated to keyword this doesn't happen
-    (->> (link-tx-read-memoized+ @(r/fmap-> link-ref :link/tx-fn))
-         (unwrap (constantly nil)))))
+    (link-tx-read-memoized! @(r/fmap-> link-ref :link/tx-fn))))
 
 (defn- fix-param [ctx param]
   (if (instance? ThinEntity param)
