@@ -4,7 +4,7 @@
     [datomic.api :as d]
     [contrib.reader :as reader]
     [hyperfiddle.domain :as domain]
-    [hyperfiddle.domains.multi-datomic :as multi-datomic]
+    [hyperfiddle.directory.core :as directory]
     [hyperfiddle.io.datomic.transact :as transact]
     [hyperfiddle.security :as security]
     [hyperfiddle.security.domains]))
@@ -15,7 +15,7 @@
                  (d/q '[:find ?uri (pull ?db db-pull)
                         :in db-pull $
                         :where [?db :database/uri ?uri]]
-                      multi-datomic/database-pull)
+                      directory/database-pull)
                  (into {}))]
     (reify domain/Domain
       (databases [domain] dbs))))

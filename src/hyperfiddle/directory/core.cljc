@@ -1,4 +1,4 @@
-(ns hyperfiddle.domains.multi-datomic
+(ns hyperfiddle.directory.core
   (:require
     [cats.core :as cats :refer [mlet]]
     [cats.monad.either :as either]
