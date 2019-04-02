@@ -155,7 +155,7 @@
    :fiddle/renderer (fn [fiddle]
                       #?(:cljs (-> hyperfiddle.ui/fiddle meta :expr-str)
                          :clj  nil))
-   :fiddle/type (constantly :blank)})                       ; default is :query from new-fiddle; but from links panel, it's :entity
+   :fiddle/type (constantly :blank)})                       ; Toggling default to :query degrades perf in ide
 
 (defn auto-link+ [schemas qin link]
   (try-either                                               ; link/txfn could throw, todo wrap tighter
