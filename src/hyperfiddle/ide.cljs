@@ -8,15 +8,15 @@
     [hyperfiddle.domain :as domain]
     [hyperfiddle.foundation :as foundation]
     [hyperfiddle.runtime :as runtime]
+    [hyperfiddle.ui.staging]
 
     ; pull in the entire ide app for reference from user-land
-    [hyperfiddle.ide.fiddles.fiddle-src]
-    [hyperfiddle.ide.fiddles.schema-editor]
-    [hyperfiddle.ide.fiddles.schema-attribute]
-    [hyperfiddle.ide.fiddles.topnav]
-    [hyperfiddle.ide.preview.view]
     [hyperfiddle.ide.edit]
-    [hyperfiddle.ui.staging]))
+    [hyperfiddle.ide.fiddles.fiddle-src]
+    [hyperfiddle.ide.fiddles.schema-attribute]
+    [hyperfiddle.ide.fiddles.schema-editor]
+    [hyperfiddle.ide.fiddles.topnav]
+    [hyperfiddle.ide.preview.view]))
 
 
 (defn parse-ide-fragment [s-fragment]
