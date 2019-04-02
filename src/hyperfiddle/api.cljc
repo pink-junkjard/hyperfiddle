@@ -3,7 +3,8 @@
     [contrib.ct :refer [unwrap]]
     [contrib.data :refer [unqualify]]
     [contrib.reactive :as r]
-    [hypercrud.browser.context :as context]))
+    [hypercrud.browser.context :as context]
+    [taoensso.timbre :as timbre]))
 
 
 ; (d/touch (:fiddle/_links (d/entity (db! "datomic:free://datomic:4334/root") 17592186060983)))
@@ -23,7 +24,10 @@
 (declare render-dispatch)
 
 (defmulti tx (fn [ctx eav props]
-               (context/link-tx ctx)))
+               (let [dispatch-v (context/link-tx ctx)]
+                 ; UX - users actually want to see this in console
+                 (timbre/info "hf/tx: " dispatch-v " eav: " (pr-str eav))
+                 dispatch-v)))
 
 ; Dispatch is a set
 (defmulti render (fn [ctx props]
