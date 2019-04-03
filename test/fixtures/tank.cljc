@@ -780,7 +780,89 @@
        :community/category ["15th avenue residents"],
        :community/orgtype {:db/id 17592186045432},
        :community/type [{:db/id 17592186045436}]}]]]
-   }
+
+   :foo/clojurians
+   [{:db/id 17592186048012,
+     :fiddle/cljs-ns
+     "(defmethod hyperfiddle.api/render #{:user-profile/image-192}\n  [ctx props]\n  [:img {:src (hypercrud.browser.context/v ctx)}])",
+     :fiddle/ident :foo/clojurians,
+     :fiddle/links
+     [{:db/id 17592186048013,
+       :link/fiddle
+       {:db/id 17592186048014,
+        :fiddle/ident :foo.clojurians/user-profile,
+        :fiddle/type :entity},
+       :link/path ":channel/creator"}
+      {:db/id 17592186048015,
+       :link/fiddle
+       {:db/id 17592186048016,
+        :fiddle/ident :foo.clojurians/channel,
+        :fiddle/type :entity},
+       :link/path ":channel/name"}],
+     :fiddle/query
+     "[:in $clojurians\n :find\n (count ?msg)\n (pull $clojurians ?chan \n       [:channel/name\n        {:channel/creator \n         [:user/name]}])\n :where\n [$clojurians ?msg :message/channel ?chan]\n [$clojurians ?chan :channel/name ?cname]\n [(< ?cname \"d\")]]",
+     :fiddle/type :query}
+
+    [[430 #:channel{:name "clojurescript", :creator #:user{:name "gjnoonan"}}]
+     [41 #:channel{:name "cljsrn", :creator #:user{:name "mfikes"}}]
+     [3 #:channel{:name "clojars", :creator #:user{:name "tcrawley"}}]
+     [1252 #:channel{:name "clojure", :creator #:user{:name "gjnoonan"}}]
+     [69 #:channel{:name "community-development", :creator #:user{:name "gjnoonan"}}]
+     [1 #:channel{:name "clojure-brasil", :creator #:user{:name "pbalduino"}}]
+     [1 #:channel{:name "clojure-china", :creator #:user{:name "yusup"}}]
+     [26 #:channel{:name "core-async", :creator #:user{:name "warn4n"}}]
+     [102 #:channel{:name "clojure-dev", :creator #:user{:name "alexmiller"}}]
+     [146 #:channel{:name "cursive", :creator #:user{:name "pupeno"}}]
+     [57 #:channel{:name "clojure-greece", :creator #:user{:name "gtsiftsis"}}]
+     [1 #:channel{:name "clojure-india", :creator #:user{:name "pastafari"}}]
+     [134 #:channel{:name "clojure-italy", :creator #:user{:name "reborg"}}]
+     [3 #:channel{:name "aleph", :creator #:user{:name "pmagnus"}}]
+     [115 #:channel{:name "arachne", :creator #:user{:name "surreal.analysis"}}]
+     [30 #:channel{:name "clojure-nl", :creator #:user{:name "borkdude"}}]
+     [3 #:channel{:name "architecture", :creator #:user{:name "greywolve"}}]
+     [1 #:channel{:name "aws", :creator #:user{:name "alandipert"}}]
+     [2 #:channel{:name "bangalore-clj", :creator #:user{:name "kumarshantanu"}}]
+     [20 #:channel{:name "clojure-russia", :creator #:user{:name "nicola"}}]
+     [907 #:channel{:name "beginners", :creator #:user{:name "arathunku"}}]
+     [8 #:channel{:name "clojure-sanfrancisco", :creator #:user{:name "paul.legato"}}]
+     [198 #:channel{:name "boot", :creator #:user{:name "martinklepsch"}}]
+     [215 #:channel{:name "clojure-spec", :creator #:user{:name "martintrojer"}}]
+     [4 #:channel{:name "bristol-clojurians", :creator #:user{:name "msgodf"}}]
+     [216 #:channel{:name "clojure-uk", :creator #:user{:name "tiltyard"}}]
+     [212 #:channel{:name "cider", :creator #:user{:name "bozhidar"}}]
+     [60 #:channel{:name "clara", :creator #:user{:name "devn"}}]
+     [146 #:channel{:name "cljs-dev", :creator #:user{:name "dnolen"}}]]]
+
+   :foo.clojurians/channel
+   [{:db/id 17592186048016,
+     :fiddle/ident :foo.clojurians/channel,
+     :fiddle/pull
+     "[:db/id\n :channel/name\n :channel/created\n {(:message/_channel :limit 11) \n  [:message/text\n   {:message/user [:user/name]}]}]",
+     :fiddle/pull-database "$clojurians",
+     :fiddle/type :entity}
+    {:db/id 17592186046158,
+     :channel/name "clojurescript",
+     :channel/created 1425233874,
+     :message/_channel
+     [#:message{:text
+                "<@U051SS2EU> that's right, so I misinterpreted it and actually the doc does not mention that. So I was using it with `into` and everything was (of course) stuck :wink:",
+                :user #:user{:name "richiardiandrea"}}
+      #:message{:text "<@U0C8489U6> I dug up the convo <https://dev.clojure.org/jira/browse/ASYNC-159>", :user #:user{:name "noisesmith"}}
+      #:message{:text "it is still a bit counter intuitive imho, as you would expect a closed chan to return `nil`, but well...it is what it is",
+                :user #:user{:name "richiardiandrea"}}
+      #:message{:text
+                "I'm getting some strange behavior with cljs.\n```\n(gobj/get cljs-react-material-ui.reagent \"app-bar\")\n(gobj/get cljs-react-material-ui.reagent \"paper\")\n```\nWith these two statements, the first returns nil and the second returns the object I want. I aliased the ns to `rui` and\n```\nrui/app-bar\nrui/paper\n```\nboth of these statements return the objects I want. When I `console.dir` the namespace, `app-bar` isn't in it, but I can still access it",
+                :user #:user{:name "radomski"}}
+      #:message{:text "What could cause something like this to happen?", :user #:user{:name "radomski"}}
+      #:message{:text "My suspicion is the google closure compiler. I have advanced compilation turned on", :user #:user{:name "radomski"}}
+      #:message{:text "in the library, both objects are also defined the same way", :user #:user{:name "radomski"}}
+      #:message{:text "Alright I found out in order to do dynamic access, I need to use `app_bar` instead of `app-bar` anybody know why?",
+                :user #:user{:name "radomski"}}
+      #:message{:text "(defn app-bar [...] ...) creates a thing called app_bar", :user #:user{:name "noisesmith"}}
+      #:message{:text "see the `munge` and `demunge` functions", :user #:user{:name "noisesmith"}}
+      #:message{:text
+                "I discovered that when I started dumping vars to the console. I feel really stupid now because I totally knew js doesn't support kabab cased names",
+                :user #:user{:name "radomski"}}]}]}
    )
 
 
@@ -897,6 +979,45 @@
      ))
 
 (def schemas {"$" (exception/success schema)
+              "$clojurians"
+              (exception/success
+                (contrib.datomic/indexed-schema
+                  '({:db/ident :channel/created, :db/valueType {:db/ident :db.type/long}, :db/cardinality {:db/ident :db.cardinality/one}}
+                    {:db/ident :channel/creator, :db/valueType {:db/ident :db.type/ref}, :db/cardinality {:db/ident :db.cardinality/one}}
+                    {:db/ident :channel/name, :db/valueType {:db/ident :db.type/string}, :db/cardinality {:db/ident :db.cardinality/one}, :db/unique {:db/ident :db.unique/identity}}
+                    {:db/ident :channel/slack-id, :db/valueType {:db/ident :db.type/string}, :db/cardinality {:db/ident :db.cardinality/one}, :db/unique {:db/ident :db.unique/identity}}
+                    {:db/ident :event/subtype, :db/valueType {:db/ident :db.type/string}, :db/cardinality {:db/ident :db.cardinality/one}}
+                    {:db/ident :event/ts, :db/valueType {:db/ident :db.type/string}, :db/cardinality {:db/ident :db.cardinality/one}}
+                    {:db/ident :message/channel, :db/valueType {:db/ident :db.type/ref}, :db/cardinality {:db/ident :db.cardinality/one}, :db/doc "Channel the message was posted in."}
+                    {:db/ident :message/day, :db/valueType {:db/ident :db.type/string}, :db/cardinality {:db/ident :db.cardinality/one}, :db/doc "The day this message is categorized under, e.g. 2017-11-20."}
+                    {:db/ident :message/key, :db/valueType {:db/ident :db.type/string}, :db/cardinality {:db/ident :db.cardinality/one}, :db/unique {:db/ident :db.unique/identity}, :db/doc "Key consisting of channel id + ts. Useful for upserts and refs."}
+                    {:db/ident :message/text, :db/valueType {:db/ident :db.type/string}, :db/cardinality {:db/ident :db.cardinality/one}, :db/doc "Message text (markdown)"}
+                    {:db/ident :message/thread-inst, :db/valueType {:db/ident :db.type/instant}, :db/cardinality {:db/ident :db.cardinality/one}, :db/doc "Same as :message/thread-ts, but parsed to java.util.Date. This is lossy: Date has milisecond precision, ts has microseconds."}
+                    {:db/ident :message/thread-ts, :db/valueType {:db/ident :db.type/string}, :db/cardinality {:db/ident :db.cardinality/one}, :db/doc "Thread parent message timestamp (seconds since epoch up to 6 decimals). Stored as string because it is used by slack as a kind of identifier. Unique per channel."}
+                    {:db/ident :message/ts, :db/valueType {:db/ident :db.type/string}, :db/cardinality {:db/ident :db.cardinality/one}, :db/doc "Message timestamp (seconds since epoch up to 6 decimals). Stored as string because it is used by slack as a kind of identifier. Unique per channel."}
+                    {:db/ident :message/user, :db/valueType {:db/ident :db.type/ref}, :db/cardinality {:db/ident :db.cardinality/one}, :db/doc "User who posted the message"}
+                    {:db/ident :user/admin?, :db/valueType {:db/ident :db.type/boolean}, :db/cardinality {:db/ident :db.cardinality/one}}
+                    {:db/ident :user/name, :db/valueType {:db/ident :db.type/string}, :db/cardinality {:db/ident :db.cardinality/one}, :db/unique {:db/ident :db.unique/identity}, :db/doc "A user's public handle."}
+                    {:db/ident :user/owner?, :db/valueType {:db/ident :db.type/boolean}, :db/cardinality {:db/ident :db.cardinality/one}}
+                    {:db/ident :user/profile, :db/valueType {:db/ident :db.type/ref}, :db/cardinality {:db/ident :db.cardinality/one}, :db/doc "Reference to a user's profile, which contains email, avatar, display name, etc."}
+                    {:db/ident :user/real-name, :db/valueType {:db/ident :db.type/string}, :db/cardinality {:db/ident :db.cardinality/one}}
+                    {:db/ident :user/slack-id, :db/valueType {:db/ident :db.type/string}, :db/cardinality {:db/ident :db.cardinality/one}, :db/unique {:db/ident :db.unique/identity}, :db/doc "Internal user identifier used by slack. Alphanumeric, starts with U."}
+                    {:db/ident :user-profile/avatar-hash, :db/valueType {:db/ident :db.type/string}, :db/cardinality {:db/ident :db.cardinality/one}}
+                    {:db/ident :user-profile/display-name, :db/valueType {:db/ident :db.type/string}, :db/cardinality {:db/ident :db.cardinality/one}}
+                    {:db/ident :user-profile/display-name-normalized, :db/valueType {:db/ident :db.type/string}, :db/cardinality {:db/ident :db.cardinality/one}}
+                    {:db/ident :user-profile/email, :db/valueType {:db/ident :db.type/string}, :db/cardinality {:db/ident :db.cardinality/one}}
+                    {:db/ident :user-profile/first-name, :db/valueType {:db/ident :db.type/string}, :db/cardinality {:db/ident :db.cardinality/one}}
+                    {:db/ident :user-profile/image-192, :db/valueType {:db/ident :db.type/string}, :db/cardinality {:db/ident :db.cardinality/one}}
+                    {:db/ident :user-profile/image-24, :db/valueType {:db/ident :db.type/string}, :db/cardinality {:db/ident :db.cardinality/one}}
+                    {:db/ident :user-profile/image-32, :db/valueType {:db/ident :db.type/string}, :db/cardinality {:db/ident :db.cardinality/one}}
+                    {:db/ident :user-profile/image-48, :db/valueType {:db/ident :db.type/string}, :db/cardinality {:db/ident :db.cardinality/one}}
+                    {:db/ident :user-profile/image-512, :db/valueType {:db/ident :db.type/string}, :db/cardinality {:db/ident :db.cardinality/one}}
+                    {:db/ident :user-profile/image-72, :db/valueType {:db/ident :db.type/string}, :db/cardinality {:db/ident :db.cardinality/one}}
+                    {:db/ident :user-profile/image-original, :db/valueType {:db/ident :db.type/string}, :db/cardinality {:db/ident :db.cardinality/one}}
+                    {:db/ident :user-profile/last-name, :db/valueType {:db/ident :db.type/string}, :db/cardinality {:db/ident :db.cardinality/one}}
+                    {:db/ident :user-profile/real-name, :db/valueType {:db/ident :db.type/string}, :db/cardinality {:db/ident :db.cardinality/one}}
+                    {:db/ident :user-profile/real-name-normalized, :db/valueType {:db/ident :db.type/string}, :db/cardinality {:db/ident :db.cardinality/one}}
+                    {:db/ident :user-profile/title, :db/valueType {:db/ident :db.type/string}, :db/cardinality {:db/ident :db.cardinality/one}})))
               "$soup"
               (exception/success
                 (contrib.datomic/indexed-schema

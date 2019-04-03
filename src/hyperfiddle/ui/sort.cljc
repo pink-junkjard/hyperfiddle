@@ -5,32 +5,59 @@
     [hypercrud.browser.context :as context]))
 
 
-(defn sortable? [ctx]
-  (let [element (some-> (:hypercrud.browser/element ctx) deref)]
-    ; Used to check links dont break sorting, but those cases don't happen anymore.
-    (if (and element (not (context/qfind-level? ctx)))
-      (condp some [(unqualify (contrib.datomic/parser-type element))]
-        #{:aggregate :variable} true
-        #{:pull} (let [a (context/a ctx)]
-                  (and
-                    (context/attr? ctx a :db.cardinality/one)
-                    ; ref requires more work (inspect label-prop)
-                    (not (context/attr? ctx a :db.type/ref)))))
-      ; e.g. !field[js/user.hyperblog-post-link]()
-      false)))
+(defn top-level-sort? [ctx]
+  ; Special if statement because our context doesn't track this weird case.
+  ; result-path assumes there is a row in scope but we are in the header.
+  ; pull-path does not track find elements.
+  ;
+  ; Top level header, we might be in a FE
+  (or (= 1 (context/pull-depth ctx))
+      (and (context/qfind-level? ctx)                       ; no pull path, e.g. aggregate
+           (boolean (:hypercrud.browser/element ctx)))))
 
-(defn sort-direction [relative-path ctx]
+(defn sortable? [ctx]
+  ; check attr, not a, because context/a returns fiddle-ident but attr checks the schema
+
+  (or (and (context/attr ctx)
+           (context/attr? ctx :db.cardinality/one)
+           (not (context/attr? ctx :db.type/ref)))
+      (and (boolean (:hypercrud.browser/element ctx))
+           (not (context/attr ctx)))))
+
+(defn sort-direction [p ctx]
   (let [[sort-path direction] @(::sort-col ctx)]
-    (when (= sort-path relative-path)
+    (when (= sort-path p)
       direction)))
 
-(defn toggle-sort! [relative-path ctx]
-  (when (sortable? ctx)
-    (reset! (::sort-col ctx)
-            (case (sort-direction relative-path ctx)
-              :asc [relative-path :desc]
-              :desc nil
-              [relative-path :asc]))))
+(defn sort-path [ctx]
+  (when (sortable? ctx)                                     ; we are inside a table header
+    (cond
+      (top-level-sort? ctx)                                 ; bypasses aggregate?
+      (condp = [(unqualify (contrib.datomic/parser-type (context/qfind ctx)))
+                (unqualify (contrib.datomic/parser-type (context/element ctx)))]
+        [:find-coll :pull] [(context/a ctx)]
+        [:find-rel :pull] [(:hypercrud.browser/element-index ctx) (context/a ctx)]
+        [:find-coll :aggregate] nil
+        [:find-rel :aggregate] [(:hypercrud.browser/element-index ctx)]
+
+        ; Scalar and tuple aren't sortable
+        nil)
+
+      :else-nested-pull                                     ; Relative to the collection (:many value).
+      [(context/a ctx)])))
+
+(defn sort-directive [ctx]
+  (if-let [p (sort-path ctx)]
+    [p (sort-direction p ctx)]))
+
+(defn toggle-sort! [ctx]
+  (if-let [[p ?d] (sort-directive ctx)]
+    (let [v (case ?d
+              :asc [p :desc]
+              :desc nil                                     ; [ nil nil ]
+              [p :asc])]
+      (println "sort-path: " (pr-str p))
+      (reset! (::sort-col ctx) v))))
 
 (defn sort-fn [relations-val sort-col]
   (let [[path direction] @sort-col]

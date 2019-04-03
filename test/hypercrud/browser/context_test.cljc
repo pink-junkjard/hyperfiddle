@@ -13,7 +13,8 @@
     [hyperfiddle.fiddle]
     [hyperfiddle.foundation :as foundation]
     [hyperfiddle.reducers]
-    [hyperfiddle.runtime :as runtime]))
+    [hyperfiddle.runtime :as runtime]
+    [hyperfiddle.ui.sort :as sort]))
 
 
 (defn mock-peer [branch-id schemas]
@@ -105,7 +106,7 @@
            [[:dustingetz.reg/email
              :dustingetz.reg/name                           ; name is absent from second row
              #:dustingetz.reg{:gender [:db/ident]}
-             #:dustingetz.reg{:shirt-size  [:db/ident]}
+             #:dustingetz.reg{:shirt-size [:db/ident]}
              :db/id]]))
     )
   )
@@ -961,7 +962,7 @@
 
 (def ctx-blog3 (-> (mock-fiddle! :dustingetz.tutorial/blog) ; FindRel-1
                    (context/row [[:dustingetz.post/slug :automatic-CRUD-links]])
-                   #_(context/browse-element 0)                    ; Specifically no element
+                   #_(context/browse-element 0)             ; Specifically no element
                    ))
 
 (testing "refocus link from tupled qfind, identity focused from result ctx"
@@ -1328,3 +1329,57 @@
   ;(is (= (deps-over-satisfied? [0 :reg/gender] [0 :reg/gender]) true))
   ; It would be over-satisfied if there was another
   )
+
+
+; Clojurians
+; Is it sortable at
+; aggregate
+; column
+; nested pull column
+(deftest sorting-1
+  (testing "from :many with a row, refocus to self"
+
+    (let [ctx (mock-fiddle! fixtures.tank/schemas
+                            fixtures.tank/fiddles
+                            :foo/clojurians)]
+
+      (is (= (-> ctx
+                 (context/browse-element 1)
+                 (context/attribute :channel/name)
+                 (hyperfiddle.ui.sort/sortable?))
+             true))
+
+      (is (= (-> ctx
+                 (context/browse-element 1)
+                 (context/attribute :channel/creator)       ; ref
+                 (hyperfiddle.ui.sort/sortable?))
+             false))
+
+      (is (= true (-> ctx
+                      (context/browse-element 0)
+                      (hyperfiddle.ui.sort/sortable?))))
+
+      #_(is (= false (-> ctx
+                         (context/browse-element 1)
+                         (hyperfiddle.ui.sort/sortable?))))
+      )
+
+    (let [ctx (mock-fiddle! fixtures.tank/schemas
+                            fixtures.tank/fiddles
+                            :foo.clojurians/channel)]
+
+      (is (= (-> ctx
+                 (context/attribute :message/_channel)
+                 (hyperfiddle.ui.sort/sortable?))
+             false))
+
+      (is (= (-> ctx
+                 (context/attribute :message/text)
+                 (hyperfiddle.ui.sort/sortable?))
+             true))
+
+      (is (= (-> ctx
+                 (context/attribute :message/user)          ; ref
+                 (hyperfiddle.ui.sort/sortable?))
+             false))
+      )))

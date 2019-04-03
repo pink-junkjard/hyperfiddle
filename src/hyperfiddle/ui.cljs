@@ -154,7 +154,7 @@
   (or (attr-renderer-control val ctx props)               ; compat
       (hf/render ctx props)))
 
-(defn ^:export hyper-label [_ ctx & [props]]
+(defn ^:export hyper-label [_ ctx & [props]]                ; props has sort :on-click
   (let [?element (:hypercrud.browser/element ctx)
         element-type (if ?element (contrib.datomic/parser-type @?element))
         i (:hypercrud.browser/element-index ctx)
@@ -333,8 +333,10 @@ User renderers should not be exposed to the reaction."
                 :style {:background-color (domain/database-color (runtime/domain (:peer ctx)) (context/dbname ctx))}}
            [Head nil ctx (-> props
                              (update :class css (when (sort/sortable? ctx) "sortable")
-                                     (some-> (sort/sort-direction (:hypercrud.browser/pull-path ctx) ctx) name))
-                             (assoc :on-click (r/partial sort/toggle-sort! (:hypercrud.browser/pull-path ctx) ctx)))]]
+                                     (if-let [[p ?d] (sort/sort-directive ctx)]
+                                       (if ?d
+                                         (name ?d))))
+                             (assoc :on-click (r/partial sort/toggle-sort! ctx)))]]
     ; Field omits [] but table does not, because we use it to specifically draw repeating anchors with a field renderer.
     :body [:td {:class (css "field" (:class props))
                 :style {:border-color (domain/database-color (runtime/domain (:peer ctx)) (context/dbname ctx))}}
