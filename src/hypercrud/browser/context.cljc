@@ -297,7 +297,7 @@
        :else (assert false)
        )))
   ([ctx a]                                                  ; eav order of init issues, ::eav depends on this in :many
-   {:pre [(> (depth ctx) 0)]}
+   {:pre [(> (pull-depth ctx) 0)]}
    (assert (not (:hypercrud.browser/head-sentinel ctx)) "this whole flag is trouble, not sure if this assert is strictly necessary")
    (case (contrib.datomic/cardinality @(:hypercrud.browser/schema ctx) a)
 
@@ -744,7 +744,7 @@
       ; Handle variable and aggregate above
       :variable [#_[(get-in element [:variable :symbol]) ctx]]
       :aggregate [#_[(get-in element [:fn :symbol]) ctx]]
-      :pull (for [k (contrib.datomic/pull-level (pull-enclosure-here ctx))]
+      :pull (for [k (children ctx)]
               [k (attribute ctx k)]))))
 
 ; var first, then can always use db/id on row. No not true – collisions! It is the [?e ?f] product which is unique

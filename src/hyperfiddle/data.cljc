@@ -58,7 +58,8 @@
                    :when (context/identity? ctx a) #_(context/attr? ctx :db.unique/identity)]
                (select-many ctx (conj cs a)))
              (sequence cat)
-             (concat (select-many ctx (conj cs (context/a ctx))))))
+             (concat (select-many ctx (conj cs (context/a ctx))))
+             doall))
 
       ; Otherwise just check here.
       :else
