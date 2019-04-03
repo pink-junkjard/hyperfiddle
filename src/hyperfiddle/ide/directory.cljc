@@ -39,7 +39,7 @@
                                     (constantly nil)        ; user domains can be misconfigured, can just leave ide-$ unbound
                                     identity)]]
     (return
-      (build
+      (ide-domain/build
         domains-basis build
         (->> (:domain/databases user-datomic-record)
              (map (juxt :domain.database/name :domain.database/record))
