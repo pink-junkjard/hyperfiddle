@@ -132,7 +132,7 @@
                                                  (:hypercrud.browser/result-path ctx))
                                                @(r/fmap :db/id link-ref)
                                                (:route props)
-                                               @(r/fmap (r/partial context/reagent-entity-key ctx)
+                                               @(r/fmap (r/partial context/entity-viewkey ctx)
                                                         (:hypercrud.browser/fiddle ctx))
                                                ; visual-a de-dupes various identity columns which show exactly the same link
                                                (:hyperfiddle.ui.popover/visual-a props)]

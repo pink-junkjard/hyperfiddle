@@ -164,46 +164,49 @@
 (defn- set-parent [ctx]
   (assoc ctx :hypercrud.browser/parent ctx))
 
-(defn key-entity [ctx v]
+(defn entity-datakey [ctx v]
   (if v
     (smart-entity-identifier ctx v)))
 
-(defn reagent-entity-key "Specialized key that works around Datomic issue to stabilize views as we transition from
-  empty entity to entity with datoms. Not useful for anything except as internal reagent key."
+(defn entity-viewkey "React.js view key that is stable for entire view lifecycle.
+This works around Datomic issue where a tempid is hydrated for the first time and is allocated
+a speculative db/id."
   [ctx {:keys [:db/id :db/ident] :as v}]
   ; https://github.com/hyperfiddle/hyperfiddle/issues/563 - Regression: Schema editor broken due to smart-id
   ; https://github.com/hyperfiddle/hyperfiddle/issues/345 - Form jank when tempid entity transitions to real entity
   (if v
     (or (underlying-tempid ctx id)                          ; Tempid is stable for entire view lifecycle
-        (key-entity ctx v)
-        #_(pr-str v))))
+        (entity-datakey ctx v))))
 
-(defn key-scalar "For at the top when you don't know"
-  [ctx v]
+(defn scalar-key "For at the top when you don't know"
+  [ctx v entity-kf]
   (condp some [(type @(:hypercrud.browser/element ctx))]
     #{Aggregate Variable} v
-    #{Pull} (key-entity ctx v)))
+    #{Pull} (entity-kf ctx v)))
 
 (declare element-head)
 (declare spread-elements)
 (declare qfind-level?)
 
-(defn row-key "Properly accounts for elements/schema"       ; does it return nil, or a v?
-  [{qfind :hypercrud.browser/qfind :as ctx} row]
-  ; This keyfn is very tricky, read https://github.com/hyperfiddle/hyperfiddle/issues/341
-  #_(let [qfind (contrib.datomic/qfind-collapse-findrel-1 @qfind row)])
-  (cond
-    (qfind-level? ctx)
-    (condp some [(type @qfind)]
-      #{FindColl FindScalar}
-      (key-scalar (element-head ctx 0) row)
-      #{FindRel FindTuple}
-      (vec                                                  ; Tupled elements have tupled keys, except FindRel-1.
-        (for [[i ctx] (spread-elements ctx element-head)]   ; Data is not focused yet, must sidestep that logic
-          (key-scalar ctx (get row i)))))
+(defn ^:export row-key "Properly accounts for elements/schema"       ; does it return nil, or a v?
+  ([ctx row]
+    ; The opposite should probably be the default, for userland views.
+   (row-key ctx row entity-datakey))
+  ([{qfind :hypercrud.browser/qfind :as ctx} row entity-kf]
+    ; This keyfn is very tricky, read https://github.com/hyperfiddle/hyperfiddle/issues/341
+    #_(let [qfind (contrib.datomic/qfind-collapse-findrel-1 @qfind row)])
+   (cond
+     (qfind-level? ctx)
+     (condp some [(type @qfind)]
+       #{FindColl FindScalar}
+       (scalar-key (element-head ctx 0) row entity-kf)
+       #{FindRel FindTuple}
+       (vec                                                 ; Tupled elements have tupled keys, except FindRel-1.
+         (for [[i ctx] (spread-elements ctx element-head)]  ; Data is not focused yet, must sidestep that logic
+           (scalar-key ctx (get row i) entity-kf))))
 
-    :else
-    (key-scalar ctx row)))
+     :else
+     (scalar-key ctx row entity-kf))))
 
 (def ^:export ^:legacy row-keyfn row-key)
 (def ^:export ^:legacy key-row row-key)
@@ -262,7 +265,7 @@
   (or (row-key ctx row) row))
 
 (defn entity-key-v [ctx v]
-  (or (key-entity ctx v) v))
+  (or (entity-datakey ctx v) v))
 
 (defn index-result "Builds the result index based on qfind. Result index is orthogonal to sorting or order.
   All paths get a result-index, though if there is no collection, then this is just the result as no indexing is needed.
@@ -375,7 +378,7 @@
       ; Attribute level first, makes element level easier
       (> (pull-depth ctx) 0)
       (if (contrib.datomic/ref? @(:hypercrud.browser/schema ctx) ?a)
-        (key-entity ctx ?v)                                 ; no fallback, this must be a real identity or nil
+        (entity-datakey ctx ?v)                                 ; no fallback, this must be a real identity or nil
         ?v)
 
       ; Change in behavior below, it was smart-entity-identifier before
@@ -385,8 +388,8 @@
       (= (pull-depth ctx) 0)                                ; element level confirmed
       (condp some [(type @(:hypercrud.browser/qfind ctx))]
         #{FindRel FindColl} (if (> (depth ctx) 0)           ; need row
-                              (key-scalar ctx ?v))
-        #{FindTuple FindScalar} (key-scalar ctx ?v)))))
+                              (scalar-key ctx ?v entity-datakey))
+        #{FindTuple FindScalar} (scalar-key ctx ?v entity-datakey)))))
 
 (defn eav "Not reactive." [ctx]
   {:pre [(s/assert :hypercrud/context ctx)]}

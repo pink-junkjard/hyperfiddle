@@ -401,7 +401,7 @@ User renderers should not be exposed to the reaction."
   {:pre [(s/assert :hypercrud/context ctx)]}
   (let [ctx (assoc ctx ::layout :hyperfiddle.ui.layout/block)] ; make this go away
     (into
-      [:<> {:key (str (context/row-key ctx val))}]   ; when entity-keyfn?
+      [:<> {:key (str (context/row-key ctx val context/entity-viewkey))}]
       (columns ctx))))
 
 (defn columns [ctx & [props]]
