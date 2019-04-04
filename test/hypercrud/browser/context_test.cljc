@@ -935,10 +935,10 @@
       (is (= (mlet [[ctx r+route] (context/refocus-to-link+ ctx-blog2 link1)]
                (context/eav ctx))
              ; should it be [nil nil "479925454"] from the txfn perspective?
-             [nil :dustingetz.tutorial/blog "hyperfiddle.tempid--2017569654"]))
+             [nil :dustingetz.tutorial/blog "hyperfiddle.tempid--853640389"]))
       (is (= (mlet [[ctx +route] (context/refocus-to-link+ ctx-blog2 link1)]
                (return +route))
-             (right [:dustingetz.tutorial.blog/new-post [#entity["$" "hyperfiddle.tempid--2017569654"]]])))))
+             (right [:dustingetz.tutorial.blog/new-post [#entity["$" "hyperfiddle.tempid--853640389"]]])))))
 
   (testing "iframe at double nested attr"
     (is (= (context/eav ctx-seattle1) [[:district/name "Ballard"] :district/region :region/nw]))
