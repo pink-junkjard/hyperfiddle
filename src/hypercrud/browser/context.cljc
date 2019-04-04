@@ -1080,6 +1080,10 @@ a speculative db/id."
       :else-valid
       (either/right params'))))
 
+(defn hash-portable [v]
+  ; Transactions have db/id longs and longs hash differently on cljs vs clj
+  (hash (pr-str v)))
+
 (let [impl (fn [rt branch-id dbname]
              (->> (loop [branch-id branch-id
                          tx nil]
@@ -1087,9 +1091,10 @@ a speculative db/id."
                       (if (branch/root-branch? branch-id)
                         tx
                         (recur (branch/parent-branch-id branch-id) tx))))
-                  hash
+                  hash-portable
                   (str "hyperfiddle.tempid-")))]
-  (defn tempid! "unstable"
+  (defn tempid! "Generate a stable unique tempid that will never collide and also can be deterministicly
+  reproduced in any tab or the server"
     ([ctx]
       ; :blank can assume $; otherwise user should specify a qfind
       ; ^ is old comment and can't this be removed now?
