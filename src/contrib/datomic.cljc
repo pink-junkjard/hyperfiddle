@@ -300,6 +300,13 @@ Shape is normalized to match the shape of the Datomic result, e.g. [:user/a-ref]
 (defn pull-seq [pull]
   (tree-seq coll? seq pull))
 
+(defn pp-recursion? [v]
+  #_[:person/parents 3]
+  (and (vector? v)
+       (let [[a b] v]
+         (keyword? a)
+         (number? b))))
+
 (defn result-enclosure! "
   no data is not a well-formed result - probably invalid query, but it's less confusing to users
   if the UI still works in this case, since tweaking a formshape does not require the form be populated"
@@ -318,12 +325,15 @@ Shape is normalized to match the shape of the Datomic result, e.g. [:user/a-ref]
                                        schema (some-> (get schemas dbname) deref)
                                        shape (pull-shape schema pull-pattern)
                                        no-splat (->> (pull-seq pull-pattern) (filter (partial = '*)) count (= 0))
+                                       no-recursion (->> (pull-seq pull-pattern) (filter pp-recursion?) count (= 0))
                                        enclosure #_(delay)    ; Delay this to repro https://github.com/hyperfiddle/hyperfiddle/issues/892
                                        (let [coll (mapv #(get % i) ?data)]
                                          (pull-enclosure schema shape coll))]
-                                   (if no-splat
-                                     shape                  ; fast path, and doesn't muck with pull order
-                                     enclosure)))))
+                                   (if (and no-splat no-recursion)
+                                     shape                  ; fast path, and doesn't lose pull order
+                                     enclosure              ; loses pull order
+                                     ; Do not inline enclosure, it causes reaction bugs
+                                     )))))
            vec))))
 
 (defn spread-elements! [f schemas qfind data]

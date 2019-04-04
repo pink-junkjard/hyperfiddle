@@ -4,7 +4,7 @@
     [contrib.datomic :refer [pull-shape tree-derivative pull-enclosure pull-level
                              pull-traverse pull-union normalize-result
                              validate-qfind-attrs! result-enclosure!
-                             pull-seq]]
+                             pull-seq pp-recursion?]]
     [contrib.ct]
     [contrib.try$]
     [fixtures.ctx]
@@ -25,25 +25,46 @@
                         *]}
                       :db/id])
 
-(def pull-soup '[:a/a
-                 [:a/comp-one :as "comp-one"]
-                 :a/comp-many
-                 *
-                 (limit :a/v 1)
-                 {(default :a/s {}) [* :b/a :b/b {:c/a [*]} {:c/b [:d/a]}]
-                  [:a/t :as "T"] [*]
-                  (limit :a/u 2) [*]
-                  :a/x [*]}
-                 (default :a/z "a/z default")])
+(def pp-1 '[:a/a
+            [:a/comp-one :as "comp-one"]
+            :a/comp-many
+            *
+            (limit :a/v 1)
+            {(default :a/s {}) [* :b/a :b/b {:c/a [*]} {:c/b [:d/a]}]
+             [:a/t :as "T"] [*]
+             (limit :a/u 2) [*]
+             :a/x [*]}
+            (default :a/z "a/z default")])
+
+
+(def pp-2 [:db/id
+           :person/name
+           {:person/parents 3}])
 
 (deftest pull-seq-
-  (is (= (->> (pull-seq pull-soup)
+  (is (= (->> (pull-seq pp-1)
               (filter (partial = '*))
               count)
-         6)))
+         6))
+
+  (is (= (->> (pull-seq pp-2)
+              (filter (partial = '*))
+              count)
+         0))
+
+  (is (= (->> (pull-seq pp-2)
+              (filter pp-recursion?)
+              count)
+         1))
+
+  (is (= (->> (pull-seq pp-1)
+              (filter pp-recursion?)
+              count)
+         0))
+  )
 
 (deftest pull-shape-
-  (is (= (pull-shape @(fixtures.tank/schemas "$soup") pull-soup)
+  (is (= (pull-shape @(fixtures.tank/schemas "$soup") pp-1)
          [:a/a
           #:a{:comp-one [:db/id]}
           #:a{:comp-many [:db/id]}
@@ -133,9 +154,9 @@
 
   (is (= [:db/id :db/ident :hyperfiddle/owners #:reg{:gender [:db/id]}]
          (tree-derivative fixtures.ctx/schema {:db/id 17592186046209,
-                                         :db/ident :shirt-size/womens-medium,
-                                         :hyperfiddle/owners [#uuid "acd054a8-4e36-4d6c-a9ec-95bdc47f0d39"],
-                                         :reg/gender {:db/id 17592186046204}})))
+                                               :db/ident :shirt-size/womens-medium,
+                                               :hyperfiddle/owners [#uuid "acd054a8-4e36-4d6c-a9ec-95bdc47f0d39"],
+                                               :reg/gender {:db/id 17592186046204}})))
 
   (is (= [:db/id
           :hyperfiddle/owners
@@ -147,59 +168,59 @@
   )
 
 #_(deftest pull-union-
-  (is (= (pull-union [:db/id {:reg/gender [:db/id]}]
-                     [:db/ident {:reg/gender [:db/ident]}])
-         [:db/id :db/ident #:reg{:gender [:db/id :db/ident]}]))
+    (is (= (pull-union [:db/id {:reg/gender [:db/id]}]
+                       [:db/ident {:reg/gender [:db/ident]}])
+           [:db/id :db/ident #:reg{:gender [:db/id :db/ident]}]))
 
-  (is (= (pull-union {:reg/gender [:db/id]}
-                     {:reg/gender [:db/ident]})
-         #:reg{:gender [:db/id :db/ident]}))
+    (is (= (pull-union {:reg/gender [:db/id]}
+                       {:reg/gender [:db/ident]})
+           #:reg{:gender [:db/id :db/ident]}))
 
-  (is (= (pull-union [:db/id {:reg/gender [:db/id]}]
-                     [:db/ident {:reg/gender [:db/ident]}])
-         [:db/id :db/ident #:reg{:gender [:db/id :db/ident]}]))
+    (is (= (pull-union [:db/id {:reg/gender [:db/id]}]
+                       [:db/ident {:reg/gender [:db/ident]}])
+           [:db/id :db/ident #:reg{:gender [:db/id :db/ident]}]))
 
-  (is (= (pull-union []
-                     [:db/id {:reg/gender [:db/id]}]
-                     [:db/ident {:reg/gender [:db/ident]}])
-         [:db/id :db/ident #:reg{:gender [:db/id :db/ident]}]))
+    (is (= (pull-union []
+                       [:db/id {:reg/gender [:db/id]}]
+                       [:db/ident {:reg/gender [:db/ident]}])
+           [:db/id :db/ident #:reg{:gender [:db/id :db/ident]}]))
 
-  #_(testing "pull order"
-      ; Busted: The maps get merged (and maps don't have order) and :db/id hoists to before the maps.
-    (is (= (pull-union [:dustingetz.reg/email
-                        :dustingetz.reg/name
-                        ; :dustingetz.reg/age
-                        ; :dustingetz.reg/birthdate
-                        {:dustingetz.reg/gender [:db/ident]}
-                        {:dustingetz.reg/shirt-size [:db/ident]}
-                        :db/id])
-           [:dustingetz.reg/email :dustingetz.reg/name
-            #:dustingetz.reg{:gender [:db/ident]}
-            #:dustingetz.reg{:shirt-size [:db/ident]}
-            :db/id])))
+    #_(testing "pull order"
+        ; Busted: The maps get merged (and maps don't have order) and :db/id hoists to before the maps.
+        (is (= (pull-union [:dustingetz.reg/email
+                            :dustingetz.reg/name
+                            ; :dustingetz.reg/age
+                            ; :dustingetz.reg/birthdate
+                            {:dustingetz.reg/gender [:db/ident]}
+                            {:dustingetz.reg/shirt-size [:db/ident]}
+                            :db/id])
+               [:dustingetz.reg/email :dustingetz.reg/name
+                #:dustingetz.reg{:gender [:db/ident]}
+                #:dustingetz.reg{:shirt-size [:db/ident]}
+                :db/id])))
 
-  (is (= (apply pull-union
-                [:reg/email :reg/age #:reg{:gender [:db/ident], :shirt-size [:db/ident]} :db/id]
-                [[:db/id
-                  :hyperfiddle/owners
-                  :reg/email
-                  :reg/age
-                  #:reg{:gender [:db/ident]}
-                  #:reg{:shirt-size [:db/id :db/ident :hyperfiddle/owners #:reg{:gender [:db/id]}]}]
-                 [:db/id
-                  :hyperfiddle/owners
-                  :reg/email
-                  :reg/name
-                  :reg/age
-                  #:reg{:gender [:db/ident]}
-                  #:reg{:shirt-size [:db/id :db/ident :hyperfiddle/owners #:reg{:gender [:db/id]}]}]])
-         [:reg/email
-          :reg/age
-          :db/id
-          :hyperfiddle/owners
-          :reg/name
-          #:reg{:gender [:db/ident], :shirt-size [:db/ident :db/id :hyperfiddle/owners #:reg{:gender [:db/id]}]}]))
-  )
+    (is (= (apply pull-union
+                  [:reg/email :reg/age #:reg{:gender [:db/ident], :shirt-size [:db/ident]} :db/id]
+                  [[:db/id
+                    :hyperfiddle/owners
+                    :reg/email
+                    :reg/age
+                    #:reg{:gender [:db/ident]}
+                    #:reg{:shirt-size [:db/id :db/ident :hyperfiddle/owners #:reg{:gender [:db/id]}]}]
+                   [:db/id
+                    :hyperfiddle/owners
+                    :reg/email
+                    :reg/name
+                    :reg/age
+                    #:reg{:gender [:db/ident]}
+                    #:reg{:shirt-size [:db/id :db/ident :hyperfiddle/owners #:reg{:gender [:db/id]}]}]])
+           [:reg/email
+            :reg/age
+            :db/id
+            :hyperfiddle/owners
+            :reg/name
+            #:reg{:gender [:db/ident], :shirt-size [:db/ident :db/id :hyperfiddle/owners #:reg{:gender [:db/id]}]}]))
+    )
 
 
 (def p [:db/id
@@ -214,13 +235,13 @@
   (pull-enclosure fixtures.ctx/schema [] [{:db/ident :foo} {:db/id 10 :db/ident :yo}])
   (pull-enclosure fixtures.ctx/schema [:db/ident] [])
   (pull-enclosure fixtures.ctx/schema [] [{:db/id 17592186046209,
-                                    :db/ident :shirt-size/womens-medium,
-                                    :hyperfiddle/owners [#uuid "acd054a8-4e36-4d6c-a9ec-95bdc47f0d39"],
-                                    :reg/gender {:db/id 17592186046204}}
-                                   {:db/id 17592186046209,
-                                    :db/ident :shirt-size/womens-medium,
-                                    :reg/gender {:db/id 17592186046204}}
-                                   ])
+                                           :db/ident :shirt-size/womens-medium,
+                                           :hyperfiddle/owners [#uuid "acd054a8-4e36-4d6c-a9ec-95bdc47f0d39"],
+                                           :reg/gender {:db/id 17592186046204}}
+                                          {:db/id 17592186046209,
+                                           :db/ident :shirt-size/womens-medium,
+                                           :reg/gender {:db/id 17592186046204}}
+                                          ])
   (pull-enclosure fixtures.ctx/schema (pull-shape fixtures.ctx/schema pull-pattern-1) fixtures.ctx/result-coll)
   (pull-enclosure fixtures.ctx/schema (pull-shape fixtures.ctx/schema pull-pattern-1) [])
 
@@ -260,13 +281,13 @@
 
 (deftest pull-traverse1
   (is (= (pull-traverse fixtures.ctx/schema [:reg/gender
-                         :db/id                             ; In place order
-                         {:reg/shirt-size [:db/ident
-                                           :reg/gender
-                                           :db/ident
-                                           :db/id]}
-                         :db/id                             ; Ignored, use first
-                         ])
+                                             :db/id         ; In place order
+                                             {:reg/shirt-size [:db/ident
+                                                               :reg/gender
+                                                               :db/ident
+                                                               :db/id]}
+                                             :db/id         ; Ignored, use first
+                                             ])
          [[:reg/gender]
           [:db/id]
           [:reg/shirt-size]
