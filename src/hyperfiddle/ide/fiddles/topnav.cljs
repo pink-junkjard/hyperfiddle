@@ -26,6 +26,18 @@
   [ctx [e a v] props]
   [[:db/add v :fiddle/type :query]])
 
+(defn topnav-new-wrapper-render [_ ctx props]
+  ; iframe wrapper for naked qfind color tag
+  [ui/link :hyperfiddle.ide/new-fiddle ctx "new"
+   (let [disabled? (not (security/can-create? ctx))   ; we explicitly know the context here is $
+         anonymous? (nil? @(runtime/state (:peer ctx) [::runtime/user-id]))]
+     {:disabled disabled?
+      :tooltip (cond
+                 (and anonymous? disabled?) [:warning "Please login"]
+                 disabled? [:warning "Writes restricted"])
+      :hyperfiddle.ui.popover/redirect (fn [popover-data]
+                                         [(:fiddle/ident popover-data)])})])
+
 (defn renderer' [ctx props left-child right-child]
   [:div props
    [:div.left-nav
@@ -50,21 +62,7 @@
    [:div.right-nav {:key "right-nav"}                       ; CAREFUL; this key prevents popover flickering
     [loading-spinner ctx]
     right-child
-    (either/branch
-      (hyperfiddle.data/browse+ ctx :hyperfiddle.ide/topnav-new) ; iframe wrapper for naked qfind color tag
-      (fn [e]
-        #_(println "topnav-new error: " e)
-        [:span (ex-message e)])                       ; todo fix this shit error handling, why not throw?
-      (fn [ctx]
-        (ui/link :hyperfiddle.ide/new-fiddle ctx "new"
-                 (let [disabled? (not (security/can-create? ctx)) ; we explicitly know the context here is $
-                       anonymous? (nil? @(runtime/state (:peer ctx) [::runtime/user-id]))]
-                   {:disabled disabled?
-                    :tooltip (cond
-                               (and anonymous? disabled?) [:warning "Please login"]
-                               disabled? [:warning "Writes restricted"])
-                    :hyperfiddle.ui.popover/redirect (fn [popover-data]
-                                                       [(:fiddle/ident popover-data)])}))))
+    [hyperfiddle.ui/link :hyperfiddle.ide/topnav-new ctx nil {:user-renderer topnav-new-wrapper-render}]
     [tooltip {:label "Environment administration"} (ui/link :hyperfiddle.ide/env ctx "env")]
     (if @(runtime/state (:peer ctx) [::runtime/user-id])
       (if-let [{:keys [:hypercrud.browser/result]} (hyperfiddle.data/browse ctx :hyperfiddle.ide/account)]
