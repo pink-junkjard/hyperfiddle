@@ -133,7 +133,9 @@
                                                @(r/fmap :db/id link-ref)
                                                (:route props)
                                                @(r/fmap (r/partial context/reagent-entity-key ctx)
-                                                        (:hypercrud.browser/fiddle ctx))]
+                                                        (:hypercrud.browser/fiddle ctx))
+                                               ; visual-a de-dupes various identity columns which show exactly the same link
+                                               (:hyperfiddle.ui.popover/visual-a props)]
                                               #_hash str)]
                           (branch/child-branch-id (:branch ctx) relative-id))
         ;_ (println (context/eav ctx) "; " child-branch-id)
