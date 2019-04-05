@@ -87,7 +87,7 @@
       to-string (fn [v] (pprint-datoms-str (some-> v reverse)))
       on-change (fn [rt branch dbname-ref o n]
                   (runtime/dispatch! rt (actions/reset-stage-db rt branch @dbname-ref n)))]
-  (defn- tab-content [rt branch dbname-ref child]
+  (defn- tab-content [rt branch dbname-ref & [child]]
     [:div.hyperfiddle-stage-content
      {:style {:border-color (domain/database-color (runtime/domain rt) @dbname-ref)}}
      child
@@ -105,7 +105,7 @@
 (defn ^:export editor-cmp
   ([selected-dbname ctx]
    [editor-cmp selected-dbname (:peer ctx) (:branch ctx) (default-dbname-labels (:peer ctx))])
-  ([selected-dbname rt branch dbname-labels child]
+  ([selected-dbname rt branch dbname-labels & [child]]
    (let [dirty-dbs (->> @(runtime/state rt [::runtime/partitions branch :stage])
                         (remove (comp empty? second))
                         (map first)
