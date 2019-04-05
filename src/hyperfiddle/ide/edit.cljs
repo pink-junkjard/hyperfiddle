@@ -35,7 +35,8 @@
                                :alt-key-pressed false
                                :display-mode :hypercrud.browser.browser-ui/user
                                ; specifically deref and re-wrap this ref on mount because we are tracking deviation from this value
-                               :staleness (preview/ide-branch-reference user-runtime (:branch ctx))})
+                               :staleness (when user-runtime
+                                            (preview/ide-branch-reference user-runtime (:branch ctx)))})
         user-ctx {:peer user-runtime
                   :branch (preview/build-user-branch-id (:branch ctx)) ; user-branch
                   ::preview/ide-branch (:branch ctx)
@@ -69,7 +70,8 @@
 
                :else
                [domain-error-display ctx])
-             [staging/inline-stage user-ctx]])
+             (when user-runtime
+               [staging/inline-stage user-ctx])])
 
           [:div.fiddle-editor-col
            [hyperfiddle.ui/link
