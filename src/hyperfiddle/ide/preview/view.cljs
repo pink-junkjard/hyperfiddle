@@ -4,7 +4,7 @@
     [contrib.cljs-platform :refer [code-for-browser]]
     [contrib.component :as component]
     [contrib.css :refer [css]]
-    [contrib.data :refer [map-values]]
+    [contrib.data :refer [map-values assoc-if]]
     [contrib.local-storage :as local-storage]
     [contrib.reactive :as r]
     [contrib.ui]
@@ -91,7 +91,7 @@
 
 (defn preview-toolbar [user-ctx preview-state]
   (let [stale @(r/track preview-stale? user-ctx preview-state)]
-    [:span.preview-toolbar (when stale {:class "stale"})
+    [:span.preview-toolbar (when stale {:class "hyperfiddle-preview-stale"})
      ; todo animation
      (let [is-hovering-refresh-button (r/cursor preview-state [:is-hovering-refresh-button])]
        [:button {:class "refresh" :on-click #(refresh! user-ctx preview-state)
@@ -101,9 +101,7 @@
         [re-com/popover-tooltip
          :showing? (r/atom (and @is-hovering-refresh-button (not @(r/cursor preview-state [:is-refreshing]))))
          :anchor "↻"
-         :label (if stale
-                  "Currently stale, refresh to see changes (or press alt+enter)"
-                  "Refresh preview to see changes")]])
+         :label "Re-compute stale preview (alt+enter)"]])
      [:span.url]
      #_[contrib.ui/text
         {:value (domain/url-encode (runtime/domain rt) route)
@@ -123,7 +121,8 @@
 (defn preview-content [ctx preview-state route]
   (if @(r/cursor preview-state [:initial-render])
     [loading-page]
-    (let [code+ (project/eval-domain-code!+ @(runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :project :project/code]))]
+    (let [code+ (project/eval-domain-code!+ @(runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :project :project/code]))
+          is-stale @(r/track preview-stale? ctx preview-state)]
       [:<>
        (when (either/left? code+)
          (let [e @code+]
@@ -132,7 +131,9 @@
                  message (or (some-> (ex-cause e) ex-message) (ex-message e))]
              [:h6 {:style {:text-align "center" :background-color "lightpink" :margin 0 :padding "0.5em 0"}}
               "Exception evaluating " [:a {:href href} [:code ":domain/code"]] ": " message])))
-       [:div#root (when @(r/cursor preview-state [:alt-key-pressed]) {:style {:cursor "pointer"}})
+       [:div#root (merge {}
+                         (when is-stale {:class "hyperfiddle-preview-stale"})
+                         (when @(r/cursor preview-state [:alt-key-pressed]) {:style {:cursor "pointer"}}))
         [:style {:dangerouslySetInnerHTML {:__html @(runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :project :project/css])}}]
         ^{:key "user-iframe"}
         [iframe-cmp ctx
