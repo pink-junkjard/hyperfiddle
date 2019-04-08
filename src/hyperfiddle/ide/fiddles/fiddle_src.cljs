@@ -42,13 +42,21 @@
         [hyper-control (context/v ctx) ctx (with-fiddle-default {:class "pull-database"} val :fiddle/pull-database)]))]
    [:span.schema "schema: " (schema-links ctx-fiddle-type)]])
 
-(defmethod hf/render #{:hyperfiddle/ide :link/fiddle} [ctx props]
+(defmethod hf/render #{:link/fiddle
+                       :hyperfiddle/ide}
+  [ctx props]
   [:<>
    [controls/ref
     (context/data ctx) ctx
     {:options :hyperfiddle.ide/fiddle-options
      :option-label (r/comp pr-str :fiddle/ident)}]
    [link :hyperfiddle.ide/new-fiddle ctx "new"]])
+
+(defmethod hf/render #{:fiddle/markdown
+                       :hyperfiddle/ide}
+  [ctx props]
+  [hyperfiddle.ui.controls/markdown-editor
+   (context/data ctx) ctx props])
 
 (defmethod hf/tx ::new-fiddle [ctx [e a v] props]
   ; This is the right default for most links that traverse the graph
