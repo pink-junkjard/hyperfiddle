@@ -42,6 +42,8 @@
 
 (defn error-comp [ctx]
   (cond
+    (:hyperfiddle.ui/error-render-custom ctx) (:hyperfiddle.ui/error-render-custom ctx) ; hack https://github.com/hyperfiddle/hyperfiddle/issues/919
+
     (> (count (:hypercrud.browser/pull-path ctx)) 0) error-inline
 
     (:hyperfiddle.ui/error-with-stage? ctx) (r/partial error-block-with-stage ctx)
