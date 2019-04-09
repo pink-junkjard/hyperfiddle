@@ -181,7 +181,11 @@
 (defn with-user-id [cookie-name cookie-domain jwt-secret jwt-issuer]
   {:name ::with-user-id
    :enter (fn [context]
-            (let [verify (jwt/build-verifier jwt-secret jwt-issuer)
+            (let [verify (fn [& args]
+                           ; todo this is brittle
+                           ; there are configurations where no auth is used
+                           ; delay any exception from lack of or misconfiguration of verification until auth is used
+                           (apply (jwt/build-verifier jwt-secret jwt-issuer) args))
                   jwt-cookie (get-in context [:request :cookies cookie-name :value])
                   jwt-header (some->> (get-in context [:request :headers "authorization"])
                                       (re-find #"^Bearer (.+)$")
