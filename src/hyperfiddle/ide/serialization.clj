@@ -5,7 +5,8 @@
     [clojure.walk :as walk]
     [contrib.datomic-peer :as datomic-peer]
     [contrib.reader :as reader]
-    [datomic.api :as d])
+    [datomic.api :as d]
+    [taoensso.timbre :as timbre])
   (:import
     (java.util Date)))
 
@@ -99,5 +100,6 @@
     @(d/transact (d/connect (str uri)) ide-data)))
 
 (defn initialize-ide! [uri]
-  (when (d/create-database (str uri))
-    (transact-ide! uri)))
+  (if (d/create-database (str uri))
+    (transact-ide! uri)
+    (timbre/warnf "Database already exists for uri '%s'. Skipping data load." uri)))
