@@ -49,7 +49,7 @@
                             (some-> @(runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :error])))]
                ; error handling copied from foundation
                (foundation/error-cmp e)
-               (loading/loading-page))
+               (loading/page (runtime/domain (:peer ctx))))
        :cljs (try
                (reagent-server/render-to-static-markup [foundation/view ctx])
                (catch :default e
