@@ -45,6 +45,11 @@
   ["/" {"api-user/" {(str build "/") (routes/api nil)
                      [[#"[^/]*" :build] "/"] {true :force-refresh}
                      true :404}
+        ; todo this static path conflicts with the ide
+        "static/" {(str build "/") {[[#".+" :resource-name]] {:get :static-resource
+                                                              true :405}
+                                    true :404}
+                   [:build "/"] {true :force-refresh}}
         true {:get :ssr
               true :405}}])
 
