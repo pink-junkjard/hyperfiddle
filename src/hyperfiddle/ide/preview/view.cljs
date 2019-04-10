@@ -25,7 +25,7 @@
     [hyperfiddle.route :as route]
     [hyperfiddle.runtime :as runtime]
     [hyperfiddle.ui.iframe :refer [iframe-cmp]]
-    [hyperfiddle.ui.loading :refer [loading-page]]
+    [hyperfiddle.ui.loading :as loading]
     [hyperfiddle.ui.staging :as staging]
 
     [reagent.core :as reagent]
@@ -120,7 +120,7 @@
 
 (defn preview-content [ctx preview-state route]
   (if @(r/cursor preview-state [:initial-render])
-    [loading-page]
+    [loading/page (runtime/domain (:peer ctx))]
     (let [code+ (project/eval-domain-code!+ @(runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :project :project/code]))
           is-stale @(r/track preview-stale? ctx preview-state)]
       [:<>

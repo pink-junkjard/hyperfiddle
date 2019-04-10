@@ -50,7 +50,7 @@
              {:hyperfiddle.ui.sort/initial-sort [[:db/ident] :asc]}]))]
        [hyperfiddle.ide/ide-stage ctx]])))
 
-(defn renderer [& args]
+(defn renderer [& [_ ctx :as args]]
   (if (= "nodejs" *target*)
-    (hyperfiddle.ui.loading/loading-page)
+    (hyperfiddle.ui.loading/page (hyperfiddle.runtime/domain (:peer ctx)))
     (into [renderer'] args)))
