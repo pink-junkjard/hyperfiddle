@@ -6,6 +6,7 @@
     [goog.object :as object]
     [hyperfiddle.domain :as domain]
     [hyperfiddle.ide.authenticate :as auth]
+    [hyperfiddle.ide.directory :as ide-directory]           ; immoral
     [hyperfiddle.ide.domain :as ide-domain :refer [IdeDomain]]
     [hyperfiddle.ide.service.core :as ide-service]
     [hyperfiddle.io.core :as io]
@@ -38,7 +39,7 @@
         (-> (auth/login env domain service-uri io (-> req .-query .-code))
             (p/then (fn [jwt]
                       (doto res
-                        (.cookie ide-service/cookie-name jwt (-> (:ide-domain domain)
+                        (.cookie ide-service/cookie-name jwt (-> (::ide-directory/ide-domain domain)
                                                                  (cookie/jwt-options-express)
                                                                  #_(assoc "expires" expiration)
                                                                  clj->js))
@@ -66,7 +67,7 @@
           (handle-route (keyword (name handler)) env req res)))
 
       (and (= :ssr handler)
-           (= "demo" (:app-domain-ident domain))
+           (= "demo" (::ide-directory/app-domain-ident domain))
            (nil? (object/get req "user-id"))
            (not (string/starts-with? path "/:hyperfiddle.ide!please-login/")))
       ; todo this logic should be injected into demo domain record
@@ -80,7 +81,7 @@
 (defmethod service-domain/route IdeDomain [domain env req res]
   (let [#_#_{:keys [cookie-name jwt-secret jwt-issuer]} (-> (get-in context [:request :domain])
                                                             domain/environment-secure :jwt)
-        cookie-domain (:ide-domain domain)
+        cookie-domain (::ide-directory/ide-domain domain)
         mw (middleware/with-user-id ide-service/cookie-name cookie-domain (:AUTH0_CLIENT_SECRET env) (str (:AUTH0_DOMAIN env) "/"))
         next (fn [] (ide-routing domain env req res))]
     (mw req res next)))

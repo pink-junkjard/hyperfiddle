@@ -1,17 +1,15 @@
 (ns hyperfiddle.ide.fiddles.topnav
   (:require
-    [cats.monad.either :as either]
     [contrib.reactive :as r]
     [contrib.ui.tooltip :refer [tooltip]]
     [hyperfiddle.api :as hf]
     [hyperfiddle.data]
     [hyperfiddle.domain :as domain]
     [hyperfiddle.foundation :as foundation]
-    [hyperfiddle.ide.domain :as ide-domain]
+    [hyperfiddle.ide.directory :as ide-directory]
     [hyperfiddle.runtime :as runtime]
     [hyperfiddle.security.client :as security]
-    [hyperfiddle.ui :as ui]
-    [hyperfiddle.ui.staging :as staging]))
+    [hyperfiddle.ui :as ui]))
 
 
 (defn any-loading? [peer]
@@ -41,7 +39,8 @@
 (defn renderer' [ctx props left-child right-child]
   [:div props
    [:div.left-nav
-    [tooltip {:label "Home"} [:a {:href "/"} (:app-domain-ident (runtime/domain (:peer ctx)))]]
+    [tooltip {:label "Home"} [:a {:href "/"}
+                              (or (-> (runtime/domain (:peer ctx)) ::ide-directory/app-domain-ident) "Home")]]
     (let [props {:tooltip [nil "Fiddles in this domain"]
                  :iframe-as-popover true}]
       [ui/link :hyperfiddle.ide/entry-point-fiddles ctx "index" props])
@@ -75,7 +74,7 @@
 (defn hack-login-renderer [ctx props _ _]
   [:div props
    [:div.left-nav
-    [tooltip {:label "Home"} [:a (:app-domain-ident (runtime/domain (:peer ctx)))]]]
+    [tooltip {:label "Home"} [:a (or (-> (runtime/domain (:peer ctx)) ::ide-directory/app-domain-ident) "Home")]]]
    [:div.right-nav {:key "right-nav"}                       ; CAREFUL; this key prevents popover flickering
     [loading-spinner ctx]]])
 

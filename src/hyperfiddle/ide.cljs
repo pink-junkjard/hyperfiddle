@@ -28,7 +28,8 @@
 (defn stateless-login-url
   ([ctx] (stateless-login-url ctx (domain/url-encode (runtime/domain (:peer ctx)) @(runtime/state (:peer ctx) [::runtime/partitions foundation/root-branch :route]))))
   ([ctx state]
-   (let [{:keys [hyperfiddle.ide/fqdn ide-domain] :as domain} (runtime/domain (:peer ctx))
+   (let [{:keys [hyperfiddle.ide.directory/fqdn
+                 hyperfiddle.ide.directory/ide-domain] :as domain} (runtime/domain (:peer ctx))
          {:keys [domain client-id]} (get-in (domain/environment domain) [:auth0 ide-domain])]
      (str domain "/login?"
           "client=" client-id

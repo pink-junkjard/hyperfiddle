@@ -83,7 +83,11 @@
                         (directory/hydrate-app-domain io local-basis [:domain/ident "www"] build)
                         (-> (hydrate-ide-domain io local-basis app-domain-ident build)
                             (p/then #(assoc %
-                                       :hyperfiddle.ide/fqdn fqdn
+                                       ::fqdn fqdn
+                                       ::ide-domain ide-domain
+                                       ::app-domain-ident app-domain-ident
+
+                                       ; legacy
                                        :ide-domain ide-domain
                                        :app-domain-ident app-domain-ident))))
                       (directory/hydrate-app-domain io local-basis [:domain/aliases fqdn] build))))))))

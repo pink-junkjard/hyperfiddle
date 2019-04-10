@@ -6,6 +6,7 @@
     [contrib.base-64-url-safe :as base64-url-safe]
     [hyperfiddle.domain :as domain]
     [hyperfiddle.ide.authenticate :as auth]
+    [hyperfiddle.ide.directory :as ide-directory]           ; immoral
     [hyperfiddle.ide.domain :as ide-domain]
     [hyperfiddle.ide.service.core :as ide-service]
     [hyperfiddle.io.core :as io]
@@ -41,7 +42,7 @@
         (p/then (fn [jwt]
                   {:status 302
                    :headers {"Location" (-> (get-in req [:query-params :state]) base64-url-safe/decode)}
-                   :cookies {ide-service/cookie-name (-> (get-in req [:domain :ide-domain])
+                   :cookies {ide-service/cookie-name (-> (get-in req [:domain ::ide-directory/ide-domain])
                                                          (cookie/jwt-options-pedestal)
                                                          (assoc :value jwt
                                                                 #_#_:expires expiration))}
@@ -51,7 +52,7 @@
   (assoc context
     :response {:status 302
                :headers {"Location" "/"}
-               :cookies {ide-service/cookie-name (-> (get-in context [:request :domain :ide-domain])
+               :cookies {ide-service/cookie-name (-> (get-in context [:request :domain ::ide-directory/ide-domain])
                                                      (cookie/jwt-options-pedestal)
                                                      (assoc :value (get-in context [:request :cookies ide-service/cookie-name :value])
                                                             :expires "Thu, 01 Jan 1970 00:00:00 GMT"))}
@@ -76,7 +77,7 @@
             (handle-route (keyword (name handler)) env context))))
 
       (and (= :ssr handler)
-           (= "demo" (:app-domain-ident domain))
+           (= "demo" (::ide-directory/app-domain-ident domain))
            (nil? (get-in context [:request :user-id]))
            (not (string/starts-with? path "/:hyperfiddle.ide!please-login/")))
       ; todo this logic should be injected into demo domain record
@@ -91,7 +92,7 @@
 (defmethod service-domain/route IdeDomain [domain env context]
   (enqueue context [(let [#_#_{:keys [cookie-name jwt-secret jwt-issuer]} (-> (get-in context [:request :domain])
                                                                               domain/environment-secure :jwt)
-                          cookie-domain (:ide-domain domain)]
+                          cookie-domain (::ide-directory/ide-domain domain)]
                       (interceptor/interceptor
                         (interceptors/with-user-id ide-service/cookie-name cookie-domain (:AUTH0_CLIENT_SECRET env) (str (:AUTH0_DOMAIN env) "/"))))
                     (interceptor/interceptor
