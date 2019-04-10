@@ -1,10 +1,18 @@
-(ns hyperfiddle.ui.loading)
+(ns hyperfiddle.ui.loading
+  (:require
+    [hyperfiddle.domain :as domain]))
 
 
-(defn loading-page [& children]
+(defn- impl [img-src & children]
   [:div.loading-page
    [:div.logo-callout
-    [:img {:src "https://i.imgur.com/DtMAeuM.png"}]
+    [:img {:src img-src}]
     #_[:span.brand ":hyperfiddle"]
     (when children
       (into [:div.additional-content] children))]])
+
+(defn page [domain & children]
+  (apply impl (domain/api-path-for domain :static-resource :resource-name "logo.png") children))
+
+(defn ^:deprecated loading-page [& children]
+  (apply impl "https://i.imgur.com/DtMAeuM.png" children))
