@@ -72,9 +72,10 @@
         popover-invalid (->> +popover-ctx-post (unwrap (constantly nil)) context/tree-invalid?)]
     [:<>
      [iframe-cmp popover-ctx-pre {:route route}]            ; cycle
-     [:button {:on-click (r/partial stage! popover-id child-branch-id ctx r-popover-data props)
-               :disabled popover-invalid} "stage"]
-     [:button {:on-click #(cancel! popover-id child-branch-id ctx)} "cancel"]]))
+     [:div.hyperfiddle-popover-actions
+      [:button {:on-click (r/partial stage! popover-id child-branch-id ctx r-popover-data props)
+                :disabled popover-invalid} "stage"]
+      [:button {:on-click #(cancel! popover-id child-branch-id ctx)} "cancel"]]]))
 
 (defn- non-branched-popover-body [route popover-id ctx]
   [:<>
