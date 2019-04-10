@@ -1,8 +1,8 @@
 ; AUTO-GENERATED FILE - DO NOT EDIT BY HAND
 ; AUTO-GENERATED FILE - DO NOT EDIT BY HAND
 ;
-; generated at: Wed Apr 03 12:17:26 EDT 2019
-; basis: 17772
+; generated at: Wed Apr 10 10:04:14 EDT 2019
+; basis: 17785
 ;
 ; AUTO-GENERATED FILE - DO NOT EDIT BY HAND
 ; AUTO-GENERATED FILE - DO NOT EDIT BY HAND
@@ -112,7 +112,8 @@
                         :path ":hyperfiddle/ide"}
                  #:link{:class [:hf/new]
                         :fiddle #:db{:id "34"}
-                        :path ":link/fiddle"}]
+                        :path ":link/fiddle"
+                        :tx-fn ":hyperfiddle.ide.fiddles.fiddle-src/new-fiddle"}]
   :fiddle/pull "; synchronized with hyperfiddle.fiddle/browser-pull\n[:db/id\n :fiddle/css\n :fiddle/ident\n {:fiddle/links [:db/id\n                 :link/class\n                 {:link/fiddle [:db/id\n                                :fiddle/ident               ; routing\n                                :fiddle/query               ; validation\n                                :fiddle/type                ; validation\n                                ]}\n                 :link/formula\n                 :link/path\n                 :link/rel\n                 :link/tx-fn]}\n :fiddle/markdown\n :fiddle/pull\n :fiddle/pull-database\n :fiddle/query\n :fiddle/cljs-ns\n :fiddle/renderer\n :fiddle/type\n :fiddle/hydrate-result-as-fiddle\n *                                                          ; For hyperblog, so we can access :hyperblog.post/title etc from the fiddle renderer\n ]"
   :fiddle/renderer "hyperfiddle.ide.fiddles.fiddle-src/fiddle-src-renderer"
   :fiddle/type :entity
@@ -125,7 +126,7 @@
                         :path ":hyperfiddle/topnav"}
                  #:link{:class [:hf/iframe]
                         :fiddle #:db{:id "32"}
-                        :formula "(constantly (hyperfiddle.api/tempid-detached \"$\" ctx))"
+                        :formula "(constantly (hyperfiddle.api/tempid! ctx))"
                         :path ":hyperfiddle/topnav"}
                  #:link{:class [:hf/iframe]
                         :fiddle #:db{:id "27"}
@@ -136,19 +137,13 @@
   :fiddle/type :blank
   :hyperfiddle/starred true}
  {:db/id "24"
+  :fiddle/cljs-ns "(defmethod hyperfiddle.api/render #{:user/user-id\n                                    :hyperfiddle.ide/account}\n  [ctx props]\n  [:div.hyperfiddle-input-group\n   [:div.input\n    (pr-str (hypercrud.browser.context/data ctx))]])"
   :fiddle/ident :hyperfiddle.ide/account
-  :fiddle/links [#:link{:fiddle #:db{:id "21"}
-                        :path ":hyperfiddle.ide/account"}
-                 #:link{:class [:domains
-                                :hf/iframe]
+  :fiddle/links [#:link{:class [:hf/iframe]
                         :fiddle #:db{:id "5"}
-                        :path ":hyperfiddle.ide/account"}
-                 #:link{:class [:databases
-                                :hf/iframe]
-                        :fiddle #:db{:id "14"}
                         :path ":hyperfiddle.ide/account"}]
-  :fiddle/query "[:in $users\n :find\n (pull $users ?user [:db/id \n                     :user/name \n                     :user/email \n                     :user/last-seen \n                     :user/sub \n                     :user/picture \n                     :user/user-id \n                     #_:hyperfiddle.ide/parinfer\n                     *])\n .\n :where\n [(ground hyperfiddle.io.bindings/*subject*) ?user-id]\n [$users ?user :user/user-id ?user-id]]"
-  :fiddle/renderer "(let [user @(:hypercrud.browser/result ctx)]\n  [:div props\n   [:div.p \n    [hyperfiddle.ui/img (:user/picture user) ctx {:class \"avatar\"}]]\n\n   [:h3 \"Hello, \" (:user/name user) \"!\"]\n\n   [:div.p\n    [:form {:action \"/logout\" :method \"post\"}\n     (str \"Last login was \" (or (some-> (:user/last-seen user) .toLocaleDateString) \"–\") \".\")\n     \n     [:button.btn.btn-link {:type \"submit\"\n                            :style {:display \"inline\"\n                                    :padding \"0\"\n                                    :margin-left \".25em\"\n                                    :font-size \"inherit\"\n                                    :vertical-align \"inherit\"}}\n      \"logout\"]]\n    ]\n\n   [:div.p [:div {:style {:margin-bottom \"1em\"}}]]\n\n   #_[:div.p \"Feature flags\"]\n   #_(->> (-> ctx :hypercrud.browser/field deref :hypercrud.browser.field/children)\n       (map (fn [{a :hypercrud.browser.field/path-segment}]\n              (when (and (keyword? a) (= (namespace a) \"hyperfiddle.ide\"))\n                ^{:key (str [a])}\n                [hyperfiddle.ui/field [a] ctx])))\n       doall)\n   #_[hyperfiddle.ui/field ['*] ctx]\n   [hyperfiddle.ui/browse :hyperfiddle.ide.user/domains ctx]\n   [hyperfiddle.ui/browse :hyperfiddle.ide.user/databases ctx]])\n"
+  :fiddle/query "[:in $users\n :find\n (pull $users ?user \n       [:db/id \n        :user/name \n        :user/email \n        :user/last-seen \n        :user/sub \n        :user/picture \n        :user/user-id \n        #_:hyperfiddle.ide/parinfer\n        *])\n .\n :where\n [(ground hyperfiddle.io.bindings/*subject*) ?user-id]\n [$users ?user :user/user-id ?user-id]]\n"
+  :fiddle/renderer "(let [user @(:hypercrud.browser/result ctx)]\n  [:div props\n   [:div.p \n    [hyperfiddle.ui/img (:user/picture user) ctx {:class \"avatar\"}]]\n\n   [:h3 \"Hello, \" (:user/name user) \"!\"]\n\n   [:div.p\n    [:form {:action \"/logout\" :method \"post\"}\n     (str \"Last login was \" (or (some-> (:user/last-seen user) .toLocaleDateString) \"–\") \".\")\n     \n     [:button.btn.btn-link {:type \"submit\"\n                            :style {:display \"inline\"\n                                    :padding \"0\"\n                                    :margin-left \".25em\"\n                                    :font-size \"inherit\"\n                                    :vertical-align \"inherit\"}}\n      \"logout\"]]\n    ]\n   \n   \n\n   [:div.p [:div {:style {:margin-bottom \"1em\"}}]]\n\n   #_[:div.p \"Feature flags\"]\n   #_(->> (-> ctx :hypercrud.browser/field deref :hypercrud.browser.field/children)\n       (map (fn [{a :hypercrud.browser.field/path-segment}]\n              (when (and (keyword? a) (= (namespace a) \"hyperfiddle.ide\"))\n                ^{:key (str [a])}\n                [hyperfiddle.ui/field [a] ctx])))\n       doall)\n   #_[hyperfiddle.ui/field ['*] ctx]\n   [hyperfiddle.ui/link :hyperfiddle.ide.user/domains ctx]\n   \n   #_[:div (pr-str (:user/user-id user))]\n   [hyperfiddle.ui/field [:user/user-id] ctx]])\n"
   :fiddle/type :query}
  {:db/id "16"
   :fiddle/ident :hyperfiddle.ide/attribute-edit
@@ -157,16 +152,17 @@
   :fiddle/type :entity}
  {:db/id "22"
   :fiddle/ident :hyperfiddle.ide/attribute-renderers
-  :fiddle/links [#:link{:class [:hf/new]
+  :fiddle/links [#:link{:class [:hf/remove]
+                        :path ":attribute/ident"}
+                 #:link{:class [:hf/new]
                         :fiddle #:db{:id "16"}
-                        :path ":hyperfiddle.ide/domain-attribute-renderers"}
-                 #:link{:class [:hf/remove]
                         :path ":hyperfiddle.ide/domain-attribute-renderers"}]
   :fiddle/query "[:find \n [(pull ?e [:attribute/ident\n            :attribute/renderer])\n  ...] \n :where [?e :attribute/ident]]"
   :fiddle/renderer "(if (= \"nodejs\" *target*)\n  (hyperfiddle.ui.loading/loading-page)\n  ; this table is awful on ssr\n  [:div props\n   [hyperfiddle.ui/result val ctx {}]]\n  )"
   :fiddle/type :query}
  {:db/doc "Databases, DNS, API keys, etc"
   :db/id "21"
+  :fiddle/cljs-ns "(defmethod hyperfiddle.api/render #{:domain/ident\n                                    :hyperfiddle.ide/domain}\n  [ctx props]\n  [:div \n   [:a (assoc props :href \"/\") \n    (hypercrud.browser.context/v ctx)]])\n\n\n; Information leak\n#_(defmethod hyperfiddle.api/render #{:domain/fiddle-database\n                                    :hyperfiddle.ide/domain}\n  [ctx props]\n  [hyperfiddle.ui.select$/select nil ctx\n   {:options :database/options-list\n    :option-label (comp :database/uri first)}])\n"
   :fiddle/css "div.hyperfiddle.ui div.hyperfiddle.field.-domain-router,\ndiv.hyperfiddle.ui div.hyperfiddle.field.-domain-environment,\ndiv.hyperfiddle.ui div.hyperfiddle.field.-domain-code,\ndiv.hyperfiddle.ui div.hyperfiddle.field.-domain-css\n{ display: block; }\n\n.hyperfiddle-ide table.hyperfiddle { table-layout: fixed; }\n.hyperfiddle-ide th.-db-id { width: 60px; }\n.hyperfiddle-ide th.-domain-database-name { width: 200px; }\n.hyperfiddle-ide td.-db-id button { padding: 0px; }\n.hyperfiddle-ide td.-database-uri > div { padding: 4px 5px; }"
   :fiddle/ident :hyperfiddle.ide/domain
   :fiddle/links [#:link{:class [:hf/remove]
@@ -176,13 +172,12 @@
                         :path "$domains :domain/databases"}
                  #:link{:class [:hf/remove]
                         :path ":hyperfiddle.ide/domain"}
-                 #:link{:class [:database-options
-                                :hf/iframe]
+                 #:link{:class [:hf/iframe]
                         :fiddle #:db{:id "25"}
                         :path ":hyperfiddle.ide/domain"}]
-  :fiddle/pull "[:db/id\n :domain/ident\n :domain/environment\n :domain/aliases\n :domain/disable-javascript\n :domain/home-route\n {:domain/databases [:db/id \n                     :domain.database/name \n                     {:domain.database/record [:db/id :database/uri]}]}\n {:domain/fiddle-database [:db/id :database/uri]}\n :hyperfiddle/owners]"
+  :fiddle/pull "[#_:db/id\n :domain/ident\n :hyperfiddle/owners\n {:domain/databases \n  [:db/id \n   :domain.database/name \n   {:domain.database/record\n    [#_:db/id\n     :database/uri]}]}\n {:domain/fiddle-database \n  [#_:db/id \n   :database/uri]}\n :domain/aliases\n :domain/disable-javascript\n :domain/home-route\n :domain/environment]"
   :fiddle/pull-database "$domains"
-  :fiddle/renderer "(if (= \"nodejs\" *target*)\n  (hyperfiddle.ui.loading/loading-page)\n  ; slow to ssr\n  [:div props\n   [:h3 \"Environment: \" [hyperfiddle.ui/value [:domain/ident] ctx #(str %)]]\n   [hyperfiddle.ui/field [:domain/ident] ctx (fn [v ctx props] [:div [:a (assoc props :href \"/\") v]])]\n   [hyperfiddle.ui/field [:hyperfiddle/owners] ctx hyperfiddle.ui/hyper-control]\n   [hyperfiddle.ui/field [:domain/databases] ctx\n    (fn [val ctx props]\n      [hyperfiddle.ui/table\n       (fn [ctx]\n         [[hyperfiddle.ui/field [:db/id] ctx]\n          [hyperfiddle.ui/field [:domain.database/name] ctx hyperfiddle.ui/hyper-control]\n          [hyperfiddle.ui/field [:domain.database/record :database/uri] ctx hyperfiddle.ui/hyper-control]])\n       ctx])]\n   [hyperfiddle.ui/field [:domain/fiddle-database] ctx hyperfiddle.ui/hyper-control {:options :database-options\n                                                                                     :option-label (comp :database/uri first)}]\n   [hyperfiddle.ui/field [:domain/aliases] ctx hyperfiddle.ui/hyper-control]\n   [hyperfiddle.ui/field [:domain/disable-javascript] ctx hyperfiddle.ui/hyper-control]\n   [hyperfiddle.ui/field [:domain/home-route] ctx hyperfiddle.ui/hyper-control]\n   [hyperfiddle.ui/field [:domain/environment] ctx hyperfiddle.ui/hyper-control]]\n  )"
+  :fiddle/renderer "(if (= \"nodejs\" *target*)\n  (hyperfiddle.ui.loading/loading-page)\n  ; slow to ssr\n  [:div props\n   [:h3 \"Environment: \" [hyperfiddle.ui/value [:domain/ident] ctx #(str %)]]\n   [hyperfiddle.ui/result val ctx props]])"
   :fiddle/type :entity}
  {:db/id "33"
   :fiddle/css ".-hyperfiddle-ide-edit {\n  flex: 1 1;\n  overflow-y: auto;\n}\n\n@media (min-width: 576px) {\n  .-hyperfiddle-ide-edit {\n    display: flex;\n  }\n  .-hyperfiddle-ide-edit > div {\n    flex: 1 1 50%;\n  }\n}\n\n.fiddle-editor-col {\n  display: flex;\n  flex-direction: column;\n  min-height: calc(100vh - 22px);\n}\n\n.fiddle-editor-header {\n  padding: .1em .5em;\n  background-color: #d7ebff;\n}\n\n.fiddle-editor-header > label {\n  float: right;\n}\n\n.fiddle-editor {\n  flex: 1 1;\n}\n\n.fiddle-editor > .CodeMirror {\n    height: 100%;\n}\n"
@@ -222,7 +217,7 @@
                  #:link{:class [:hf/iframe]
                         :fiddle #:db{:id "22"}
                         :path ":hyperfiddle.ide/env"}]
-  :fiddle/renderer "[:<>\n [hyperfiddle.ui/ui-from-link\n  (hyperfiddle.data/select ctx :hyperfiddle/topnav) ctx {}] \n\n [:div.container-fluid.hyperfiddle-ide-env-content\n  (if (= \"nodejs\" *target*)\n    (hyperfiddle.ui.loading/loading-page)\n    ; this content chunk takes too long to ssr\n    [:<>\n     (if (-> (hyperfiddle.runtime/domain (:peer ctx))\n           (hyperfiddle.domain/database \"$domains\"))\n       ; $domains exists only with directory service\n       [hyperfiddle.ui/ui-from-link\n        (hyperfiddle.data/select ctx :hyperfiddle.ide/domain) ctx {}]\n       (-> (hyperfiddle.runtime/domain (:peer ctx))\n         :hyperfiddle.ide.domain/user-domain+\n         (cats.monad.either/branch\n          (fn [e] [:pre (js/pprint-str e)])\n          (fn [domain] [:pre (js/pprint-str domain)])))\n       )\n     [:h5 \"Project\"]\n     [hyperfiddle.ui/ui-from-link\n      (hyperfiddle.data/select ctx :hyperfiddle.ide/project) ctx {}]\n     [:h5 \"Attribute renderers\"]\n     [hyperfiddle.ui/ui-from-link\n      (hyperfiddle.data/select ctx :hyperfiddle.ide/attribute-renderers) ctx {}]\n     ])\n  ]\n\n [hyperfiddle.ide/ide-stage ctx]]"}
+  :fiddle/renderer "[:<>\n [hyperfiddle.ui/ui-from-link\n  (hyperfiddle.data/select ctx :hyperfiddle/topnav) ctx {}] \n\n [:div.container-fluid.hyperfiddle-ide-env-content\n  (if (= \"nodejs\" *target*)\n    (hyperfiddle.ui.loading/loading-page)\n    ; this content chunk takes too long to ssr\n    [:<>\n     (if (-> (hyperfiddle.runtime/domain (:peer ctx))\n           (hyperfiddle.domain/database \"$domains\"))\n       ; $domains exists only with directory service\n       [hyperfiddle.ui/link :hyperfiddle.ide/domain ctx {}]\n       (-> (hyperfiddle.runtime/domain (:peer ctx))\n         :hyperfiddle.ide.domain/user-domain+\n         (cats.monad.either/branch\n          (fn [e] [:pre (js/pprint-str e)])\n          (fn [domain] [:pre (js/pprint-str domain)])))\n       )\n     [:h5 \"Project\"]\n     [hyperfiddle.ui/link :hyperfiddle.ide/project ctx {}]\n     [:h5 \"Attribute renderers\"]\n     [hyperfiddle.ui/link :hyperfiddle.ide/attribute-renderers ctx {}]\n     ])\n  ]\n\n [hyperfiddle.ide/ide-stage ctx]]"}
  {:db/id "12"
   :fiddle/ident :hyperfiddle.ide/fiddle-index
   :fiddle/query "[:in $src\n :find \n (pull $src ?e [:hyperfiddle/starred \n                :fiddle/ident \n                :db/id])\n (max ?tx)\n :where \n [$src ?e :fiddle/ident]\n [$src ?e _ _ ?tx]]"
@@ -345,7 +340,8 @@
   :fiddle/ident :hyperfiddle.ide/topnav-new
   :fiddle/links [#:link{:class [:hf/new]
                         :fiddle #:db{:id "34"}
-                        :path ":fiddle/ident"}]
+                        :path ":fiddle/ident"
+                        :tx-fn ":hyperfiddle.ide.fiddles.topnav/new-fiddle-tx"}]
   :fiddle/pull "[:fiddle/ident]"
   :fiddle/type :entity}
  {:db/id "14"
