@@ -13,6 +13,3 @@
 
 (defn page [domain & children]
   (apply impl (domain/api-path-for domain :static-resource :resource-name "logo.png") children))
-
-(defn ^:deprecated loading-page [& children]
-  (apply impl "https://i.imgur.com/DtMAeuM.png" children))
