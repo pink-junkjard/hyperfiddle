@@ -136,7 +136,7 @@
                                                @(r/fmap (r/partial context/entity-viewkey ctx)
                                                         (:hypercrud.browser/fiddle ctx))
                                                ; visual-a de-dupes various identity columns which show exactly the same link
-                                               (:hyperfiddle.ui.popover/visual-a props)]
+                                               (:hyperfiddle.ui.popover/visual-eav props)]
                                               #_hash str)]
                           (branch/child-branch-id (:branch ctx) relative-id))
         ;_ (println (context/eav ctx) "; " child-branch-id)
