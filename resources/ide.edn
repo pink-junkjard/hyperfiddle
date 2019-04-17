@@ -1,8 +1,8 @@
 ; AUTO-GENERATED FILE - DO NOT EDIT BY HAND
 ; AUTO-GENERATED FILE - DO NOT EDIT BY HAND
 ;
-; generated at: Wed Apr 17 15:09:15 EDT 2019
-; basis: 17792
+; generated at: Wed Apr 17 15:33:34 EDT 2019
+; basis: 17793
 ;
 ; AUTO-GENERATED FILE - DO NOT EDIT BY HAND
 ; AUTO-GENERATED FILE - DO NOT EDIT BY HAND
@@ -121,9 +121,9 @@
  {:db/id "23"
   :fiddle/css ".hyperfiddle-user.-hyperfiddle-topnav.user { padding: 0; }\n.-hyperfiddle-topnav .-account { display: inline-block; }\n\n.-hyperfiddle-topnav button,\n.-hyperfiddle-topnav a { padding: 0 2px; }\n\n.-hyperfiddle-topnav .-hyperfiddle-ide-entry-point-fiddles {\n  max-height: 50vh;\n  overflow-y: auto;\n}"
   :fiddle/ident :hyperfiddle/topnav
-  :fiddle/links [#:link{:class [:hf/iframe]
-                        :fiddle #:db{:id "24"}
-                        :path ":hyperfiddle/topnav"}
+  :fiddle/links [#:link{:fiddle #:db{:id "24"}
+                        :path ":hyperfiddle/topnav"
+                        :tx-fn ":zero"}
                  #:link{:class [:hf/iframe]
                         :fiddle #:db{:id "32"}
                         :formula "(constantly (hyperfiddle.api/tempid! ctx))"
