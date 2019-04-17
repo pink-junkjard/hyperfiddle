@@ -65,10 +65,7 @@
     [tooltip {:label "Environment administration"} (ui/link :hyperfiddle.ide/env ctx "env")]
     (when (-> (runtime/domain (:peer ctx)) (domain/database "$users"))
       (if @(runtime/state (:peer ctx) [::runtime/user-id])
-        (if-let [{:keys [:hypercrud.browser/result]} (hyperfiddle.data/browse ctx :hyperfiddle.ide/account)]
-          (let [props {:tooltip [nil @(r/fmap :user/email result)]
-                       :iframe-as-popover true}]
-            [ui/link :hyperfiddle.ide/account ctx @(r/fmap :user/name result) props]))
+        [ui/link :hyperfiddle.ide/account ctx]
         [:a {:href (hyperfiddle.ide/stateless-login-url ctx)} "login"]))]])
 
 (defn hack-login-renderer [ctx props _ _]
