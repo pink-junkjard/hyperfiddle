@@ -192,12 +192,19 @@
          (map css-slugify)
          (apply css))))
 
+(defn- value-props [props ctx]
+  (as-> props props
+    (update props :disabled #(or % (not @(r/track writable-entity? ctx))))
+    (cond-> props (context/leaf-invalid? ctx) (assoc :is-invalid true))
+    (update props :class css (if (:disabled props) "disabled"))))
+
 (defn ^:export value "Relation level value renderer. Works in forms and lists but not tables (which need head/body structure).
 User renderers should not be exposed to the reaction."
   ; Path should be optional, for disambiguation only. Naked is an error
   [relative-path ctx ?f & [props]]                          ; ?f :: (ref, props, ctx) => DOM
   (let [ctx (context/focus ctx relative-path)
-        props (update props :class css (semantic-css ctx))]
+        props (-> (update props :class css (semantic-css ctx))
+                  (value-props ctx))]
     [(or ?f hyper-control) (hypercrud.browser.context/data ctx) ctx props]))
 
 (defn ^:export anchor [ctx props & children]
@@ -327,11 +334,7 @@ User renderers should not be exposed to the reaction."
     [:div {:class (css "field" (:class props))
            :style {:border-color (domain/database-color (runtime/domain (:peer ctx)) (context/dbname ctx))}}
      [Head nil ctx props]                                   ; suppress ?v in head even if defined
-     (let [props (as-> props props
-                       (update props :disabled #(or % (not @(r/track writable-entity? ctx))))
-                       (cond-> props (context/leaf-invalid? ctx) (assoc :is-invalid true))
-                       (update props :class css (if (:disabled props) "disabled")))]
-       [Body (hypercrud.browser.context/data ctx) ctx props])]))
+     [Body (hypercrud.browser.context/data ctx) ctx (value-props props ctx)]]))
 
 (defn table-field "Form fields are label AND value. Table fields are label OR value."
   [ctx Body Head props]                                     ; Body :: (val props ctx) => DOM, invoked as component
@@ -347,11 +350,7 @@ User renderers should not be exposed to the reaction."
     ; Field omits [] but table does not, because we use it to specifically draw repeating anchors with a field renderer.
     :body [:td {:class (css "field" (:class props))
                 :style {:border-color (domain/database-color (runtime/domain (:peer ctx)) (context/dbname ctx))}}
-           (let [props (as-> props props
-                             (update props :disabled #(or % (not @(r/track writable-entity? ctx))))
-                             (cond-> props (context/leaf-invalid? ctx) (assoc :is-invalid true))
-                             (update props :class css (if (:disabled props) "disabled")))]
-             [Body (hypercrud.browser.context/data ctx) ctx props])]))
+           [Body (hypercrud.browser.context/data ctx) ctx (value-props props ctx)]]))
 
 (defn ^:export field "Works in a form or table context. Draws label and/or value."
   [relative-path ctx & [?f props]]
