@@ -27,7 +27,11 @@
 (defn topnav-new-wrapper-render [_ ctx props]
   ; iframe wrapper for naked qfind color tag
   [ui/link :hyperfiddle.ide/new-fiddle ctx "new"
-   (let [disabled? (not (security/can-create? ctx))   ; we explicitly know the context here is $
+   (let [disabled? (-> ctx
+                       ; KAH: no idea on the appropriate way to inject $
+                       ; hack so security/can-create? can call context/dbname and get "$"
+                       (assoc :hypercrud.browser/element (r/pure {:source {:symbol '$}})) ; we explicitly know the context here is $
+                       security/can-create? not)
          anonymous? (nil? @(runtime/state (:peer ctx) [::runtime/user-id]))]
      {:disabled disabled?
       :tooltip (cond
