@@ -56,7 +56,7 @@
         (when-not (= ls-state n)
           (local-storage/set-item! ls-key (assoc n :last-modified (.now js/Date))))))))
 
-(defn watch-key [branch-id] (keyword (hash branch-id) "local-storage"))
+(defn watch-key [branch-id] (keyword (str (hash branch-id)) "local-storage"))
 
 (defn- update-state [rt branch-id ls-key new-value dispatch! get-state different-basis]
   (let [current-state (get-state)
