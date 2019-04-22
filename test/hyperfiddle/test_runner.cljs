@@ -19,7 +19,6 @@
     hypercrud.browser.context-test
     hyperfiddle.fiddle-test
     hyperfiddle.io.basis-test
-    hyperfiddle.io.global-basis-test
     hyperfiddle.readers-test
     hyperfiddle.route-test
     hyperfiddle.ui.docstring-test
@@ -43,7 +42,6 @@
     'hypercrud.browser.context-test
     'hyperfiddle.fiddle-test
     'hyperfiddle.io.basis-test
-    'hyperfiddle.io.global-basis-test
     'hyperfiddle.readers-test
     'hyperfiddle.route-test
     'hyperfiddle.ui.docstring-test
