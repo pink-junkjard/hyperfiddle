@@ -7,6 +7,7 @@
 
 (defprotocol Domain
   (basis [domain])
+  (type-name [domain])
   (fiddle-dbname [domain])
   (databases [domain])
   (environment [domain])

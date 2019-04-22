@@ -12,6 +12,7 @@
 (defrecord BidiDomain [basis fiddle-dbname databases environment router build]
   domain/Domain
   (basis [domain] basis)
+  (type-name [domain] (str *ns* "/" "BidiDomain"))
   (fiddle-dbname [domain] fiddle-dbname)
   (databases [domain] databases)
   (environment [domain] environment)
