@@ -45,7 +45,7 @@
     (either/left (ex-info "Invalid :domain/fiddle-database. Missing :db/id"
                           (select-keys datomic-record [:domain/ident :domain/fiddle-database])))))
 
-(defn hydrate-app-domain [io local-basis domain-eid build]
+(defn hydrate-app-domain [io local-basis domain-eid]
   (-> (io/hydrate-one! io local-basis nil (->EntityRequest domain-eid (->DbRef "$domains" foundation/root-branch) domain-pull))
       (p/then (fn [datomic-record]
                 (if (nil? (:db/id datomic-record))
@@ -57,8 +57,7 @@
                                                    :databases (->> (:domain/databases datomic-record)
                                                                    (map (juxt :domain.database/name :domain.database/record))
                                                                    (into {}))
-                                                   :environment (assoc environment :domain/disable-javascript (:domain/disable-javascript datomic-record))
-                                                   :build build}]]
+                                                   :environment (assoc environment :domain/disable-javascript (:domain/disable-javascript datomic-record))}]]
                         (if (:domain/router datomic-record)
                           (->> (reader/read-edn-string+ (:domain/router datomic-record))
                                (cats/fmap (fn [router] (map->BidiDomain (assoc partial-domain :router router)))))
@@ -69,17 +68,16 @@
 
 ; app-domains = #{"bar.com"}
 ; fqdn = "foo.bar.com" or "myfancyfoo.com"
-(defn domain-for-fqdn [io app-domains build fqdn]
+(defn domain-for-fqdn [io app-domains fqdn]
   (-> (io/sync io #{"$domains"})
       (p/then (fn [local-basis]
                 (let [domain-eid (if-let [domain-ident (some #(second (re-find (re-pattern (str "^(.*)\\." % "$")) fqdn)) app-domains)]
                                    [:domain/ident domain-ident]
                                    [:domain/aliases fqdn])]
-                  (hydrate-app-domain io local-basis domain-eid build))))))
+                  (hydrate-app-domain io local-basis domain-eid))))))
 
-(defn domains-domain [domains-transactor-uri build]
-  (let [api-routes (routes/build build)]
-    (reify domain/Domain
-      (databases [domain] {"$domains" {:database/uri domains-transactor-uri}})
-      (environment [domain] {})
-      (api-routes [domain] api-routes))))
+(defn domains-domain [domains-transactor-uri]
+  (reify domain/Domain
+    (databases [domain] {"$domains" {:database/uri domains-transactor-uri}})
+    (environment [domain] {})
+    (api-routes [domain] routes/routes)))

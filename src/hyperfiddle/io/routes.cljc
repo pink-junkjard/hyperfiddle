@@ -30,14 +30,16 @@
 
    true (keyword route-ns "404")})
 
-(defn build [build]
-  ["/" {"api/" {(str build "/") (api nil)
-                [[#"[^/]*" :build] "/"] {true :force-refresh}
+(def version "0.0.1")
+
+(def routes
+  ["/" {"api/" {(str version "/") (api nil)
+                [[#"[^/]*" :version] "/"] {true :force-refresh}
                 true :404}
-        "static/" {(str build "/") {[[#".+" :resource-name]] {:get :static-resource
-                                                              true :405}
-                                    true :404}
-                   [:build "/"] {true :force-refresh}
+        "static/" {(str version "/") {[[#".+" :resource-name]] {:get :static-resource
+                                                                true :405}
+                                      true :404}
+                   [:version "/"] {true :force-refresh}
                    true :404}
         "favicon.ico" :favicon
         true {:get :ssr
