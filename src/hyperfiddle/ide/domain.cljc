@@ -19,12 +19,12 @@
 
 (def user-dbname-prefix "$user.")
 
-(defn build-routes [build]
-  ["/" {"api/" {(str build "/") (routes/api nil)
-                [[#"[^/]*" :build] "/"] {true :force-refresh}
+(def routes
+  ["/" {"api/" {(str routes/version "/") (routes/api nil)
+                [[#"[^/]*" :version] "/"] {true :force-refresh}
                 true :404}
-        "api-user/" {(str build "/") (routes/api "user")
-                     [[#"[^/]*" :build] "/"] {true :force-refresh}
+        "api-user/" {(str routes/version "/") (routes/api "user")
+                     [[#"[^/]*" :version] "/"] {true :force-refresh}
                      true :404}
         "auth0" {:get :hyperfiddle.ide/auth0-redirect
                  #".+" :404
@@ -32,24 +32,24 @@
         "logout" {:post :hyperfiddle.ide/logout
                   #".+" :404
                   true :405}
-        "static/" {(str build "/") {[[#".+" :resource-name]] {:get :static-resource
-                                                              true :405}
-                                    true :404}
-                   [:build "/"] {true :force-refresh}
+        "static/" {(str routes/version "/") {[[#".+" :resource-name]] {:get :static-resource
+                                                                       true :405}
+                                             true :404}
+                   [:version "/"] {true :force-refresh}
                    true :404}
         "favicon.ico" :favicon
         true {:get :ssr
               true :405}}])
 
-(defn nested-user-routes [build]
-  ["/" {"api-user/" {(str build "/") (routes/api nil)
-                     [[#"[^/]*" :build] "/"] {true :force-refresh}
+(def nested-user-routes
+  ["/" {"api-user/" {(str routes/version "/") (routes/api nil)
+                     [[#"[^/]*" :version] "/"] {true :force-refresh}
                      true :404}
         ; todo this static path conflicts with the ide
-        "static/" {(str build "/") {[[#".+" :resource-name]] {:get :static-resource
-                                                              true :405}
-                                    true :404}
-                   [:build "/"] {true :force-refresh}}
+        "static/" {(str routes/version "/") {[[#".+" :resource-name]] {:get :static-resource
+                                                                       true :405}
+                                             true :404}
+                   [:version "/"] {true :force-refresh}}
         true {:get :ssr
               true :405}}])
 
@@ -79,7 +79,7 @@
         (-> (route/canonicalize user-fiddle (vec user-datomic-args) service-args fragment)
             (route/url-encode home-route)))))
 
-  (api-routes [domain] (build-routes build))
+  (api-routes [domain] routes)
   (system-fiddle? [domain fiddle-ident]
     (or (and (keyword? fiddle-ident) (= "hyperfiddle.ide.schema" (namespace fiddle-ident)))
         (system-fiddle/system-fiddle? fiddle-ident)))
@@ -90,7 +90,7 @@
   )
 
 ; shitty code duplication because we cant pass our api-routes data structure as props (no regex equality)
-(defrecord IdeEdnishDomain [basis fiddle-dbname databases environment home-route build]
+(defrecord IdeEdnishDomain [basis fiddle-dbname databases environment home-route]
   domain/Domain
   (basis [domain] basis)
   (type-name [domain] (str *ns* "/" "IdeEdnishDomain"))
@@ -99,7 +99,7 @@
   (environment [domain] environment)
   (url-decode [domain s] (route/url-decode s home-route))
   (url-encode [domain route] (route/url-encode route home-route))
-  (api-routes [domain] (nested-user-routes build))
+  (api-routes [domain] nested-user-routes)
   (system-fiddle? [domain fiddle-ident] (system-fiddle/system-fiddle? fiddle-ident))
   (hydrate-system-fiddle [domain fiddle-ident] (system-fiddle/hydrate fiddle-ident))
   )
@@ -123,14 +123,12 @@
    {:pre [(instance? EdnishDomain user-domain)]}
    (build
      (domain/basis user-domain)
-     (:build user-domain)
      (domain/databases user-domain)
      (domain/fiddle-dbname user-domain)
      (-> user-domain map->IdeEdnishDomain either/right)
      {"$src" {:database/uri $src-uri}}
      "$src"))
-  ([basis build
-    user-databases user-fiddle-dbname user-domain+
+  ([basis user-databases user-fiddle-dbname user-domain+
     ide-databases ide-fiddle-dbname & {:keys [ide-environment ide-home-route]
                                        :or {ide-environment {}
                                             ide-home-route [:hyperfiddle.ide/home]}}]
@@ -156,7 +154,6 @@
                                       :database/color (color/color-for-name user-fiddle-dbname)))))
         :environment ide-environment
         :home-route ide-home-route
-        :build build
         ::user-dbname->ide (->> user-databases
                                 (map (fn [[dbname db]]
                                        [dbname
