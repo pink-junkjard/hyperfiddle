@@ -83,8 +83,7 @@
             [:script {:id "main" :src (domain/api-path-for (runtime/domain rt) :static-resource :resource-name "main.js")}]]))])
 
 (defn bootstrap-html-cmp [env domain io path user-id]
-  (let [build (:BUILD env)
-        initial-state {::runtime/auto-transact (data/map-values
+  (let [initial-state {::runtime/auto-transact (data/map-values
                                                  (fn [hf-db]
                                                    (if-some [auto-tx (:database/auto-transact hf-db)]
                                                      auto-tx
@@ -99,8 +98,5 @@
     (-> (actions/bootstrap-data rt foundation/root-branch actions/LEVEL-NONE)
         (p/catch #(or (:hyperfiddle.io/http-status-code (ex-data %)) 500))
         (p/then (fn [http-status-code]
-                  (let [client-params {:sentry {:dsn (:SENTRY_DSN env)
-                                                :environment (:SENTRY_ENV env)
-                                                :release (:BUILD env)}}]
-                    {:http-status-code (or http-status-code 200)
-                     :component [full-html build (:ANALYTICS env) rt client-params]}))))))
+                  {:http-status-code (or http-status-code 200)
+                   :component [full-html (:BUILD env) (:ANALYTICS env) rt (:CLIENT_PARAMS env)]})))))
