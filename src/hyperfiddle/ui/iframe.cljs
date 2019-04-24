@@ -76,8 +76,9 @@
 (defn iframe-cmp [ctx {:keys [route] :as props}]            ; :: [route ctx & [?f props]]
   (let [either-v (or (some-> @(runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :error]) either/left)
                      (base/data-from-route route ctx))
-        error-comp (ui-error/error-comp ctx)
-        props (dissoc props :route)]
+        error-comp (or (:hyperfiddle.ui/error-render-custom props)        ; try props first
+                       (ui-error/error-comp ctx))
+        props (dissoc props :route :hyperfiddle.ui/error-render-custom)]
     [stale/loading (stale/can-be-loading? ctx) either-v
      (fn [e]
        [error-comp e (cond-> {:class (css "hyperfiddle-error" (:class props) "ui")}

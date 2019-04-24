@@ -285,7 +285,6 @@ User renderers should not be exposed to the reaction."
         [stale/loading (stale/can-be-loading? visual-ctx)          ; was just ctx before
          (fmap #(route/assoc-frag % (:frag props)) +route) ; what is this frag noise?
          (fn [e]
-           (println "UIFROMLINK " (boolean (::error-render-custom ctx)))
            ; These extra error keys don't work wtf https://github.com/hyperfiddle/hyperfiddle/issues/919
            (let [E (or #_(::error-render-custom props)        ; try props first
                        #_(::error-render-custom ctx)          ; this is allowed and different than props
