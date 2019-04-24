@@ -35,8 +35,8 @@
   (let [scheme (:PUBLIC_SERVICE_HTTP_SCHEME env)
         port (:PUBLIC_SERVICE_HTTP_PORT env)]
     (-> (str scheme "://" (.-hostname req))
-        (cond-> (or (and (= scheme :http) (not= port 80))
-                    (and (= scheme :https) (not= port 443)))
+        (cond-> (or (and (= scheme "http") (not= port 80))
+                    (and (= scheme "https") (not= port 443)))
                 (str ":" port))
         ->URI)))
 
