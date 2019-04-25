@@ -16,8 +16,8 @@
 
 (defn service-uri [scheme fqdn port]
   (-> (str scheme "://" fqdn)
-      (cond-> (or (and (= scheme "http") (not= port 80))
-                  (and (= scheme "https") (not= port 443)))
+      (cond-> (or (and (= scheme "http") (not= (str port) "80"))
+                  (and (= scheme "https") (not= (str port) "443")))
               (str ":" port))
       ->URI))
 
