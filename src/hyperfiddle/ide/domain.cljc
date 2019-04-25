@@ -120,6 +120,8 @@
 
 (defn build
   ([user-domain $src-uri]
+    (build user-domain $src-uri {}))
+  ([user-domain $src-uri ide-environment]
    {:pre [(instance? EdnishDomain user-domain)]}
    (build
      (domain/basis user-domain)
@@ -127,7 +129,19 @@
      (domain/fiddle-dbname user-domain)
      (-> user-domain map->IdeEdnishDomain either/right)
      {"$src" {:database/uri $src-uri}}
-     "$src"))
+     "$src"
+     :ide-environment ide-environment))
+  ([user-domain $src-uri $users-uri ide-environment]
+   {:pre [(instance? EdnishDomain user-domain) $users-uri]}
+   (build
+     (domain/basis user-domain)
+     (domain/databases user-domain)
+     (domain/fiddle-dbname user-domain)
+     (-> user-domain map->IdeEdnishDomain either/right)
+     {"$src" {:database/uri $src-uri}
+      "$users" {:database/uri $users-uri}}
+     "$src"
+     :ide-environment ide-environment))
   ([basis user-databases user-fiddle-dbname user-domain+
     ide-databases ide-fiddle-dbname & {:keys [ide-environment ide-home-route]
                                        :or {ide-environment {}

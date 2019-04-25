@@ -10,6 +10,7 @@
     [hyperfiddle.ide.domain :as ide-domain]
     [hyperfiddle.io.core :as io]
     [hyperfiddle.route :as route]
+    [hyperfiddle.service.http :as http-service]
     [promesa.core :as p]))
 
 
@@ -67,7 +68,7 @@
 ; ide-domains = #{"hyperfiddle.net"}
 ; fqdn = "foo.hyperfiddle.net" or "foo.hyperfiddle.com" or "myfancyfoo.com"
 ; todo app-domains and ide-domains can just be a regex with one capture group
-(defn build-domain-provider [io app-domains ide-domains]
+(defn build-domain-provider [env io app-domains ide-domains]
   (assert (first app-domains) "Ide service must have app-domains configured")
   (fn [fqdn]
     (-> (io/sync io #{"$domains"})
@@ -82,7 +83,7 @@
                         (directory/hydrate-app-domain io local-basis [:domain/ident "www"])
                         (-> (hydrate-ide-domain io local-basis app-domain-ident)
                             (p/then #(assoc %
-                                       ::fqdn fqdn
+                                       ::service-uri (http-service/service-uri (:PUBLIC_SERVICE_HTTP_SCHEME env) fqdn (:PUBLIC_SERVICE_HTTP_PORT env))
                                        ::ide-domain ide-domain
                                        ::app-domain-ident app-domain-ident
 

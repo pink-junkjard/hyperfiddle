@@ -28,14 +28,15 @@
 (defn stateless-login-url
   ([ctx] (stateless-login-url ctx (domain/url-encode (runtime/domain (:peer ctx)) @(runtime/state (:peer ctx) [::runtime/partitions foundation/root-branch :route]))))
   ([ctx state]
-   (let [{:keys [hyperfiddle.ide.directory/fqdn
+   (let [{:keys [hyperfiddle.ide.directory/service-uri
                  hyperfiddle.ide.directory/ide-domain] :as domain} (runtime/domain (:peer ctx))
-         {:keys [domain client-id]} (get-in (domain/environment domain) [:auth0 ide-domain])]
+         {:keys [domain client-id]} (get-in (domain/environment domain) [:auth0 ide-domain])
+         redirect-uri (str service-uri (domain/api-path-for (runtime/domain (:peer ctx)) :hyperfiddle.ide/auth0-redirect))]
      (str domain "/login?"
           "client=" client-id
           "&scope=" "openid email profile"
           "&state=" (base64-url-safe/encode state)
-          "&redirect_uri=" (str "http://" fqdn "/auth0")))))
+          "&redirect_uri=" redirect-uri))))
 
 (defn ide-stage [ctx]
   ; Could also be inlined:
