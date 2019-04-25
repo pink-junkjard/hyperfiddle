@@ -4,6 +4,7 @@
     [contrib.base-64-url-safe :as base-64-url-safe]
     [contrib.ednish :as ednish]
     [contrib.reader :refer [read-edn-string!]]
+    [contrib.uri :refer [->URI]]
     [hypercrud.types.Err :refer [->Err]]
     [hyperfiddle.io.core :as io]
     [hyperfiddle.route :as route]
@@ -12,6 +13,13 @@
 
 
 (defmulti handle-route (fn [handler & rest] handler))
+
+(defn service-uri [scheme fqdn port]
+  (-> (str scheme "://" fqdn)
+      (cond-> (or (and (= scheme "http") (not= port 80))
+                  (and (= scheme "https") (not= port 443)))
+              (str ":" port))
+      ->URI))
 
 (defn e->platform-response [e]
   ; todo there are a subset of requests that are cacheable

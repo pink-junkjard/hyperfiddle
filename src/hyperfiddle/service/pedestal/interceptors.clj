@@ -3,13 +3,12 @@
     [clojure.core.async :refer [chan put!]]
     [clojure.string :as string]
     [cognitect.transit :as transit]
-    [contrib.uri :refer [->URI]]
     [hypercrud.transit :as hc-t]
     [hypercrud.types.Err :refer [->Err]]
     [hyperfiddle.domain :as domain]
     [hyperfiddle.service.cookie :as cookie]
     [hyperfiddle.service.domain :as service-domain]
-    [hyperfiddle.service.http :refer [handle-route]]
+    [hyperfiddle.service.http :as http-service :refer [handle-route]]
     [hyperfiddle.service.jwt :as jwt]
     [io.pedestal.http :as pedestal-http]
     [io.pedestal.http.content-negotiation :as content-negotiation]
@@ -35,13 +34,7 @@
 (defn service-uri [env req]
   ; we are partially trusting the request for generating a service uri which is brittle
   ; todo there should be no dependency on the request once the domain is acquired
-  (let [scheme (:PUBLIC_SERVICE_HTTP_SCHEME env)
-        port (:PUBLIC_SERVICE_HTTP_PORT env)]
-    (-> (str scheme "://" (:server-name req))
-        (cond-> (or (and (= scheme "http") (not= port 80))
-                    (and (= scheme "https") (not= port 443)))
-                (str ":" port))
-        ->URI)))
+  (http-service/service-uri (:PUBLIC_SERVICE_HTTP_SCHEME env) (:server-name req) (:PUBLIC_SERVICE_HTTP_PORT env)))
 
 (defn platform->pedestal-req-handler [env platform-req-handler req]
   (platform-req-handler
