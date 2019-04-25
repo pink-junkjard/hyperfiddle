@@ -1,8 +1,8 @@
 ; AUTO-GENERATED FILE - DO NOT EDIT BY HAND
 ; AUTO-GENERATED FILE - DO NOT EDIT BY HAND
 ;
-; generated at: Tue Apr 23 12:29:23 EDT 2019
-; basis: 17794
+; generated at: Thu Apr 25 13:29:50 EDT 2019
+; basis: 17796
 ;
 ; AUTO-GENERATED FILE - DO NOT EDIT BY HAND
 ; AUTO-GENERATED FILE - DO NOT EDIT BY HAND
@@ -138,12 +138,10 @@
   :hyperfiddle/starred true}
  {:db/id "24"
   :fiddle/cljs-ns "(defmethod hyperfiddle.api/render #{:user/user-id\n                                    :hyperfiddle.ide/account}\n  [ctx props]\n  [:div.hyperfiddle-input-group\n   [:div.input\n    (pr-str (hypercrud.browser.context/data ctx))]])"
+  :fiddle/css "img.avatar { border: 1px solid lightgray; border-radius: 50%; width: 80px; }\nimg.avatar { float: left; margin-top: 1rem; margin-right: 1rem; }\n.-hyperfiddle-ide-user-settings h3 { margin-top: 1rem; }"
   :fiddle/ident :hyperfiddle.ide/account
-  :fiddle/links [#:link{:class [:hf/iframe]
-                        :fiddle #:db{:id "5"}
-                        :path ":hyperfiddle.ide/account"}]
   :fiddle/query "[:in $users\n :find\n (pull $users ?user \n       [:db/id \n        :user/name \n        :user/email \n        :user/last-seen \n        :user/sub \n        :user/picture \n        :user/user-id \n        #_:hyperfiddle.ide/parinfer\n        *])\n .\n :where\n [(ground hyperfiddle.io.bindings/*subject*) ?user-id]\n [$users ?user :user/user-id ?user-id]]\n"
-  :fiddle/renderer "(let [user @(:hypercrud.browser/result ctx)]\n  [:div.container-fluid props\n   [:div.p \n    [hyperfiddle.ui/img (:user/picture user) ctx {:class \"avatar\"}]]\n\n   [:h3 \"Hello, \" (:user/name user) \"!\"]\n\n   [:div.p\n    [:form {:action \"/logout\" :method \"post\"}\n     (str \"Last login was \" (or (some-> (:user/last-seen user) .toLocaleDateString) \"–\") \".\")\n     \n     [:button.btn.btn-link {:type \"submit\"\n                            :style {:display \"inline\"\n                                    :padding \"0\"\n                                    :margin-left \".25em\"\n                                    :font-size \"inherit\"\n                                    :vertical-align \"inherit\"}}\n      \"logout\"]]\n    ]\n   \n   \n\n   [:div.p [:div {:style {:margin-bottom \"1em\"}}]]\n\n   #_[:div.p \"Feature flags\"]\n   #_(->> (-> ctx :hypercrud.browser/field deref :hypercrud.browser.field/children)\n       (map (fn [{a :hypercrud.browser.field/path-segment}]\n              (when (and (keyword? a) (= (namespace a) \"hyperfiddle.ide\"))\n                ^{:key (str [a])}\n                [hyperfiddle.ui/field [a] ctx])))\n       doall)\n   #_[hyperfiddle.ui/field ['*] ctx]\n   [hyperfiddle.ui/link :hyperfiddle.ide.user/domains ctx]\n   \n   #_[:div (pr-str (:user/user-id user))]\n   [hyperfiddle.ui/field [:user/user-id] ctx]])\n"
+  :fiddle/renderer "(let [user @(:hypercrud.browser/result ctx)]\n  [:div.container-fluid props\n   [:div.p \n    [hyperfiddle.ui/img (:user/picture user) ctx {:class \"avatar\"}]]\n\n   [:h3 \"Hello, \" (:user/name user) \"!\"]\n\n   [:div.p\n    [:form {:action \"/logout\" :method \"post\"}\n     (str \"Last login was \" (or (some-> (:user/last-seen user) .toLocaleDateString) \"–\") \".\")\n     \n     [:button.btn.btn-link {:type \"submit\"\n                            :style {:display \"inline\"\n                                    :padding \"0\"\n                                    :margin-left \".25em\"\n                                    :font-size \"inherit\"\n                                    :vertical-align \"inherit\"}}\n      \"logout\"]]\n    ]\n   \n   \n\n   [:div.p [:div {:style {:margin-bottom \"1em\"}}]]\n\n   #_[:div.p \"Feature flags\"]\n   #_(->> (-> ctx :hypercrud.browser/field deref :hypercrud.browser.field/children)\n       (map (fn [{a :hypercrud.browser.field/path-segment}]\n              (when (and (keyword? a) (= (namespace a) \"hyperfiddle.ide\"))\n                ^{:key (str [a])}\n                [hyperfiddle.ui/field [a] ctx])))\n       doall)\n   #_[hyperfiddle.ui/field ['*] ctx]\n   #_[hyperfiddle.ui/link :hyperfiddle.ide.user/domains ctx]\n   \n   #_[:div (pr-str (:user/user-id user))]\n   [hyperfiddle.ui/field [:user/user-id] ctx]])\n"
   :fiddle/type :query}
  {:db/id "16"
   :fiddle/ident :hyperfiddle.ide/attribute-edit
@@ -351,7 +349,6 @@
   :fiddle/renderer "(let [{:keys [:hypercrud.browser/fiddle]} ctx\n      dbs (hypercrud.browser.context/data ctx)]\n  (when-not (empty? dbs)\n    [:div props\n     [hyperfiddle.ui/markdown (:fiddle/markdown @fiddle) ctx]\n     [:ul\n      (->> (sort-by :database/uri dbs)\n           (map (fn [db]\n                  [:li {:key (hash (:db/id db))} (str (:database/uri db))]))\n           (doall))]]))"
   :fiddle/type :query}
  {:db/id "5"
-  :fiddle/css "img.avatar { border: 1px solid lightgray; border-radius: 50%; width: 80px; }\nimg.avatar { float: left; margin-top: 1rem; margin-right: 1rem; }\n.-hyperfiddle-ide-user-settings h3 { margin-top: 1rem; }"
   :fiddle/ident :hyperfiddle.ide.user/domains
   :fiddle/markdown "Domains"
   :fiddle/query "[:find [(pull $domains ?domain [:domain/ident :db/id]) ...]\n :in $domains\n :where\n [(ground hyperfiddle.io.bindings/*subject*) ?user-id]\n [$domains ?domain :domain/ident]\n [$domains ?domain :hyperfiddle/owners ?user-id]]"
