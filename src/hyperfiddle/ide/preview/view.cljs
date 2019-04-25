@@ -217,9 +217,8 @@
         (update-in [::runtime/partitions (build-user-branch-id ide-branch)] #(or % {})) ; branch MUST exist in state
         (reducers/root-reducer nil))))
 
-(defn compute-user-route [ide-ctx]
-  (let [[_ [fiddle-lookup-ref & datomic-args] service-args encoded-fragment]
-        @(runtime/state (:peer ide-ctx) [::runtime/partitions (:branch ide-ctx) :route])]
+(defn compute-user-route [ide-route]
+  (let [[_ [fiddle-lookup-ref & datomic-args] service-args encoded-fragment] ide-route]
     (route/canonicalize
       (base/legacy-lookup-ref->fiddle-ident fiddle-lookup-ref)
       (vec datomic-args)

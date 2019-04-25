@@ -62,14 +62,15 @@
             [fiddle-src/fiddle-src-tabs tab-state]])
 
          [:div (select-keys props [:class])
-          (let [ctx (hyperfiddle.data/browse ctx :hyperfiddle.ide/preview)]
-            [:div {:class (hyperfiddle.ui.iframe/auto-ui-css-class ctx)}
+          (let [preview-ctx (hyperfiddle.data/browse ctx :hyperfiddle.ide/preview)]
+            [:div {:class (hyperfiddle.ui.iframe/auto-ui-css-class preview-ctx)}
              (cond
-               (::preview/user-domain ctx)
-               [preview/preview-effects user-ctx (preview/compute-user-route ctx)]
+               (::preview/user-domain preview-ctx)
+               (let [ide-route @(:hypercrud.browser/route ctx)]
+                 [preview/preview-effects user-ctx (preview/compute-user-route ide-route)])
 
                :else
-               [domain-error-display ctx])
+               [domain-error-display preview-ctx])
              (when user-runtime
                [staging/inline-stage user-ctx])])
 
