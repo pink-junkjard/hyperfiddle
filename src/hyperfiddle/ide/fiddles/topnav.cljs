@@ -2,6 +2,7 @@
   (:require
     [contrib.reactive :as r]
     [contrib.ui.tooltip :refer [tooltip]]
+    [hypercrud.ui.error]
     [hyperfiddle.api :as hf]
     [hyperfiddle.data]
     [hyperfiddle.domain :as domain]
@@ -65,7 +66,9 @@
    [:div.right-nav {:key "right-nav"}                       ; CAREFUL; this key prevents popover flickering
     [loading-spinner ctx]
     right-child
-    [hyperfiddle.ui/link :hyperfiddle.ide/topnav-new ctx nil {:user-renderer topnav-new-wrapper-render}]
+    [hyperfiddle.ui/link :hyperfiddle.ide/topnav-new
+     ctx nil {:hyperfiddle.ui/error-render-custom hypercrud.ui.error/error-inline
+              :user-renderer topnav-new-wrapper-render}]
     [tooltip {:label "Environment administration"} (ui/link :hyperfiddle.ide/env ctx "env")]
     (when (-> (runtime/domain (:peer ctx)) (domain/database "$users"))
       (if @(runtime/state (:peer ctx) [::runtime/user-id])
