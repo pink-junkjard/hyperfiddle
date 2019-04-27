@@ -400,12 +400,14 @@ User renderers should not be exposed to the reaction."
                            (let [k (or ?k ix)
                                  cs (columns ctx)]
                              (into [:tr {:key (str k)}] cs))))]
-         [contrib.hfrecom/anchor-tabs
-          :model page
-          :tabs (for [i (range (/ (count @(:hypercrud.browser/result ctx))
-                                  page-size))]
-                  {:id i :href "#" :label (str (inc i))})
-          :on-change (r/partial reset! page)]]))))
+         (let [n (count @(:hypercrud.browser/result ctx))]
+           (if (> n 0)
+             [contrib.hfrecom/anchor-tabs
+              :model page
+              :tabs (for [i (range (/ n page-size))]
+                      {:id i :href "#" :label (str (inc i))})
+              :on-change (r/partial reset! page)]
+             [:div "no results"]))]))))
 
 (defn hint [val {:keys [hypercrud.browser/fiddle] :as ctx} props]
   (if (and (-> (:fiddle/type @fiddle) (= :entity))
