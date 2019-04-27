@@ -12,6 +12,7 @@
     [contrib.eval :as eval]
     [contrib.pprint :refer [pprint-str]]
     [contrib.reactive :as r]
+    [contrib.hfrecom]
     [contrib.string :refer [blank->nil]]
     [contrib.ui]
     [contrib.ui.safe-render :refer [user-portal]]
@@ -375,24 +376,36 @@ User renderers should not be exposed to the reaction."
   [columns ctx & [props]]
   {:pre [(s/assert :hypercrud/context ctx)]}
   ; Need backwards compat arity
-  (let [sort-col (r/atom (::sort/initial-sort props))]
+  (let [sort-col (r/atom (::sort/initial-sort props))
+        page-size 20
+        page (r/atom 0)]
     (fn [columns ctx & [props]]
       {:pre [(s/assert :hypercrud/context ctx)]}
       (let [props (update props :class (fnil css "hyperfiddle") "unp") ; fnil case is iframe root (not a field :many)
             ctx (assoc ctx ::sort/sort-col sort-col
                            :hypercrud.browser/head-sentinel true ; hacks - this is coordination with the context, how to fix?
                            ::layout :hyperfiddle.ui.layout/table)]
-        [:table (select-keys props [:class :style])
-         [:thead (into [:tr] (columns ctx))]
-         ; filter? Group-by? You can't. This is data driven. Shape your data in the peer.
-         (into [:tbody] (for [[ix [?k ctx]] (->> (hypercrud.browser.context/spread-rows ctx #(sort/sort-fn % sort-col))
-                                                 ; Duplicate rows https://github.com/hyperfiddle/hyperfiddle/issues/298
-                                                 (map-indexed vector))]
-                          ; columns keys should work out, field sets it on inside
-                          #_[:tr {:key (str ?k)} (columns ctx)]
-                          (let [k (or ?k ix)
-                                cs (columns ctx)]
-                            (into [:tr {:key (str k)}] cs))))]))))
+        [:<>
+         [:table (select-keys props [:class :style])
+          [:thead (into [:tr] (columns ctx))]
+          ; filter? Group-by? You can't. This is data driven. Shape your data in the peer.
+          (into [:tbody] (for [[ix [?k ctx]] (->> (hypercrud.browser.context/spread-rows
+                                                    ctx
+                                                    #(sort/sort-fn % sort-col)
+                                                    #(->> % (drop (* @page page-size)) (take page-size)))
+                                                  ; Duplicate rows https://github.com/hyperfiddle/hyperfiddle/issues/298
+                                                  (map-indexed vector))]
+                           ; columns keys should work out, field sets it on inside
+                           #_[:tr {:key (str ?k)} (columns ctx)]
+                           (let [k (or ?k ix)
+                                 cs (columns ctx)]
+                             (into [:tr {:key (str k)}] cs))))]
+         [contrib.hfrecom/anchor-tabs
+          :model page
+          :tabs (for [i (range (/ (count @(:hypercrud.browser/result ctx))
+                                  page-size))]
+                  {:id i :href "#" :label (str (inc i))})
+          :on-change (r/partial reset! page)]]))))
 
 (defn hint [val {:keys [hypercrud.browser/fiddle] :as ctx} props]
   (if (and (-> (:fiddle/type @fiddle) (= :entity))

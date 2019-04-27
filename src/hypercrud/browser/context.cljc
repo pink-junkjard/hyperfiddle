@@ -470,11 +470,12 @@ a speculative db/id."
   Automatically accounts for query dimension - no-op in the case of FindTuple and FindScalar.
   Can be skipped in head case, or can address a row directly if you know the keyfn.
   Accounts for row order and handles client sorting."
-  [ctx & [sort-fn]]
+  [ctx & [sort-fn page-fn]]
   {:pre [(:hypercrud.browser/qfind ctx)]}
   (s/assert :hypercrud/context ctx)
   (let [ctx (assoc ctx :hypercrud.browser/head-sentinel false) ; hack
-        sort-fn (or sort-fn identity)]
+        sort-fn (or sort-fn identity)
+        page-fn (or page-fn identity)]
     (cond                                                   ; fiddle | nested attr (otherwise already spread)
       (= (depth ctx) 0)                                     ; fiddle level
       (let [{r-qfind :hypercrud.browser/qfind} ctx
@@ -482,13 +483,13 @@ a speculative db/id."
             r-ordered-result (:hypercrud.browser/result ctx)]
         (condp = (type @r-qfind)
           FindColl
-          (for [[?k k] (->> (sort-fn @r-ordered-result)     ; client side sorting – should happen in backend
+          (for [[?k k] (->> (page-fn (sort-fn @r-ordered-result)) ; client side sorting – should happen in backend
                             (map (juxt (partial row-key ctx)
                                        (partial row-key-v ctx))))]
             [?k (row ctx k)])
 
           FindRel
-          (for [[?k k] (->> (sort-fn @r-ordered-result)     ; client side sorting – should happen in backend
+          (for [[?k k] (->> (page-fn (sort-fn @r-ordered-result)) ; client side sorting – should happen in backend
                             (map (juxt (partial row-key ctx)
                                        (partial row-key-v ctx))))]
             [?k (row ctx k)])
