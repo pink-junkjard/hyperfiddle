@@ -81,21 +81,16 @@
       (let [me (first s)]
         (cons me (when (pred me) (take-to pred (rest s))))))))
 
-
-; Re-assemble: (sequence cat (parse-datomic-query-vector q))
-(defn parse-datomic-query-vector [q]
+(defn parse-query-element [q query-element]
+  ; return value is symbols, not strings
   (let [last-kw (atom nil)
         f (fn [x]
             (if (keyword? x) (reset! last-kw x))
             @last-kw)]
-    (partition-by f q)))
-
-(defn parse-query-element [q k]
-  ; return value is symbols, not strings
-  (->> (parse-datomic-query-vector q)
-       (filter #(= k (first %)))
-       first
-       (drop 1)))
+    (->> (partition-by f q)
+         (filter #(= query-element (first %)))
+         first
+         (drop 1))))
 
 (defn transpose "Define transpose empty matrix to return the matrix unchanged - this is not math"
   [matrix]

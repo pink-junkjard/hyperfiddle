@@ -5,7 +5,7 @@
     [contrib.data :refer [xorxs
                           cond-let map-pad pad rtrim-coll fix-arity fvor take-to ungroup dissoc-nils
                           compare-by-index ancestry-common ancestry-divergence merge-by collect orp
-                          parse-datomic-query-vector assoc-if]]))
+                          assoc-if]]))
 
 
 (comment
@@ -162,25 +162,3 @@
   (is (= (assoc-if {:a 1} :b 2) {:a 1, :b 2}))
   (is (= (assoc-if {:a 1} :b nil) {:a 1}))
   )
-
-
-(deftest parse-datomic-query-vector'
-  (is (= (->> '[:find
-                (pull ?e [:db/id :fiddle/ident])
-                (max ?tx)
-                ?entrypoint
-                :where
-                (not-join [?e]
-                          [(ground hyperfiddle.io.bindings/*subject*) ?user-id]
-                          [?e :hyperfiddle/owners ?user-id])
-                [?e :fiddle/ident]
-                [(hyperfiddle.query/entrypoint-fiddle? $ ?e) ?entrypoint]
-                (not [?e :dustingetz.post/hidden true])
-                [?e _ _ ?tx]
-
-                :hf/post-eval (->> (sort-by first) (take 5))]
-              (parse-datomic-query-vector)
-              (filter #(= "hf" (namespace (first %))))
-              (map (juxt first (comp first rest)))
-              (into {}))
-         #:hf{:post-eval '(->> (sort-by first) (take 5))})))
