@@ -6,6 +6,7 @@
     [contrib.reader :refer [read-edn-string!]]
     [contrib.uri :refer [->URI]]
     [hypercrud.types.Err :refer [->Err]]
+    [hyperfiddle.domain :as domain]
     [hyperfiddle.io.core :as io]
     [hyperfiddle.route :as route]
     [promesa.core :as p]
@@ -76,6 +77,7 @@
       (-> (->> (mapcat second stage)
                (remove (comp empty? second))
                (map first)
+               (filter #(domain/database domain %))         ; only sync declared dbnames
                (distinct)
                (io/sync io))
           (p/then (fn [sync-results]
