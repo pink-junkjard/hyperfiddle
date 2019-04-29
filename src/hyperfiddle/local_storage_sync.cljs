@@ -138,7 +138,7 @@
              {}
              ssr))
 
-(defn foo [domain initial-state ls-state & [global-basis]]
+(defn- init-state [domain initial-state ls-state & [global-basis]]
   (-> (select-keys ls-state [::runtime/auto-transact
                              ::runtime/user-id
                              :last-modified
@@ -158,7 +158,7 @@
           new-ls-state (loop [ls-state ls-state]
                          (if (= running-ls-schema-version (:version ls-state))
                            (if-not (branch/root-branch? branch-id)
-                             (foo (runtime/domain rt) initial-state ls-state)
+                             (init-state (runtime/domain rt) initial-state ls-state)
                              (let [global-basis (let [init-gb (::runtime/global-basis initial-state)
                                                       ls-gb (get ls-state [::runtime/global-basis])]
                                                   (cond
@@ -176,7 +176,7 @@
                                                                   -1 ls-gb
                                                                   0 init-gb
                                                                   1 init-gb)))))]
-                               (foo (runtime/domain rt) initial-state ls-state global-basis)))
+                               (init-state (runtime/domain rt) initial-state ls-state global-basis)))
                            (if-let [migrate (get ls-migrations (:version ls-state))]
                              (recur (migrate ls-state))
                              (do
