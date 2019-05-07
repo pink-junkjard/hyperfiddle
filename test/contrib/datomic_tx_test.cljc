@@ -2,7 +2,8 @@
   #?(:cljs (:require-macros [contrib.datomic-tx-test :refer [test-into-tx]]))
   (:require
     [contrib.data :as data]
-    [contrib.datomic-tx :refer [edit-entity into-tx]]
+    [contrib.datomic :refer [indexed-schema]]
+    [contrib.datomic-tx :refer [edit-entity into-tx normalize-tx]]
     [clojure.set :as set]
     [clojure.test :refer [deftest is testing]]))
 
@@ -345,3 +346,62 @@
     (is (= (edit-entity "-1" attribute #{"a" "b"} #{})
            [[:db/retract "-1" :many "a"]
             [:db/retract "-1" :many "b"]]))))
+
+(deftest normalize-tx-1
+  (let [schema-tx [{:db/ident :community/name, :db/valueType :db.type/string, :db/cardinality :db.cardinality/one, :db/fulltext true, :db/doc "A community's name"}
+                   {:db/ident :community/url, :db/valueType :db.type/string, :db/cardinality :db.cardinality/one, :db/doc "A community's url"}
+                   {:db/ident :community/neighborhood, :db/valueType :db.type/ref, :db/cardinality :db.cardinality/one, :db/doc "A community's neighborhood"}
+                   {:db/ident :community/category, :db/valueType :db.type/string, :db/cardinality :db.cardinality/many, :db/fulltext true, :db/doc "All community categories"}
+                   {:db/ident :community/orgtype, :db/valueType :db.type/ref, :db/cardinality :db.cardinality/one, :db/doc "A community orgtype enum value"}
+                   {:db/ident :community/type, :db/valueType :db.type/ref, :db/cardinality :db.cardinality/many, :db/doc "Community type enum values"}
+                   {:db/ident :neighborhood/name, :db/valueType :db.type/string, :db/cardinality :db.cardinality/one, :db/unique :db.unique/identity, :db/doc "A unique neighborhood name (upsertable)"}
+                   {:db/ident :neighborhood/district, :db/valueType :db.type/ref, :db/cardinality :db.cardinality/one, :db/doc "A neighborhood's district"}
+                   {:db/ident :district/name, :db/valueType :db.type/string, :db/cardinality :db.cardinality/one, :db/unique :db.unique/identity, :db/doc "A unique district name (upsertable)"}
+                   {:db/ident :district/region, :db/valueType :db.type/ref, :db/cardinality :db.cardinality/one, :db/doc "A district region enum value"}]
+        schema (indexed-schema schema-tx)]
+    (normalize-tx schema schema-tx)
+    (is (= [[:db/add "-700968933" :db/ident :community/name]
+            [:db/add "-700968933" :db/valueType :db.type/string]
+            [:db/add "-700968933" :db/cardinality :db.cardinality/one]
+            [:db/add "-700968933" :db/fulltext true]
+            [:db/add "-700968933" :db/doc "A community's name"]
+            [:db/add "43126449" :db/ident :community/url]
+            [:db/add "43126449" :db/valueType :db.type/string]
+            [:db/add "43126449" :db/cardinality :db.cardinality/one]
+            [:db/add "43126449" :db/doc "A community's url"]
+            [:db/add "-1305932792" :db/ident :community/neighborhood]
+            [:db/add "-1305932792" :db/valueType :db.type/ref]
+            [:db/add "-1305932792" :db/cardinality :db.cardinality/one]
+            [:db/add "-1305932792" :db/doc "A community's neighborhood"]
+            [:db/add "1766286392" :db/ident :community/category]
+            [:db/add "1766286392" :db/valueType :db.type/string]
+            [:db/add "1766286392" :db/cardinality :db.cardinality/many]
+            [:db/add "1766286392" :db/fulltext true]
+            [:db/add "1766286392" :db/doc "All community categories"]
+            [:db/add "1563115599" :db/ident :community/orgtype]
+            [:db/add "1563115599" :db/valueType :db.type/ref]
+            [:db/add "1563115599" :db/cardinality :db.cardinality/one]
+            [:db/add "1563115599" :db/doc "A community orgtype enum value"]
+            [:db/add "1352154034" :db/ident :community/type]
+            [:db/add "1352154034" :db/valueType :db.type/ref]
+            [:db/add "1352154034" :db/cardinality :db.cardinality/many]
+            [:db/add "1352154034" :db/doc "Community type enum values"]
+            [:db/add "1955030477" :db/ident :neighborhood/name]
+            [:db/add "1955030477" :db/valueType :db.type/string]
+            [:db/add "1955030477" :db/cardinality :db.cardinality/one]
+            [:db/add "1955030477" :db/unique :db.unique/identity]
+            [:db/add "1955030477" :db/doc "A unique neighborhood name (upsertable)"]
+            [:db/add "1168461573" :db/ident :neighborhood/district]
+            [:db/add "1168461573" :db/valueType :db.type/ref]
+            [:db/add "1168461573" :db/cardinality :db.cardinality/one]
+            [:db/add "1168461573" :db/doc "A neighborhood's district"]
+            [:db/add "-37942678" :db/ident :district/name]
+            [:db/add "-37942678" :db/valueType :db.type/string]
+            [:db/add "-37942678" :db/cardinality :db.cardinality/one]
+            [:db/add "-37942678" :db/unique :db.unique/identity]
+            [:db/add "-37942678" :db/doc "A unique district name (upsertable)"]
+            [:db/add "492450710" :db/ident :district/region]
+            [:db/add "492450710" :db/valueType :db.type/ref]
+            [:db/add "492450710" :db/cardinality :db.cardinality/one]
+            [:db/add "492450710" :db/doc "A district region enum value"]]
+           ))))

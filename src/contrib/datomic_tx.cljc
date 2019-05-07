@@ -118,3 +118,63 @@
   (let [[[_ _ _ v]] (->> tx (filter (fn [[op e a v]]
                                       (= [op e a] [:db/add e-needle a-needle]))))]
     v))
+
+; ignores component, not useful imo
+(defn ^:legacy pulled-tree-children [schema entity]
+  ; Need schema for component. How can you walk a pulled-tree without inspecting component?
+  ; If it turns out we don't need component, we can dispatch on map?/coll? and not need schema.
+  (mapcat (fn [[attr v]]
+            (let [{:keys [:db/cardinality :db/valueType]} (get schema attr)]
+              (case [(:db/ident valueType) (:db/ident cardinality)]
+                [:db.type/ref :db.cardinality/one] [v]
+                [:db.type/ref :db.cardinality/many] (vec v)
+                [])))
+          entity))
+
+(defn any-ref->dbid "Safe for ref and primitive vals"
+  [v]
+  (cond
+    (map? v) (:db/id v)
+    :else v))
+
+(defn ^:legacy entity->statements
+  "Only need schema to recurse into component entities. valueType and cardinality is determined dynamically.
+  If schema is omitted, don't recurse refs."
+  [{dbid :db/id :as entity} & [schema]]
+  ;; dissoc :db/id, it is done as a seq/filter for compatibility with #Entity
+  (assert (nil? schema) "todo component recursion")
+  (let [dbid (or dbid (str (hash entity)))]
+    (->> (seq entity)
+         (filter (fn [[k v]] (not= :db/id k)))
+
+         (mapcat (fn [[attr v]]
+                   ; dont care about refs - just pass them through blindly, they are #DbId and will just work
+                   (if (vector? v)
+                     (mapv (fn [v] [:db/add dbid attr (any-ref->dbid v)]) v)
+                     [[:db/add dbid attr (any-ref->dbid v)]]))))))
+
+; ignores component - pretty useless imo
+(defn ^:legacy pulled-tree->statements [schema pulled-tree]
+  (->> (tree-seq map? #(pulled-tree-children schema %) pulled-tree)
+       (mapcat entity->statements)))
+
+(defn normalize-tx "Normalize a Datomic transaction by flattening any map-form Datomic statements into tuple-form"
+  [schema tx]
+  (mapcat (partial pulled-tree->statements schema)
+          tx))
+
+;(defn ^:legacy entity-components [schema entity]
+;  (mapcat (fn [[attr v]]
+;            (let [{:keys [:db/cardinality :db/valueType :db/isComponent]} (get schema attr)]
+;              (if isComponent
+;                (case [(:db/ident valueType) (:db/ident cardinality)]
+;                  [:db.type/ref :db.cardinality/one] [v]
+;                  [:db.type/ref :db.cardinality/many] (vec v)
+;                  []))))
+;          entity))
+;
+;; pulled-tree->statements, respect component
+;(defn ^:legacy entity-and-components->statements [schema e]
+;  ; tree-seq lets us get component entities too
+;  (->> (tree-seq map? #(entity-components schema %) e)
+;       (mapcat entity->statements)))

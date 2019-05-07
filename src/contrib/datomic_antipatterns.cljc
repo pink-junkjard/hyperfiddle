@@ -28,62 +28,6 @@
              [a v])))
        (into {})))
 
-(defn any-ref->dbid
-  "Safe for ref and primitive vals"
-  [v]
-  (cond (map? v) (:db/id v)
-        ; #DbId will just work, its already right
-        :else v))
-
-; Internal
-(defn ^:legacy entity->statements
-  "Only need schema to recurse into component entities. valueType and cardinality is determined dynamically.
-  If schema is omitted, don't recurse refs."
-  [{dbid :db/id :as entity} & [schema]]
-  ;; dissoc :db/id, it is done as a seq/filter for compatibility with #Entity
-  (assert (nil? schema) "todo component recursion")
-  (->> (seq entity)
-       (filter (fn [[k v]] (not= :db/id k)))
-
-       (mapcat (fn [[attr v]]
-                 ; dont care about refs - just pass them through blindly, they are #DbId and will just work
-                 (if (vector? v)
-                   (mapv (fn [v] [:db/add dbid attr (any-ref->dbid v)]) v)
-                   [[:db/add dbid attr (any-ref->dbid v)]])))))
-
-(defn ^:legacy entity-components [schema entity]
-  (mapcat (fn [[attr v]]
-            (let [{:keys [:db/cardinality :db/valueType :db/isComponent]} (get schema attr)]
-              (if isComponent
-                (case [(:db/ident valueType) (:db/ident cardinality)]
-                  [:db.type/ref :db.cardinality/one] [v]
-                  [:db.type/ref :db.cardinality/many] (vec v)
-                  []))))
-          entity))
-
-; pulled-tree->statements, respect component
-(defn ^:legacy entity-and-components->statements [schema e]
-  ; tree-seq lets us get component entities too
-  (->> (tree-seq map? #(entity-components schema %) e)
-       (mapcat entity->statements)))
-
-; ignores component, not useful imo
-(defn ^:legacy pulled-tree-children [schema entity]
-  ; Need schema for component. How can you walk a pulled-tree without inspecting component?
-  ; If it turns out we don't need component, we can dispatch on map?/coll? and not need schema.
-  (mapcat (fn [[attr v]]
-            (let [{:keys [:db/cardinality :db/valueType]} (get schema attr)]
-              (case [(:db/ident valueType) (:db/ident cardinality)]
-                [:db.type/ref :db.cardinality/one] [v]
-                [:db.type/ref :db.cardinality/many] (vec v)
-                [])))
-          entity))
-
-; ignores component - pretty useless imo
-(defn ^:legacy pulled-tree->statements [schema pulled-tree]
-  (->> (tree-seq map? #(pulled-tree-children schema %) pulled-tree)
-       (mapcat entity->statements)))
-
 ; don't know what this is
 (defn ^:legacy walk-pulled-tree [schema f tree]                      ; don't actually need schema for anything but component which is ignored here
   (walk/postwalk
