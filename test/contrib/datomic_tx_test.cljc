@@ -359,8 +359,9 @@
                    {:db/ident :district/name, :db/valueType :db.type/string, :db/cardinality :db.cardinality/one, :db/unique :db.unique/identity, :db/doc "A unique district name (upsertable)"}
                    {:db/ident :district/region, :db/valueType :db.type/ref, :db/cardinality :db.cardinality/one, :db/doc "A district region enum value"}]
         schema (indexed-schema schema-tx)]
-    (normalize-tx schema schema-tx)
-    (is (= [[:db/add "-700968933" :db/ident :community/name]
+
+    (is (= (normalize-tx schema schema-tx)
+           [[:db/add "-700968933" :db/ident :community/name]
             [:db/add "-700968933" :db/valueType :db.type/string]
             [:db/add "-700968933" :db/cardinality :db.cardinality/one]
             [:db/add "-700968933" :db/fulltext true]
