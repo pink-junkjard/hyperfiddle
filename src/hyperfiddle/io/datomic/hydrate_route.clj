@@ -5,6 +5,7 @@
     [contrib.performance :as perf]
     [contrib.reactive :as r]
     [hypercrud.browser.browser-request :as browser-request]
+    [hypercrud.browser.context :refer [map->Context]]
     [hypercrud.client.core :as hc]
     [hyperfiddle.io.core :as io]
     [hyperfiddle.io.datomic.hydrate-requests :as hydrate-requests]
@@ -74,5 +75,5 @@
                        (timbre/debugf "request function %sms" total-time)
                        (when (> total-time 500)
                          (timbre/warnf "Slow request function %sms :: route: %s" total-time route)))
-                     (browser-request/request-from-route route {:branch branch :peer rt}))
+                     (browser-request/request-from-route route (map->Context {:ident nil :branch branch :peer rt})))
           (select-keys @(runtime/state rt [::runtime/partitions branch]) [:local-basis :attr-renderers :project :ptm :schemas :tempid-lookups]))))))

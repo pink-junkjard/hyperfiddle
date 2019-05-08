@@ -18,6 +18,7 @@
     [hypercrud.types.DbName :refer [#?(:cljs DbName)]]
     [hypercrud.types.DbRef :refer [->DbRef]]
     [hypercrud.types.ThinEntity :refer [->ThinEntity #?(:cljs ThinEntity)]]
+    [hyperfiddle.api :as hf]
     [hyperfiddle.branch :as branch]
     [hyperfiddle.fiddle]
     [hyperfiddle.route :as route]
@@ -1103,3 +1104,29 @@ a speculative db/id."
     ([dbname ctx]
       ; Use hash of current dbval, which changes with each edit
      @(r/track impl (:peer ctx) (:branch ctx) dbname))))
+
+(defrecord Context [ident]
+  hf/Browser
+  (data [ctx]
+    (data ctx))
+  (fiddle [ctx]
+    (fiddle ctx))
+  (a [ctx]
+    (a ctx))
+  (attr [ctx]
+    (attr ctx))
+  (element [ctx]
+    (element ctx))
+  (identity? [ctx]
+    (identity? ctx))
+  (element-type [ctx]
+    (element-type ctx))
+  (tempid! [ctx]
+    (tempid! ctx))
+  (tempid! [ctx dbname]
+    (tempid! dbname ctx))         ; careful, params flipped
+  (qfind-level? [ctx]
+    (qfind-level? ctx))
+  (link-tx [ctx]
+    (link-tx ctx))
+  )
