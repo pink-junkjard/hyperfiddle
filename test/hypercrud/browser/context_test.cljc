@@ -966,21 +966,22 @@
                    #_(context/browse-element 0)             ; Specifically no element
                    ))
 
-(testing "refocus link from tupled qfind, identity focused from result ctx"
-  ; Select a link from the root context that is reachable but not exactly here.
-  ; So select post/slug from a row ctx, as can happen in a view but not an autogrid.
-  ; This exercises tag-v-with-color edge cases
+(deftest yo
+  (testing "refocus link from tupled qfind, identity focused from result ctx"
+    ; Select a link from the root context that is reachable but not exactly here.
+    ; So select post/slug from a row ctx, as can happen in a view but not an autogrid.
+    ; This exercises tag-v-with-color edge cases
 
-  (def link (hyperfiddle.data/select ctx-blog3 :hf/new))
-  (is (= (mlet [[ctx route] (context/refocus-to-link+ ctx-blog3 link)]
-           (context/eav ctx))
-         [nil :dustingetz.tutorial/blog "hyperfiddle.tempid--2017569654"]))
-  (is (= (mlet [[ctx route] (context/refocus-to-link+ ctx-blog3 link)]
-           (return route))
-         ; This works because refocus hardcodes element 0, which it turns out is almost always
-         ; what the custom renderer wants.
-         (right [:dustingetz.tutorial.blog/new-post [#entity["$" "hyperfiddle.tempid--2017569654"]]])))
-  )
+    (def link (hyperfiddle.data/select ctx-blog3 :hf/new))
+    (is (= (mlet [[ctx route] (context/refocus-to-link+ ctx-blog3 link)]
+             (context/eav ctx))
+           [nil :dustingetz.tutorial/blog "hyperfiddle.tempid--2017569654"]))
+    (is (= (mlet [[ctx route] (context/refocus-to-link+ ctx-blog3 link)]
+             (return route))
+           ; This works because refocus hardcodes element 0, which it turns out is almost always
+           ; what the custom renderer wants.
+           (right [:dustingetz.tutorial.blog/new-post [#entity["$" "hyperfiddle.tempid--2017569654"]]])))
+    ))
 
 (def ctx-schema (mock-fiddle! :dustingetz.test/schema-ident-findcoll))
 
