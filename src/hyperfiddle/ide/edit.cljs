@@ -3,6 +3,7 @@
     [contrib.css :refer [css]]
     [contrib.reactive :as r]
     [hypercrud.ui.error :as error-cmps]
+    [hypercrud.browser.context :refer [map->Context]]
     [cats.monad.either :as either :refer [branch]]
     [hyperfiddle.ide.domain :as ide-domain]
     [hyperfiddle.ide.preview.view :as preview]
@@ -37,13 +38,14 @@
                                ; specifically deref and re-wrap this ref on mount because we are tracking deviation from this value
                                :staleness (when user-runtime
                                             (preview/ide-branch-reference user-runtime (:branch ctx)))})
-        user-ctx {:peer user-runtime
-                  :branch (preview/build-user-branch-id (:branch ctx)) ; user-branch
-                  ::preview/ide-branch (:branch ctx)
-                  ::preview/preview-state preview-state
-                  :hyperfiddle.ui/debug-tooltips true
-                  :hypercrud.ui/display-mode (r/cursor preview-state [:display-mode])
-                  :hyperfiddle.ui.iframe/on-click (r/partial preview/frame-on-click user-runtime)}
+        user-ctx (map->Context {:ident nil
+                                :peer user-runtime
+                                :branch (preview/build-user-branch-id (:branch ctx)) ; user-branch
+                                ::preview/ide-branch (:branch ctx)
+                                ::preview/preview-state preview-state
+                                :hyperfiddle.ui/debug-tooltips true
+                                :hypercrud.ui/display-mode (r/cursor preview-state [:display-mode])
+                                :hyperfiddle.ui.iframe/on-click (r/partial preview/frame-on-click user-runtime)})
 
         ; fiddle-src
         initial-tab (-> @(:hypercrud.browser/route ctx) (get 3) hyperfiddle.ide/parse-ide-fragment)
