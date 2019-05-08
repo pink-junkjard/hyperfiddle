@@ -9,6 +9,7 @@
     [hypercrud.transit :as hc-t]
     #?(:cljs [hypercrud.ui.error :as error])
     [hyperfiddle.actions :as actions]
+    [hypercrud.browser.context :refer [map->Context]]
     [hyperfiddle.domain :as domain]
     [hyperfiddle.foundation :as foundation]
     [hyperfiddle.reducers :as reducers]
@@ -43,8 +44,9 @@
        :cljs [tag (assoc-in props [:dangerouslySetInnerHTML :__html] html)])))
 
 (defn root-html-str [rt]
-  (let [ctx {:peer rt
-             :branch foundation/root-branch}]
+  (let [ctx (map->Context {:ident nil
+                           :peer rt
+                           :branch foundation/root-branch})]
     #?(:clj  (if-let [e (or @(runtime/state (:peer ctx) [::runtime/fatal-error])
                             (some-> @(runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :error])))]
                ; error handling copied from foundation
