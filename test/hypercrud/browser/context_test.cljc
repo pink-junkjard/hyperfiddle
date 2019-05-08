@@ -34,9 +34,10 @@
   ([schemas fiddles ident]
    (let [branch-id foundation/root-branch
          [fiddle result] (-> fiddles ident)]
-     (-> {:branch branch-id
-          :hypercrud.browser/route nil
-          :peer (mock-peer branch-id schemas)}
+     (-> (context/map->Context
+           {:branch branch-id
+            :hypercrud.browser/route nil
+            :peer (mock-peer branch-id schemas)})
          (context/fiddle+ (r/pure fiddle))
          (either/branch (fn [e] (throw e)) identity)
          (context/result (r/pure result))))))
