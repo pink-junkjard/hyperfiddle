@@ -975,12 +975,12 @@
     (def link (hyperfiddle.data/select ctx-blog3 :hf/new))
     (is (= (mlet [[ctx route] (context/refocus-to-link+ ctx-blog3 link)]
              (context/eav ctx))
-           [nil :dustingetz.tutorial/blog "hyperfiddle.tempid--2017569654"]))
+           [nil :dustingetz.tutorial/blog "hyperfiddle.tempid--853640389"]))
     (is (= (mlet [[ctx route] (context/refocus-to-link+ ctx-blog3 link)]
              (return route))
            ; This works because refocus hardcodes element 0, which it turns out is almost always
            ; what the custom renderer wants.
-           (right [:dustingetz.tutorial.blog/new-post [#entity["$" "hyperfiddle.tempid--2017569654"]]])))
+           (right [:dustingetz.tutorial.blog/new-post [#entity["$" "hyperfiddle.tempid--853640389"]]])))
     ))
 
 (def ctx-schema (mock-fiddle! :dustingetz.test/schema-ident-findcoll))
