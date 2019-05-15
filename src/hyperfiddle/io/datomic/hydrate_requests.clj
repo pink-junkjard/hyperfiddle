@@ -51,10 +51,7 @@
 (defn build-get-secure-db-with+ [domain staged-branches db-with-lookup local-basis]
   {:pre [(map? local-basis)
          (not-any? nil? (vals local-basis))]}
-  (letfn [(filter-db [db]
-            (let [read-sec-predicate (constantly true)]     ;todo look up sec pred
-              (d/filter db read-sec-predicate)))
-          (get-secure-db-from-branch+ [{:keys [branch-ident dbname tx] :as branch}]
+  (letfn [(get-secure-db-from-branch+ [{:keys [branch-ident dbname tx] :as branch}]
             (or (get @db-with-lookup branch)
                 (let [db-with+ (mlet [t (or (some-> (get local-basis dbname) exception/success)
                                             (exception/failure (ex-info (str "Basis not found") {:dbname dbname :local-basis local-basis})))
@@ -86,15 +83,13 @@
                                               (if (validate-tx tx)
                                                 (exception/success nil)
                                                 (exception/failure (RuntimeException. (str "staged tx for " dbname " failed validation")))))
-                                          ; todo d/with an unfiltered db
-                                          {:keys [db-after tempids]} (exception/try-on (d/with db-with tx))
-                                          db-with (exception/try-on (filter-db db-after))]
+                                          {:keys [db-after tempids]} (exception/try-on (d/with db-with tx))]
                                      ; as-of/basis-t gymnastics:
                                      ; https://gist.github.com/dustingetz/39f28f148942728c13edef1c7d8baebf/ee35a6af327feba443339176d371d9c7eaff4e51#file-datomic-d-with-interactions-with-d-as-of-clj-L35
                                      ; https://forum.datomic.com/t/interactions-of-d-basis-t-d-as-of-d-with/219
                                      (exception/try-on
-                                       {:db-with db-with
-                                        :secure-db (d/as-of db-with (d/basis-t db-with))
+                                       {:db-with db-after
+                                        :secure-db (d/as-of db-after (d/basis-t db-after))
                                         :with? true
                                         ; todo this merge is excessively duplicating data to send to the client
                                         :id->tempid (merge id->tempid (set/map-invert tempids))}))))]
