@@ -16,10 +16,11 @@
     [cljs.spec.alpha :as s]))
 
 (defn ident->label [v]
-  (if (instance? cljs.core/Keyword v)
+  (cond
     ; A sensible default for userland whose idents usually share a long namespace.
-    (name v)
-    (str v)))
+    (instance? cljs.core/Keyword v) (name v)
+    (and (vector? v) (= 1 (count v))) (str (first v))
+    :else (str v)))
 
 ;(defn option-label-default' [row ctx]                                ; typechecks with keyword
 ;  ; spread-rows is external, f.
