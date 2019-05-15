@@ -27,7 +27,16 @@
    (defmethod print-dup java.net.URI [o ^java.io.Writer w]
      (.write w (impl-print (str o)))))
 
+#?(:clj
+   (defmethod print-method com.cognitect.transit.URI [o ^java.io.Writer w]
+     (.write w (impl-print (str o)))))
+
+#?(:clj
+   (defmethod print-dup com.cognitect.transit.URI [o ^java.io.Writer w]
+     (.write w (impl-print (str o)))))
+
 (def read-URI #(->URI %))
 
 (defn is-uri? [o] #?(:cljs (instance? URI o)
-                     :clj  (instance? java.net.URI o)))
+                     :clj  (or (instance? java.net.URI o)
+                               (instance? com.cognitect.transit.URI o))))
