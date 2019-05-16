@@ -2,8 +2,8 @@
   (:require
     [cats.monad.either :as either]
     [contrib.eval :as eval]
-    [datomic.api :as d]
     [hyperfiddle.domain :as domain]
+    [hyperfiddle.io.datomic :as d]
     [hyperfiddle.security :as security]
     [taoensso.timbre :as timbre]))
 
@@ -21,20 +21,21 @@
                                         (timbre/error e)
                                         (throw (ex-info "Misconfigured database security" {:hyperfiddle.io/http-status-code 500
                                                                                            :uri (:database/uri hf-db)
+                                                                                           :db-name (:database/db-name hf-db)
                                                                                            :additional-info (.getMessage e)})))
                                       :process-tx)))]
       (f hf-db subject tx))))
 
 
-(defn transact! [domain subject tx-groups]
+(defn transact! [datomic domain subject tx-groups]
   {:pre [(not (uri? domain))]}                              ; this interface changed
   (let [tempid-lookups (->> tx-groups
                             (map (fn [[dbname tx]]
                                    [dbname (process-tx (domain/database domain dbname) subject tx)]))
                             (doall)                         ; allow any exceptions to fire before transacting anythng
                             (map (fn [[dbname dtx]]
-                                   (let [uri (:database/uri (domain/database domain dbname))
-                                         {:keys [tempids]} @(d/transact (d/connect (str uri)) dtx)]
+                                   (let [conn (->> (domain/database domain dbname) (d/connect datomic))
+                                         {:keys [tempids]} (d/transact datomic conn {:tx-data dtx})]
                                      [dbname tempids])))
                             (into {}))]
     {:tempid->id tempid-lookups}))

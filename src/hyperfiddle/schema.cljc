@@ -8,14 +8,15 @@
     [hypercrud.types.QueryRequest :refer [->QueryRequest]]
     [hyperfiddle.domain :as domain]
     [hyperfiddle.io.core :as io]
-    [promesa.core :as p]))
+    [promesa.core :as p]
+    [taoensso.timbre :as timbre]))
 
 
 (defn request [dbval]
-  (->QueryRequest '[:find [(pull ?attr [*
-                                        {:db/valueType [:db/ident]
-                                         :db/cardinality [:db/ident]
-                                         :db/unique [:db/ident]}]) ...]
+  (->QueryRequest '[:find (pull ?attr [*
+                                       {:db/valueType [:db/ident]
+                                        :db/cardinality [:db/ident]
+                                        :db/unique [:db/ident]}])
                     :where [:db.part/db :db.install/attribute ?attr]]
                   [dbval]))
 
@@ -28,6 +29,6 @@
         (p/then (fn [{:keys [pulled-trees]}]
                   (->> pulled-trees
                        (map (fn [pulled-tree+]
-                              (-> (cats/fmap contrib.datomic/indexed-schema pulled-tree+)
+                              (-> (cats/fmap #(contrib.datomic/indexed-schema (mapv first %)) pulled-tree+)
                                   (either/branch exception/failure exception/success))))
                        (zipmap dbnames)))))))

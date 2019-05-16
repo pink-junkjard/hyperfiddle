@@ -19,7 +19,7 @@
     [taoensso.timbre :as timbre]))
 
 
-(deftype RT [domain db-with-lookup get-secure-db-with+ state-atom ?subject]
+(deftype RT [datomic domain db-with-lookup get-secure-db-with+ state-atom ?subject]
   runtime/State
   (dispatch! [rt action-or-func] (state/dispatch! state-atom reducers/root-reducer action-or-func))
   (state [rt] state-atom)
@@ -33,25 +33,25 @@
     (let [ptm @(runtime/state rt [::runtime/partitions branch :ptm])]
       (-> (if (contains? ptm request)
             (get ptm request)
-            (let [response (hydrate-requests/hydrate-request get-secure-db-with+ request ?subject)
+            (let [response (hydrate-requests/hydrate-request datomic get-secure-db-with+ request ?subject)
                   ptm (assoc ptm request response)
                   tempid-lookups (hydrate-requests/extract-tempid-lookups db-with-lookup branch)]
               (runtime/dispatch! rt [:hydrate!-success branch ptm tempid-lookups])
               response))
           (r/atom)))))
 
-(defn hydrate-route [domain local-basis route branch stage ?subject]
+(defn hydrate-route [datomic domain local-basis route branch stage ?subject]
   (let [staged-branches (stage->staged-branches stage)
         aux-io (reify io/IO
                  (hydrate-requests [io local-basis staged-branches requests]
-                   (p/do* (hydrate-requests/hydrate-requests domain local-basis requests staged-branches ?subject))))]
+                   (p/do* (hydrate-requests/hydrate-requests datomic domain local-basis requests staged-branches ?subject))))]
     (alet [schemas (schema/hydrate-schemas aux-io domain local-basis branch staged-branches)
            ; schemas can NEVER short the whole request
            ; if the fiddle-db is broken (duplicate datoms), then attr-renderers and project WILL short it
            attr-renderers (project/hydrate-attr-renderers aux-io domain local-basis branch staged-branches)
            project (project/hydrate-project-record aux-io domain local-basis branch staged-branches)]
       (let [db-with-lookup (atom {})
-            get-secure-db-with+ (hydrate-requests/build-get-secure-db-with+ domain staged-branches db-with-lookup local-basis)]
+            get-secure-db-with+ (hydrate-requests/build-get-secure-db-with+ datomic domain staged-branches db-with-lookup local-basis)]
         (perf/time (fn [total-time] (timbre/debugf "d/with total time: %sms" total-time))
                    ; must d/with at the beginning otherwise tempid reversal breaks
                    (doseq [[branch-ident branch-content] stage
@@ -70,7 +70,7 @@
                                                                    :tempid-lookups (hydrate-requests/extract-tempid-lookups db-with-lookup branch)}}}
                                     stage)
               state-atom (r/atom (reducers/root-reducer initial-state nil))
-              rt (->RT domain db-with-lookup get-secure-db-with+ state-atom ?subject)]
+              rt (->RT datomic domain db-with-lookup get-secure-db-with+ state-atom ?subject)]
           (perf/time (fn [total-time]
                        (timbre/debugf "request function %sms" total-time)
                        (when (> total-time 500)

@@ -1,16 +1,19 @@
 (ns hyperfiddle.directory.provisioning
   (:require
     [clojure.java.io :as io]
-    [datomic.api :as d]
     [contrib.reader :as reader]
+    [contrib.uri :refer [is-uri?]]
+    [datomic.api :as d]
     [hyperfiddle.domain :as domain]
     [hyperfiddle.directory.core :as directory]
+    [hyperfiddle.io.datomic.peer :as peer]
     [hyperfiddle.io.datomic.transact :as transact]
     [hyperfiddle.security :as security]
     [hyperfiddle.security.domains]))
 
 
 (defn build-util-domain [domains-uri]                       ; todo this is junk
+  {:pre [(is-uri? domains-uri)]}
   (let [dbs (->> (d/connect (str domains-uri)) d/db
                  (d/q '[:find ?uri (pull ?db db-pull)
                         :in db-pull $
@@ -21,10 +24,11 @@
       (databases [domain] dbs))))
 
 (defn provision! [uri owners domains-uri subject]
+  {:pre [(is-uri? uri)]}
   (let [domain (build-util-domain domains-uri)]             ; todo domains domain?
-    (transact/transact! domain subject {domains-uri [{:database/uri uri
-                                                      :database/write-security ::security/owner-only
-                                                      :hyperfiddle/owners owners}]}))
+    (transact/transact! peer/impl domain subject {domains-uri [{:database/uri uri
+                                                                :database/write-security ::security/owner-only
+                                                                :hyperfiddle/owners owners}]}))
   (when-not (d/create-database (str uri))
     ; security on domains should prevent this from ever happening
     (throw (ex-info "Database already exists" {:uri uri}))))
@@ -51,7 +55,7 @@
   (if (d/delete-database (str uri))
     (let [tx [[:db/retractEntity [:database/uri uri]]]
           domain (build-util-domain domains-uri)]
-      (transact/transact! domain subject {domains-uri tx}))
+      (transact/transact! peer/impl domain subject {domains-uri tx}))
     (throw (ex-info "Database already deleted" {:uri uri}))))
 
 (defn deprovision-domains-db! [domains-uri]

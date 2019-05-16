@@ -16,7 +16,8 @@
                                                :hash (hash {:fiddle-dbname (domain/fiddle-dbname domain)
                                                             :databases (->> (domain/databases domain)
                                                                             (map (fn [[dbname database]]
-                                                                                   [dbname (select-keys database [:database/uri])]))
+                                                                                   ; todo switching between peer/client will break this hash
+                                                                                   [dbname (select-keys database [:database/uri :database/db-name])]))
                                                                             (into {}))
                                                             :environment (domain/environment domain)
                                                             :type-name (domain/type-name domain)})}

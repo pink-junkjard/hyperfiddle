@@ -3,6 +3,7 @@
     [cats.core :as cats :refer [mlet]]
     [cats.monad.either :as either]
     [contrib.reader :as reader]
+    [contrib.uri :refer [is-uri?]]
     [hypercrud.types.DbRef :refer [->DbRef]]
     [hypercrud.types.EntityRequest :refer [->EntityRequest]]
     [hyperfiddle.domain :as domain]
@@ -17,6 +18,7 @@
 
 (def database-pull
   [:db/id
+   :database/db-name
    :database/uri
    :database.custom-security/client
    :database.custom-security/server
@@ -76,8 +78,10 @@
                                    [:domain/aliases fqdn])]
                   (hydrate-app-domain io local-basis domain-eid))))))
 
-(defn domains-domain [domains-transactor-uri]
+(defn domain [directory-uri-or-db-name]
   (reify domain/Domain
-    (databases [domain] {"$domains" {:database/uri domains-transactor-uri}})
+    (databases [domain] {"$domains" (if (is-uri? directory-uri-or-db-name)
+                                      {:database/uri directory-uri-or-db-name}
+                                      {:database/db-name directory-uri-or-db-name})})
     (environment [domain] {})
     (api-routes [domain] routes/routes)))

@@ -7,7 +7,9 @@
     [hyperfiddle.branch :as branch]
     [hyperfiddle.domain :as domain]
     [hyperfiddle.foundation :as foundation]
-    [hyperfiddle.io.datomic.hydrate-requests :as datomic-hydrate-requests]))
+    [hyperfiddle.io.datomic.hydrate-requests :as datomic-hydrate-requests]
+    [hyperfiddle.io.datomic.peer :as peer]                  ; todo run tests for client as well
+    ))
 
 
 (def test-uri "datomic:mem://test")
@@ -32,7 +34,7 @@
                       (d/delete-database test-uri)))
 
 (defn build-get-secure-db-with [& args]
-  (let [get-secure-db-with+ (apply datomic-hydrate-requests/build-get-secure-db-with+ test-domain args)]
+  (let [get-secure-db-with+ (apply datomic-hydrate-requests/build-get-secure-db-with+ peer/impl test-domain args)]
     (fn [& args] (exception/extract (apply get-secure-db-with+ args)))))
 
 (deftest schema-alteration []

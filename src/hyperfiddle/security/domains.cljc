@@ -1,12 +1,19 @@
 (ns hyperfiddle.security.domains
   (:require
     [hyperfiddle.security :as security]
-    [hyperfiddle.security.client :as client-sec]
-    #?(:clj
-    [hyperfiddle.security.entity-ownership :as entity-ownership])))
+    [hyperfiddle.security.client :as client-sec])
+  #?(:clj
+     (:import
+       (java.io FileNotFoundException))))
 
 #?(:clj
    (def server
-     {:process-tx entity-ownership/write-domains}))
+     {:process-tx (fn [& args]
+                    (let [f (try
+                              (require 'hyperfiddle.security.entity-ownership)
+                              (resolve 'hyperfiddle.security.entity-ownership/write-domains)
+                              (catch Exception e
+                                (throw (ex-info "Entity ownership unsupported with datomic client" {} e))))]
+                      (apply f args)))}))
 
 (def client client-sec/entity-ownership)

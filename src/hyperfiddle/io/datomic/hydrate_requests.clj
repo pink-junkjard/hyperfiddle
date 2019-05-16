@@ -9,12 +9,12 @@
     [contrib.datomic]
     [contrib.pprint :refer [pprint-str]]
     [contrib.try$ :refer [try-either]]
-    [datomic.api :as d]
     [hypercrud.types.EntityRequest]
     [hypercrud.types.QueryRequest]
     [hyperfiddle.branch :as branch]
     [hyperfiddle.domain :as domain]
-    [hyperfiddle.io.bindings])                              ; userland
+    [hyperfiddle.io.bindings]                               ; userland
+    [hyperfiddle.io.datomic :as d])
   (:import
     (hypercrud.types.DbRef DbRef)
     (hypercrud.types.EntityRequest EntityRequest)
@@ -32,23 +32,22 @@
 
 (defmulti hydrate-request* (fn [this & args] (class this)))
 
-(defmethod hydrate-request* EntityRequest [{:keys [e db pull-exp]} get-secure-db-with]
+(defmethod hydrate-request* EntityRequest [{:keys [e db pull-exp]} datomic get-secure-db-with]
   (let [{pull-db :db} (get-secure-db-with (:dbname db) (:branch db))]
     (cond
       (nil? e) nil                                          ; This is probably an error, report it? Datomic says: (d/pull $ [:db/id] nil) => #:db{:id nil}
       (contrib.datomic/tempid? e) {:db/id e}                ; This introduces sloppy thinking about time!   https://github.com/hyperfiddle/hyperfiddle/issues/584
-      :happy (d/pull pull-db pull-exp e))))
+      :happy (d/pull datomic pull-db {:selector pull-exp :eid e}))))
 
-(defmethod hydrate-request* QueryRequest [{:keys [query params]} get-secure-db-with]
+(defmethod hydrate-request* QueryRequest [{:keys [query params]} datomic get-secure-db-with]
   (assert query "hydrate: missing query")
-  (->> (map #(parameter % get-secure-db-with) params)
-       ;todo gaping security hole
-       (apply d/q query)))
+  (d/q datomic {:query query
+                :args (map #(parameter % get-secure-db-with) params)}))
 
 ; todo i18n
 (def ERROR-BRANCH-PAST ":hyperfiddle.error/basis-stale Branching the past is currently unsupported, please refresh your basis by refreshing the page")
 
-(defn build-get-secure-db-with+ [domain staged-branches db-with-lookup local-basis]
+(defn build-get-secure-db-with+ [datomic domain staged-branches db-with-lookup local-basis]
   {:pre [(map? local-basis)
          (not-any? nil? (vals local-basis))]}
   (letfn [(get-secure-db-from-branch+ [{:keys [branch-ident dbname tx] :as branch}]
@@ -57,10 +56,11 @@
                                             (exception/failure (ex-info (str "Basis not found") {:dbname dbname :local-basis local-basis})))
                                       init-db-with (if (branch/root-branch? branch-ident)
                                                      (exception/try-on
-                                                       (let [uri (:database/uri (domain/database domain dbname))
-                                                             $ (-> (d/connect (str uri)) d/db filter-db)]
+                                                       (let [$ (->> (domain/database domain dbname)
+                                                                    (d/connect datomic)
+                                                                    (d/with-db datomic))]
                                                          {:db-with $
-                                                          :secure-db (d/as-of $ t)}))
+                                                          :secure-db (d/as-of datomic $ t)}))
                                                      (let [parent-ident (branch/parent-branch-id branch-ident)
                                                            parent-branch (or (->> staged-branches
                                                                                   (filter #(and (= parent-ident (:branch-ident %))
@@ -73,7 +73,7 @@
                                  (if (empty? tx)
                                    (cats/return init-db-with)
                                    (mlet [:let [{:keys [db-with id->tempid with?]} init-db-with]
-                                          _ (if (and (not with?) (not= t (d/basis-t db-with)))
+                                          _ (if (and (not with?) (not= t (d/basis-t datomic db-with)))
                                               ; can only run this assert once, on the first time a user d/with's
                                               ; every subsequent d/with, the new db's basis will never again match the user submitted basis
                                               ; however this is fine, since the original t is already known good
@@ -83,13 +83,13 @@
                                               (if (validate-tx tx)
                                                 (exception/success nil)
                                                 (exception/failure (RuntimeException. (str "staged tx for " dbname " failed validation")))))
-                                          {:keys [db-after tempids]} (exception/try-on (d/with db-with tx))]
+                                          {:keys [db-after tempids]} (exception/try-on (d/with datomic db-with {:tx-data tx}))]
                                      ; as-of/basis-t gymnastics:
                                      ; https://gist.github.com/dustingetz/39f28f148942728c13edef1c7d8baebf/ee35a6af327feba443339176d371d9c7eaff4e51#file-datomic-d-with-interactions-with-d-as-of-clj-L35
                                      ; https://forum.datomic.com/t/interactions-of-d-basis-t-d-as-of-d-with/219
                                      (exception/try-on
                                        {:db-with db-after
-                                        :secure-db (d/as-of db-after (d/basis-t db-after))
+                                        :secure-db (d/as-of datomic db-after (d/basis-t datomic db-after))
                                         :with? true
                                         ; todo this merge is excessively duplicating data to send to the client
                                         :id->tempid (merge id->tempid (set/map-invert tempids))}))))]
@@ -163,22 +163,22 @@
                  (assoc acc (:dbname branch) (extract-tempid-lookup+ internal-secure-db+)))
                {})))
 
-(defn hydrate-request [get-secure-db-with+ request ?subject]
+(defn hydrate-request [datomic get-secure-db-with+ request ?subject]
   {:pre [(or (instance? EntityRequest request) (instance? QueryRequest request))]}
   (binding [hyperfiddle.io.bindings/*subject* ?subject]
     (either/branch-left
-      (try-either (hydrate-request* request (comp exception/extract get-secure-db-with+)))
+      (try-either (hydrate-request* request datomic (comp exception/extract get-secure-db-with+)))
       (fn [e] (either/left (error-cleaner e request))))))
 
-(defn hydrate-requests [domain local-basis requests staged-branches ?subject]
+(defn hydrate-requests [datomic domain local-basis requests staged-branches ?subject]
   {:pre [requests
          (not-any? nil? requests)
          (every? #(or (instance? EntityRequest %) (instance? QueryRequest %)) requests)]}
   (let [db-with-lookup (atom {})
         local-basis (into {} local-basis)                   ; :: ([dbname 1234]), but there are some duck type shenanigans happening
-        get-secure-db-with+ (build-get-secure-db-with+ domain staged-branches db-with-lookup local-basis)
+        get-secure-db-with+ (build-get-secure-db-with+ datomic domain staged-branches db-with-lookup local-basis)
         pulled-trees (->> requests
-                          (map #(hydrate-request get-secure-db-with+ % ?subject))
+                          (map #(hydrate-request datomic get-secure-db-with+ % ?subject))
                           (doall))
         tempid-lookups (reduce (fn [acc [branch internal-secure-db+]]
                                  (assoc-in acc [(:branch-ident branch) (:dbname branch)] (extract-tempid-lookup+ internal-secure-db+)))
