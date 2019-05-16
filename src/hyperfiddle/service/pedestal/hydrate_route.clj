@@ -9,13 +9,13 @@
     [promesa.core :as p]))
 
 
-(deftype IOImpl [domain jwt ?subject]
+(deftype IOImpl [datomic domain jwt ?subject]
   io/IO
   (hydrate-route [io local-basis route branch stage]
-    (hydrate-route domain local-basis route branch stage ?subject))
+    (hydrate-route datomic domain local-basis route branch stage ?subject))
 
   (sync [io dbnames]
-    (p/do* (sync domain dbnames))))
+    (p/do* (sync datomic domain dbnames))))
 
 (def-data-route :hydrate-route [handler env req]
-  (platform->pedestal-req-handler env (partial http-service/hydrate-route-handler ->IOImpl) req))
+  (platform->pedestal-req-handler env (partial http-service/hydrate-route-handler (partial ->IOImpl (:datomic env))) req))

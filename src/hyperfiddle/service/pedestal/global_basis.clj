@@ -9,13 +9,13 @@
     [promesa.core :as p]))
 
 
-(deftype IOImpl [domain service-uri jwt ?subject]
+(deftype IOImpl [datomic domain service-uri jwt ?subject]
   io/IO
   (global-basis [io]
     (global-basis io domain))
 
   (sync [io dbnames]
-    (p/do* (sync domain dbnames))))
+    (p/do* (sync datomic domain dbnames))))
 
 (def-data-route :global-basis [handler env req]
-  (platform->pedestal-req-handler env (partial http-service/global-basis-handler ->IOImpl) req))
+  (platform->pedestal-req-handler env (partial http-service/global-basis-handler (partial ->IOImpl (:datomic env))) req))

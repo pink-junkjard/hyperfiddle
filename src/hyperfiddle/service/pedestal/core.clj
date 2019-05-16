@@ -29,7 +29,7 @@
           {staged-branches :staged-branches requests :request} body-params
           r (perf/time
               (fn [total-time] (timbre/debugf "hydrate-requests: count %s, has stage? %s, total time: %sms" (count requests) (not (empty? staged-branches)) total-time))
-              (hydrate-requests domain local-basis requests staged-branches (:user-id req)))]
+              (hydrate-requests (:datomic env) domain local-basis requests staged-branches (:user-id req)))]
       (ring-resp/response r))
     (catch Exception e
       (timbre/error e)
@@ -37,14 +37,14 @@
 
 (def-data-route :sync [handler env req]
   (try
-    (-> (datomic-sync/sync (:domain req) (:body-params req))
+    (-> (datomic-sync/sync (:datomic env) (:domain req) (:body-params req))
         (ring-resp/response))
     (catch Exception e
       (e->response e))))
 
 (def-data-route :transact [handler env req]
   (try
-    (-> (transact! (:domain req) (:user-id req) (:body-params req))
+    (-> (transact! (:datomic env) (:domain req) (:user-id req) (:body-params req))
         (ring-resp/response))
     (catch Exception e
       (timbre/error e)

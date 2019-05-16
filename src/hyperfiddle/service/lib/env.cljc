@@ -36,7 +36,7 @@
          optional #{:ANALYTICS :HF_ALIAS_HOSTNAMES :SERVICE_HOST
 
                     :DOMAINS_API_URI
-                    :DOMAINS_TRANSACTOR_URI
+                    :DIRECTORY_URI_OR_DB_NAME
                     :DOMAINS_USER_ID
 
                     :SENTRY_DSN :SENTRY_ENV
@@ -49,7 +49,7 @@
                  (update :HF_HOSTNAMES #(string/split % #";"))
 
                  (update :DOMAINS_API_URI ->URI)
-                 (update :DOMAINS_TRANSACTOR_URI ->URI)
+                 (update :DIRECTORY_URI_OR_DB_NAME #(if (.startsWith % "datomic:") (->URI %) %))
 
                  (update :SERVICE_PORT #(#?(:clj Integer/parseInt :cljs js/parseInt) %))
                  (update-existing :HF_ALIAS_HOSTNAMES #(string/split % #";")))]
