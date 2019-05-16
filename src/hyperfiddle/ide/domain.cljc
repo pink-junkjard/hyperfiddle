@@ -3,6 +3,7 @@
     [cats.core :as cats]
     [cats.monad.either :as either]
     [cognitect.transit :as t]
+    [contrib.uri :refer [is-uri?]]
     [hypercrud.browser.base :as base]
     [hypercrud.transit :as transit]
     [hyperfiddle.database.color :as color]
@@ -116,27 +117,33 @@
       with-serializer))
 
 (defn build
-  ([user-domain $src-uri]
-    (build user-domain $src-uri {}))
-  ([user-domain $src-uri ide-environment]
+  ([user-domain $src-uri-or-db-name]
+    (build user-domain $src-uri-or-db-name {}))
+  ([user-domain $src-uri-or-db-name ide-environment]
    {:pre [(instance? EdnishDomain user-domain)]}
    (build
      (domain/basis user-domain)
      (domain/databases user-domain)
      (domain/fiddle-dbname user-domain)
      (-> user-domain map->IdeEdnishDomain either/right)
-     {"$src" {:database/uri $src-uri}}
+     {"$src" (if (is-uri? $src-uri-or-db-name)
+               {:database/uri $src-uri-or-db-name}
+               {:database/db-name $src-uri-or-db-name})}
      "$src"
      :ide-environment ide-environment))
-  ([user-domain $src-uri $users-uri ide-environment]
-   {:pre [(instance? EdnishDomain user-domain) $users-uri]}
+  ([user-domain $src-uri-or-db-name $users-uri-or-db-name ide-environment]
+   {:pre [(instance? EdnishDomain user-domain) $users-uri-or-db-name]}
    (build
      (domain/basis user-domain)
      (domain/databases user-domain)
      (domain/fiddle-dbname user-domain)
      (-> user-domain map->IdeEdnishDomain either/right)
-     {"$src" {:database/uri $src-uri}
-      "$users" {:database/uri $users-uri}}
+     {"$src" (if (is-uri? $src-uri-or-db-name)
+               {:database/uri $src-uri-or-db-name}
+               {:database/db-name $src-uri-or-db-name})
+      "$users" (if (is-uri? $users-uri-or-db-name)
+                 {:database/uri $users-uri-or-db-name}
+                 {:database/db-name $users-uri-or-db-name})}
      "$src"
      :ide-environment ide-environment))
   ([basis user-databases user-fiddle-dbname user-domain+

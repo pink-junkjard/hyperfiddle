@@ -8,7 +8,7 @@
   {:fiddle/ident (keyword "hyperfiddle.ide.schema" (str "options.cardinality" ide-dbname))
    :fiddle/type :query
    :fiddle/query (let [$db (symbol ide-dbname)]
-                   (str [:in $db :find [(list 'pull $db '?e [:db/ident]) '...] :where
+                   (str [:in $db :find (list 'pull $db '?e [:db/ident]) :where
                          [$db '?e :db/ident '?ident]
                          '[(namespace ?ident) ?ns]
                          '[(= ?ns "db.cardinality")]]))})
@@ -17,7 +17,7 @@
   {:fiddle/ident (keyword "hyperfiddle.ide.schema" (str "options.unique" ide-dbname))
    :fiddle/type :query
    :fiddle/query (let [$db (symbol ide-dbname)]
-                   (str [:in $db :find [(list 'pull $db '?e [:db/ident]) '...] :where
+                   (str [:in $db :find (list 'pull $db '?e [:db/ident]) :where
                          [$db '?e :db/ident '?ident]
                          '[(namespace ?ident) ?ns]
                          '[(= ?ns "db.unique")]]))})
@@ -26,7 +26,7 @@
   {:fiddle/ident (keyword "hyperfiddle.ide.schema" (str "options.valueType" ide-dbname))
    :fiddle/type :query
    :fiddle/query (let [$db (symbol ide-dbname)]
-                   (str [:in $db :find [(list 'pull $db '?valueType [:db/ident]) '...] :where
+                   (str [:in $db :find (list 'pull $db '?valueType [:db/ident]) :where
                          [$db '?db-part :db.install/valueType '?valueType]
                          [$db '?db-part :db/ident :db.part/db]]))})
 
@@ -73,13 +73,13 @@
   {:fiddle/ident (keyword "hyperfiddle.ide.schema" (str "editor" ide-dbname))
    :fiddle/type :query
    :fiddle/query (let [$db (symbol ide-dbname)]
-                   (str [:in $db :find [(list 'pull $db '?attr
-                                              [:db/id
-                                               :db/ident
-                                               {:db/valueType [:db/ident]}
-                                               {:db/cardinality [:db/ident]}
-                                               {:db/unique [:db/ident]}
-                                               :db/isComponent :db/fulltext :db/doc]) '...]
+                   (str [:in $db :find (list 'pull $db '?attr
+                                             [:db/id
+                                              :db/ident
+                                              {:db/valueType [:db/ident]}
+                                              {:db/cardinality [:db/ident]}
+                                              {:db/unique [:db/ident]}
+                                              :db/isComponent :db/fulltext :db/doc])
                          :where [$db :db.part/db :db.install/attribute '?attr]]))
    :fiddle/renderer "hyperfiddle.ide.fiddles.schema-editor/renderer"
    :fiddle/links #{{:db/id :hyperfiddle.ide.schema.link/edit-attribute

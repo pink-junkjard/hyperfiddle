@@ -8,12 +8,11 @@
         needle (contrib.reactive/atom nil)
         db-attr? #(<= (:db/id %) 62)
         archived? #(cuerdas.core/starts-with? (namespace (:db/ident %)) "zzz") ; "zzz/" and "zzz.", we are inconsistent
-        do-filter-reactive (fn [xs]                           ; perf sensitive
-                             (as-> xs xs
-                               (if @hide-datomic (remove db-attr? xs) xs)
-                               (if @hide-archived (remove archived? xs) xs)
-                               (if (contrib.string/blank->nil @needle)
-                                 (filter #(cuerdas.core/includes? (-> % :db/ident str) @needle) xs) xs)))]
+        do-filter-reactive (fn [xs]                         ; perf sensitive
+                             (cond->> xs
+                               @hide-datomic (remove (comp db-attr? first))
+                               @hide-archived (remove (comp archived? first))
+                               (contrib.string/blank->nil @needle) (filter #(cuerdas.core/includes? (-> % first :db/ident str) @needle))))]
     (fn [_ ctx props]
       [:<>
        [:div.container-fluid.-hyperfiddle-ide-schema-editor props
@@ -33,21 +32,22 @@
                       (assoc :hyperfiddle.ui/layout :hyperfiddle.ui.layout/table))]
           (if @is-edn
             [contrib.ui/code {:value (-> (hypercrud.browser.context/data ctx)
+                                         (map first)
                                          (->> (sort-by :db/ident)
                                               (map #(dissoc % :db/id)))
                                          (contrib.pprint/pprint-str 1000))
                               :read-only true}]
             [hyperfiddle.ui/table
              (fn [ctx]
-               [(hyperfiddle.ui/field [:db/ident] ctx)
-                (hyperfiddle.ui/field [:db/valueType] ctx #(hyperfiddle.ui.controls/string ((comp (fnil name :–) :db/ident) %) %2 %3) {:disabled true})
-                (hyperfiddle.ui/field [:db/cardinality] ctx #(hyperfiddle.ui.controls/string ((comp (fnil name :–) :db/ident) %) %2 %3) {:disabled true})
-                (hyperfiddle.ui/field [:db/unique] ctx #(hyperfiddle.ui.controls/string ((comp (fnil name :–) :db/ident) %) %2 %3) {:disabled true})
-                (hyperfiddle.ui/field [:db/isComponent] ctx)
-                (hyperfiddle.ui/field [:db/fulltext] ctx nil {:disabled true})
-                (hyperfiddle.ui/field [:db/doc] ctx)])
+               [(hyperfiddle.ui/field [0 :db/ident] ctx)
+                (hyperfiddle.ui/field [0 :db/valueType] ctx #(hyperfiddle.ui.controls/string ((comp (fnil name :–) :db/ident) %) %2 %3) {:disabled true})
+                (hyperfiddle.ui/field [0 :db/cardinality] ctx #(hyperfiddle.ui.controls/string ((comp (fnil name :–) :db/ident) %) %2 %3) {:disabled true})
+                (hyperfiddle.ui/field [0 :db/unique] ctx #(hyperfiddle.ui.controls/string ((comp (fnil name :–) :db/ident) %) %2 %3) {:disabled true})
+                (hyperfiddle.ui/field [0 :db/isComponent] ctx)
+                (hyperfiddle.ui/field [0 :db/fulltext] ctx nil {:disabled true})
+                (hyperfiddle.ui/field [0 :db/doc] ctx)])
              ctx
-             {:hyperfiddle.ui.sort/initial-sort [[:db/ident] :asc]}]))]
+             {:hyperfiddle.ui.sort/initial-sort [[0 :db/ident] :asc]}]))]
        [hyperfiddle.ide/ide-stage ctx]])))
 
 (defn renderer [& [_ ctx :as args]]

@@ -29,15 +29,15 @@
   (let [io (reify io/IO
              (hydrate-requests [io local-basis staged-branches requests]
                ; todo who is this executed on behalf of? system/root or the end user?
-               (p/do* (hydrate-requests (:domain req) local-basis requests staged-branches nil)))
+               (p/do* (hydrate-requests (:datomic env) (:domain req) local-basis requests staged-branches nil)))
 
              (sync [io dbnames]
                ; todo who is this executed on behalf of? system/root or the end user?
-               (p/do* (sync (:domain req) dbnames)))
+               (p/do* (sync (:datomic env) (:domain req) dbnames)))
 
              (transact! [io tx-groups]
                ; todo who is this executed on behalf of? system/root or the end user?
-               (p/do* (transact! (:domain req) nil tx-groups))))]
+               (p/do* (transact! (:datomic env) (:domain req) nil tx-groups))))]
     (-> (auth/login env (:domain req) (interceptors/service-uri env req) io (get-in req [:query-params :code]))
         (p/then (fn [jwt]
                   {:status 302
