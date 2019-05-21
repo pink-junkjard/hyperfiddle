@@ -1,8 +1,8 @@
 ; AUTO-GENERATED FILE - DO NOT EDIT BY HAND
 ; AUTO-GENERATED FILE - DO NOT EDIT BY HAND
 ;
-; generated at: Fri Apr 26 14:27:32 EDT 2019
-; basis: 17800
+; generated at: Tue May 21 09:11:22 EDT 2019
+; basis: 17811
 ;
 ; AUTO-GENERATED FILE - DO NOT EDIT BY HAND
 ; AUTO-GENERATED FILE - DO NOT EDIT BY HAND
@@ -155,7 +155,7 @@
                  #:link{:class [:hf/new]
                         :fiddle #:db{:id "16"}
                         :path ":hyperfiddle.ide/domain-attribute-renderers"}]
-  :fiddle/query "[:find \n [(pull ?e [:attribute/ident\n            :attribute/renderer])\n  ...] \n :where [?e :attribute/ident]]"
+  :fiddle/query "[:find \n (pull ?e [:attribute/ident\n           :attribute/renderer]) \n :where [?e :attribute/ident]]"
   :fiddle/renderer "(if (= \"nodejs\" *target*)\n  (hyperfiddle.ui.loading/page (hyperfiddle.runtime/domain (:peer ctx)))\n  ; this table is awful on ssr\n  [:div props\n   [hyperfiddle.ui/result val ctx {}]]\n  )"
   :fiddle/type :query}
  {:db/doc "Databases, DNS, API keys, etc"
@@ -195,7 +195,7 @@
   :fiddle/cljs-ns "(def show-all (reagent.core/atom false))\n(def needle (reagent.core/atom \"\"))\n(def regex? (reagent.core/atom false))\n\n(defn narrow-list [xs]\n  (->> xs\n    #_((if @user/show-all identity (partial filter #(-> % :fiddle/ident namespace nil?))))\n    (filter (fn [[fiddle _]]\n              (let [s (str (:fiddle/ident fiddle))]\n                (if @user/regex?\n                  (re-seq re s)\n                  (cuerdas.core/includes? s @user/needle)))))))\n\n(defn sort-by-fiddle-ident [xxs]\n  (->> xxs\n    (sort (fn [[a] [b]]\n            (compare (clojure.string/replace (str (:fiddle/ident a)) #\"/\" \".\")\n                     (clojure.string/replace (str (:fiddle/ident b)) #\"/\" \".\"))))))\n\n(defn links-list [ctx xs]\n  [:table.table-hover\n   [:tbody\n    (->> xs\n      (map (fn [[e :as row]]\n             (let [k (hypercrud.browser.context/row-key ctx row)\n                   ctx (hypercrud.browser.context/row ctx k)]\n               [:tr {:key k}\n                [:td [hyperfiddle.ui/value [0 :hyperfiddle/starred] ctx]]\n                (let [route [:hyperfiddle.ide/edit [(:fiddle/ident e)]]]\n                  [:td [hyperfiddle.ui/anchor ctx {:route route} (str (:fiddle/ident e))]])])))\n      (doall))]])\n\n(defn search-ui []\n  [:div.form-group {:class (when (and @user/regex? err) \"has-error\")}\n   #_[:label.col-sm-2.control-label {:for \"hyperfiddle/entry-point-needle\"} \"Filter\"]\n   #_[:span.col-sm-3 [contrib.ui/easy-checkbox-boolean \"Regex? \" user/regex?]]\n   #_[contrib.ui/easy-checkbox-boolean \"Show all fiddles? \" user/show-all]\n   [:input.col-sm-10.form-control \n    {:type \"text\"\n     :on-change #(reset! user/needle (.. % -target -value))\n     :placeholder \":fiddle/ident filter\"\n     #_#_:auto-focus true  ; page scroll pos gets lost, otherwise this is great\n     :id \"hyperfiddle/entry-point-needle\"\n     :style {:display \"inline-block\"} ; bootstrap styles are half imported, wonky hacks\n     :auto-complete \"off\"}]\n   (when (and @user/regex? err) [:span (ex-message err)])])"
   :fiddle/css ".-hyperfiddle-ide-entry-point-fiddles table {\n  width: 100%;\n}\n.-hyperfiddle-ide-entry-point-fiddles tr > td:first-child {\n  width: 1.5em;\n}"
   :fiddle/ident :hyperfiddle.ide/entry-point-fiddles
-  :fiddle/query "[:find \n (pull ?e [:hyperfiddle/starred \n           :fiddle/ident \n           :db/id])\n (max ?tx)\n :where \n [?e :fiddle/ident]\n (or-join [?e]\n          (and \n            [(ground hyperfiddle.io.bindings/*subject*) ?user-id]\n            [?e :hyperfiddle/owners ?user-id])\n          [(missing? $ ?e :hyperfiddle/owners)])\n [?e _ _ ?tx]]"
+  :fiddle/query "[:find \n (pull ?e [:hyperfiddle/starred \n           :fiddle/ident \n           :db/id])\n (max ?tx)\n :where \n [?e :fiddle/ident]\n (or-join [?e]\n          ; todo *subject* unsupported on peer\n          #_(and \n            [(ground hyperfiddle.io.bindings/*subject*) ?user-id]\n            [?e :hyperfiddle/owners ?user-id])\n          [(missing? $ ?e :hyperfiddle/owners)])\n [?e _ _ ?tx]]"
   :fiddle/renderer "(if (= \"nodejs\" *target*)\n  (hyperfiddle.ui.loading/loading-page)\n(let [[err re] (try [nil (re-pattern @user/needle)] (catch :default e [e #\"\"]))\n      [as _] ((juxt filter remove) (comp :hyperfiddle/starred first) val)]\n  [:div.container-fluid props\n   (when (empty? @user/needle)\n     [:<>\n      [:p \"My starred fiddles\"]\n      [user/links-list ctx as]\n      [:p \"My recent fiddles\"]\n      [user/links-list ctx (->> val (sort-by second) reverse (take 5))]])\n   [:p \"All my fiddles\"]\n   [user/search-ui]\n   [user/links-list ctx \n    (user/sort-by-fiddle-ident\n     (user/narrow-list val))]])\n)"
   :fiddle/type :query}
  {:db/id "19"
@@ -218,13 +218,15 @@
   :fiddle/renderer "[:<>\n [hyperfiddle.ui/ui-from-link\n  (hyperfiddle.data/select ctx :hyperfiddle/topnav) ctx {}] \n\n [:div.container-fluid.hyperfiddle-ide-env-content\n  (if (= \"nodejs\" *target*)\n    (hyperfiddle.ui.loading/page (hyperfiddle.runtime/domain (:peer ctx)))\n    ; this content chunk takes too long to ssr\n    [:<>\n     [:h3 \"Environment\"]\n     (if (-> (hyperfiddle.runtime/domain (:peer ctx))\n           (hyperfiddle.domain/database \"$domains\"))\n       ; $domains exists only with directory service\n       [hyperfiddle.ui/link :hyperfiddle.ide/domain ctx {}]\n       (-> (hyperfiddle.runtime/domain (:peer ctx))\n         :hyperfiddle.ide.domain/user-domain+\n         (cats.monad.either/branch\n          (fn [e] [:pre (js/pprint-str e)])\n          (fn [domain]\n            (->> (for [[label f] [#_:domain/ident\n                                  #_:hyperfiddle/owners\n                                  [\"databases\" hyperfiddle.domain/databases]\n                                  [\"fiddle-dbname\" hyperfiddle.domain/fiddle-dbname]\n                                  #_:domain/aliases\n                                  #_:domain/disable-javascript\n                                  #_:domain/home-route\n                                  [\"environment\" hyperfiddle.domain/environment]]]\n                   [:<> [:dt label] [:dd (contrib.pprint/pprint-str (f domain))]])\n              (into [:dl]))))))\n     [:h5 \"Project\"]\n     [hyperfiddle.ui/link :hyperfiddle.ide/project ctx {}]\n     (when (exists? js/show_renderers)\n       [:<>\n        [:h5 \"Attribute renderers\"]\n        [hyperfiddle.ui/link :hyperfiddle.ide/attribute-renderers ctx {}]])\n     ])\n  ]\n\n [hyperfiddle.ide/ide-stage ctx]]"}
  {:db/id "12"
   :fiddle/ident :hyperfiddle.ide/fiddle-index
-  :fiddle/query "[:in $src\n :find \n (pull $src ?e [:hyperfiddle/starred \n                :fiddle/ident \n                :db/id])\n (max ?tx)\n :where \n [$src ?e :fiddle/ident]\n [$src ?e _ _ ?tx]]"
+  :fiddle/markdown "### Recently modified fiddles"
+  :fiddle/query "[:find \n (pull ?e [:hyperfiddle/starred \n           :fiddle/ident])\n (max ?tx)\n ?entrypoint\n :where\n [(ground true) ?entrypoint]\n [?e :fiddle/ident]\n [?e _ _ ?tx]]"
+  :fiddle/renderer "(let [{:keys [:hypercrud.browser/fiddle]} ctx]\n  [:div props\n   [hyperfiddle.ui/markdown (:fiddle/markdown @fiddle) ctx]\n   #_[hyperfiddle.ui/result val ctx {}]\n   [js/user.domain.fiddle-list ctx]])"
   :fiddle/type :query}
  {:db/id "11"
   :fiddle/ident :hyperfiddle.ide/fiddle-options
   :fiddle/links [#:link{:class [:hf/remove]
                         :path ":hyperfiddle.ide/fiddle-options"}]
-  :fiddle/query "[:find [(pull ?link [:db/id :fiddle/ident]) ...]\n #_(pull ?link [:db/id :fiddle/ident])\n :where \n (or [?link :fiddle/ident] \n     [?link :fiddle/type])]"
+  :fiddle/query "[:find (pull ?link [:db/id :fiddle/ident])\n :where \n (or [?link :fiddle/ident] \n     [?link :fiddle/type])]"
   :fiddle/type :query}
  {:db/id "10"
   :fiddle/cljs-ns "(def needle (reagent.core/atom \"\"))\n\n(defn filter-controls [needle is-regex]\n  [:div.form-group {:class (when (and @is-regex err) \"has-error\")}\n   [:input.form-control\n    {:style {:display \"inline-block\"}                       ; bootstrap styles are half imported, wonky hacks\n     :type \"text\"\n     :on-change #(reset! needle (.. % -target -value))\n     :auto-complete \"off\"\n     #_#_:auto-focus true                                   ; page sroll pos gets lost, otherwise this is great\n     :placeholder \"filter\"}]\n   #_[:span.col-sm-3 [contrib.ui/easy-checkbox-boolean \"regex \" is-regex]]\n   #_(when (and @is-regex err) [:span (ex-message err)])])"
@@ -234,15 +236,10 @@
                         :fiddle #:db{:id "23"}
                         :path ":hyperfiddle.ide/home"}
                  #:link{:class [:hf/iframe]
-                        :fiddle #:db{:id "13"}
-                        :path ":hyperfiddle.ide/home"}
-                 #:link{:class [:hf/iframe]
-                        :fiddle #:db{:id "28"}
-                        :path ":hyperfiddle.ide/home"}
-                 #:link{:fiddle #:db{:id "12"}
+                        :fiddle #:db{:id "12"}
                         :path ":hyperfiddle.ide/home"}]
   :fiddle/markdown "# :hyperfiddle.ide/home"
-  :fiddle/renderer "[:<>\n [hyperfiddle.ui/link :hyperfiddle/topnav ctx] \n [:main.container-fluid props\n  [hyperfiddle.ui/markdown \n   (-> ctx :hypercrud.browser/fiddle deref :fiddle/markdown) ctx]\n  [user.domain/filter-controls user/needle]\n  (let [ctx (assoc ctx :hyperfiddle.ide.home/needle user/needle)]\n    [:div.row\n     [:div.col-sm-6\n      [hyperfiddle.ui/link :dustingetz/fiddle-index-recent ctx]]\n     [:div.col-sm-6\n      [hyperfiddle.ui/link :dustingetz/fiddle-index-owned ctx]]])]\n [hyperfiddle.ide/ide-stage ctx]]\n"}
+  :fiddle/renderer "[:<>\n [hyperfiddle.ui/link :hyperfiddle/topnav ctx] \n [:main.container-fluid props\n  [hyperfiddle.ui/markdown \n   (-> ctx :hypercrud.browser/fiddle deref :fiddle/markdown) ctx]\n  [user.domain/filter-controls user/needle]\n  (let [ctx (assoc ctx :hyperfiddle.ide.home/needle user/needle)]\n    [:div.row\n     [:div.col-sm-12\n      [hyperfiddle.ui/link :hyperfiddle.ide/fiddle-index ctx]]\n     #_[:div.col-sm-6\n      [hyperfiddle.ui/link :dustingetz/fiddle-index-recent ctx]]\n     #_[:div.col-sm-6\n      [hyperfiddle.ui/link :dustingetz/fiddle-index-owned ctx]]])]\n [hyperfiddle.ide/ide-stage ctx]]\n"}
  {:db/id "34"
   :fiddle/css ".-hyperfiddle-ide-new-fiddle > .field { display: flex; }\n.-hyperfiddle-ide-new-fiddle div.field > :first-child { \n  flex: 0 1 7em !important; display: inline; padding-right: 1em; text-align: right; }\n.-hyperfiddle-ide-new-fiddle div.field > :nth-child(2) { flex: 1 1; }"
   :fiddle/ident :hyperfiddle.ide/new-fiddle
