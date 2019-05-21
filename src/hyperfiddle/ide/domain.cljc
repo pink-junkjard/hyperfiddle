@@ -2,13 +2,14 @@
   (:require
     [cats.core :as cats]
     [cats.monad.either :as either]
+    [clojure.spec.alpha :as s]
     [cognitect.transit :as t]
     [contrib.uri :refer [is-uri?]]
     [hypercrud.browser.base :as base]
     [hypercrud.transit :as transit]
     [hyperfiddle.database.color :as color]
     [hyperfiddle.domain :as domain]
-    [hyperfiddle.domains.ednish :refer [#?(:cljs EdnishDomain)]]
+    [hyperfiddle.domains.ednish :as ednish-domain :refer [#?(:cljs EdnishDomain)]]
     [hyperfiddle.ide.system-fiddle :as ide-system-fiddle]
     [hyperfiddle.io.routes :as routes]
     [hyperfiddle.route :as route]
@@ -117,69 +118,61 @@
       with-serializer))
 
 (defn build
-  ([user-domain $src-uri-or-db-name]
-    (build user-domain $src-uri-or-db-name {}))
-  ([user-domain $src-uri-or-db-name ide-environment]
-   {:pre [(instance? EdnishDomain user-domain)]}
-   (build
-     (domain/basis user-domain)
-     (domain/databases user-domain)
-     (domain/fiddle-dbname user-domain)
-     (-> user-domain map->IdeEdnishDomain either/right)
-     {"$src" (if (is-uri? $src-uri-or-db-name)
-               {:database/uri $src-uri-or-db-name}
-               {:database/db-name $src-uri-or-db-name})}
-     "$src"
-     :ide-environment ide-environment))
-  ([user-domain $src-uri-or-db-name $users-uri-or-db-name ide-environment]
-   {:pre [(instance? EdnishDomain user-domain) $users-uri-or-db-name]}
-   (build
-     (domain/basis user-domain)
-     (domain/databases user-domain)
-     (domain/fiddle-dbname user-domain)
-     (-> user-domain map->IdeEdnishDomain either/right)
-     {"$src" (if (is-uri? $src-uri-or-db-name)
-               {:database/uri $src-uri-or-db-name}
-               {:database/db-name $src-uri-or-db-name})
-      "$users" (if (is-uri? $users-uri-or-db-name)
-                 {:database/uri $users-uri-or-db-name}
-                 {:database/db-name $users-uri-or-db-name})}
-     "$src"
-     :ide-environment ide-environment))
-  ([basis user-databases user-fiddle-dbname user-domain+
-    ide-databases ide-fiddle-dbname & {:keys [ide-environment ide-home-route]
-                                       :or {ide-environment {}
-                                            ide-home-route [:hyperfiddle.ide/home]}}]
-   (-> {:basis basis
-        :fiddle-dbname ide-fiddle-dbname
-        :databases (let [user-dbs (->> (dissoc user-databases user-fiddle-dbname)
-                                       (map (fn [[dbname db]]
-                                              [(str user-dbname-prefix dbname)
-                                               (assoc db
-                                                 :database/auto-transact false
-                                                 :database/color (color/color-for-name dbname))]))
-                                       (into {}))
-                         ide-dbs (->> ide-databases
+  [basis
+   user-databases user-fiddle-dbname user-domain+
+   ide-databases ide-fiddle-dbname
+   & {:keys [ide-environment ide-home-route]
+      :or {ide-environment {}
+           ide-home-route [:hyperfiddle.ide/home]}}]
+  (-> {:basis basis
+       :fiddle-dbname ide-fiddle-dbname
+       :databases (let [user-dbs (->> (dissoc user-databases user-fiddle-dbname)
                                       (map (fn [[dbname db]]
-                                             [dbname
+                                             [(str user-dbname-prefix dbname)
                                               (assoc db
-                                                :database/auto-transact true
-                                                :database/color "#777")]))
-                                      (into {}))]
-                     (-> (into user-dbs ide-dbs)
-                         (assoc "$" (assoc (get user-databases user-fiddle-dbname)
-                                      :database/auto-transact false
-                                      :database/color (color/color-for-name user-fiddle-dbname)))))
-        :environment ide-environment
-        :home-route ide-home-route
-        ::user-dbname->ide (->> user-databases
-                                (map (fn [[dbname db]]
-                                       [dbname
-                                        (if (= user-fiddle-dbname dbname)
-                                          "$"
-                                          (str user-dbname-prefix dbname))]))
-                                (into {}))
-        ::user-domain+ user-domain+
-        :html-root-id "ide-root"}
-       map->IdeDomain
-       with-serializer)))
+                                                :database/auto-transact false
+                                                :database/color (color/color-for-name dbname))]))
+                                      (into {}))
+                        ide-dbs (->> ide-databases
+                                     (map (fn [[dbname db]]
+                                            [dbname
+                                             (assoc db
+                                               :database/auto-transact true
+                                               :database/color "#777")]))
+                                     (into {}))]
+                    (-> (into user-dbs ide-dbs)
+                        (assoc "$" (assoc (get user-databases user-fiddle-dbname)
+                                     :database/auto-transact false
+                                     :database/color (color/color-for-name user-fiddle-dbname)))))
+       :environment ide-environment
+       :home-route ide-home-route
+       ::user-dbname->ide (->> user-databases
+                               (map (fn [[dbname db]]
+                                      [dbname
+                                       (if (= user-fiddle-dbname dbname)
+                                         "$"
+                                         (str user-dbname-prefix dbname))]))
+                               (into {}))
+       ::user-domain+ user-domain+
+       :html-root-id "ide-root"}
+      map->IdeDomain
+      with-serializer))
+
+(defn build-from-user-domain
+  ([user-domain $src-uri-or-db-name]
+   (build-from-user-domain user-domain $src-uri-or-db-name {}))
+  ([user-domain $src-uri-or-db-name ide-environment & {:as ide-databases}]
+   {:pre [(instance? EdnishDomain user-domain)
+          (s/valid? ednish-domain/spec user-domain)
+          (s/valid? (s/nilable :hyperfiddle.domain/databases) ide-databases)]}
+   (build
+     (domain/basis user-domain)
+     (domain/databases user-domain)
+     (domain/fiddle-dbname user-domain)
+     (-> user-domain map->IdeEdnishDomain either/right)
+     (into {"$src" (if (is-uri? $src-uri-or-db-name)
+                     {:database/uri $src-uri-or-db-name}
+                     {:database/db-name $src-uri-or-db-name})}
+           ide-databases)
+     "$src"
+     :ide-environment ide-environment)))
