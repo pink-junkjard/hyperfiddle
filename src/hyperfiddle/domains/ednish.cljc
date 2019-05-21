@@ -9,11 +9,14 @@
 
 (s/def ::home-route (s/spec :hyperfiddle/route))
 
-(def spec (s/keys :req-un [::domain/basis
-                           ::domain/fiddle-dbname
-                           ::domain/databases
-                           ::domain/environment
-                           ::home-route]))
+(def spec
+  (s/and
+    (s/keys :req-un [::domain/basis
+                     ::domain/fiddle-dbname
+                     ::domain/databases
+                     ::domain/environment
+                     ::home-route])
+    #(contains? (:databases %) (:fiddle-dbname %))))
 
 (defrecord EdnishDomain [basis fiddle-dbname databases environment home-route]
   domain/Domain
