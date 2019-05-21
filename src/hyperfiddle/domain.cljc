@@ -2,8 +2,24 @@
   (:require
     [bidi.bidi :as bidi]
     [clojure.set :as set]
-    [hyperfiddle.database.color :as color]))
+    [clojure.spec.alpha :as s]
+    [clojure.string :as string]
+    [contrib.uri :refer [is-uri?]]
+    [hyperfiddle.database.color :as color]
+    [hyperfiddle.route]))
 
+
+; todo these db specs belong somewhere else
+(def dbname (s/and string? #(string/starts-with? % "$")))
+(s/def :database/db-name string?)
+(s/def :database/uri is-uri?)
+(def database (s/keys :opt [:database/db-name :database/uri]))
+
+(s/def ::basis some?)
+(s/def ::type-name some?)
+(s/def ::fiddle-dbname dbname)
+(s/def ::databases (s/map-of dbname database))
+(s/def ::environment map?)
 
 (defprotocol Domain
   (basis [domain])

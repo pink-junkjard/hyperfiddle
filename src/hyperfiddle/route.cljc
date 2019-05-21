@@ -13,7 +13,6 @@
     [contrib.try$ :refer [try-either]]
     [cuerdas.core :as str]
     [hypercrud.types.ThinEntity :refer [->ThinEntity #?(:cljs ThinEntity)]]
-    [hyperfiddle.domain]
     [hyperfiddle.fiddle]                                    ; for ::fiddle spec
     )
   #?(:clj

@@ -1,10 +1,19 @@
 (ns hyperfiddle.domains.ednish
   (:require
+    [clojure.spec.alpha :as s]
     [hyperfiddle.domain :as domain]
     [hyperfiddle.io.routes :as routes]
     [hyperfiddle.route :as route]
     [hyperfiddle.system-fiddle :as system-fiddle]))
 
+
+(s/def ::home-route (s/spec :hyperfiddle/route))
+
+(def spec (s/keys :req-un [::domain/basis
+                           ::domain/fiddle-dbname
+                           ::domain/databases
+                           ::domain/environment
+                           ::home-route]))
 
 (defrecord EdnishDomain [basis fiddle-dbname databases environment home-route]
   domain/Domain
