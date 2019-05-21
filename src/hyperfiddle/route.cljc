@@ -36,8 +36,8 @@
   (s/or
     :a (s/tuple ::fiddle)
     :b (s/tuple ::fiddle ::datomic-args)
-    :c (s/tuple ::fiddle (s/or :nil nil? :args ::datomic-args) ::service-args)
-    :d (s/tuple ::fiddle (s/or :nil nil? :args ::datomic-args) (s/or :nil nil? :args ::service-args) ::fragment)))
+    :c (s/tuple ::fiddle (s/nilable ::datomic-args) ::service-args)
+    :d (s/tuple ::fiddle (s/nilable ::datomic-args) (s/nilable ::service-args) ::fragment)))
 
 (defn validate-route+ [route]
   (if (s/valid? :hyperfiddle/route route)
