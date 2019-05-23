@@ -25,7 +25,6 @@
        (hypercrud.types.Err Err)
        (hypercrud.types.QueryRequest QueryRequest)
        (hypercrud.types.ThinEntity ThinEntity)
-       (hyperfiddle.domain Domain)
        (java.io ByteArrayInputStream ByteArrayOutputStream))))
 
 
