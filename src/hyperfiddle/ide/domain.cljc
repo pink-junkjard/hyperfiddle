@@ -1,16 +1,15 @@
 (ns hyperfiddle.ide.domain
   (:require
-    [cats.core :as cats]
     [cats.monad.either :as either]
     [clojure.spec.alpha :as s]
-    [cognitect.transit :as t]
     [contrib.uri :refer [is-uri?]]
     [hypercrud.browser.base :as base]
-    [hypercrud.transit :as transit]
     [hyperfiddle.database.color :as color]
     [hyperfiddle.domain :as domain]
     [hyperfiddle.domains.ednish :as ednish-domain :refer [#?(:cljs EdnishDomain)]]
+    [hyperfiddle.domains.transit :as domains-transit]
     [hyperfiddle.ide.system-fiddle :as ide-system-fiddle]
+    #?(:clj [hyperfiddle.io.datomic :as d])
     [hyperfiddle.io.routes :as routes]
     [hyperfiddle.route :as route]
     [hyperfiddle.system-fiddle :as system-fiddle])
@@ -52,7 +51,7 @@
         true {:get :ssr
               true :405}}])
 
-(defrecord IdeDomain [basis fiddle-dbname databases environment home-route build
+(defrecord IdeDomain [basis fiddle-dbname databases environment home-route build ?datomic-client
                       html-root-id]
   domain/Domain
   (basis [domain] basis)
@@ -86,10 +85,17 @@
     (if (and (keyword? fiddle-ident) (= "hyperfiddle.ide.schema" (namespace fiddle-ident)))
       (ide-system-fiddle/hydrate fiddle-ident (::user-dbname->ide domain))
       (system-fiddle/hydrate fiddle-ident)))
+  #?(:clj (connect [domain dbname] (d/dyna-connect (domain/database domain dbname) ?datomic-client)))
   )
 
+(domains-transit/register-handlers
+  IdeDomain
+  (str 'hyperfiddle.ide.domain/IdeDomain)
+  #(-> (into {} %) (dissoc :?datomic-client))
+  map->IdeDomain)
+
 ; shitty code duplication because we cant pass our api-routes data structure as props (no regex equality)
-(defrecord IdeEdnishDomain [basis fiddle-dbname databases environment home-route]
+(defrecord IdeEdnishDomain [basis fiddle-dbname databases environment home-route ?datomic-client]
   domain/Domain
   (basis [domain] basis)
   (type-name [domain] (str *ns* "/" "IdeEdnishDomain"))
@@ -101,24 +107,17 @@
   (api-routes [domain] nested-user-routes)
   (system-fiddle? [domain fiddle-ident] (system-fiddle/system-fiddle? fiddle-ident))
   (hydrate-system-fiddle [domain fiddle-ident] (system-fiddle/hydrate fiddle-ident))
+  #?(:clj (connect [domain dbname] (d/dyna-connect (domain/database domain dbname) ?datomic-client)))
   )
 
-(defn with-serializer [ide-domain]
-  (->> (let [rep-fn #(-> (into {} %) (dissoc :hack-transit-serializer))]
-         (fn [domain]
-           (-> domain
-               (update ::user-domain+ #(cats/fmap (partial into {}) %))
-               (transit/encode :opts {:handlers (assoc transit/write-handlers
-                                                  IdeDomain (t/write-handler (constantly "IdeDomain") rep-fn))}))))
-       (assoc ide-domain :hack-transit-serializer)))
-
-(defn from-rep [rep]
-  (-> (map->IdeDomain rep)
-      (update ::user-domain+ #(cats/fmap map->IdeEdnishDomain %))
-      with-serializer))
+(domains-transit/register-handlers
+  IdeEdnishDomain
+  (str 'hyperfiddle.ide.domain/IdeEdnishDomain)
+  #(-> (into {} %) (dissoc :?datomic-client))
+  map->IdeEdnishDomain)
 
 (defn build
-  [basis
+  [?datomic-client basis
    user-databases user-fiddle-dbname user-domain+
    ide-databases ide-fiddle-dbname
    & {:keys [ide-environment ide-home-route]
@@ -154,9 +153,9 @@
                                          (str user-dbname-prefix dbname))]))
                                (into {}))
        ::user-domain+ user-domain+
+       :?datomic-client ?datomic-client
        :html-root-id "ide-root"}
-      map->IdeDomain
-      with-serializer))
+      map->IdeDomain))
 
 (defn build-from-user-domain
   ([user-domain $src-uri-or-db-name]
@@ -166,6 +165,7 @@
           (s/valid? ednish-domain/spec user-domain)
           (s/valid? (s/nilable :hyperfiddle.domain/databases) ide-databases)]}
    (build
+     (:?datomic-client user-domain)
      (domain/basis user-domain)
      (domain/databases user-domain)
      (domain/fiddle-dbname user-domain)
