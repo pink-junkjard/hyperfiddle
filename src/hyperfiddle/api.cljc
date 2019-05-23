@@ -9,6 +9,7 @@
   (a [ctx])
   (attr [ctx])
   (data [ctx])
+  (eav [ctx])
   (element [ctx])
   (element-type [ctx])
   (fiddle [ctx])
@@ -16,6 +17,7 @@
   (link-tx [ctx])
   (qfind-level? [ctx])
   (tempid! [ctx] [ctx dbname])
+  (v [ctx])
   )
 
 (declare render-dispatch)

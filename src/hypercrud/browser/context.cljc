@@ -1113,6 +1113,8 @@ a speculative db/id."
     (fiddle ctx))
   (a [ctx]
     (a ctx))
+  (eav [ctx]
+    (eav ctx))
   (attr [ctx]
     (attr ctx))
   (element [ctx]
@@ -1129,4 +1131,6 @@ a speculative db/id."
     (qfind-level? ctx))
   (link-tx [ctx]
     (link-tx ctx))
+  (v [ctx]
+    (v ctx))
   )
