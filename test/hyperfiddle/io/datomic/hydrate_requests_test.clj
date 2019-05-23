@@ -17,7 +17,7 @@
 
 (def test-domain
   (reify domain/Domain
-    (connect [domain dbname] (-> (domain/database domain dbname) peer/connect :database/uri))
+    (connect [domain dbname] (-> (domain/database domain dbname) :database/uri peer/connect))
     (databases [domain]
       {test-dbname {:database/uri (->URI test-uri)}})))
 

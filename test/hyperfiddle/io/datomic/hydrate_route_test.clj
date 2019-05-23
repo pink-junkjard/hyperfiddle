@@ -22,7 +22,7 @@
 
 (def test-domain
   (reify domain/Domain
-    (connect [domain dbname] (-> (domain/database domain dbname) peer/connect :database/uri))
+    (connect [domain dbname] (-> (domain/database domain dbname) :database/uri peer/connect))
     (fiddle-dbname [domain] "$src")
     (databases [domain]
       {"$" {:database/uri (->URI (str "datomic:mem://" 'hyperfiddle.io.datomic.hydrate-route-test "$"))}
