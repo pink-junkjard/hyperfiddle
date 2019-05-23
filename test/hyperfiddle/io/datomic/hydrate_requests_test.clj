@@ -17,6 +17,7 @@
 
 (def test-domain
   (reify domain/Domain
+    (connect [domain dbname] (-> (domain/database domain dbname) peer/connect :database/uri))
     (databases [domain]
       {test-dbname {:database/uri (->URI test-uri)}})))
 
@@ -34,7 +35,7 @@
                       (d/delete-database test-uri)))
 
 (defn build-get-secure-db-with [& args]
-  (let [get-secure-db-with+ (apply datomic-hydrate-requests/build-get-secure-db-with+ peer/impl test-domain args)]
+  (let [get-secure-db-with+ (apply datomic-hydrate-requests/build-get-secure-db-with+ test-domain args)]
     (fn [& args] (exception/extract (apply get-secure-db-with+ args)))))
 
 (deftest schema-alteration []

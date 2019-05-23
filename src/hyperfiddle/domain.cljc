@@ -10,15 +10,15 @@
 
 
 ; todo these db specs belong somewhere else
-(def dbname (s/and string? #(string/starts-with? % "$")))
+(def dbname-spec (s/and string? #(string/starts-with? % "$")))
 (s/def :database/db-name string?)
 (s/def :database/uri is-uri?)
-(def database (s/keys :opt [:database/db-name :database/uri]))
+(def database-spec (s/keys :opt [:database/db-name :database/uri]))
 
 (s/def ::basis some?)
 (s/def ::type-name some?)
-(s/def ::fiddle-dbname dbname)
-(s/def ::databases (s/map-of dbname database))
+(s/def ::fiddle-dbname dbname-spec)
+(s/def ::databases (s/map-of dbname-spec database-spec))
 (s/def ::environment map?)
 
 (defprotocol Domain
@@ -33,6 +33,7 @@
 
   (system-fiddle? [domain fiddle-ident])
   (hydrate-system-fiddle [domain fiddle-ident])
+  #?(:clj (connect [domain dbname]))
   )
 
 (defn database [domain dbname]

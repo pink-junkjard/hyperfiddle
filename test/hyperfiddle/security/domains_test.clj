@@ -5,7 +5,6 @@
     [hyperfiddle.directory.fixtures :as fixtures]           ; todo these tests can run without a directory service
     [hyperfiddle.directory.provisioning :as dp]
     [hyperfiddle.domain :as domain]
-    [hyperfiddle.io.datomic.peer :as peer]                  ; todo run tests for client as well
     [hyperfiddle.io.datomic.transact :as transact]
     [hyperfiddle.security :as security]
     [hyperfiddle.security.domains])
@@ -60,7 +59,7 @@
     (transact/process-tx hf-db subject tx)))
 
 (defn transact! [domains-uri subject tx-groups]
-  (transact/transact! peer/impl (dp/build-util-domain domains-uri) subject tx-groups))
+  (transact/transact! (dp/build-util-domain domains-uri) subject tx-groups))
 
 (deftest test-schema-changes []
   (testing "installing new attribute"

@@ -2,6 +2,8 @@
   (:require
     [clojure.spec.alpha :as s]
     [hyperfiddle.domain :as domain]
+    [hyperfiddle.domains.transit :as domains-transit]
+    #?(:clj [hyperfiddle.io.datomic :as d])
     [hyperfiddle.io.routes :as routes]
     [hyperfiddle.route :as route]
     [hyperfiddle.system-fiddle :as system-fiddle]))
@@ -18,7 +20,7 @@
                      ::home-route])
     #(contains? (:databases %) (:fiddle-dbname %))))
 
-(defrecord EdnishDomain [basis fiddle-dbname databases environment home-route]
+(defrecord EdnishDomain [basis fiddle-dbname databases environment home-route ?datomic-client]
   domain/Domain
   (basis [domain] basis)
   (type-name [domain] (str *ns* "/" "EdnishDomain"))
@@ -30,4 +32,11 @@
   (api-routes [domain] routes/routes)
   (system-fiddle? [domain fiddle-ident] (system-fiddle/system-fiddle? fiddle-ident))
   (hydrate-system-fiddle [domain fiddle-ident] (system-fiddle/hydrate fiddle-ident))
+  #?(:clj (connect [domain dbname] (d/dyna-connect (domain/database domain dbname) ?datomic-client)))
   )
+
+(domains-transit/register-handlers
+  EdnishDomain
+  (str 'hyperfiddle.domains.ednish/EdnishDomain)
+  #(-> (into {} %) (dissoc :?datomic-client))
+  map->EdnishDomain)

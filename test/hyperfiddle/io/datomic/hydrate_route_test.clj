@@ -22,6 +22,7 @@
 
 (def test-domain
   (reify domain/Domain
+    (connect [domain dbname] (-> (domain/database domain dbname) peer/connect :database/uri))
     (fiddle-dbname [domain] "$src")
     (databases [domain]
       {"$" {:database/uri (->URI (str "datomic:mem://" 'hyperfiddle.io.datomic.hydrate-route-test "$"))}
@@ -50,25 +51,25 @@
 (deftest duplicate-datoms []
   (testing "non source db"
     (let [response (timbre/with-config {:enabled? false}
-                     (let [local-basis (datomic-sync/sync peer/impl test-domain ["$" "$src"])
+                     (let [local-basis (datomic-sync/sync test-domain ["$" "$src"])
                            route [:persons]
                            branch foundation/root-branch
                            stage {foundation/root-branch {"$" [[:db/add [:person/name "Bob"] :person/age 41]
                                                                [:db/add [:person/name "Bob"] :person/age 42]]}}
                            subject nil]
-                       @(hydrate-route/hydrate-route peer/impl test-domain local-basis route branch stage subject)))]
+                       @(hydrate-route/hydrate-route test-domain local-basis route branch stage subject)))]
       (is (-> response :schemas (get "$") exception/failure?))
       (is (-> response :schemas (get "$src") exception/success?))))
 
   (testing "source db"
     (let [response+ (timbre/with-config {:enabled? false}
-                      (let [local-basis (datomic-sync/sync peer/impl test-domain ["$" "$src"])
+                      (let [local-basis (datomic-sync/sync test-domain ["$" "$src"])
                             route [:persons]
                             branch foundation/root-branch
                             stage {foundation/root-branch {"$src" [[:db/add [:fiddle/ident :persons] :db/doc "foo"]
                                                                    [:db/add [:fiddle/ident :persons] :db/doc "bar"]]}}
                             subject nil]
-                        @(p/branch (hydrate-route/hydrate-route peer/impl test-domain local-basis route branch stage subject)
+                        @(p/branch (hydrate-route/hydrate-route test-domain local-basis route branch stage subject)
                                    exception/success
                                    exception/failure)))]
       (is (thrown-with-msg? ExceptionInfo (re-pattern (Pattern/quote ":db.error/datoms-conflict")) @response+)))))

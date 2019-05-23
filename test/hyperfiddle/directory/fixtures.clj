@@ -2,7 +2,6 @@
   (:require
     [contrib.uri :refer [->URI]]
     [hyperfiddle.directory.provisioning :as dp]
-    [hyperfiddle.io.datomic.peer :as peer]                  ; todo run tests for client as well
     [hyperfiddle.io.datomic.transact :as transact]))
 
 
@@ -26,9 +25,9 @@
                                                     :database/write-security security}
                                              (:client custom-security) (assoc :database.custom-security/client (:client custom-security))
                                              (:server custom-security) (assoc :database.custom-security/server (:server custom-security)))]}]
-          (transact/transact! peer/impl domain subject tx-groups)))
+          (transact/transact! domain subject tx-groups)))
       (when schema
         (let [domain (dp/build-util-domain test-domains-uri)] ; rebuild because we just altered
-          (transact/transact! peer/impl domain subject {uri schema})))
+          (transact/transact! domain subject {uri schema})))
       (f)
       (finally (dp/deprovision! uri test-domains-uri subject)))))

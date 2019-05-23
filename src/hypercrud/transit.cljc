@@ -12,9 +12,7 @@
     [hypercrud.types.EntityRequest :refer [->EntityRequest #?(:cljs EntityRequest)]]
     [hypercrud.types.Err :refer [->Err #?(:cljs Err)]]
     [hypercrud.types.QueryRequest :refer [->QueryRequest #?(:cljs QueryRequest)]]
-    [hypercrud.types.ThinEntity :refer [->ThinEntity #?(:cljs ThinEntity)]]
-    [hyperfiddle.domains.bidi :refer [map->BidiDomain #?(:cljs BidiDomain)]]
-    [hyperfiddle.domains.ednish :refer [map->EdnishDomain #?(:cljs EdnishDomain)]])
+    [hypercrud.types.ThinEntity :refer [->ThinEntity #?(:cljs ThinEntity)]])
   #?(:clj
      (:import
        (cats.monad.either Left Right)
@@ -27,8 +25,7 @@
        (hypercrud.types.Err Err)
        (hypercrud.types.QueryRequest QueryRequest)
        (hypercrud.types.ThinEntity ThinEntity)
-       (hyperfiddle.domains.bidi BidiDomain)
-       (hyperfiddle.domains.ednish EdnishDomain)
+       (hyperfiddle.domain Domain)
        (java.io ByteArrayInputStream ByteArrayOutputStream))))
 
 
@@ -51,8 +48,6 @@
    "failure-v" (t/read-handler #(apply exception/failure %))
    "success-v" (t/read-handler #(apply exception/success %))
    "ex-info" (t/read-handler #(apply ex-info %))
-   "BidiDomain" (t/read-handler map->BidiDomain)
-   "EdnishDomain" (t/read-handler map->EdnishDomain)
    })
 
 (def write-handlers
@@ -69,8 +64,6 @@
    Failure (t/write-handler (constantly "failure-v") (fn [v] (vector (cats/extract v))))
    Success (t/write-handler (constantly "success-v") (fn [v] (vector (cats/extract v))))
    ExceptionInfo (t/write-handler (constantly "ex-info") (fn [ex] [(ex-message ex) (ex-data ex) (ex-cause ex)]))
-   BidiDomain (t/write-handler (constantly "BidiDomain") #(into {} %))
-   EdnishDomain (t/write-handler (constantly "EdnishDomain") #(into {} %))
    #?@(:cljs [URI (t/write-handler (constantly "r") (fn [v] (.-uri-str v)))])
    })
 

@@ -21,14 +21,15 @@
                       directory/database-pull)
                  (into {}))]
     (reify domain/Domain
+      (connect [domain dbname] (-> (domain/database domain dbname) peer/connect :database/uri))
       (databases [domain] dbs))))
 
 (defn provision! [uri owners domains-uri subject]
   {:pre [(is-uri? uri)]}
   (let [domain (build-util-domain domains-uri)]             ; todo domains domain?
-    (transact/transact! peer/impl domain subject {domains-uri [{:database/uri uri
-                                                                :database/write-security ::security/owner-only
-                                                                :hyperfiddle/owners owners}]}))
+    (transact/transact! domain subject {domains-uri [{:database/uri uri
+                                                      :database/write-security ::security/owner-only
+                                                      :hyperfiddle/owners owners}]}))
   (when-not (d/create-database (str uri))
     ; security on domains should prevent this from ever happening
     (throw (ex-info "Database already exists" {:uri uri}))))
@@ -55,7 +56,7 @@
   (if (d/delete-database (str uri))
     (let [tx [[:db/retractEntity [:database/uri uri]]]
           domain (build-util-domain domains-uri)]
-      (transact/transact! peer/impl domain subject {domains-uri tx}))
+      (transact/transact! domain subject {domains-uri tx}))
     (throw (ex-info "Database already deleted" {:uri uri}))))
 
 (defn deprovision-domains-db! [domains-uri]

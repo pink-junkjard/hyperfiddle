@@ -27,15 +27,14 @@
       (f hf-db subject tx))))
 
 
-(defn transact! [datomic domain subject tx-groups]
-  {:pre [(not (uri? domain))]}                              ; this interface changed
+(defn transact! [domain subject tx-groups]
   (let [tempid-lookups (->> tx-groups
                             (map (fn [[dbname tx]]
                                    [dbname (process-tx (domain/database domain dbname) subject tx)]))
                             (doall)                         ; allow any exceptions to fire before transacting anythng
                             (map (fn [[dbname dtx]]
-                                   (let [conn (->> (domain/database domain dbname) (d/connect datomic))
-                                         {:keys [tempids]} (d/transact datomic conn {:tx-data dtx})]
+                                   (let [conn (domain/connect domain dbname)
+                                         {:keys [tempids]} (d/transact conn {:tx-data dtx})]
                                      [dbname tempids])))
                             (into {}))]
     {:tempid->id tempid-lookups}))

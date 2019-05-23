@@ -6,10 +6,8 @@
     [taoensso.timbre :as timbre]))
 
 
-(defn sync [datomic domain dbnames]
+(defn sync [domain dbnames]
   (timbre/debug "syncing" (pr-str dbnames))
   (->> dbnames
-       (map (juxt identity #(->> (domain/database domain %)
-                                 (d/connect datomic)
-                                 (d/basis datomic))))
+       (map (juxt identity #(-> (domain/connect domain %) d/basis)))
        (into {})))
