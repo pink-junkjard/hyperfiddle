@@ -11,6 +11,7 @@
     [hyperfiddle.actions :as actions]
     [hypercrud.browser.context :refer [map->Context]]
     [hyperfiddle.domain :as domain]
+    [hyperfiddle.domains.transit :as domains-transit]
     [hyperfiddle.foundation :as foundation]
     [hyperfiddle.reducers :as reducers]
     [hyperfiddle.runtime :as runtime]
@@ -76,10 +77,7 @@
 
      (-> (runtime/domain rt) domain/environment :domain/disable-javascript not)
      (into [(inner-html :script {:id "params" :type "application/transit-json"} (hc-t/encode client-params))
-            (inner-html :script {:id "domain" :type "application/transit-json"}
-                        (let [domain (runtime/domain rt)
-                              f (or (:hack-transit-serializer domain) hc-t/encode)]
-                          (f domain)))
+            (inner-html :script {:id "domain" :type "application/transit-json"} (domains-transit/encode (runtime/domain rt)))
             (inner-html :script {:id "state" :type "application/transit-json"} (hc-t/encode @(runtime/state rt)))
             [:script {:id "preamble" :src (domain/api-path-for (runtime/domain rt) :static-resource :build build :resource-name "preamble.js")}]
             [:script {:id "main" :src (domain/api-path-for (runtime/domain rt) :static-resource :build build :resource-name "main.js")}]]))])

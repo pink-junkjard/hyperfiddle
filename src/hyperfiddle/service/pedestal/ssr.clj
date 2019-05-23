@@ -14,7 +14,7 @@
     [taoensso.timbre :as timbre]))
 
 
-(deftype IOImpl [datomic domain ?subject]
+(deftype IOImpl [domain ?subject]
   io/IO
   (global-basis [io]
     (global-basis/global-basis io domain))
@@ -23,18 +23,18 @@
     (p/resolved (local-basis/local-basis io global-basis route)))
 
   (hydrate-requests [io local-basis staged-branches requests]
-    (p/do* (hydrate-requests datomic domain local-basis requests staged-branches nil)))
+    (p/do* (hydrate-requests domain local-basis requests staged-branches nil)))
 
   (hydrate-route [io local-basis route branch-id stage]
-    (hydrate-route datomic domain local-basis route branch-id stage ?subject))
+    (hydrate-route domain local-basis route branch-id stage ?subject))
 
   (sync [io dbnames]
-    (p/do* (sync/sync datomic domain dbnames))))
+    (p/do* (sync/sync domain dbnames))))
 
 (defmethod handle-route :ssr [handler env context]
   (let [domain (get-in context [:request :domain])
         user-id (get-in context [:request :user-id])
-        io (->IOImpl (:datomic env) domain user-id)
+        io (->IOImpl domain user-id)
         path (get-in context [:request :path-info])
         channel (chan)]
     (-> (ssr/bootstrap-html-cmp env domain io path user-id)
