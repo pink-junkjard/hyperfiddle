@@ -113,10 +113,11 @@
 
                      (:link/fiddle link)                    ; If there is a fiddle-target, infer the expected :in shape
                      (case (get-in link [:link/fiddle :fiddle/type] ((:fiddle/type fiddle-defaults) (:link/fiddle link)))
-                       :query (infer-query-formula (get-in link [:link/fiddle :fiddle/query] ((:fiddle/query fiddle-defaults) (:link/fiddle link))))
+                       :query "identity" #_(infer-query-formula (get-in link [:link/fiddle :fiddle/query] ((:fiddle/query fiddle-defaults) (:link/fiddle link))))
                        :entity "identity"
 
                        ; this is the case where the v is inferred but we don't actually want it, like a toplevel iframe for a FindScalar.
+                       ; Update: can use :db/id for the dependent iframe, use :fiddleident for a standalone iframe ? or naked (no :link/attr)
                        :blank nil)
 
                      ; TODO: What if :txfn is combined with :target-fiddle :blank, or :target-fiddle :FindTuple?
