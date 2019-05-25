@@ -64,24 +64,23 @@
 (declare fiddle-api)
 (declare fiddle-xray)
 
-(defn entity-links-iframe [val ctx & [props]]
+(defn entity-links-iframe [ctx & [props]]
   ; Remove links that are also available at our ancestors.
   ; http://hyperfiddle.hyperfiddle.site/:hyperfiddle.ide!domain/~entity('$domains',(:domain!ident,'hyperfiddle'))
   ; http://tank.hyperfiddle.site/:tutorial.race!submission/~entity('$',(:dustingetz.reg!email,'bob@example.com'))
   ; http://tank.hyperfiddle.site/:dustingetz.seattle!communities/
+  ; http://tank.hyperfiddle.site/:seattle!neighborhoods/
   (if (or (= (context/depth ctx) 0)
           (and (> (context/depth ctx) 0)
                (let [[_ a _] (context/eav ctx)]
                  (not (contrib.datomic/ref-one? @(:hypercrud.browser/schema ctx) a)))))
     [:<>
-     ; keep flip flopping. is it here, or in dimension ??
-     (for [[k r-link] (hyperfiddle.data/spread-links-in-dimension ctx :hf/iframe)]
+     ; keep flip flopping. is it links-here, or in links-in-dimension ??
+     ; http://domains.hyperfiddle.site/:domains!edit/~entity('$domains',(:domain!ident,'dustingetzcom'))
+     ; http://tank.hyperfiddle.site/:demo.seattle!neighborhood/~entity('$',(:neighborhood!name,'Georgetown'))
+     (for [[k r-link] (hyperfiddle.data/spread-links-here ctx :hf/iframe)]
        ^{:key k}
        [ui-from-link r-link ctx props])]))
-
-(defn iframe-field-default [val ctx props]
-  (let [props (-> props (dissoc :class) (assoc :label-fn (r/constantly nil) #_[:div "nested pull iframes"]))]
-    [field [] ctx entity-links-iframe props]))
 
 (defn render-ref [ctx props]
   (let [children (context/children ctx)]
@@ -101,9 +100,10 @@
 
       (seq children)
       (let [ctx (dissoc ctx ::layout)]
-        [:div                                               ; wrapper div: https://github.com/hyperfiddle/hyperfiddle/issues/541
-         [pull (context/data ctx) ctx props]                               ; account for hf/new at parent ref e.g. :community/neighborhood
-         #_[iframe-field-default (context/data ctx) ctx props]])
+        [:<>
+         [:div                                              ; wrapper div: https://github.com/hyperfiddle/hyperfiddle/issues/541
+          [pull (context/data ctx) ctx props]]              ; account for hf/new at parent ref e.g. :community/neighborhood
+         [entity-links-iframe ctx props]])
 
       (context/attr? ctx :db.cardinality/one)
       [controls/ref (context/data ctx) ctx props]
@@ -502,11 +502,11 @@ nil. call site must wrap with a Reagent component"          ; is this just hyper
 (def ^:export fiddle (-build-fiddle))
 
 (defn ^:export fiddle-xray [val ctx & [props]]
-  [:div.container-fluid (select-keys props [:class :on-click])
-   [:h3 (pr-str @(:hypercrud.browser/route ctx))]
-   ;(for [ctx (hyperfiddle.api/spread-fiddle ctx)])
-   [result val ctx {}]
-   #_[iframe-field-default val ctx props]])
+  [:<>
+   [:div.container-fluid (select-keys props [:class :on-click])
+    [:h3 (pr-str @(:hypercrud.browser/route ctx))]
+    [result val ctx {}]]
+   [entity-links-iframe ctx props]])
 
 (letfn [(render-edn [data]
           (let [edn-str (pprint-str data 160)]

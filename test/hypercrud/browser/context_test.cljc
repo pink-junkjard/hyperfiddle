@@ -100,7 +100,7 @@
     (is (= @(r/fmap :fiddle/ident (:hypercrud.browser/fiddle ctx))
            :dustingetz/gender-shirtsize))
     (is (= @(:hypercrud.browser/eav ctx)
-           [nil :dustingetz/gender-shirtsize nil]))
+           [nil nil nil]))
     ; result-enclosure, schemas, qfind, link-index, validation
 
     (is (= @(:hypercrud.browser/result-enclosure ctx)
@@ -168,15 +168,15 @@
              (context/depth ctx))
            '(1 1))))
 
-  (testing "fiddle level a is fiddle-ident"
+  (testing "fiddle level a is nil (no longer fiddle-ident)"
     (is (= @(:hypercrud.browser/eav ctx-genders)
-           [nil :dustingetz/gender-shirtsize nil])))
+           [nil nil nil])))
 
   (testing "spread-result does not touch eav"
     (is (= [@(:hypercrud.browser/eav ctx-genders)]
            (for [[_ ctx] (context/spread-result ctx-genders)]
              @(:hypercrud.browser/eav ctx))
-           '([nil :dustingetz/gender-shirtsize nil]))))
+           '([nil nil nil]))))
   )
 
 (deftest context-a
@@ -192,28 +192,28 @@
                  [_ ctx] (context/spread-rows ctx)
                  [_ ctx] (context/spread-elements ctx)]
              (context/eav ctx))
-           '([nil :dustingetz/gender-shirtsize [:dustingetz.reg/email "dustin@example.com"]]
-              [nil :dustingetz/gender-shirtsize [:dustingetz.reg/email "bob@example.com"]]))))
+           '([nil nil [:dustingetz.reg/email "dustin@example.com"]]
+              [nil nil [:dustingetz.reg/email "bob@example.com"]]))))
 
   (testing "spread-row doesnt prefill v, but it can be inferred"
     (is (= #_(for [[_ ctx] (context/spread-rows ctx)]
                @(:hypercrud.browser/eav ctx))               ; element not inferred, why no lookup ref? Because no schema.
           (for [[_ ctx] (context/spread-rows ctx-genders)]
             (context/eav ctx))
-          [[nil :dustingetz/gender-shirtsize [:dustingetz.reg/email "dustin@example.com"]]
-           [nil :dustingetz/gender-shirtsize [:dustingetz.reg/email "bob@example.com"]]]))
+          [[nil nil [:dustingetz.reg/email "dustin@example.com"]]
+           [nil nil [:dustingetz.reg/email "bob@example.com"]]]))
 
     (is (= (for [[_ ctx] (context/spread-rows ctx-genders)]
              (context/eav ctx))
-           '([nil :dustingetz/gender-shirtsize [:dustingetz.reg/email "dustin@example.com"]]
-              [nil :dustingetz/gender-shirtsize [:dustingetz.reg/email "bob@example.com"]]))))
+           '([nil nil [:dustingetz.reg/email "dustin@example.com"]]
+              [nil nil [:dustingetz.reg/email "bob@example.com"]]))))
 
   (is (= (for [[_ ctx] (context/spread-result ctx-genders)
                [_ ctx] (context/spread-rows ctx)
                [_ ctx] (context/spread-elements ctx)]
            @(:hypercrud.browser/eav ctx))
-         '([nil :dustingetz/gender-shirtsize [:dustingetz.reg/email "dustin@example.com"]]
-            [nil :dustingetz/gender-shirtsize [:dustingetz.reg/email "bob@example.com"]]))))
+         '([nil nil [:dustingetz.reg/email "dustin@example.com"]]
+            [nil nil [:dustingetz.reg/email "bob@example.com"]]))))
 
 (deftest context-c
   (testing "fiddle/type :pull"
@@ -221,9 +221,9 @@
                  [_ ctx] (context/spread-rows ctx)
                  [_ ctx] (context/spread-elements ctx)]
              (context/eav ctx))
-           (for [ctx [(mock-fiddle! :hyperfiddle/ide)]]
-             (context/eav ctx))
-           [[nil :hyperfiddle/ide [:fiddle/ident :hyperfiddle/ide]]]))
+           ;(for [ctx [(mock-fiddle! :hyperfiddle/ide)]]
+           ;  (context/eav ctx))
+           [[nil nil [:fiddle/ident :hyperfiddle/ide]]]))   ; no longer infers v without a row
 
     (is (= (let [ctx (mock-fiddle! :hyperfiddle/ide)
                  ctx (context/attribute ctx :fiddle/renderer)]
@@ -233,7 +233,7 @@
 (deftest context-b
   (testing "nested pulls"
     (let [ctx (mock-fiddle! :hyperfiddle/ide)]
-      (is (= (context/eav ctx) [nil :hyperfiddle/ide [:fiddle/ident :hyperfiddle/ide]])) ; infer scalar
+      ;(is (= (context/eav ctx) [nil nil [:fiddle/ident :hyperfiddle/ide]])) ; infer scalar
       ;(is (= (context/data ctx) 42))
       (testing "nested ref many"
         (let [ctx (context/attribute ctx :fiddle/links)]
@@ -255,7 +255,7 @@
 
   (testing "nested pull on :hyperfiddle/ide :fiddle/links"
     (let [ctx (mock-fiddle! :hyperfiddle/ide)]
-      (is (= (context/eav ctx) [nil :hyperfiddle/ide [:fiddle/ident :hyperfiddle/ide]]))
+      ;(is (= (context/eav ctx) [nil nil [:fiddle/ident :hyperfiddle/ide]]))
       (let [ctx (context/attribute ctx :fiddle/links)]
         (is (= (context/eav ctx) [[:fiddle/ident :hyperfiddle/ide] :fiddle/links nil]))
         (is (= (count (context/data ctx)) 5))
@@ -284,8 +284,8 @@
                              (context/spread-result))
                  [_ ctx] (context/spread-rows ctx)]
              (context/eav (extract (context/refocus+ ctx :dustingetz/gender-shirtsize))))
-           [[nil :dustingetz/gender-shirtsize [:dustingetz.reg/email "dustin@example.com"]]
-            [nil :dustingetz/gender-shirtsize [:dustingetz.reg/email "bob@example.com"]]])))
+           [[nil nil [:dustingetz.reg/email "dustin@example.com"]]
+            [nil nil [:dustingetz.reg/email "bob@example.com"]]])))
 
   (testing "refocus"
     (is (= (for [[_ ctx] (context/spread-result ctx-genders)
@@ -293,8 +293,8 @@
                  [_ ctx] (context/spread-elements ctx)]
              ; Focusing the element
              @(:hypercrud.browser/eav ctx #_(extract (context/refocus+ ctx :dustingetz/gender-shirtsize))))
-           '([nil :dustingetz/gender-shirtsize [:dustingetz.reg/email "dustin@example.com"]]
-              [nil :dustingetz/gender-shirtsize [:dustingetz.reg/email "bob@example.com"]])))
+           '([nil nil [:dustingetz.reg/email "dustin@example.com"]]
+              [nil nil [:dustingetz.reg/email "bob@example.com"]])))
 
     (is (= (for [[_ ctx] (context/spread-result ctx-genders)
                  [_ ctx] (context/spread-rows ctx)]
@@ -318,7 +318,7 @@
     (is (= (let [ctx (mock-fiddle! :tutorial.race/shirt-sizes)
                  ctx (context/row ctx :dustingetz.shirt-size/womens-medium)]
              (context/eav ctx))
-           [nil :tutorial.race/shirt-sizes :dustingetz.shirt-size/womens-medium]))
+           [nil nil :dustingetz.shirt-size/womens-medium]))
 
     (is (= (let [ctx (mock-fiddle! :tutorial.race/shirt-sizes)
                  ctx (context/row ctx :dustingetz.shirt-size/womens-medium)
@@ -424,7 +424,7 @@
 
   (testing "row does not set e"
     (is (= @(:hypercrud.browser/eav (context/row ctx-genders 17592186046196))
-           [nil :dustingetz/gender-shirtsize nil])))
+           [nil nil nil])))
   (testing "target isolated row"
     (is (= (for [ctx [(context/row ctx-genders [:dustingetz.reg/email "dustin@example.com"] #_17592186046196)]]
              ; infers element
@@ -457,7 +457,7 @@
 (deftest head-sentinel
   (testing "head-sentinel sanity checks, head-sentinel needs to go"
     (let [ctx (mock-fiddle! :seattle/neighborhoods)]
-      (is (= (context/eav ctx) [nil :seattle/neighborhoods nil]))
+      (is (= (context/eav ctx) [nil nil nil]))
       (is (= (count (context/data ctx)) 7))
       (let [ctx (context/attribute ctx :neighborhood/district)]
         (is (= (context/eav ctx) [nil :neighborhood/district nil])))
@@ -612,10 +612,10 @@
              #_(context/data ctx)
              (context/eav ctx)
              )
-           [[nil :dustingetz/slack-storm [:dustingetz.post/slug :asdf]]
-            [nil :dustingetz/slack-storm 13194139535895]
-            [nil :dustingetz/slack-storm 17592186047105]
-            [nil :dustingetz/slack-storm 13194139536000]])))
+           [[nil nil [:dustingetz.post/slug :asdf]]
+            [nil nil 13194139535895]
+            [nil nil 17592186047105]
+            [nil nil 13194139536000]])))
 
   #_(testing "smart identity should prefer identity attrs to db/id"
       (is (= (for [[_ ctx] (context/spread-rows ctx)
@@ -702,7 +702,7 @@
   (testing "rowkey then single elements"
     (is (let [ctx (mock-fiddle! :dustingetz/slack-storm)
               ctx (context/row ctx [[:dustingetz.post/slug :asdf] 13194139535895])]
-          (is (= (context/eav ctx) [nil :dustingetz/slack-storm nil])) ; could potentially set v to the rowkey here
+          (is (= (context/eav ctx) [nil nil nil])) ; could potentially set v to the rowkey here
           (is (= (context/data (context/browse-element ctx 0))
                  {:db/id 17592186047000,
                   :dustingetz.post/title "is js/console.log syntax future proof?",
@@ -714,20 +714,20 @@
   (testing "element level does set value, it is not ambigous due to set semantics in FindRel"
     (is (let [ctx (mock-fiddle! :dustingetz/slack-storm)
               ctx (context/row ctx [[:dustingetz.post/slug :asdf] 13194139535895])]
-          (is (= (context/eav ctx) [nil :dustingetz/slack-storm nil])) ; could potentially set v to the rowkey here
+          (is (= (context/eav ctx) [nil nil nil])) ; could potentially set v to the rowkey here
           ; Originally thought:
           ; Can't set v to [:dustingetz.post/slug :asdf] because A is ambiguous.
           ; Can't set v to 5895 because A is ambiguous.
           ; NO, wrong.
           ; Arguably this is NOT ambiguous due to set semantics. The same entity can't be pulled twice in a find relation.
-          (is (= (context/eav (context/browse-element ctx 0)) [nil :dustingetz/slack-storm [:dustingetz.post/slug :asdf]]))
-          (is (= (context/eav (context/browse-element ctx 1)) [nil :dustingetz/slack-storm 13194139535895])))))
+          (is (= (context/eav (context/browse-element ctx 0)) [nil nil [:dustingetz.post/slug :asdf]]))
+          (is (= (context/eav (context/browse-element ctx 1)) [nil nil 13194139535895])))))
 
   (testing "key all the way and then attributes"
     (let [ctx (mock-fiddle! :dustingetz/slack-storm)
           ctx (context/row ctx [[:dustingetz.post/slug :asdf] 13194139535895])
           ctx (context/browse-element ctx 0)]
-      (is (= (context/eav ctx) [nil :dustingetz/slack-storm [:dustingetz.post/slug :asdf]]))
+      (is (= (context/eav ctx) [nil nil [:dustingetz.post/slug :asdf]]))
       (is (= (context/data ctx)
              {:db/id 17592186047000,
               :dustingetz.post/title "is js/console.log syntax future proof?",
@@ -757,8 +757,8 @@
                    [_ ctx] (context/spread-elements ctx)
                    #_#_[_ ctx] (context/spread-attributes ctx)]
                (context/eav ctx)))
-           [[nil :dustingetz/slack-storm [:dustingetz.post/slug :asdf]]
-            [nil :dustingetz/slack-storm 13194139535895]]))
+           [[nil nil [:dustingetz.post/slug :asdf]]
+            [nil nil 13194139535895]]))
 
     (is (= (let [ctx (mock-fiddle! :dustingetz/slack-storm)]
              (for [ctx [(context/row ctx [[:dustingetz.post/slug :asdf] 13194139535895])]
@@ -838,7 +838,7 @@
               :dustingetz.post/slug :automatic-CRUD-links}]]))
     (is (= (for [[_ ctx] (context/spread-elements ctx-blog)]
              (context/eav ctx))
-           [[nil :dustingetz.tutorial/blog nil]]))
+           [[nil nil nil]]))
 
     ;(is (= (for [[_ ctx] (context/spread-elements ctx)]
     ;         ; Asking for data without a row and unable to infer row
@@ -860,14 +860,14 @@
     (is (= (for [[_ ctx] (context/spread-rows ctx-blog)
                  [_ ctx] (context/spread-elements ctx)]
              (context/eav ctx))
-           [[nil :dustingetz.tutorial/blog [:dustingetz.post/slug :large-strings-and-high-churn-attrs-blow-out-indexes]]
-            [nil :dustingetz.tutorial/blog [:dustingetz.post/slug :automatic-CRUD-links]]]))
+           [[nil nil [:dustingetz.post/slug :large-strings-and-high-churn-attrs-blow-out-indexes]]
+            [nil nil [:dustingetz.post/slug :automatic-CRUD-links]]]))
 
     (is (= (for [[_ ctx] (context/spread-rows ctx-blog)
                  [_ ctx] (context/spread-elements ctx)]
              (context/eav ctx))
-           [[nil :dustingetz.tutorial/blog [:dustingetz.post/slug :large-strings-and-high-churn-attrs-blow-out-indexes]]
-            [nil :dustingetz.tutorial/blog [:dustingetz.post/slug :automatic-CRUD-links]]]))
+           [[nil nil [:dustingetz.post/slug :large-strings-and-high-churn-attrs-blow-out-indexes]]
+            [nil nil [:dustingetz.post/slug :automatic-CRUD-links]]]))
 
     (is (= (context/row-key ctx-blog [{:db/id 17592186047142,
                                        :dustingetz.post/published-date #inst"2018-11-22T15:57:34.277-00:00",
@@ -887,7 +887,7 @@
             :dustingetz.post/title "automatic CRUD links",
             :dustingetz.post/slug :automatic-CRUD-links}))
     (is (= (context/eav ctx-blog1)
-           [nil :dustingetz.tutorial/blog [:dustingetz.post/slug :automatic-CRUD-links]]))
+           [nil nil [:dustingetz.post/slug :automatic-CRUD-links]]))
 
     #_(let [#_#_ctx (context/browse-element ctx 0)]
         (is (= (context/eav ctx) [nil :dustingetz/slack-storm [:dustingetz.post/slug :asdf]]))
@@ -928,7 +928,7 @@
                      (unwrap #(throw (ex-info % {})))))
     (is (= (mlet [[ctx ?route] (context/refocus-to-link+ ctx-blog2 r-link)]
              (context/eav ctx))
-           [nil :dustingetz.tutorial/blog [:dustingetz.post/slug :automatic-CRUD-links]]))
+           [nil nil [:dustingetz.post/slug :automatic-CRUD-links]]))
     )
 
   (testing "at fiddle level, link :hf/new eav does not have a parent"
@@ -936,7 +936,7 @@
       (is (= (mlet [[ctx r+route] (context/refocus-to-link+ ctx-blog2 link1)]
                (context/eav ctx))
              ; should it be [nil nil "479925454"] from the txfn perspective?
-             [nil :dustingetz.tutorial/blog "hyperfiddle.tempid--853640389"]))
+             [nil nil "hyperfiddle.tempid--853640389"]))
       (is (= (mlet [[ctx +route] (context/refocus-to-link+ ctx-blog2 link1)]
                (return +route))
              (right [:dustingetz.tutorial.blog/new-post [#entity["$" "hyperfiddle.tempid--853640389"]]])))))
@@ -975,7 +975,7 @@
     (def link (hyperfiddle.data/select ctx-blog3 :hf/new))
     (is (= (mlet [[ctx route] (context/refocus-to-link+ ctx-blog3 link)]
              (context/eav ctx))
-           [nil :dustingetz.tutorial/blog "hyperfiddle.tempid--853640389"]))
+           [nil nil "hyperfiddle.tempid--853640389"]))
     (is (= (mlet [[ctx route] (context/refocus-to-link+ ctx-blog3 link)]
              (return route))
            ; This works because refocus hardcodes element 0, which it turns out is almost always
@@ -992,7 +992,7 @@
            #:db{:ident :db.sys/partiallyIndexed}))
     (is (= (let [ctx (context/row ctx-schema :db.sys/partiallyIndexed)]
              (context/eav ctx))
-           [nil :seattle/neighborhoods :db.sys/partiallyIndexed]))
+           [nil nil :db.sys/partiallyIndexed]))
     (is (= (let [ctx (context/row ctx-schema :db.sys/partiallyIndexed)]
              (context/row-key ctx (context/data ctx)))
            :db.sys/partiallyIndexed))
@@ -1003,7 +1003,7 @@
     (is (= (let [ctx (context/row ctx-schema :db.sys/partiallyIndexed)
                  ctx (context/browse-element ctx 0)]
              (context/eav ctx))
-           [nil :seattle/neighborhoods :db.sys/partiallyIndexed]))
+           [nil nil :db.sys/partiallyIndexed]))
     (is (= (let [ctx (context/row ctx-schema :db.sys/partiallyIndexed)
                  ctx (context/browse-element ctx 0)]
              (context/data ctx))

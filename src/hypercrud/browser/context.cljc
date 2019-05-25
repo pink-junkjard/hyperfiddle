@@ -213,7 +213,7 @@ a speculative db/id."
 (def ^:export ^:legacy key-row row-key)
 
 (defn stable-eav-v [[?e a _] ?v']
-  {:pre [a
+  {:pre [#_a
          #_?v'                                              ; Never know with ?v, did they pull identity?
          ]}
   [?e a ?v'])
@@ -392,11 +392,15 @@ a speculative db/id."
                               (scalar-key ctx ?v entity-datakey))
         #{FindTuple FindScalar} (scalar-key ctx ?v entity-datakey)))))
 
-(defn eav "Not reactive." [ctx]
+(defn eav "Public EAV interface from userland.
+  This can't over-infer in the naked iframe case, so inference is eager now"
+  ; Context internals use :eav instead of this.
+  [ctx]
   {:pre [(s/assert :hypercrud/context ctx)]}
-  ; Should you use this or ::eav? Userland renderers call this.
-  ; Context internals use ::eav. I think.
-  (let [ctx (-infer-implicit-element ctx)]
+  ; What can be inferred?
+  ; If a row in scope, yes infer the v as entity identity
+  ; If fiddle level, don't infer the row, it breaks iframe formulas
+  (let [#_#_ctx (-infer-implicit-element ctx)]
     @(:hypercrud.browser/eav ctx)))                         ; this could be lazily pulled through :result
 
 (defn e [ctx]
@@ -446,6 +450,9 @@ a speculative db/id."
        (attr? ctx a :db.unique/identity) (not (underlying-tempid ctx e)) ; this logic in wrong place?
        :else false))))
 
+; If you ask for an attribute, the row is (may now be) inferred
+; If you ask for a row, the element is (may now be) inferred
+
 (defn row "Row does not set E. E is the parent, not the child, and row is analogous to :ref :many child."
   [ctx & [k]]
   {:pre [(s/assert :hypercrud/context ctx)
@@ -462,7 +469,7 @@ a speculative db/id."
     (if (qfind-level? ctx)
       ; ::eav depends on element which isn't known yet
       ; (eav) can infer this, but keep the "cursor" precise
-      ctx
+      (-infer-implicit-element ctx)
 
       ; In nested case we do know precisely the eav has changed
       (assoc ctx :hypercrud.browser/eav (r/fmap-> (:hypercrud.browser/eav ctx) (stable-eav-v (v! ctx)))))))
@@ -539,7 +546,7 @@ a speculative db/id."
         :hypercrud.browser/link-index (r/fmap->> r-fiddle :fiddle/links (map link-identifiers))
         :hypercrud.browser/eav (r/apply stable-eav-av
                                         [(r/pure nil)
-                                         (r/fmap :fiddle/ident r-fiddle)
+                                         (r/pure nil) #_(r/fmap :fiddle/ident r-fiddle)
                                          (r/pure nil)])
         ; push this down, it should be nil now
         :hypercrud.browser/pull-path []))))
@@ -594,28 +601,33 @@ a speculative db/id."
   {:pre []
    :post [(s/assert r/reactive? (:hypercrud.browser/qfind %)) ; qfind set in base if it is available
           (s/assert r/reactive? (:hypercrud.browser/schema %))]}
-  (let [r-pull-enclosure (r/fmap-> (:hypercrud.browser/result-enclosure ctx) (get i))]
-    (as-> ctx ctx
-      (element-head ctx i)
-      (assoc ctx :hypercrud.browser/root-pull-enclosure r-pull-enclosure) ; for refocus
-      (assoc ctx :hypercrud.browser/pull-enclosure r-pull-enclosure)
-      (condp some [(type @(:hypercrud.browser/qfind ctx))]
-        #{FindRel FindTuple} (as-> ctx ctx
-                               (update ctx :hypercrud.browser/result-path (fnil conj []) i)
-                               ; I don't think we index result here, uncertain.
-                               ; Related to collapse FindRel-N to FindColl
-                               (assoc ctx :hypercrud.browser/element-index i)) ; used only in labels
-        #{FindColl FindScalar} ctx)
+  (cond
+    (:hypercrud.browser/element ctx)                        ; this was eagerly inferred. Weird spot to do it but makes spread-elements f-override logic work
+    ctx
 
-      ; Do last, result-path is set
-      ; If there is only one element, should we set V?
-      ; Hard to interpret it since we don't know what it is (entity, aggregate, var)
-      ; Setting :hypercrud.browser/validation-hints doesn't make sense here as specs are keyword oriented
-      ; so at the fiddle level, or at the attribute level, but not relations.
-      ;
-      ; We can set i as the a, but you can't have links on i, we want to leave the fiddle-ident as the a.
-      ; a has to be semantic. does it matter?
-      (assoc ctx :hypercrud.browser/eav (r/fmap-> (:hypercrud.browser/eav ctx) (stable-eav-v (v! ctx)))))))
+    :else
+    (let [r-pull-enclosure (r/fmap-> (:hypercrud.browser/result-enclosure ctx) (get i))]
+      (as-> ctx ctx
+            (element-head ctx i)
+            (assoc ctx :hypercrud.browser/root-pull-enclosure r-pull-enclosure) ; for refocus
+            (assoc ctx :hypercrud.browser/pull-enclosure r-pull-enclosure)
+            (condp some [(type @(:hypercrud.browser/qfind ctx))]
+              #{FindRel FindTuple} (as-> ctx ctx
+                                         (update ctx :hypercrud.browser/result-path (fnil conj []) i)
+                                         ; I don't think we index result here, uncertain.
+                                         ; Related to collapse FindRel-N to FindColl
+                                         (assoc ctx :hypercrud.browser/element-index i)) ; used only in labels
+              #{FindColl FindScalar} ctx)
+
+            ; Do last, result-path is set
+            ; If there is only one element, should we set V?
+            ; Hard to interpret it since we don't know what it is (entity, aggregate, var)
+            ; Setting :hypercrud.browser/validation-hints doesn't make sense here as specs are keyword oriented
+            ; so at the fiddle level, or at the attribute level, but not relations.
+            ;
+            ; We can set i as the a, but you can't have links on i, we want to leave the fiddle-ident as the a.
+            ; a has to be semantic. does it matter?
+            (assoc ctx :hypercrud.browser/eav (r/fmap-> (:hypercrud.browser/eav ctx) (stable-eav-v (v! ctx))))))))
 
 (defn -infer-implicit-element "auto-focus single elements - legacy field path compat"
   [ctx]
@@ -726,7 +738,11 @@ a speculative db/id."
     ; could also dispatch on qfind. Is fiddle/type unnecessary now?
     (condp some [(:fiddle/type @r-fiddle)]
       #{:blank} []
-      #{:query :entity} [[(:fiddle/ident @r-fiddle) ctx]])))
+      #{:query :entity} [[(:fiddle/ident @r-fiddle)
+                          ; inference is lazy
+                          ; But it needs to add something, so that we know that it is inferrable now
+                          ; presence of path param?
+                          ctx #_(-infer-implicit-element ctx)]])))
 
 (defn ^:export spread-elements "yields [i ctx] foreach element.
   All query dimensions have at least one element.
@@ -734,7 +750,7 @@ a speculative db/id."
   Second arity is for keyfns who need elements but not data."
   [ctx & [f]]
   {:pre [(:hypercrud.browser/qfind ctx)
-         (not (:hypercrud.browser/element ctx))]
+         #_(not (:hypercrud.browser/element ctx))]
    #_#_:post [(s/assert :hypercrud/context %)]}
   (let [r-qfind (:hypercrud.browser/qfind ctx)]
     ; No unsequence here? What if find elements change? Can we use something other than (range) as keyfn?

@@ -8,7 +8,8 @@
     [cuerdas.core :as str]
     [hypercrud.browser.base :as base]
     [hypercrud.browser.context :as context]
-    [hyperfiddle.fiddle]))
+    [hyperfiddle.fiddle]
+    [hyperfiddle.api :as hf]))
 
 
 (defn select-many "All links we can reach (for this entire dimension)"
@@ -44,7 +45,7 @@
 
 (defn select-many-here' [ctx & [?corcs]]                    ; There's not a lot of value of shorting the reaction sooner than the link-index; it all must be checked
   (let [cs (contrib.data/xorxs ?corcs #{})
-        a (context/a ctx)]
+        a (or (context/a ctx) (hf/fiddle ctx))]
     ; links "here" means all possible links that apply. Can be lots of things!
     ; :db/id and :db/ident sys links
     ; :db/id and :db/ident parent attr links are good here too
@@ -58,7 +59,7 @@
                    :when (context/identity? ctx a) #_(context/attr? ctx :db.unique/identity)]
                (select-many ctx (conj cs a)))
              (sequence cat)
-             (concat (select-many ctx (conj cs (context/a ctx))))
+             (concat (select-many ctx (conj cs (context/a ctx)))) ; hf/fiddle
              doall))
 
       ; Otherwise just check here.
@@ -94,6 +95,6 @@
   (->> (select-many-here ctx ?corcs)
        (r/unsequence :db/id)))
 
-(defn spread-links-in-dimension [ctx & [?corcs]]            ; rename: layer
-  (->> (r/track select-many ctx ?corcs)
-       (r/unsequence :db/id)))
+;(defn spread-links-in-dimension [ctx & [?corcs]]            ; rename: layer
+;  (->> (r/track select-many ctx ?corcs)
+;       (r/unsequence :db/id)))
