@@ -14,6 +14,7 @@
     [contrib.uri :refer [is-uri?]]
     [datascript.parser :refer [FindRel FindColl FindTuple FindScalar Variable Aggregate Pull]]
     [hypercrud.browser.context :as context]
+    [hyperfiddle.api :as hf]
     [hyperfiddle.data]
     #_[hyperfiddle.ui]
     [hyperfiddle.ui.docstring :refer [semantic-docstring]]
@@ -80,17 +81,13 @@
       [hyperfiddle.ui/ui-from-link r-link ctx])))
 
 (defn hf-iframe [_ ctx]
-  (let [display-mode (or (some-> (:hypercrud.ui/display-mode ctx) deref)
-                         :hypercrud.browser.browser-ui/user)]
-    (case display-mode
-      :hypercrud.browser.browser-ui/user nil
-      :hypercrud.browser.browser-ui/xray
-      (doall
-        (for [[k r-link] (hyperfiddle.data/spread-links-here ctx :hf/iframe)]
-          ; Don't iframe-as-popover – Messy UI is actually desirable because repeating iframes are slow, don't do it!
-          ; http://tank.hyperfiddle.site/:tutorial.race!submission/~entity('$',(:dustingetz.reg!email,'bob@example.com'))
-          ^{:key k}
-          [hyperfiddle.ui/ui-from-link r-link ctx #_{:iframe-as-popover true}])))))
+  (if (hf/display-mode? ctx :xray)
+    (doall
+      (for [[k r-link] (hyperfiddle.data/spread-links-here ctx :hf/iframe)]
+        ; Don't iframe-as-popover – Messy UI is actually desirable because repeating iframes are slow, don't do it!
+        ; http://tank.hyperfiddle.site/:tutorial.race!submission/~entity('$',(:dustingetz.reg!email,'bob@example.com'))
+        ^{:key k}
+        [hyperfiddle.ui/ui-from-link r-link ctx #_{:iframe-as-popover true}]))))
 
 (defn hf-remove [val ctx]
   ; (if-not (:hypercrud.browser/head-sentinel ctx))

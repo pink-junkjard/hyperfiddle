@@ -20,6 +20,10 @@
   (v [ctx])
   )
 
+(defprotocol UI
+  (display-mode [ctx])
+  (display-mode? [ctx k]))
+
 (declare render-dispatch)
 
 (defmulti tx (fn [ctx eav props]
@@ -38,7 +42,7 @@
 (defn render-dispatch [ctx props]
   ; Is there a method which is a subset of what we've got?
   (or
-    (if (= :hypercrud.browser.browser-ui/user @(get ctx :hypercrud.ui/display-mode (r/pure :hypercrud.browser.browser-ui/user)))
+    (if (hyperfiddle.api/display-mode? ctx :user)
       (or
         (let [d (extract-set ctx hyperfiddle.api/fiddle hyperfiddle.api/a)]
           (if (contains? (methods render) d)
