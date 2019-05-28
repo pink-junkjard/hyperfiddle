@@ -6,6 +6,8 @@
      (:import
        (java.io FileNotFoundException))))
 
+#?(:clj (try (require 'hyperfiddle.security.entity-ownership) (catch Exception e)))
+
 #?(:clj
    (def server
      {:process-tx (fn [& args]
