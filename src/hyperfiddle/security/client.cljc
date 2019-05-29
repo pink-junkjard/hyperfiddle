@@ -17,12 +17,14 @@
 
 
 (def allow-anonymous
-  {:subject-can-transact? (constantly true)
+  {:subject-can-transact? (constantly (either/right))
    :can-create? (constantly true)
    :writable-entity? (constantly true)})
 
 (def authenticated-users-only
-  {:subject-can-transact? (fn [hf-db subject] (some? subject))
+  {:subject-can-transact? (fn [hf-db subject] (if (some? subject)
+                                                (either/right)
+                                                (either/left "Please login")))
    :can-create? (fn [hf-db subject ctx] (some? subject))
    :writable-entity? (fn [hf-db subject ctx] (some? subject))})
 
@@ -30,7 +32,9 @@
                   (-> (into #{} (:hyperfiddle/owners hf-db))
                       (contains? subject)))]
   (def owner-only
-    {:subject-can-transact? (fn [hf-db subject] (owned-by? hf-db subject))
+    {:subject-can-transact? (fn [hf-db subject] (if (owned-by? hf-db subject)
+                                                  (either/right)
+                                                  (either/left "Writes restricted")))
      :can-create? (fn [hf-db subject ctx] (owned-by? hf-db subject))
      :writable-entity? (fn [hf-db subject ctx] (owned-by? hf-db subject))}))
 
@@ -47,7 +51,9 @@
                         (and (not (branch/root-branch? branch))
                              (new-entity? peer dbname dbid (branch/parent-branch-id branch)))))]
   (def entity-ownership
-    {:subject-can-transact? (fn [hf-db subject] (some? subject))
+    {:subject-can-transact? (fn [hf-db subject] (if (some? subject)
+                                                  (either/right)
+                                                  (either/left "Please login")))
      :can-create? (fn [hf-db subject ctx] (some? subject))
      :writable-entity? (fn [hf-db subject ctx]
                          (and (some? subject)
@@ -68,9 +74,12 @@
       ::security/custom (memoized-safe-eval-string (:database.custom-security/client hf-db)))))
 
 (defn subject-can-transact? [hf-db subject]
-  (mlet [client-sec (eval-client-sec hf-db)
-         :let [f (or (:subject-can-transact? client-sec) (constantly true))]]
-    (try-either (f hf-db subject))))
+  (mlet [{:keys [subject-can-transact?]} (eval-client-sec hf-db)]
+    (if subject-can-transact?
+      (either/branch (try-either (subject-can-transact? hf-db subject))
+                     (constantly (either/left "Misconfigured db security"))
+                     identity)
+      (either/right))))
 
 (defn can-create? [ctx]
   (-> (mlet [:let [dbname (context/dbname ctx)

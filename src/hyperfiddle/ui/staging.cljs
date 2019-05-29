@@ -22,9 +22,6 @@
     selected-dbname
     (first tab-ids)))
 
-
-(defn- anonymous? [rt] (nil? @(runtime/state rt [::runtime/user-id])))
-
 (defn- writes-allowed?+ [rt selected-dbname]
   (let [hf-db (domain/database (runtime/domain rt) selected-dbname)
         subject @(runtime/state rt [::runtime/user-id])]
@@ -34,22 +31,16 @@
   (let [selected-dbname @selected-dbname-ref
         writes-allowed?+ (writes-allowed?+ rt selected-dbname)
         stage (runtime/state rt [::runtime/partitions branch-id :stage selected-dbname])]
-    [tooltip (either/branch
-               writes-allowed?+
-               (fn [e] {:status :warning :label "Misconfigured db security"})
-               (fn [writes-allowed?]
-                 (cond (and (not writes-allowed?) (anonymous? rt)) {:status :warning :label "Please login"}
-                       (not writes-allowed?) {:status :warning :label "Writes restricted"}
-                       (empty? @stage) {:status :warning :label "no changes"})))
+    [tooltip (cond
+               (either/left? writes-allowed?+) {:status :warning :label @writes-allowed?+}
+               (empty? @stage) {:status :warning :label "no changes"})
      (let [color (domain/database-color (runtime/domain rt) selected-dbname)
-           is-disabled (either/branch writes-allowed?+ (constantly true)
-                                      (fn [writes-allowed?]
-                                        (or (not writes-allowed?) (empty? @stage))))]
+           is-disabled (or (either/left? writes-allowed?+) (empty? @stage))]
        [:button {:disabled is-disabled
                  :class (css "btn btn-sm hf-btn-xs" (if is-disabled "btn-outline-secondary" "btn-secondary"))
                  :style (cond-> {(if is-disabled :color :background-color) color
                                  :border-color color}
-                                is-disabled (assoc :pointer-events "none"))
+                          is-disabled (assoc :pointer-events "none"))
                  :on-click (fn []
                              (let [action (actions/manual-transact-db! rt branch-id selected-dbname)]
                                (runtime/dispatch! rt action)))}
@@ -59,18 +50,10 @@
   (let [selected-dbname @selected-dbname-ref
         writes-allowed?+ (writes-allowed?+ rt selected-dbname)
         stage (runtime/state rt [::runtime/partitions branch-id :stage selected-dbname])]
-    [tooltip (either/branch
-               writes-allowed?+
-               (fn [e] {:status :warning :label "Misconfigured db security"})
-               (fn [writes-allowed?]
-                 (cond (and (anonymous? rt) (not writes-allowed?)) {:status :warning :label "Please login"}
-                       (not writes-allowed?) {:status :warning :label "Writes restricted"}
-                       (not (empty? @stage)) {:status :warning :label "please transact! all changes first"})))
-     (let [is-disabled (either/branch
-                         writes-allowed?+
-                         (constantly true)
-                         (fn [writes-allowed?]
-                           (or (not writes-allowed?) (not (empty? @stage)))))
+    [tooltip (cond
+               (either/left? writes-allowed?+) {:status :warning :label @writes-allowed?+}
+               (not (empty? @stage)) {:status :warning :label "Please transact! all changes first"})
+     (let [is-disabled (or (either/left? writes-allowed?+) (not (empty? @stage)))
            is-auto-transact @(runtime/state rt [::runtime/auto-transact selected-dbname])]
        [easy-checkbox {:disabled is-disabled
                        :style (cond-> {:margin-left "0.5em"}
