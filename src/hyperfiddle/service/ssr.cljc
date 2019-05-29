@@ -87,10 +87,7 @@
                                                  (fn [hf-db]
                                                    (if-some [auto-tx (:database/auto-transact hf-db)]
                                                      auto-tx
-                                                     (either/branch
-                                                       (security/subject-can-transact? hf-db user-id)
-                                                       (constantly false)
-                                                       identity)))
+                                                     (either/right? (security/subject-can-transact? hf-db user-id))))
                                                  (domain/databases domain))
                        ::runtime/partitions {foundation/root-branch {:route (domain/url-decode domain path)}}
                        ::runtime/user-id user-id}
