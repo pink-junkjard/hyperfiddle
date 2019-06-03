@@ -210,3 +210,8 @@
 (defn unqualify [?qualified-kw]
   (if ?qualified-kw
     (keyword (name ?qualified-kw))))
+
+(defn keywordize [s]
+  (if (= \: (first s))
+    (keyword (subs s 1))
+    (keyword s)))
