@@ -2,10 +2,12 @@
   (:require
     [contrib.datomic-peer]                                  ; query helpers
     [datomic.api :as d-peer]
+    [datascript.parser :as parser]
     [hyperfiddle.io.datomic :refer [ConnectionFacade DbFacade]]
     [hyperfiddle.query]                                     ; query helpers
     [taoensso.timbre :as timbre])
   (:import
+    (datascript.parser FindColl FindRel)
     (datomic.db Db)
     (datomic.peer Connection LocalConnection)
     (java.net URISyntaxException)
@@ -59,4 +61,14 @@
          (timbre/error e)
          (throw e))))
 
-(defn q [arg-map] (d-peer/query arg-map))
+(defn- q-find-type [query]
+  (->> (if (map? query) query (parser/query->map query))
+       :find datascript.parser/parse-find type))
+
+(defn q [{:keys [query limit offset] :as arg-map}]
+  (let [result (d-peer/query (dissoc arg-map :limit :offset))]
+    (if (contains? #{FindColl FindRel} (q-find-type query))
+      (cond->> result
+        offset (drop offset)
+        limit (take limit))
+      result)))
