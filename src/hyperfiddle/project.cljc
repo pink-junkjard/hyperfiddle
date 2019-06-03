@@ -15,7 +15,7 @@
                     [?attr :attribute/ident ?i]
                     [?attr :attribute/renderer ?r]]
                   [(->DbRef (domain/fiddle-dbname domain) branch)]
-                  {:limit nil}))
+                  {:limit -1}))
 
 (defn hydrate-attr-renderers [io domain local-basis branch staged-branches]
   (-> (io/hydrate-one! io local-basis staged-branches (attrs-request domain branch))

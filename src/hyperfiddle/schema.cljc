@@ -19,7 +19,7 @@
                                         :db/unique [:db/ident]}])
                     :where [:db.part/db :db.install/attribute ?attr]]
                   [dbval]
-                  {:limit nil}))
+                  {:limit -1}))
 
 (defn hydrate-schemas [io domain local-basis branch staged-branches]
   (let [dbnames (-> (domain/databases domain)

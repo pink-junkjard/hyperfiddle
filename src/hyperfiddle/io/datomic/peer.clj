@@ -70,5 +70,5 @@
     (if (contains? #{FindColl FindRel} (q-find-type query))
       (cond->> result
         offset (drop offset)
-        limit (take limit))
+        (and limit (not= -1 limit)) (take limit))
       result)))
