@@ -1,4 +1,4 @@
 (ns hypercrud.types.QueryRequest)
 
 
-(defrecord QueryRequest [query params])
+(defrecord QueryRequest [query params opts])

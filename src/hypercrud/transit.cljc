@@ -56,7 +56,7 @@
    DbRef (t/write-handler (constantly "DbRef") (fn [v] [(:dbname v) (:branch v)]))
    EntityRequest (t/write-handler (constantly "EReq") (fn [v] [(:e v) (:db v) (:pull-exp v)]))
    Err (t/write-handler (constantly "err") #(:msg %))
-   QueryRequest (t/write-handler (constantly "QReq") (fn [v] [(:query v) (:params v)]))
+   QueryRequest (t/write-handler (constantly "QReq") (fn [v] [(:query v) (:params v) (:opts v)]))
    ThinEntity (t/write-handler (constantly "entity") (fn [^ThinEntity v] [(.-dbname v) (.-id v)]))
    Left (t/write-handler (constantly "left-v") (fn [v] (vector (cats/extract v))))
    Right (t/write-handler (constantly "right-v") (fn [v] (vector (cats/extract v))))

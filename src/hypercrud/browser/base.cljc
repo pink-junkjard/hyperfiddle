@@ -69,7 +69,7 @@
   (case @(r/cursor fiddle [:fiddle/type])
     :query (mlet [q (reader/memoized-read-string+ @(r/cursor fiddle [:fiddle/query]))
                   args (context/validate-query-params+ q @(r/fmap second (:hypercrud.browser/route ctx)) ctx)]
-             (return (->QueryRequest q args)))
+             (return (->QueryRequest q args nil)))
 
     :entity
     (let [[_ args] @(:hypercrud.browser/route ctx)          ; Missing entity param is valid state now https://github.com/hyperfiddle/hyperfiddle/issues/268

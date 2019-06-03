@@ -39,11 +39,18 @@
       (contrib.datomic/tempid? e) {:db/id e}                ; This introduces sloppy thinking about time!   https://github.com/hyperfiddle/hyperfiddle/issues/584
       :happy (d/pull pull-db {:selector pull-exp :eid e}))))
 
-(defmethod hydrate-request* QueryRequest [{:keys [query params]} domain get-secure-db-with]
+(def default-query-limit nil #_100)
+
+(defmethod hydrate-request* QueryRequest [{:keys [query params opts]} domain get-secure-db-with]
   (assert query "hydrate: missing query")
-  ((d/qf domain params)
-   {:query query
-    :args (map #(parameter % get-secure-db-with) params)}))
+  (let [q (d/qf domain params)
+        arg-map (-> (select-keys opts [:offset])
+                    (assoc :query query
+                           :args (map #(parameter % get-secure-db-with) params)
+                           :limit (if (contains? opts :limit) ; IMPORTANT respect :limit nil
+                                    (:limit opts)
+                                    default-query-limit)))]
+    (q arg-map)))
 
 ; todo i18n
 (def ERROR-BRANCH-PAST ":hyperfiddle.error/basis-stale Branching the past is currently unsupported, please refresh your basis by refreshing the page")

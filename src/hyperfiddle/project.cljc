@@ -14,7 +14,8 @@
   (->QueryRequest '[:find ?i ?r :where
                     [?attr :attribute/ident ?i]
                     [?attr :attribute/renderer ?r]]
-                  [(->DbRef (domain/fiddle-dbname domain) branch)]))
+                  [(->DbRef (domain/fiddle-dbname domain) branch)]
+                  {:limit nil}))
 
 (defn hydrate-attr-renderers [io domain local-basis branch staged-branches]
   (-> (io/hydrate-one! io local-basis staged-branches (attrs-request domain branch))
