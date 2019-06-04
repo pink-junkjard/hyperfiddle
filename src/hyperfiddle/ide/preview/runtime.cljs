@@ -1,7 +1,6 @@
 (ns hyperfiddle.ide.preview.runtime
   (:require
     [contrib.reactive :as r]
-    [hypercrud.client.core :as hc]
     [hypercrud.client.peer :as peer]
     [hyperfiddle.runtime :as runtime]
     [hyperfiddle.state :as state]))
@@ -16,9 +15,7 @@
   runtime/HF-Runtime
   (domain [rt] domain)
   (io [rt] io)
-
-  hc/Peer
-  (hydrate [this branch request] (peer/hydrate state-atom branch request))
+  (hydrate [rt branch request] (peer/hydrate state-atom branch request))
 
   IEquiv
   (-equiv [o other]
