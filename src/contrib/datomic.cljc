@@ -314,7 +314,7 @@ Shape is normalized to match the shape of the Datomic result, e.g. [:user/a-ref]
   #_{:pre [schemas ?qfind]
      :post [vector?]}                                       ; associative by index
   (when ?qfind
-    (let [?data (contrib.datomic/normalize-result ?qfind ?data)] ; nil data can mean no query or invalid query, we can still draw forms
+    (let [?data (normalize-result ?qfind ?data)]            ; nil data can mean no query or invalid query, we can still draw forms
       (->> (datascript.parser/find-elements ?qfind)
            (map-indexed (fn [i element]
                           (condp = (type element)
@@ -326,7 +326,7 @@ Shape is normalized to match the shape of the Datomic result, e.g. [:user/a-ref]
                                        shape (pull-shape schema pull-pattern)
                                        no-splat (->> (pull-seq pull-pattern) (filter (partial = '*)) count (= 0))
                                        no-recursion (->> (pull-seq pull-pattern) (filter pp-recursion?) count (= 0))
-                                       enclosure #_(delay)    ; Delay this to repro https://github.com/hyperfiddle/hyperfiddle/issues/892
+                                       enclosure #_(delay)  ; Delay this to repro https://github.com/hyperfiddle/hyperfiddle/issues/892
                                        (let [coll (mapv #(get % i) ?data)]
                                          (pull-enclosure schema shape coll))]
                                    (if (and no-splat no-recursion)
@@ -370,21 +370,21 @@ Shape is normalized to match the shape of the Datomic result, e.g. [:user/a-ref]
     :hf/variable []
     :hf/aggregate []
     :hf/pull (let [{{pull-pattern :value} :pattern} element]
-             (->> (pull-traverse schema (pull-shape schema pull-pattern))
-                  (remove empty?)
-                  (map last)
-                  (filter #(nil? (some-> schema (attr %)))) ; dont crash; reject good ones
-                  #_empty?)
-             #_(tree-seq map?
-                         (fn [m]
-                           (concat (keys m)
-                                   (apply concat (vals m))))
-                         (pull-shape pull-pattern))
-             #_(->> (pull-traverse (pull-shape pull-pattern))
+               (->> (pull-traverse schema (pull-shape schema pull-pattern))
+                    (remove empty?)
                     (map last)
-                    (mapcat identity))
-             ; collect the errors
-             )))
+                    (filter #(nil? (some-> schema (attr %)))) ; dont crash; reject good ones
+                    #_empty?)
+               #_(tree-seq map?
+                           (fn [m]
+                             (concat (keys m)
+                                     (apply concat (vals m))))
+                           (pull-shape pull-pattern))
+               #_(->> (pull-traverse (pull-shape pull-pattern))
+                      (map last)
+                      (mapcat identity))
+               ; collect the errors
+               )))
 
 (defn validate-qfind-attrs! "Validate the pull attributes against schema. Bug: doesn't see Datomic aliases."
   [schemas qfind]

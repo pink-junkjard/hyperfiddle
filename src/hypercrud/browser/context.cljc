@@ -118,7 +118,7 @@
 (defn ctx->id-lookup "light ctx dependency - needs :branch and :peer"
   ([ctx] (ctx->id-lookup (dbname ctx) ctx))
   ([dbname ctx]
-    ; todo what about if the tempid is on a higher branch in the uri?
+   ; todo what about if the tempid is on a higher branch in the uri?
    (some-> dbname
            (->> (conj [::runtime/partitions (:branch ctx) :tempid-lookups])
                 (runtime/state (:peer ctx))
@@ -189,13 +189,13 @@ a speculative db/id."
 (declare spread-elements)
 (declare qfind-level?)
 
-(defn ^:export row-key "Properly accounts for elements/schema"       ; does it return nil, or a v?
+(defn ^:export row-key "Properly accounts for elements/schema" ; does it return nil, or a v?
   ([ctx row]
-    ; The opposite should probably be the default, for userland views.
+   ; The opposite should probably be the default, for userland views.
    (row-key ctx row entity-datakey))
   ([{qfind :hypercrud.browser/qfind :as ctx} row entity-kf]
-    ; This keyfn is very tricky, read https://github.com/hyperfiddle/hyperfiddle/issues/341
-    #_(let [qfind (contrib.datomic/qfind-collapse-findrel-1 @qfind row)])
+   ; This keyfn is very tricky, read https://github.com/hyperfiddle/hyperfiddle/issues/341
+   #_(let [qfind (contrib.datomic/qfind-collapse-findrel-1 @qfind row)])
    (cond
      (qfind-level? ctx)
      (condp some [(type @qfind)]
@@ -379,7 +379,7 @@ a speculative db/id."
       ; Attribute level first, makes element level easier
       (> (pull-depth ctx) 0)
       (if (contrib.datomic/ref? @(:hypercrud.browser/schema ctx) ?a)
-        (entity-datakey ctx ?v)                                 ; no fallback, this must be a real identity or nil
+        (entity-datakey ctx ?v)                             ; no fallback, this must be a real identity or nil
         ?v)
 
       ; Change in behavior below, it was smart-entity-identifier before
@@ -597,7 +597,7 @@ a speculative db/id."
                                          [(runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :schemas])
                                           r-element]))))
 
-(defn browse-element [ctx i]                                       ; [nil :seattle/neighborhoods 1234345]
+(defn browse-element [ctx i]                                ; [nil :seattle/neighborhoods 1234345]
   {:pre []
    :post [(s/assert r/reactive? (:hypercrud.browser/qfind %)) ; qfind set in base if it is available
           (s/assert r/reactive? (:hypercrud.browser/schema %))]}
@@ -608,26 +608,26 @@ a speculative db/id."
     :else
     (let [r-pull-enclosure (r/fmap-> (:hypercrud.browser/result-enclosure ctx) (get i))]
       (as-> ctx ctx
-            (element-head ctx i)
-            (assoc ctx :hypercrud.browser/root-pull-enclosure r-pull-enclosure) ; for refocus
-            (assoc ctx :hypercrud.browser/pull-enclosure r-pull-enclosure)
-            (condp some [(type @(:hypercrud.browser/qfind ctx))]
-              #{FindRel FindTuple} (as-> ctx ctx
-                                         (update ctx :hypercrud.browser/result-path (fnil conj []) i)
-                                         ; I don't think we index result here, uncertain.
-                                         ; Related to collapse FindRel-N to FindColl
-                                         (assoc ctx :hypercrud.browser/element-index i)) ; used only in labels
-              #{FindColl FindScalar} ctx)
+        (element-head ctx i)
+        (assoc ctx :hypercrud.browser/root-pull-enclosure r-pull-enclosure) ; for refocus
+        (assoc ctx :hypercrud.browser/pull-enclosure r-pull-enclosure)
+        (condp some [(type @(:hypercrud.browser/qfind ctx))]
+          #{FindRel FindTuple} (as-> ctx ctx
+                                 (update ctx :hypercrud.browser/result-path (fnil conj []) i)
+                                 ; I don't think we index result here, uncertain.
+                                 ; Related to collapse FindRel-N to FindColl
+                                 (assoc ctx :hypercrud.browser/element-index i)) ; used only in labels
+          #{FindColl FindScalar} ctx)
 
-            ; Do last, result-path is set
-            ; If there is only one element, should we set V?
-            ; Hard to interpret it since we don't know what it is (entity, aggregate, var)
-            ; Setting :hypercrud.browser/validation-hints doesn't make sense here as specs are keyword oriented
-            ; so at the fiddle level, or at the attribute level, but not relations.
-            ;
-            ; We can set i as the a, but you can't have links on i, we want to leave the fiddle-ident as the a.
-            ; a has to be semantic. does it matter?
-            (assoc ctx :hypercrud.browser/eav (r/fmap-> (:hypercrud.browser/eav ctx) (stable-eav-v (v! ctx))))))))
+        ; Do last, result-path is set
+        ; If there is only one element, should we set V?
+        ; Hard to interpret it since we don't know what it is (entity, aggregate, var)
+        ; Setting :hypercrud.browser/validation-hints doesn't make sense here as specs are keyword oriented
+        ; so at the fiddle level, or at the attribute level, but not relations.
+        ;
+        ; We can set i as the a, but you can't have links on i, we want to leave the fiddle-ident as the a.
+        ; a has to be semantic. does it matter?
+        (assoc ctx :hypercrud.browser/eav (r/fmap-> (:hypercrud.browser/eav ctx) (stable-eav-v (v! ctx))))))))
 
 (defn -infer-implicit-element "auto-focus single elements - legacy field path compat"
   [ctx]
@@ -786,11 +786,11 @@ a speculative db/id."
   (->> index
        (filter #(link-criteria-match? criterias %))
        (mapv second))
-  #_#_[r-link-index criterias]                                  ; criterias can contain nil, meaning toptop
-  (r/fmap->> r-link-index
-             (filter (r/partial link-criteria-match? criterias))
-             (mapv second)
-             #_(mapv (juxt :db/id identity))))
+  #_#_[r-link-index criterias]                              ; criterias can contain nil, meaning toptop
+      (r/fmap->> r-link-index
+                 (filter (r/partial link-criteria-match? criterias))
+                 (mapv second)
+                 #_(mapv (juxt :db/id identity))))
 
 (defn reachable-pullpaths "
   txfn can be on scalar and it is harmless to allow this."
@@ -824,7 +824,7 @@ a speculative db/id."
         ?pullpath (:hypercrud.browser/pull-path ctx)]
     (if-not (and ?element ?schema ?pullpath)                ; this if statement was causing chaos #909
       (links-at index criterias)
-      (let [as (reachable-attrs ctx)       ; scan for anything reachable ?
+      (let [as (reachable-attrs ctx)                        ; scan for anything reachable ?
             links (->> as
                        ; Places within reach
                        (mapcat (fn [a]
@@ -1056,7 +1056,7 @@ a speculative db/id."
       memoized-read-string (memoize safe-eval-string)]
   (defn link-tx-read-memoized! "Parse the keyword here and ignore the error, once migrated to keyword
   this doesn't happen"
-    [kw-str]                     ; TODO migrate type to keyword
+    [kw-str]                                                ; TODO migrate type to keyword
     (let [x (if (blank->nil kw-str)
               (memoized-read-string kw-str)
               (either/right nil))]
@@ -1114,11 +1114,11 @@ a speculative db/id."
   (defn tempid! "Generate a stable unique tempid that will never collide and also can be deterministicly
   reproduced in any tab or the server"
     ([ctx]
-      ; :blank can assume $; otherwise user should specify a qfind
-      ; ^ is old comment and can't this be removed now?
+     ; :blank can assume $; otherwise user should specify a qfind
+     ; ^ is old comment and can't this be removed now?
      (tempid! (or (dbname ctx) "$") ctx))
     ([dbname ctx]
-      ; Use hash of current dbval, which changes with each edit
+     ; Use hash of current dbval, which changes with each edit
      @(r/track impl (:peer ctx) (:branch ctx) dbname))))
 
 (defrecord Context [ident]
@@ -1142,7 +1142,7 @@ a speculative db/id."
   (tempid! [ctx]
     (tempid! ctx))
   (tempid! [ctx dbname]
-    (tempid! dbname ctx))         ; careful, params flipped
+    (tempid! dbname ctx))                                   ; careful, params flipped
   (qfind-level? [ctx]
     (qfind-level? ctx))
   (link-tx [ctx]
