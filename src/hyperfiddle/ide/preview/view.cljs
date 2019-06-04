@@ -184,11 +184,10 @@
              preview-state (::preview-state ctx)]
          (when-not (= prev-route next-route)
            (swap! preview-state assoc :is-refreshing true)
-           (runtime/dispatch! rt (fn [dispatch! get-state]
-                                   (-> (actions/set-route rt next-route user-branch false dispatch! get-state)
-                                       (p/finally (fn [] (swap! preview-state assoc
-                                                                :staleness (ide-branch-reference rt (::ide-branch ctx))
-                                                                :is-refreshing false)))))))))
+           (-> (runtime/set-route rt user-branch next-route)
+               (p/finally (fn [] (swap! preview-state assoc
+                                        :staleness (ide-branch-reference rt (::ide-branch ctx))
+                                        :is-refreshing false)))))))
 
      :component-will-unmount
      (fn [this]
