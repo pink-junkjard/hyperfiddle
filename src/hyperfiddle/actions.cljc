@@ -88,7 +88,9 @@
   {:pre [(s/valid? :hyperfiddle/route route)]}
   (let [current-route (get-in (get-state) [::runtime/partitions branch :route])]
     (if (and (not force) (route/equal-without-frag? route current-route))
-      (dispatch! [:partition-route branch route])           ; just update state without re-hydrating
+      (do
+        (dispatch! [:partition-route branch route])         ; just update state without re-hydrating
+        (p/resolved nil))
       (do
         (dispatch! (apply batch
                           [:partition-route branch route]
