@@ -5,7 +5,8 @@
 
 (defprotocol HF-Runtime
   (domain [rt])
-  (io [rt]))
+  (io [rt])
+  (hydrate [rt branch request]))
 
 (defprotocol State                                          ; internal
   (dispatch! [rt action-or-func])

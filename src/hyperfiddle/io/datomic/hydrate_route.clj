@@ -6,7 +6,6 @@
     [contrib.reactive :as r]
     [hypercrud.browser.browser-request :as browser-request]
     [hypercrud.browser.context :refer [map->Context]]
-    [hypercrud.client.core :as hc]
     [hyperfiddle.io.core :as io]
     [hyperfiddle.io.datomic.hydrate-requests :as hydrate-requests]
     [hyperfiddle.io.legacy :refer [stage->staged-branches]]
@@ -27,8 +26,6 @@
 
   runtime/HF-Runtime
   (domain [rt] domain)
-
-  hc/Peer
   (hydrate [rt branch request]
     (let [ptm @(runtime/state rt [::runtime/partitions branch :ptm])]
       (-> (if (contains? ptm request)

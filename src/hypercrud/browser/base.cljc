@@ -9,7 +9,6 @@
             [datascript.parser #?@(:cljs [:refer [FindRel FindColl FindTuple FindScalar Variable Aggregate Pull]])]
             [hypercrud.browser.context :as context]
             [hypercrud.browser.routing :as routing]
-            [hypercrud.client.core :as hc]
             [hypercrud.types.DbName :refer [#?(:cljs DbName)]]
             [hypercrud.types.DbRef :refer [->DbRef]]
             [hypercrud.types.EntityRequest :refer [->EntityRequest]]
@@ -62,7 +61,7 @@
   (let [fiddle-ident (first @(:hypercrud.browser/route ctx))]
     (if (domain/system-fiddle? (runtime/domain (:peer ctx)) fiddle-ident)
       (domain/hydrate-system-fiddle (runtime/domain (:peer ctx)) fiddle-ident)
-      (>>= @(hc/hydrate (:peer ctx) (:branch ctx) @meta-fiddle-request) validate-fiddle))))
+      (>>= @(runtime/hydrate (:peer ctx) (:branch ctx) @meta-fiddle-request) validate-fiddle))))
 
 (defn request-for-fiddle [{fiddle :hypercrud.browser/fiddle :as ctx}] ; depends on route
   ; it's a fiddle-ctx now, which has the defaults applied
@@ -88,9 +87,9 @@
 
     (either/right nil)))
 
-(let [nil-or-hydrate (fn [peer branch request]
+(let [nil-or-hydrate (fn [rt branch request]
                        (if-let [?request @request]
-                         @(hc/hydrate peer branch ?request)
+                         @(runtime/hydrate rt branch ?request)
                          (either/right nil)))]
   (defn data-from-route "either ctx, ctx-from-route" [route ctx] ; todo rename
     (mlet [ctx (-> (context/clean ctx)
