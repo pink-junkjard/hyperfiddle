@@ -4,7 +4,6 @@
     [contrib.data :as data]
     [contrib.reactive :as r]
     [contrib.template :refer [load-resource]]
-    [hypercrud.client.core :as hc]
     [hypercrud.client.peer :as peer]
     [hypercrud.transit :as hc-t]
     #?(:cljs [hypercrud.ui.error :as error])
@@ -31,9 +30,7 @@
   runtime/HF-Runtime
   (domain [rt] domain)
   (io [rt] io)
-
-  hc/Peer
-  (hydrate [this branch request] (peer/hydrate state-atom branch request)))
+  (hydrate [rt branch request] (peer/hydrate state-atom branch request)))
 
 (def analytics (load-resource "analytics.html"))
 
