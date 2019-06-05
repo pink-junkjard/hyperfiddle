@@ -3,22 +3,17 @@
     [cats.monad.either :as either]
     [contrib.cljs-platform :refer [code-for-browser]]
     [contrib.component :as component]
-    [contrib.css :refer [css]]
-    [contrib.data :refer [map-values assoc-if]]
+    [contrib.data :refer [map-values]]
     [contrib.local-storage :as local-storage]
     [contrib.reactive :as r]
     [contrib.ui]
     [hypercrud.browser.base :as base]
-    [hypercrud.ui.error :as error-cmps]
     [hyperfiddle.actions :as actions]
     [hyperfiddle.branch :as branch]
     [hyperfiddle.domain :as domain]
     [hyperfiddle.foundation :as foundation]
     [hyperfiddle.ide.domain :as ide-domain]
-    [hyperfiddle.ide.preview.runtime :refer [->Runtime]]
-    [hyperfiddle.ide.preview.state :refer [->FAtom]]
     [hyperfiddle.io.basis :as basis]
-    [hyperfiddle.io.browser :refer [->IOImpl]]
     [hyperfiddle.local-storage-sync :refer [map->LocalStorageSync]]
     [hyperfiddle.project :as project]
     [hyperfiddle.reducers :as reducers]
@@ -26,12 +21,10 @@
     [hyperfiddle.runtime :as runtime]
     [hyperfiddle.ui.iframe :refer [iframe-cmp]]
     [hyperfiddle.ui.loading :as loading]
-    [hyperfiddle.ui.staging :as staging]
-
+    [re-com.core :as re-com]
     [reagent.core :as reagent]
     [promesa.core :as p]
-    [taoensso.timbre :as timbre]
-    [re-com.core :as re-com]))
+    [taoensso.timbre :as timbre]))
 
 
 (def keypress (code-for-browser (js/keypress.Listener. js/document.body)))
@@ -60,41 +53,35 @@
           @(runtime/state rt [::runtime/partitions user-branch :local-basis])
           @(runtime/state rt [::runtime/partitions ide-branch :local-basis]))))
 
-(defn preview-stale? [user-ctx preview-state]
+(defn preview-stale? [preview-rt ide-branch preview-branch preview-state]
   #_(println (pr-str {:initial-render @(r/cursor preview-state [:initial-render])
                       :staleness-not= (not= @(r/cursor preview-state [:staleness]) (ide-branch-reference rt ide-branch))
                       :stale-gb? (stale-global-basis?)
                       :stale-lb (stale-local-basis?)}))
-  (let [rt (:peer user-ctx)
-        user-branch (:branch user-ctx)
-        ide-branch (::ide-branch user-ctx)]
-    (and (not @(r/cursor preview-state [:initial-render]))
-         (or (not= @(r/cursor preview-state [:staleness]) (ide-branch-reference rt ide-branch))
-             (stale-global-basis? rt)
-             (stale-local-basis? rt user-branch ide-branch)))))
+  (and (not @(r/cursor preview-state [:initial-render]))
+       (or (not= @(r/cursor preview-state [:staleness]) (ide-branch-reference preview-rt ide-branch))
+           (stale-global-basis? preview-rt)
+           (stale-local-basis? preview-rt preview-branch ide-branch))))
 
-(defn refresh! [ctx preview-state]
+(defn refresh! [preview-rt ide-branch preview-branch preview-state]
   (when-not (or @(r/cursor preview-state [:is-refreshing])
                 @(r/cursor preview-state [:initial-render]))
-    (let [user-branch (:branch ctx)
-          ide-branch (::ide-branch ctx)
-          rt (:peer ctx)
-          init-level (cond
-                       (stale-global-basis? rt) actions/LEVEL-NONE
-                       (stale-local-basis? rt user-branch ide-branch) actions/LEVEL-GLOBAL-BASIS
+    (let [init-level (cond
+                       (stale-global-basis? preview-rt) actions/LEVEL-NONE
+                       (stale-local-basis? preview-rt preview-branch ide-branch) actions/LEVEL-GLOBAL-BASIS
                        :else actions/LEVEL-LOCAL-BASIS)]
       (swap! preview-state assoc
-             :staleness (ide-branch-reference rt ide-branch)
+             :staleness (ide-branch-reference preview-rt ide-branch)
              :is-refreshing true)
-      (-> (actions/bootstrap-data rt user-branch init-level)
+      (-> (actions/bootstrap-data preview-rt preview-branch init-level)
           (p/finally (fn [] (swap! preview-state assoc :is-refreshing false)))))))
 
-(defn preview-toolbar [user-ctx preview-state]
-  (let [stale @(r/track preview-stale? user-ctx preview-state)]
+(defn preview-toolbar [preview-rt ide-branch preview-branch preview-state]
+  (let [stale @(r/track preview-stale? preview-rt ide-branch preview-branch preview-state)]
     [:span.preview-toolbar (when stale {:class "hyperfiddle-preview-stale"})
      ; todo animation
      (let [is-hovering-refresh-button (r/cursor preview-state [:is-hovering-refresh-button])]
-       [:button {:class "refresh" :on-click #(refresh! user-ctx preview-state)
+       [:button {:class "refresh" :on-click #(refresh! preview-rt ide-branch preview-branch preview-state)
                  :disabled @(r/cursor preview-state [:is-refreshing])
                  :on-mouse-over #(do (reset! is-hovering-refresh-button true) nil)
                  :on-mouse-out #(do (reset! is-hovering-refresh-button false) nil)}
@@ -118,11 +105,11 @@
                           :checked (= (:value props) @(r/cursor preview-state [:display-mode]))
                           :on-change #(swap! preview-state assoc :display-mode %))]))))]))
 
-(defn preview-content [ctx preview-state route]
+(defn preview-content [ctx ide-branch preview-state route]
   (if @(r/cursor preview-state [:initial-render])
     [loading/page (runtime/domain (:peer ctx))]
     (let [code+ (project/eval-domain-code!+ @(runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :project :project/code]))
-          is-stale @(r/track preview-stale? ctx preview-state)]
+          is-stale @(r/track preview-stale? (:peer ctx) ide-branch (:branch ctx) preview-state)]
       [:<>
        (when (either/left? code+)
          (let [e @code+]
@@ -146,13 +133,12 @@
 (def preview-effects
   (reagent/create-class
     {:reagent-render
-     (fn [ctx route]
-       [preview-content ctx (::preview-state ctx) route])
+     (fn [ctx ide-branch preview-state route]
+       [preview-content ctx ide-branch preview-state route])
 
      :component-did-mount
      (fn [this]
-       (let [[_ ctx route] (reagent/argv this)
-             preview-state (::preview-state ctx)
+       (let [[_ ctx ide-branch preview-state route] (reagent/argv this)
              user-branch (:branch ctx)
              rt (:peer ctx)]
          (.register-many keypress (clj->js [{"keys" "alt"
@@ -160,7 +146,7 @@
                                              "on_keydown" #(swap! preview-state assoc :alt-key-pressed true)
                                              "on_keyup" #(swap! preview-state assoc :alt-key-pressed false)}
                                             {"keys" "alt enter"
-                                             "on_keydown" #(refresh! ctx preview-state)}
+                                             "on_keydown" #(refresh! rt ide-branch (:branch ctx) preview-state)}
                                             {"keys" "ctrl `"
                                              "on_keydown" (fn []
                                                             (swap! preview-state update :display-mode
@@ -178,20 +164,19 @@
 
      :component-did-update
      (fn [this [_ _ prev-route _]]
-       (let [[_ ctx next-route] (reagent/argv this)
+       (let [[_ ctx ide-branch preview-state next-route] (reagent/argv this)
              user-branch (:branch ctx)
-             rt (:peer ctx)
-             preview-state (::preview-state ctx)]
+             rt (:peer ctx)]
          (when-not (= prev-route next-route)
            (swap! preview-state assoc :is-refreshing true)
            (-> (runtime/set-route rt user-branch next-route)
                (p/finally (fn [] (swap! preview-state assoc
-                                        :staleness (ide-branch-reference rt (::ide-branch ctx))
+                                        :staleness (ide-branch-reference rt ide-branch)
                                         :is-refreshing false)))))))
 
      :component-will-unmount
      (fn [this]
-       (let [[_ ctx route] (reagent/argv this)]
+       (let [[_ ctx ide-branch preview-state route] (reagent/argv this)]
          (when local-storage/is-supported
            (component/stop @(ctx->ls ctx))))
        (.reset keypress))
@@ -224,11 +209,3 @@
       service-args
       (when-not (hyperfiddle.ide/parse-ide-fragment encoded-fragment)
         encoded-fragment))))
-
-(defn- create-user-runtime [ide-ctx]
-  (if-let [user-domain (::user-domain ide-ctx)]
-    (let [user-state (->FAtom (runtime/state (:peer ide-ctx)) to (r/partial from (runtime/domain (:peer ide-ctx)) (:branch ide-ctx)))
-          user-io (->IOImpl user-domain)
-          user-runtime (->Runtime user-domain user-io user-state reducers/root-reducer)]
-      user-runtime)))
-
