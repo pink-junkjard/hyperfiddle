@@ -165,9 +165,9 @@
 (defn- set-parent [ctx]
   (assoc ctx :hypercrud.browser/parent ctx))
 
-(defn entity-datakey [ctx v]
-  (if v
-    (smart-entity-identifier ctx v)))
+(defn entity-datakey [ctx ?v]
+  (if ?v
+    (smart-entity-identifier ctx ?v)))
 
 (defn entity-viewkey "React.js view key that is stable for entire view lifecycle.
 This works around Datomic issue where a tempid is hydrated for the first time and is allocated
@@ -1129,6 +1129,8 @@ a speculative db/id."
     (fiddle ctx))
   (a [ctx]
     (a ctx))
+  (e [ctx]
+    (e ctx))
   (eav [ctx]
     (eav ctx))
   (attr [ctx]
@@ -1139,12 +1141,16 @@ a speculative db/id."
     (identity? ctx))
   (element-type [ctx]
     (element-type ctx))
+  (id [ctx pulltree]
+    (entity-datakey ctx pulltree))
   (tempid! [ctx]
     (tempid! ctx))
   (tempid! [ctx dbname]
     (tempid! dbname ctx))                                   ; careful, params flipped
   (qfind-level? [ctx]
     (qfind-level? ctx))
+  (row-key [ctx row]
+    (row-key ctx row))
   (link-tx [ctx]
     (link-tx ctx))
   (v [ctx]
