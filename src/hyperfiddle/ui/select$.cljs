@@ -1,20 +1,15 @@
 (ns hyperfiddle.ui.select$                                  ; Namespace clashes with var hyperfiddle.ui/select
   (:require
     [cats.core :refer [mlet return]]
-    [cats.monad.either :as either :refer [left right branch]]
+    [cats.monad.either :refer [left right branch]]
     [contrib.ct :refer [unwrap]]
     [contrib.data :refer [unqualify]]
     [contrib.eval]
-    [contrib.reactive :as r]
     [contrib.reader]
     [contrib.string :refer [blank->nil]]
-    [datascript.parser :refer [FindRel FindColl FindTuple FindScalar Variable Aggregate Pull]]
-    [hypercrud.browser.context :as context]
-    [hyperfiddle.data :as data]
+    [hyperfiddle.api :as hf]
     [hyperfiddle.ui.util :refer [with-entity-change! writable-entity?]]
-    [taoensso.timbre :as timbre]
-    [cljs.spec.alpha :as s]
-    [hyperfiddle.api :as hf]))
+    [taoensso.timbre :as timbre]))
 
 (defn ident->label [v]
   (cond
@@ -43,7 +38,7 @@
 (defn option-label-default [row ctx]
   ; row is FindRel or FindCol
   (or
-    (some-> (hypercrud.browser.context/row-key ctx row) ident->label)
+    (some-> (hf/row-key ctx row) ident->label)
     (clojure.string/join " " (vals row))))
 
 (defn wrap-change-for-select [hf-change!]
@@ -91,10 +86,9 @@
   [:span msg])
 
 (defn compute-disabled [ctx props]
-  (let [[e _ _] (context/eav ctx)]
-    (or (boolean (:disabled props))
-        (boolean (:read-only props))                        ; legacy
-        (nil? e))))
+  (or (boolean (:disabled props))
+      (boolean (:read-only props))                          ; legacy
+      (nil? (hf/e ctx))))
 
 (defn options-value-bridge+ [anchor-ctx #_target-ctx props] ; no longer need target-ctx because it has to work without options hydrated
   ; if select is qfind-level, is value tupled according to options qfind?
@@ -105,8 +99,8 @@
                                         ; in the case of tupled options, the userland view props must
                                         ; indicate which element is the entity has an identity which matches the anchor eav.
                                         (condp some [(unqualify (contrib.datomic/parser-type @(:hypercrud.browser/qfind ctx)))]
-                                          #{:find-coll :find-scalar} (context/row-key ctx val)
-                                          #{:find-rel :find-tuple} (option-element (context/row-key ctx val)))))
+                                          #{:find-coll :find-scalar} (hf/row-key ctx val)
+                                          #{:find-rel :find-tuple} (option-element (hf/row-key ctx val)))))
                       :option-label (fn [val ctx]
                                       (let [option-label (contrib.eval/ensure-fn (:option-label props option-label-default))]
                                         (option-label val ctx)))}
@@ -117,8 +111,8 @@
       ; Select options renderer is an eav oriented control like all controls, thus the
       ; anchor is always a pull context, never a qfind context. To see this is true, consider that you can't
       ; pick a tuple then write it into a database. You can only write through entities.
-      (context/qfind-level? anchor-ctx)
-      (left (str "No attribute in scope. eav: " (context/eav anchor-ctx)))
+      (hf/qfind-level? anchor-ctx)
+      (left (str "No attribute in scope. eav: " (hf/eav anchor-ctx)))
 
       #_#_(let [options (->> (hf/data target-ctx)
                              (map #((:option-value select-props) % target-ctx)))]
@@ -133,11 +127,14 @@
             option-props {:disabled (compute-disabled anchor-ctx select-props)}]
         (right [select-props option-props])))))
 
+(declare typeahead)
+
 (defn ^:export select
   ([ctx props]
    (select nil ctx props))
   ([_ ctx props]
-   {:pre [ctx]}
+   [typeahead ctx props]
+   #_#_#_{:pre [ctx]}
    (assert (:options props) "select: :options prop is required")
     ; http://hyperfiddle.hyperfiddle.net/:database!options-list/
     ; http://hyperfiddle.hyperfiddle.site/:hyperfiddle.ide!domain/~entity('$domains',(:domain!ident,'hyperfiddle'))
