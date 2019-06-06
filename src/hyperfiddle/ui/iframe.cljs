@@ -50,6 +50,7 @@
 
             :hypercrud.browser.browser-ui/xray
             (if-let [user-renderer (:user-renderer props)]
+              ; don't use r/partial with user-renderer, r/partial useful for args, not components
               ; Select user-renderer is valid in xray mode now
               [user-renderer value ctx props]
               [hyperfiddle.ui/fiddle-xray value ctx props])
