@@ -177,7 +177,8 @@
           #js {"labelKey" (fn [record]
                             ((:option-label select-props) record options-ctx))
                "placeholder" (:placeholder select-props)
-               "options" (to-array option-records-untupled) ; widget requires the option records, not ids
+               ; widget requires the option records, not ids
+               "options" (->> option-records-untupled (sort-by (:option-label select-props)) to-array)
                "onChange" (fn [jrecord]
                             ; foreign lib state is js array, single select is lifted into List like multi-select
                             ; unselected is []
