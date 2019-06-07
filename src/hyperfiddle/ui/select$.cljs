@@ -94,13 +94,15 @@
   ; if select is qfind-level, is value tupled according to options qfind?
   ; if select is pull-level, is options qfind untupled?
   ; We must compare both ctxs to decide this.
-  (let [select-props {:option-value (let [option-element (contrib.eval/ensure-fn (:option-element props first))]
+  (let [option-element (:option-element props 0)
+        select-props {:option-element option-element
+                      :option-value (let []
                                       (fn [val ctx]
                                         ; in the case of tupled options, the userland view props must
                                         ; indicate which element is the entity has an identity which matches the anchor eav.
                                         (condp some [(unqualify (contrib.datomic/parser-type @(:hypercrud.browser/qfind ctx)))]
                                           #{:find-coll :find-scalar} (hf/row-key ctx val)
-                                          #{:find-rel :find-tuple} (option-element (hf/row-key ctx val)))))
+                                          #{:find-rel :find-tuple} (get (hf/row-key ctx val) option-element))))
                       :option-label (fn [val ctx]
                                       (let [option-label (contrib.eval/ensure-fn (:option-label props option-label-default))]
                                         (option-label val ctx)))}
@@ -113,11 +115,6 @@
       ; pick a tuple then write it into a database. You can only write through entities.
       (hf/qfind-level? anchor-ctx)
       (left (str "No attribute in scope. eav: " (hf/eav anchor-ctx)))
-
-      #_#_(let [options (->> (hf/data target-ctx)
-                             (map #((:option-value select-props) % target-ctx)))]
-            (and value (not (contains? (set options) value))))
-          [select-error-cmp (str "Value not seen in options: " value)]
 
       :else
       (let [select-props (merge {:value value               ; typeahead does not use this
@@ -133,8 +130,8 @@
   ([ctx props]
    (select nil ctx props))
   ([_ ctx props]
-   [typeahead ctx props]
-   #_#_#_{:pre [ctx]}
+   #_[typeahead ctx props]
+   {:pre [ctx]}
    (assert (:options props) "select: :options prop is required")
     ; http://hyperfiddle.hyperfiddle.net/:database!options-list/
     ; http://hyperfiddle.hyperfiddle.site/:hyperfiddle.ide!domain/~entity('$domains',(:domain!ident,'hyperfiddle'))
@@ -158,29 +155,39 @@
             select-props (-> select-props
                              (dissoc :disabled)             ; Use :read-only instead to allow click to expand options
                              (update :read-only #(or % (:disabled select-props) is-no-options))
-                             (update :class #(str % (if (:disabled option-props) " disabled"))))]
+                             (update :class #(str % (if (:disabled option-props) " disabled"))))
 
-        #_(mapv (juxt #((:option-value select-props) % options-ctx) ; is lookup ref good yet?
-                      #((:option-label select-props) % options-ctx)))
+            ?v (hf/data (::value-ctx props))
+
+            ; Need schema set and in multicolor case you need to know which element
+            option-records-untupled
+            (condp some [(unqualify (contrib.datomic/parser-type (hf/qfind options-ctx)))]
+              #{:find-coll :find-scalar} (hf/data options-ctx)
+              #{:find-rel :find-tuple} (mapv #(get % (:option-element select-props 0))
+                                             (hf/data options-ctx)))
+
+            ; Convoluted context manipulation due to https://github.com/hyperfiddle/hyperfiddle/issues/949
+            ; The above untupling logic should be done by hyperfiddle
+            options-ctx (hf/browse-element options-ctx (:option-element select-props 0))
+            #_#_option-records-untupled' (hf/data options-ctx)
+            #_#__ (js/console.log option-records-untupled option-records-untupled')]
 
         (reagent.core/create-element
           js/ReactBootstrapTypeahead.Typeahead
-          #js {"labelKey" #((:option-label select-props) % options-ctx)
+          #js {"labelKey" (fn [record]
+                            ((:option-label select-props) record options-ctx))
                "placeholder" (:placeholder select-props)
-               "options" (to-array (hf/data options-ctx))
+               "options" (to-array option-records-untupled) ; widget requires the option records, not ids
                "onChange" (fn [jv]
+                            ;(first (array-seq jv))
                             (->> jv                         ; #js [] means retracted
-                                 js->clj                    ; foreign lib state is js array
+                                 array-seq                  ; foreign lib state is js array
                                  first                      ; foreign lib treats single-select as an array, like multi-select
                                  (hf/id options-ctx)
                                  ((:on-change select-props))))
-
-               ; V might not be in options
-               ; V might have different keys than options
-               ; V might be tuple???
-
-               "selected" (let [v (hf/data (::value-ctx props))] ; (let [v' ((:option-value select-props) v options-ctx)])
-                            (to-array (if v [v] [])))})))))
+               ; V might not be in options - widget accounts for this by taking a selected record rather than identity
+               ; V might have different keys than options - as long as :option-label works, it doesn't matter
+               "selected" (if ?v #js [?v] #js [])})))))
 
 (defn ^:export typeahead
   [ctx props]
