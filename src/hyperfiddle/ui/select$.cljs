@@ -130,8 +130,8 @@
   ([ctx props]
    (select nil ctx props))
   ([_ ctx props]
-   #_[typeahead ctx props]
-   {:pre [ctx]}
+   [typeahead ctx props]
+   #_#_#_{:pre [ctx]}
    (assert (:options props) "select: :options prop is required")
     ; http://hyperfiddle.hyperfiddle.net/:database!options-list/
     ; http://hyperfiddle.hyperfiddle.site/:hyperfiddle.ide!domain/~entity('$domains',(:domain!ident,'hyperfiddle'))
