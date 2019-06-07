@@ -35,11 +35,11 @@
 ;    (interpose ", ")
 ;    (apply str)))
 
-(defn option-label-default [row ctx]
-  ; row is FindRel or FindCol
-  (or
-    (some-> (hf/row-key ctx row) ident->label)
-    (clojure.string/join " " (vals row))))
+;(defn option-label-default [row ctx]
+;  ; row is FindRel or FindCol
+;  (or
+;    (some-> (hf/row-key ctx row) ident->label)
+;    (clojure.string/join " " (vals row))))
 
 (defn wrap-change-for-select [hf-change!]
   (fn [e]
@@ -103,9 +103,9 @@
                                         (condp some [(unqualify (contrib.datomic/parser-type @(:hypercrud.browser/qfind ctx)))]
                                           #{:find-coll :find-scalar} (hf/row-key ctx val)
                                           #{:find-rel :find-tuple} (get (hf/row-key ctx val) option-element))))
-                      :option-label (fn [val ctx]
-                                      (let [option-label (contrib.eval/ensure-fn (:option-label props option-label-default))]
-                                        (option-label val ctx)))}
+                      :option-label (fn [val]
+                                      (let [option-label (contrib.eval/ensure-fn (:option-label props pr-str))]
+                                        (option-label val)))}
         ; The pulled v is always the select value, options must align
         ; There is always an attribute here because all widgets are attribute-centric
         value (hf/v anchor-ctx)]
@@ -175,7 +175,8 @@
         (reagent.core/create-element
           js/ReactBootstrapTypeahead.Typeahead
           #js {"labelKey" (fn [record]
-                            ((:option-label select-props) record #_options-ctx))
+                            ; Must return string otherwise "invariant undefined"; you can pr-str from userland
+                            (str ((:option-label select-props) record)))
                "placeholder" (:placeholder select-props)
                ; widget requires the option records, not ids
                "options" (->> option-records-untupled (sort-by (:option-label select-props)) to-array)
