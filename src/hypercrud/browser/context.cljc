@@ -1129,6 +1129,8 @@ a speculative db/id."
     (fiddle ctx))
   (a [ctx]
     (a ctx))
+  (browse-element [ctx i]
+    (browse-element ctx i))
   (e [ctx]
     (e ctx))
   (eav [ctx]
@@ -1147,6 +1149,8 @@ a speculative db/id."
     (tempid! ctx))
   (tempid! [ctx dbname]
     (tempid! dbname ctx))                                   ; careful, params flipped
+  (qfind [ctx]
+    (qfind ctx))
   (qfind-level? [ctx]
     (qfind-level? ctx))
   (row-key [ctx row]

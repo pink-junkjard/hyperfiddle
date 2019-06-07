@@ -8,6 +8,7 @@
 (defprotocol Browser
   (a [ctx])
   (attr [ctx])
+  (browse-element [ctx i])
   (data [ctx])
   (eav [ctx])
   (e [ctx])
@@ -16,6 +17,7 @@
   (fiddle [ctx])
   (identity? [ctx])
   (link-tx [ctx])
+  (qfind [ctx])
   (qfind-level? [ctx])
   (id [ctx pulltree])
   (row-key [ctx row])
