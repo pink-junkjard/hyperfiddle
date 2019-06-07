@@ -49,7 +49,7 @@
    [controls/ref
     (context/data ctx) ctx
     {:options :hyperfiddle.ide/fiddle-options
-     :option-label (r/comp pr-str :fiddle/ident first)}]
+     :option-label (r/comp pr-str :fiddle/ident)}]
    [link :hyperfiddle.ide/new-fiddle ctx "new"]])
 
 (defmethod hf/render #{:fiddle/markdown
