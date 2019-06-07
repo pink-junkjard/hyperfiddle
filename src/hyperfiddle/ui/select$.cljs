@@ -178,16 +178,20 @@
                             ((:option-label select-props) record options-ctx))
                "placeholder" (:placeholder select-props)
                "options" (to-array option-records-untupled) ; widget requires the option records, not ids
-               "onChange" (fn [jv]
-                            ;(first (array-seq jv))
-                            (->> jv                         ; #js [] means retracted
-                                 array-seq                  ; foreign lib state is js array
-                                 first                      ; foreign lib treats single-select as an array, like multi-select
-                                 (hf/id options-ctx)
-                                 ((:on-change select-props))))
+               "onChange" (fn [jrecord]
+                            ; foreign lib state is js array, single select is lifted into List like multi-select
+                            ; unselected is []
+                            (let [[?record] (array-seq jrecord)
+                                  ?v (hf/id options-ctx ?record)]
+                              ((:on-change select-props) ?v)))
                ; V might not be in options - widget accounts for this by taking a selected record rather than identity
                ; V might have different keys than options - as long as :option-label works, it doesn't matter
-               "selected" (if ?v #js [?v] #js [])})))))
+               "selected" (if ?v #js [?v] #js [])
+
+               ; Rendering strategy that works in tables
+               ; http://hyperfiddle.hyperfiddle.site/:hyperfiddle.ide!edit/(:fiddle!ident,:hyperfiddle!ide)
+               "bodyContainer" true
+               "align" "left"})))))
 
 (defn ^:export typeahead
   [ctx props]
