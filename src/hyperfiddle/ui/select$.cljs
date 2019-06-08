@@ -190,6 +190,8 @@
                ; V might have different keys than options - as long as :option-label works, it doesn't matter
                "selected" (if ?v #js [?v] #js [])
 
+               "highlightOnlyResult" true                   ; this helps avoid
+
                ; Rendering strategy that works in tables
                ; http://hyperfiddle.hyperfiddle.site/:hyperfiddle.ide!edit/(:fiddle!ident,:hyperfiddle!ide)
                "bodyContainer" true
