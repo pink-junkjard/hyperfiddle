@@ -15,15 +15,13 @@
     [hyperfiddle.reducers :as reducers]
     [hyperfiddle.runtime :as runtime]
     [hyperfiddle.security.client :as security]
-    [hyperfiddle.state :as state]
     [hyperfiddle.ui.loading :as loading]
     [promesa.core :as p]
     #?(:cljs [reagent.dom.server :as reagent-server])))
 
 
-(deftype RT [domain io state-atom root-reducer]
+(deftype RT [domain io state-atom]
   runtime/State
-  (dispatch! [rt action-or-func] (state/dispatch! state-atom root-reducer action-or-func))
   (state [rt] state-atom)
   (state [rt path] (r/cursor state-atom path))
 
@@ -90,7 +88,7 @@
                                                  (domain/databases domain))
                        ::runtime/partitions {foundation/root-branch {:route (domain/url-decode domain path)}}
                        ::runtime/user-id user-id}
-        rt (->RT domain io (r/atom (reducers/root-reducer initial-state nil)) reducers/root-reducer)]
+        rt (->RT domain io (r/atom (reducers/root-reducer initial-state nil)))]
     (-> (actions/bootstrap-data rt foundation/root-branch actions/LEVEL-NONE)
         (p/catch #(or (:hyperfiddle.io/http-status-code (ex-data %)) 500))
         (p/then (fn [http-status-code]
