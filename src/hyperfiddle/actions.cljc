@@ -2,7 +2,6 @@
   (:require
     [cats.core :refer [mlet]]
     [cats.labs.promise]
-    [cats.monad.either :as either]
     [clojure.spec.alpha :as s]
     [contrib.data :as data]
     [contrib.datomic-tx :as tx]
@@ -84,19 +83,27 @@
 (defn close-popover [branch popover-id]
   [:close-popover branch popover-id])
 
-(defn set-route [rt route branch force dispatch! get-state]
-  {:pre [(s/valid? :hyperfiddle/route route)]}
-  (let [current-route (get-in (get-state) [::runtime/partitions branch :route])]
-    (if (and (not force) (route/equal-without-frag? route current-route))
-      (do
-        (dispatch! [:partition-route branch route])         ; just update state without re-hydrating
-        (p/resolved nil))
-      (do
-        (dispatch! (apply batch
-                          [:partition-route branch route]
-                          [:close-all-popovers branch]
-                          (discard-child-partitions get-state branch)))
-        (bootstrap-data rt branch LEVEL-GLOBAL-BASIS)))))
+(defn set-route
+  ([rt branch route force-hydrate]
+   (p/promise
+     (fn [resolve reject]
+       (runtime/dispatch! rt (fn [dispatch! get-state]
+                               (p/branch
+                                 (set-route rt branch route force-hydrate dispatch! get-state)
+                                 resolve reject))))))
+  ([rt branch route force-hydrate dispatch! get-state]
+   {:pre [(s/valid? :hyperfiddle/route route)]}
+   (let [current-route (get-in (get-state) [::runtime/partitions branch :route])]
+     (if (and (not force-hydrate) (route/equal-without-frag? route current-route))
+       (do
+         (dispatch! [:partition-route branch route])        ; just update state without re-hydrating
+         (p/resolved nil))
+       (do
+         (dispatch! (apply batch
+                           [:partition-route branch route]
+                           [:close-all-popovers branch]
+                           (discard-child-partitions get-state branch)))
+         (bootstrap-data rt branch LEVEL-GLOBAL-BASIS))))))
 
 (defn- update-to-tempids! [get-state branch dbname tx]
   (let [{:keys [tempid-lookups schemas]} (get-in (get-state) [::runtime/partitions branch])
@@ -104,7 +111,7 @@
         id->tempid (some-> (get tempid-lookups dbname) deref)]
     (map (partial tx/stmt-id->tempid id->tempid schema) tx)))
 
-(defn transact! [rt branch-id tx-groups dispatch! get-state & {:keys [route post-tx]}]
+(defn transact! [rt branch-id tx-groups dispatch! get-state & {:keys [post-tx]}]
   {:pre [(domain/valid-dbnames? (runtime/domain rt) (keys tx-groups))]}
   (dispatch! [:transact!-start])
   (-> (io/transact! (runtime/io rt) tx-groups)
@@ -115,93 +122,82 @@
                 ; todo should just call foundation/bootstrap-data
                 (mlet [:let [on-finally (into [[:transact!-success branch-id (keys tx-groups)]] post-tx)]
                        _ (refresh-global-basis (runtime/io rt) on-finally dispatch! get-state)
-                       :let [current-route (get-in (get-state) [::runtime/partitions branch-id :route])]]
-                  (either/branch
-                    (or (some-> route route/validate-route+) ; arbitrary user input, need to validate
-                        (either/right current-route))
-                    (fn [e]
-                      (dispatch! [:set-error e])
-                      (p/rejected e))
-                    (fn [route]
-                      (let [invert-id (fn [dbname id] (get-in tempid->id [dbname id] id))
-                            route' (route/invert-route route invert-id)]
-                        ; todo we want to overwrite our current browser location with this new url
-                        ; currently this new route breaks the back button
-                        (set-route rt route' branch-id true dispatch! get-state)))))))))
+                       :let [invert-id (fn [dbname id] (get-in tempid->id [dbname id] id))
+                             route (-> (get-in (get-state) [::runtime/partitions branch-id :route])
+                                       (route/invert-route invert-id))]]
+                  ; todo we want to overwrite our current browser location with this new url
+                  ; currently this new route breaks the back button
+                  (runtime/set-route rt branch-id route true))))))
 
 (defn should-transact!? [dbname get-state]
   (get-in (get-state) [::runtime/auto-transact dbname]))
 
-(defn with-groups [rt branch tx-groups & {:keys [route]}]
-  {:pre [(domain/valid-dbnames? (runtime/domain rt) (keys tx-groups))]}
-  (fn [dispatch! get-state]
-    (let [tx-groups (->> tx-groups
-                         (remove (fn [[dbname tx]] (empty? tx)))
-                         (map (fn [[dbname tx]] [dbname (update-to-tempids! get-state branch dbname tx)]))
-                         (into {}))
-          transact-dbnames (->> (keys tx-groups)
-                                (filter (fn [dbname] (and (branch/root-branch? branch) (should-transact!? dbname get-state)))))
-          transact-groups (select-keys tx-groups transact-dbnames)
-          with-actions (->> (apply dissoc tx-groups transact-dbnames)
-                            (mapv (fn [[dbname tx]] [:with branch dbname tx])))]
-      (if (not (empty? transact-groups))
-        ; todo what if transact throws?
-        (transact! rt branch transact-groups dispatch! get-state
-                   :post-tx with-actions
-                   :route route)
-        (either/branch
-          (or (some-> route route/validate-route+) (either/right nil)) ; arbitrary user input, need to validate
-          (fn [e]
-            (dispatch! (apply batch (conj with-actions [:set-error e]))))
-          (fn [route]
-            (let [actions (cond-> with-actions
-                            ; what about local-basis?
-                            route (conj [:partition-route branch route]))]
-              (dispatch! (apply batch (conj actions [:hydrate!-start branch])))
-              (hydrate-partition (runtime/io rt) branch dispatch! get-state))))))))
+(defn with-groups
+  ([rt branch tx-groups]
+   (p/promise
+     (fn [resolve reject]
+       (runtime/dispatch! rt (fn [dispatch! get-state]
+                               (p/branch
+                                 (with-groups rt branch tx-groups dispatch! get-state)
+                                 resolve reject))))))
+  ([rt branch tx-groups dispatch! get-state]
+   {:pre [(domain/valid-dbnames? (runtime/domain rt) (keys tx-groups))]}
+   (let [tx-groups (->> tx-groups
+                        (remove (fn [[dbname tx]] (empty? tx)))
+                        (map (fn [[dbname tx]] [dbname (update-to-tempids! get-state branch dbname tx)]))
+                        (into {}))
+         transact-dbnames (->> (keys tx-groups)
+                               (filter (fn [dbname] (and (branch/root-branch? branch) (should-transact!? dbname get-state)))))
+         transact-groups (select-keys tx-groups transact-dbnames)
+         with-actions (->> (apply dissoc tx-groups transact-dbnames)
+                           (mapv (fn [[dbname tx]] [:with branch dbname tx])))]
+     (if (not (empty? transact-groups))
+       ; todo what if transact throws?
+       (transact! rt branch transact-groups dispatch! get-state
+                  :post-tx with-actions)
+       (do
+         (dispatch! (apply batch (conj with-actions [:hydrate!-start branch])))
+         (hydrate-partition (runtime/io rt) branch dispatch! get-state))))))
 
 (defn open-popover [branch popover-id]
   [:open-popover branch popover-id])
 
-(defn stage-popover [rt branch tx-groups & {:keys [route on-start]}] ; todo rewrite in terms of with-groups
-  {:pre [(domain/valid-dbnames? (runtime/domain rt) (keys tx-groups))]}
-  (fn [dispatch! get-state]
-    (let [with-actions (->> tx-groups
-                            (remove (fn [[dbname tx]] (empty? tx)))
-                            (mapv (fn [[dbname tx]]
-                                    (let [tx (update-to-tempids! get-state branch dbname tx)]
-                                      [:with branch dbname tx]))))
-          parent-branch (branch/parent-branch-id branch)]
-      ; should the tx fn not be withd? if the transact! fails, do we want to run it again?
-      (dispatch! (apply batch (concat with-actions on-start)))
-      ;(with-groups rt parent-branch tx-groups :route route)
-      (let [tx-groups (->> (get-in (get-state) [::runtime/partitions branch :stage])
-                           (filter (fn [[dbname tx]] (and (should-transact!? dbname get-state) (not (empty? tx)))))
-                           (into {}))]
-        (if (and (branch/root-branch? parent-branch) (not (empty? tx-groups)))
-          ; todo what if transact throws?
-          (transact! rt parent-branch tx-groups dispatch! get-state
-                     :post-tx (let [clear-uris (->> (keys tx-groups)
-                                                    (map (fn [dbname] [:reset-stage-db branch dbname nil]))
-                                                    vec)]
-                                (concat clear-uris          ; clear the uris that were transacted
-                                        [[:merge branch]    ; merge the untransacted uris up
-                                         (discard-partition get-state branch)])) ; clean up the partition
-                     :route route)
-          (either/branch
-            (or (some-> route route/validate-route+) (either/right nil)) ; arbitrary user input, need to validate
-            (fn [e]
-              (dispatch! (batch [:merge branch]
-                                [:set-error e]
-                                (discard-partition get-state branch))))
-            (fn [route]
-              (let [actions [[:merge branch]
-                             (when route
-                               ; what about local-basis?
-                               [:partition-route parent-branch route])
-                             (discard-partition get-state branch)]]
-                (dispatch! (apply batch (conj actions [:hydrate!-start parent-branch])))
-                (hydrate-partition (runtime/io rt) parent-branch dispatch! get-state)))))))))
+(defn commit-branch
+  ([rt branch tx-groups on-start]
+   (p/promise
+     (fn [resolve reject]
+       (runtime/dispatch! rt (fn [dispatch! get-state]
+                               (p/branch
+                                 (commit-branch rt branch tx-groups on-start dispatch! get-state)
+                                 resolve reject))))))
+  ([rt branch tx-groups on-start dispatch! get-state]       ; todo rewrite in terms of with-groups
+   {:pre [(domain/valid-dbnames? (runtime/domain rt) (keys tx-groups))]}
+   (let [with-actions (->> tx-groups
+                           (remove (fn [[dbname tx]] (empty? tx)))
+                           (mapv (fn [[dbname tx]]
+                                   (let [tx (update-to-tempids! get-state branch dbname tx)]
+                                     [:with branch dbname tx]))))
+         parent-branch (branch/parent-branch-id branch)]
+     ; should the tx fn not be withd? if the transact! fails, do we want to run it again?
+     (dispatch! (apply batch (concat with-actions on-start)))
+     ;(with-groups rt parent-branch tx-groups :route route)
+     (let [tx-groups (->> (get-in (get-state) [::runtime/partitions branch :stage])
+                          (filter (fn [[dbname tx]] (and (should-transact!? dbname get-state) (not (empty? tx)))))
+                          (into {}))]
+       (if (and (branch/root-branch? parent-branch) (not (empty? tx-groups)))
+         ; todo what if transact throws?
+         (transact! rt parent-branch tx-groups dispatch! get-state
+                    :post-tx (let [clear-uris (->> (keys tx-groups)
+                                                   (map (fn [dbname] [:reset-stage-db branch dbname nil]))
+                                                   vec)]
+                               (concat clear-uris           ; clear the uris that were transacted
+                                       [[:merge branch]     ; merge the untransacted uris up
+                                        (discard-partition get-state branch)]))) ; clean up the partition
+         (do
+           (dispatch! (batch [:merge branch]
+                             (discard-partition get-state branch)
+                             [:hydrate!-start parent-branch]))
+           (hydrate-partition (runtime/io rt) parent-branch dispatch! get-state)))))))
 
 (defn reset-stage-db [rt branch dbname tx]
   {:pre [(domain/valid-dbname? (runtime/domain rt) dbname)]}

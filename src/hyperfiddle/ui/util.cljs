@@ -5,7 +5,6 @@
     [contrib.string :refer [empty->nil]]
     [hypercrud.browser.context :as context]
     [hyperfiddle.security.client :as security]
-    [hyperfiddle.actions :as actions]
     [hyperfiddle.runtime :as runtime]
     [taoensso.timbre :as timbre]))
 
@@ -29,12 +28,11 @@
        (timbre/warn "Trimming empty value to nil. This will be removed in a future release"))
      (tx/edit-entity e attribute o n'))))
 
-(defn with-tx!
+(defn with-tx!                                              ; legacy. todo invoke runtime/with-tx directly
   ([ctx tx]
    (with-tx! ctx (context/dbname ctx) tx))
   ([ctx dbname tx]
-   (->> (actions/with-groups (:peer ctx) (:branch ctx) {dbname tx})
-        (runtime/dispatch! (:peer ctx)))))
+   (runtime/with-tx (:peer ctx) (:branch ctx) dbname tx)))
 
 (defn with-entity-change! [ctx] (r/comp (r/partial with-tx! ctx) (r/partial entity-change->tx ctx)))
 

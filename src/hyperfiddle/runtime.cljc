@@ -1,12 +1,14 @@
-(ns hyperfiddle.runtime
-  (:require
-    [promesa.core :as p]))
+(ns hyperfiddle.runtime)
 
 
 (defprotocol HF-Runtime
   (domain [rt])
   (io [rt])
-  (hydrate [rt branch request]))
+  (hydrate [rt branch request])
+
+  ; actions
+  (-set-route [rt branch route force-hydrate])
+  )
 
 (defprotocol State                                          ; internal
   (dispatch! [rt action-or-func])
@@ -17,10 +19,23 @@
 (defn set-route
   "Set the route of the given branch. This may or may not trigger IO.
   Returns a promise"
-  [rt branch route]
-  (let [set-route (resolve 'hyperfiddle.actions/set-route)] ; todo intermediary hack for circular deps while we move away from dispatch! as the public api
-    (p/promise
-      (fn [resolve reject]
-        (dispatch! rt (fn [dispatch! get-state]
-                        (-> (set-route rt route branch false dispatch! get-state)
-                            (p/branch resolve reject))))))))
+  ([rt branch route]
+   (-set-route rt branch route false))
+  ([rt branch route force-hydrate]
+   (-set-route rt branch route force-hydrate)))
+
+(defn with-tx
+  "Stage tx to the given dbname.  This will rehydrate the given branch.  This may or may not immediately transact.
+  Returns a promise"
+  [rt branch dbname tx]
+  ; todo intermediary hack for circular deps while we move away from dispatch! as the public api
+  (let [with-groups (resolve 'hyperfiddle.actions/with-groups)]
+    (with-groups rt branch {dbname tx})))
+
+(defn commit-branch
+  "Commit the branch to its parent.  This will rehydrate the parent branch.  This may or may not immediately transact.
+  Returns a promise"
+  [rt branch tx-groups on-start]
+  ; todo intermediary hack for circular deps while we move away from dispatch! as the public api
+  (let [commit-branch (resolve 'hyperfiddle.actions/commit-branch)]
+    (commit-branch rt branch tx-groups on-start)))

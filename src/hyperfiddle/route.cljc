@@ -52,12 +52,16 @@
             (or (nil? params) (vector? params)))]}
   (orp seq (rtrim-coll nil? [fiddle ?datomic-params ?service-args ?fragment])))
 
-(defn assoc-frag [[fiddle ?datomic-args ?service-args ?fragment] frag]
-  {:pre [(nil? ?fragment)]}
-  (canonicalize fiddle ?datomic-args ?service-args frag))
+(defn update-frag [[fiddle ?datomic-args ?service-args ?fragment] f]
+  (canonicalize fiddle ?datomic-args ?service-args (f ?fragment)))
 
-(defn dissoc-frag [[fiddle ?datomic-args ?service-args _]]
-  (canonicalize fiddle ?datomic-args ?service-args nil))
+(defn assoc-frag [[_ _ _ ?fragment :as route] frag]
+  ; why must the existing fragment be nil?
+  {:pre [(nil? ?fragment)]}
+  (update-frag route (constantly frag)))
+
+(defn dissoc-frag [route]
+  (update-frag route (constantly nil)))
 
 (defn equal-without-frag? [a b]
   (= (dissoc-frag a) (dissoc-frag b)))

@@ -42,11 +42,10 @@
   (-> (run-txfn! ctx props)
       (p/then (fn [tx]
                 (let [tx-groups {(or (hypercrud.browser.context/dbname ctx) "$") ; https://github.com/hyperfiddle/hyperfiddle/issues/816
-                                 tx}]
-                  (->> (actions/stage-popover (:peer ctx) child-branch tx-groups
-                                              :route (when-let [f (::redirect props)] (f @r-popover-data))
-                                              :on-start [(actions/close-popover (:branch ctx) popover-id)])
-                       (runtime/dispatch! (:peer ctx))))))
+                                 tx}
+                      on-start [(actions/close-popover (:branch ctx) popover-id)]]
+                  (cond-> (runtime/commit-branch (:peer ctx) child-branch tx-groups on-start)
+                    (::redirect props) (p/then (fn [_] (runtime/set-route (:peer ctx) (:branch ctx) ((::redirect props) @r-popover-data))))))))
       (p/catch (fn [e]
                  ; todo something better with these exceptions (could be user error)
                  (timbre/error e)
@@ -102,9 +101,8 @@
   (-> (run-txfn! ctx props)
       (p/then
         (fn [tx]
-          (->> (actions/with-groups (:peer ctx) (:branch ctx) {(hypercrud.browser.context/dbname ctx) tx}
-                                    :route (when-let [f (::redirect props)] (f nil)))
-               (runtime/dispatch! (:peer ctx)))))
+          (cond-> (runtime/with-tx (:peer ctx) (:branch ctx) (context/dbname ctx) tx)
+            (::redirect props) (p/then (fn [_] (runtime/set-route (:peer ctx) (:branch ctx) ((::redirect props) nil)))))))
       (p/catch (fn [e]
                  ; todo something better with these exceptions (could be user error)
                  (timbre/error e)
