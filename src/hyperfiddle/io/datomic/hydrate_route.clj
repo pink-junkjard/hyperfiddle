@@ -12,7 +12,6 @@
     [hyperfiddle.project :as project]
     [hyperfiddle.reducers :as reducers]
     [hyperfiddle.runtime :as runtime]
-    [hyperfiddle.state :as state]
     [hyperfiddle.schema :as schema]
     [promesa.core :as p]
     [taoensso.timbre :as timbre]))
@@ -20,7 +19,6 @@
 
 (deftype RT [domain db-with-lookup get-secure-db-with+ state-atom ?subject]
   runtime/State
-  (dispatch! [rt action-or-func] (state/dispatch! state-atom reducers/root-reducer action-or-func))
   (state [rt] state-atom)
   (state [rt path] (r/cursor state-atom path))
 

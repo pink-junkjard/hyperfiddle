@@ -1,4 +1,7 @@
-(ns hyperfiddle.runtime)
+(ns hyperfiddle.runtime
+  (:require
+    [hyperfiddle.reducers :as reducers]
+    [hyperfiddle.state :as state]))
 
 
 (defprotocol HF-Runtime
@@ -11,8 +14,10 @@
   )
 
 (defprotocol State                                          ; internal
-  (dispatch! [rt action-or-func])
   (state [rt] [rt path]))
+
+(defn dispatch! [rt action-or-func]                         ; internal
+  (state/dispatch! (state rt) reducers/root-reducer action-or-func))
 
 (defn attribute-renderer [rt branch ident] @(state rt [::partitions branch :attr-renderers ident]))
 

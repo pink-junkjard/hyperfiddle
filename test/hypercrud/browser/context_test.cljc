@@ -23,7 +23,7 @@
                        (hyperfiddle.reducers/root-reducer nil)
                        (r/atom))]
     (reify
-      hyperfiddle.runtime/State
+      runtime/State
       (state [rt] state-atom)
       (state [rt path] (r/cursor state-atom path)))))
 
