@@ -8,6 +8,7 @@
     [hyperfiddle.domain :as domain]
     [hyperfiddle.foundation :as foundation]
     [hyperfiddle.ide.directory :as ide-directory]
+    [hyperfiddle.ide.routing :as ide-routing]
     [hyperfiddle.runtime :as runtime]
     [hyperfiddle.security.client :as security]
     [hyperfiddle.ui :as ui]))
@@ -39,7 +40,7 @@
                  (and anonymous? disabled?) [:warning "Please login"]
                  disabled? [:warning "Writes restricted"])
       :hyperfiddle.ui.popover/redirect (fn [popover-data]
-                                         [(:fiddle/ident popover-data)])})])
+                                         (ide-routing/preview-route->ide-route [(:fiddle/ident popover-data)]))})])
 
 (defn renderer' [ctx props left-child right-child]
   [:div props
