@@ -3,11 +3,11 @@
     [cats.monad.either :as either]
     [clojure.spec.alpha :as s]
     [contrib.uri :refer [is-uri?]]
-    [hypercrud.browser.base :as base]
     [hyperfiddle.database.color :as color]
     [hyperfiddle.domain :as domain]
     [hyperfiddle.domains.ednish :as ednish-domain :refer [#?(:cljs EdnishDomain)]]
     [hyperfiddle.domains.transit :as domains-transit]
+    [hyperfiddle.ide.routing :as ide-routing]
     [hyperfiddle.ide.system-fiddle :as ide-system-fiddle]
     #?(:clj [hyperfiddle.io.datomic :as d])
     [hyperfiddle.io.routes :as routes]
@@ -64,18 +64,12 @@
     (let [[fiddle-ident :as route] (route/url-decode s home-route)]
       (if (and (keyword? fiddle-ident) (#{"hyperfiddle.ide" "hyperfiddle.ide.schema"} (namespace fiddle-ident)))
         route
-        (let [[user-fiddle user-datomic-args service-args fragment] route
-              ide-fiddle :hyperfiddle.ide/edit
-              ide-datomic-args (into [(base/legacy-fiddle-ident->lookup-ref user-fiddle)] user-datomic-args)]
-          (route/canonicalize ide-fiddle ide-datomic-args service-args fragment)))))
+        (ide-routing/preview-route->ide-route route))))
   (url-encode [domain route]
-    (if (not= :hyperfiddle.ide/edit (first route))
-      (route/url-encode route home-route)
-      (let [[ide-fiddle ide-datomic-args service-args fragment] route
-            [user-fiddle-lookup-ref & user-datomic-args] ide-datomic-args
-            user-fiddle (base/legacy-lookup-ref->fiddle-ident user-fiddle-lookup-ref)]
-        (-> (route/canonicalize user-fiddle (vec user-datomic-args) service-args fragment)
-            (route/url-encode home-route)))))
+    (-> (if (not= :hyperfiddle.ide/edit (first route))
+          route
+          (ide-routing/ide-route->preview-route route))
+        (route/url-encode home-route)))
 
   (api-routes [domain] routes)
   (system-fiddle? [domain fiddle-ident]

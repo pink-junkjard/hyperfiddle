@@ -17,13 +17,14 @@
 
 
 (defn view [_ ctx props]
-  (let [preview-rt (-> (runtime/domain (:peer ctx)) ::ide-domain/user-domain+
+  (let [preview-branch (preview/build-user-branch-id (:branch ctx))
+        preview-rt (-> (runtime/domain (:peer ctx)) ::ide-domain/user-domain+
                        (either/branch
                          (constantly nil)
                          (fn [user-domain]
                            (let [preview-state (->FAtom (runtime/state (:peer ctx)) preview/to (r/partial preview/from (runtime/domain (:peer ctx)) (:branch ctx)))
                                  user-io (->IOImpl user-domain)]
-                             (->Runtime user-domain user-io preview-state reducers/root-reducer)))))
+                             (->Runtime (:peer ctx) preview-branch user-domain user-io preview-state reducers/root-reducer)))))
         preview-state (r/atom {:initial-render true
                                :is-refreshing true
                                :is-hovering-refresh-button false
@@ -32,7 +33,6 @@
                                ; specifically deref and re-wrap this ref on mount because we are tracking deviation from this value
                                :staleness (when preview-rt
                                             (preview/ide-branch-reference preview-rt (:branch ctx)))})
-        preview-branch (preview/build-user-branch-id (:branch ctx))
         ; fiddle-src
         initial-tab (-> @(:hypercrud.browser/route ctx) (get 3) hyperfiddle.ide/parse-ide-fragment)
         ;:initial-tab @(contrib.reactive/fmap-> (:hypercrud.browser/route ctx) (get 3) hyperfiddle.ide/parse-ide-fragment)
@@ -72,8 +72,7 @@
                                       :hypercrud.ui/display-mode (r/cursor preview-state [:display-mode])
                                       :hyperfiddle.ui.iframe/on-click (r/partial preview/frame-on-click preview-rt)})]
                    [:<>
-                    (let [ide-route @(:hypercrud.browser/route ctx)]
-                      [preview/preview-effects preview-ctx (:branch ctx) preview-state (preview/compute-user-route ide-route)])
+                    [preview/preview-effects preview-ctx (:branch ctx) preview-state]
                     [staging/inline-stage preview-ctx]]))))]
 
         [:div.fiddle-editor-col
