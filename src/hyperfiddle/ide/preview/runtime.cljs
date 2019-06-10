@@ -5,13 +5,11 @@
     [hyperfiddle.actions :as actions]
     [hyperfiddle.branch :as branch]
     [hyperfiddle.ide.routing :as ide-routing]
-    [hyperfiddle.runtime :as runtime]
-    [hyperfiddle.state :as state]))
+    [hyperfiddle.runtime :as runtime]))
 
 
-(deftype Runtime [ide-rt preview-root-branch domain io state-atom root-reducer]
+(deftype Runtime [ide-rt preview-root-branch domain io state-atom]
   runtime/State
-  (dispatch! [rt action-or-func] (state/dispatch! state-atom root-reducer action-or-func))
   (state [rt] state-atom)
   (state [rt path] (r/cursor state-atom path))
 

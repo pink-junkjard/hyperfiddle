@@ -11,7 +11,6 @@
     [hyperfiddle.ide.preview.state :refer [->FAtom]]
     [hyperfiddle.ide.preview.view :as preview]
     [hyperfiddle.io.browser :refer [->IOImpl]]
-    [hyperfiddle.reducers :as reducers]
     [hyperfiddle.runtime :as runtime]
     [hyperfiddle.ui.staging :as staging]))
 
@@ -24,7 +23,7 @@
                          (fn [user-domain]
                            (let [preview-state (->FAtom (runtime/state (:peer ctx)) preview/to (r/partial preview/from (runtime/domain (:peer ctx)) (:branch ctx)))
                                  user-io (->IOImpl user-domain)]
-                             (->Runtime (:peer ctx) preview-branch user-domain user-io preview-state reducers/root-reducer)))))
+                             (->Runtime (:peer ctx) preview-branch user-domain user-io preview-state)))))
         preview-state (r/atom {:initial-render true
                                :is-refreshing true
                                :is-hovering-refresh-button false
