@@ -30,7 +30,9 @@
   runtime/HF-Runtime
   (domain [rt] domain)
   (io [rt] io)
-  (hydrate [rt branch request] (peer/hydrate state-atom branch request)))
+  (hydrate [rt branch request] (peer/hydrate state-atom branch request))
+  (-set-route [rt branch route force-hydrate] (actions/set-route rt branch route force-hydrate))
+  )
 
 (def analytics (load-resource "analytics.html"))
 
