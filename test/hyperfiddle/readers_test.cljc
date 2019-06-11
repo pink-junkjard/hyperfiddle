@@ -3,6 +3,8 @@
             [contrib.datomic]
             [contrib.eval :as eval]
             [contrib.reader :as reader :refer [read-edn-string!]]
+            #?(:cljs [goog.math])
+            [hyperfiddle.readers]
             [hypercrud.transit :as transit]
             [hypercrud.types.DbRef :refer [->DbRef]]
             [hypercrud.types.ThinEntity :refer [->ThinEntity]]
@@ -84,6 +86,13 @@
                   #inst "2017-12-31"
                   "#inst \"2017-12-31\""
                   "{\"~#t\":\"2017-12-31\"}"))
+
+#?(:cljs
+   (deftest long
+     (test-all-forms (.fromString goog.math.Long "65332980922449989")
+                     #goog.math.Long "65332980922449989"
+                     "#goog.math.Long \"65332980922449989\""
+                     "[\"~#'\",\"~i65332980922449989\"]")))
 
 (deftest schema
   []

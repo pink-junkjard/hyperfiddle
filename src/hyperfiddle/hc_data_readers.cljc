@@ -22,6 +22,7 @@
    'entity read-ThinEntity
    'schema indexed-schema
    'uri read-URI
+   'goog.math.Long hyperfiddle.readers/read-goog-math-long
    'hypercrud.types.DbRef.DbRef map->DbRef
    'hypercrud.types.EntityRequest.EntityRequest map->EntityRequest
    'hypercrud.types.Err.Err map->Err

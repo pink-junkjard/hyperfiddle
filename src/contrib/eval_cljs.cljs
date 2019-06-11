@@ -19,6 +19,7 @@
                                             hc-data-readers
                                             {'entity hc-readers/entity
                                              'uri hc-readers/uri
+                                             'goog.math.Long hc-readers/goog-math-long
                                              'schema hc-readers/schema})]
     (let [r (atom nil)]
       (when-not (contains? (::ana/namespaces @-cljsjs-empty-state) eval-in-ns)
@@ -47,6 +48,7 @@
                                             hc-data-readers
                                             {'entity hc-readers/entity
                                              'uri hc-readers/uri
+                                             'goog.math.Long hc-readers/goog-math-long
                                              'schema hc-readers/schema})]
     (let [r (atom nil)
           _ (cljs/eval-str -cljsjs-empty-state
