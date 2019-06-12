@@ -30,7 +30,7 @@ around values and immutability.
 
 * Clojure/CLJC - Value-oriented programming on any platform
 * EDN - Extensible notation for values
-* Transit - Efficient value interchange between foreign systems
+* Transit - Protocol for value interchange between foreign platforms
 * Datomic - Database as a value
 * (supplemented with React.js/Reagent)
 
