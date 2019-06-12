@@ -283,22 +283,15 @@ User renderers should not be exposed to the reaction."
           [popover-cmp ?ctx props label])
 
         is-iframe
-        [stale/loading (stale/can-be-loading? visual-ctx)          ; was just ctx before
-         (fmap #(route/assoc-frag % (:frag props)) +route) ; what is this frag noise?
-         (fn [e]
-           ; These extra error keys don't work wtf https://github.com/hyperfiddle/hyperfiddle/issues/919
-           (let [E (or #_(::error-render-custom props)        ; try props first
-                       #_(::error-render-custom ctx)          ; this is allowed and different than props
-                       (ui-error/error-comp ?ctx))]
-             [E e]))
+        [stale/loading (stale/can-be-loading? ctx)          ; was just ctx before
+         +route
+         (fn [e] [(ui-error/error-comp ctx) e])
          (fn [route]
-           (let [iframe (or (::custom-iframe props) iframe-cmp)]
-             [iframe ?ctx (-> props                          ; flagged - :class
-                             (assoc :route route)
-                             (dissoc props ::custom-iframe)
-                             (update :class css (->> (context/link-class ?ctx)
-                                                     (string/join " ")
-                                                     css-slugify)))]))]
+           [iframe-cmp ?ctx (-> props                       ; flagged - :class
+                                (assoc :route route)
+                                (update :class css (->> (context/link-class ?ctx)
+                                                        (string/join " ")
+                                                        css-slugify)))])]
 
         :else (let [props (validated-route-tooltip-props +route link-ref ?ctx props)]
                 [tooltip (tooltip-props (:tooltip props))
