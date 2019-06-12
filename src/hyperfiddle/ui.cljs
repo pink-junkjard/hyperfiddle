@@ -152,7 +152,7 @@
 (defn ^:export hyper-control "Val is for userland field renderers, our builtin controls use ctx and ignore val."
   [val ctx & [props]]
   {:post [%]}
-  (or (attr-renderer-control val ctx props)               ; compat
+  (or (attr-renderer-control val ctx props)                 ; compat
       (hf/render ctx props)))
 
 (defn ^:export hyper-label [_ ctx & [props]]                ; props has sort :on-click
@@ -182,8 +182,8 @@
             (context/dbname ctx)                            ; color
             (name (context/segment-type-2 a))               ; false :attribute on fiddle-ident fixme
             (string/join "/" (:hypercrud.browser/pull-path ctx)) ; legacy unique selector for each location
-            (->> (:hypercrud.browser/pull-path ctx)              ; actually generate a unique selector for each location
-                 (cons "-hypercrud-browser-path")                ; path prefix differentiates between attr and single attr paths
+            (->> (:hypercrud.browser/pull-path ctx)         ; actually generate a unique selector for each location
+                 (cons "-hypercrud-browser-path")           ; path prefix differentiates between attr and single attr paths
                  (string/join "/"))]
            (when (> (hypercrud.browser.context/pull-depth ctx) 0) ; differentiate pull from fiddle-ident
              [(contrib.datomic/valueType @(:hypercrud.browser/schema ctx) a)
@@ -226,7 +226,7 @@ User renderers should not be exposed to the reaction."
                    blank->nil)
               (some-> (context/link-fiddle ctx) :fiddle/ident name)
               (some-> (context/link-tx ctx) name)))
-        (link-tooltip [?route ctx] ; Show how it routed. The rest is obvious from data mode
+        (link-tooltip [?route ctx]                          ; Show how it routed. The rest is obvious from data mode
           (if-let [[fiddle-ident args] ?route]
             (->> (concat #_[fiddle-ident] args)
                  (map pr-str) (interpose " ") (apply str))))
@@ -331,7 +331,7 @@ User renderers should not be exposed to the reaction."
 
 (defn table-field "Form fields are label AND value. Table fields are label OR value."
   [ctx Body Head props]                                     ; Body :: (val props ctx) => DOM, invoked as component
-  (case (if (:hypercrud.browser/head-sentinel ctx) :head :body)        ; broken
+  (case (if (:hypercrud.browser/head-sentinel ctx) :head :body) ; broken
     :head [:th {:class (css "field" (:class props))         ; hoist
                 :style {:background-color (domain/database-color (runtime/domain (:peer ctx)) (context/dbname ctx))}}
            [Head nil ctx (-> props
@@ -348,7 +348,7 @@ User renderers should not be exposed to the reaction."
 (defn ^:export field "Works in a form or table context. Draws label and/or value."
   [relative-path ctx & [?f props]]
   {:pre [ctx]}
-  (let [ctx (context/focus ctx relative-path) ; Handle element and attr
+  (let [ctx (context/focus ctx relative-path)               ; Handle element and attr
         Body (or ?f hyper-control)
         Head (or (:label-fn props) hyper-label)
         props (dissoc props :label-fn)
@@ -510,7 +510,7 @@ nil. call site must wrap with a Reagent component"          ; is this just hyper
       [:dl
        [:dt "route"] [:dd (pr-str @(:hypercrud.browser/route ctx))]]]
      (render-edn (some-> (:hypercrud.browser/result ctx) deref))
-     (->> (hyperfiddle.data/select-many ctx #{:hf/iframe}) ; this omits deep dependent iframes fixme
+     (->> (hyperfiddle.data/select-many ctx #{:hf/iframe})  ; this omits deep dependent iframes fixme
           (map #(base/data-from-link! % ctx))
           (concat (when @(r/fmap :fiddle/hydrate-result-as-fiddle (:hypercrud.browser/fiddle ctx))
                     (let [[_ [inner-fiddle & inner-args]] @(:hypercrud.browser/route ctx)
