@@ -6,7 +6,6 @@
     [contrib.template :refer [load-resource]]
     [hypercrud.client.peer :as peer]
     [hypercrud.transit :as hc-t]
-    #?(:cljs [hypercrud.ui.error :as error])
     [hyperfiddle.actions :as actions]
     [hypercrud.browser.context :refer [map->Context]]
     [hyperfiddle.domain :as domain]
@@ -15,6 +14,7 @@
     [hyperfiddle.reducers :as reducers]
     [hyperfiddle.runtime :as runtime]
     [hyperfiddle.security.client :as security]
+    #?(:cljs [hyperfiddle.ui.error :as ui-error])
     [hyperfiddle.ui.loading :as loading]
     [promesa.core :as p]
     #?(:cljs [reagent.dom.server :as reagent-server])))
@@ -56,7 +56,7 @@
                  (reagent-server/render-to-string [:<>
                                                    [:h1 "Javascript mounting..."]
                                                    [:h2 "SSR failed on:"]
-                                                   [error/error-block e]]))))))
+                                                   [ui-error/error-block e]]))))))
 
 (defn- full-html [build env-analytics-enabled rt client-params]
   [:html {:lang "en"}
