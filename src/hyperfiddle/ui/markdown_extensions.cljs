@@ -12,8 +12,8 @@
     [cuerdas.core :as str]
     [goog.object]
     [hypercrud.browser.context :as context]
-    [hypercrud.ui.error :refer [error-comp]]
     [hyperfiddle.ui]
+    [hyperfiddle.ui.error :refer [error-comp]]
     [taoensso.timbre :as timbre]))
 
 

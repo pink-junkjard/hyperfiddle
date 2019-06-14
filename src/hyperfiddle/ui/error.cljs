@@ -1,4 +1,4 @@
-(ns hypercrud.ui.error
+(ns hyperfiddle.ui.error
   (:require
     [contrib.pprint :refer [pprint-str]]
     [contrib.reactive :as r]

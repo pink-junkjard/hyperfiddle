@@ -1,4 +1,4 @@
-(ns hypercrud.ui.stale
+(ns hyperfiddle.ui.stale
   (:require
     [cats.monad.either :as either]
     [hypercrud.client.peer :refer [loading?]]))

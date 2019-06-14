@@ -10,12 +10,12 @@
     [contrib.string :refer [blank->nil]]
     [hypercrud.browser.base :as base]
     [hypercrud.browser.context :as context]
-    [hypercrud.ui.error :as ui-error]
-    [hypercrud.ui.stale :as stale]
     [hyperfiddle.api :as hf]
     [hyperfiddle.data :as data]
     [hyperfiddle.runtime :as runtime]
+    [hyperfiddle.ui.error :as ui-error]
     [hyperfiddle.ui.popover :as popover]
+    [hyperfiddle.ui.stale :as stale]
     [hyperfiddle.ui.util :refer [with-entity-change! writable-entity?]]
     [taoensso.timbre :as timbre]))
 
