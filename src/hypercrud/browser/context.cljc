@@ -49,7 +49,7 @@
                 :hypercrud.browser/pull-enclosure
                 :hypercrud.browser/pull-path                ; used only by refocus and links-in-dimension
                 :hyperfiddle.ui.iframe/on-click
-                :hypercrud.ui/display-mode
+                :hyperfiddle.ui/display-mode
                 :hyperfiddle.ui/layout
                 :hyperfiddle.ui.sort/sort-col]))
 
@@ -70,7 +70,6 @@
 (defn clean [ctx]
   ; Keeps the :peer which owns the schemas
   (dissoc ctx
-          :hypercrud.ui/error
           :hyperfiddle.ui/layout
           :hypercrud.browser/head-sentinel
           :hypercrud.browser/fiddle

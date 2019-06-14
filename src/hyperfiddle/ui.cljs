@@ -526,7 +526,7 @@ nil. call site must wrap with a Reagent component"          ; is this just hyper
 (extend-type context/Context
   hf/UI
   (display-mode [ctx]
-    (or (some-> (:hypercrud.ui/display-mode ctx) deref)
+    (or (some-> (:hyperfiddle.ui/display-mode ctx) deref)
         :hypercrud.browser.browser-ui/user))
   (display-mode? [ctx k]
     (= k (unqualify (hf/display-mode ctx)))))

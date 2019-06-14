@@ -144,7 +144,7 @@
     ; http://hyperfiddle.hyperfiddle.net/:database!options-list/
     ; http://hyperfiddle.hyperfiddle.site/:hyperfiddle.ide!domain/~entity('$domains',(:domain!ident,'hyperfiddle'))
    [hyperfiddle.ui/link (keyword (:options props))
-    #_#_ctx (assoc ctx :hypercrud.ui/display-mode (r/pure :hypercrud.browser.browser-ui/user))
+    #_#_ctx (assoc ctx :hyperfiddle.ui/display-mode (r/pure :hypercrud.browser.browser-ui/user))
     ctx nil
     (assoc props
       :user-renderer select-html

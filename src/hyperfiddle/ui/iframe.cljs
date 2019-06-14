@@ -33,7 +33,7 @@
           (eval-cljs/eval-statement-str! 'user cljs-ns))    ; Exceptions caught at user-portal error-comp
         (reset! last-cljs-ns cljs-ns)
 
-        (let [display-mode (or (some-> (:hypercrud.ui/display-mode ctx) deref)
+        (let [display-mode (or (some-> (:hyperfiddle.ui/display-mode ctx) deref)
                                :hypercrud.browser.browser-ui/user)
               props props #_(select-keys props [:class :initial-tab :on-click #_:disabled])]
           (case display-mode
@@ -63,7 +63,7 @@
         props (update props :class css (auto-ui-css-class ctx))
         ; The reactdom component should filter the keys at the last second.
         ; https://github.com/hyperfiddle/hyperfiddle/issues/698
-        display-mode (or (some-> (:hypercrud.ui/display-mode ctx) deref) :hypercrud.browser.browser-ui/user)
+        display-mode (or (some-> (:hyperfiddle.ui/display-mode ctx) deref) :hypercrud.browser.browser-ui/user)
         error-props (-> (select-keys props [:class :on-click])
                         (update :class css "hyperfiddle-error"))]
     ^{:key (str display-mode)}
