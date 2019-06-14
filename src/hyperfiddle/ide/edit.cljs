@@ -68,7 +68,7 @@
                                       :peer preview-rt
                                       :branch preview-branch
                                       :hyperfiddle.ui/debug-tooltips true
-                                      :hypercrud.ui/display-mode (r/cursor preview-state [:display-mode])
+                                      :hyperfiddle.ui/display-mode (r/cursor preview-state [:display-mode])
                                       :hyperfiddle.ui.iframe/on-click (r/partial preview/frame-on-click preview-rt)})]
                    [:<>
                     [preview/preview-effects preview-ctx (:branch ctx) preview-state]
