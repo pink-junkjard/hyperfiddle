@@ -1,12 +1,8 @@
 (ns hypercrud.ui.stale
   (:require
     [cats.monad.either :as either]
-    [hypercrud.client.peer :refer [loading?]]
-    [hyperfiddle.runtime :as runtime]))
+    [hypercrud.client.peer :refer [loading?]]))
 
-
-(defn can-be-loading? [ctx]
-  (runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :hydrate-id]))
 
 (defn loading
   ([can-be-loading either-v error success]

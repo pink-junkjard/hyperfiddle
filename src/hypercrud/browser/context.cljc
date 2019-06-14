@@ -1,6 +1,6 @@
 (ns hypercrud.browser.context
   (:require
-    [cats.core :as cats :refer [mlet return]]
+    [cats.core :as cats :refer [mlet return >>=]]
     [cats.monad.either :as either :refer [left right either?]]
     [clojure.set :as set]
     [clojure.spec.alpha :as s]
@@ -984,8 +984,8 @@ a speculative db/id."
 
 (let [eval-string!+ (memoize eval/eval-expr-str!+)]
   (defn build-args+ "Params are EAV-typed (uncolored)"
-    [ctx                                                    ;There is a ctx per argument if we are element-level tuple.
-     {:keys [:link/fiddle :link/tx-fn] :as link}]
+    ;There is a ctx per argument if we are element-level tuple.
+    [ctx link]
     {:post [(s/assert either? %)]}
     ; if at element level, zip with the find-elements, so do this N times.
     ; That assumes the target query is a query of one arg. If it takes N args, we can apply as tuple.
@@ -1007,39 +1007,48 @@ a speculative db/id."
         (if arg [arg])))))
 
 (defn ^:export build-route+ "There may not be a route! Fiddle is sometimes optional" ; build-route+
-  [args ctx {:keys [:link/fiddle :link/tx-fn] :as link}]
+  [args ctx]
   {:pre [ctx]
    :post [(s/assert either? %)]}
-  (mlet [fiddle-id (if fiddle
-                     (right (:fiddle/ident fiddle))
-                     (left {:message ":link/fiddle required" :data {:link link}}))
+  (mlet [fiddle-id (let [link @(:hypercrud.browser/link ctx)]
+                     (if-let [fiddle (:link/fiddle link)]
+                       (right (:fiddle/ident fiddle))
+                       (left {:message ":link/fiddle required" :data {:link link}})))
          ; Why must we reverse into tempids? For the URL, of course.
          :let [colored-args (mapv (partial tag-v-with-color ctx) args)] ; this ctx is refocused to some eav
          route (id->tempid+ (hyperfiddle.route/canonicalize fiddle-id colored-args) ctx)
          route (hyperfiddle.route/validate-route+ route)]
     (return route)))
 
-(defn refocus-to-link+ "focus a link ctx, accounting for link/formula which occludes the natural eav"
+(defn refocus-to-link+ "focus a link ctx"
+  [ctx link-ref]
+  {:pre [(s/assert :hypercrud/context ctx)]
+   :post [(s/assert either? %)]}
+  (->> (hyperfiddle.fiddle/read-path @(r/cursor link-ref [:link/path]))
+       (refocus+ ctx)
+       (cats/fmap #(assoc % :hypercrud.browser/link link-ref))))
+
+(defn occlude-eav [ctx untagged-uncolored-datomic-args]     ; is it important these arguments are untagged/uncolored?
+  (let [[v' & vs :as args] untagged-uncolored-datomic-args]
+    ; EAV sugar is not interested in tuple case, that txfn is way off happy path
+    (assoc ctx :hypercrud.browser/eav (r/apply stable-eav-v
+                                               [(:hypercrud.browser/eav ctx)
+                                                (r/track identity v')]))))
+
+(defn build-route-and-occlude+ [ctx link-ref]
+  (mlet [args (build-args+ ctx @link-ref)
+         ; :hf/remove doesn't have route by default, :hf/new does, both can be customized
+         route (build-route+ args ctx)
+         :let [ctx (occlude-eav ctx args)]]
+    (return [ctx route])))
+
+(defn refocus-build-route-and-occlude+ "focus a link ctx, accounting for link/formula which occludes the natural eav"
   [ctx link-ref]
   {:pre [(s/assert :hypercrud/context ctx)]
    :post [(s/assert either? %)]
    #_#_:post [(s/assert (s/cat :ctx :hypercrud/context :route r/reactive?) %)]}
-  (let [{:keys [:link/fiddle :link/tx-fn :link/path] :as link} @link-ref
-        target-a (hyperfiddle.fiddle/read-path path)]
-    (mlet [ctx (refocus+ ctx target-a)
-           [v' & vs :as args] (build-args+ ctx link)
-           ; :hf/remove doesn't have route by default, :hf/new does, both can be customized
-           ?route (if (and (not fiddle) tx-fn)
-                    (right nil)
-                    (build-route+ args ctx link))
-           ; EAV sugar is not interested in tuple case, that txfn is way off happy path
-           :let [ctx (assoc ctx
-                       :hypercrud.browser/link link-ref
-                       :hypercrud.browser/eav (r/apply stable-eav-v
-                                                       [(:hypercrud.browser/eav ctx)
-                                                        (r/track identity v')]))]]
-      (right
-        [ctx ?route]))))
+  (>>= (refocus-to-link+ ctx link-ref)
+       #(build-route-and-occlude+ % link-ref)))
 
 (defn link [ctx]
   (some-> (:hypercrud.browser/link ctx) deref))
@@ -1120,6 +1129,13 @@ a speculative db/id."
     ([dbname ctx]
      ; Use hash of current dbval, which changes with each edit
      @(r/track impl (:peer ctx) (:branch ctx) dbname))))
+
+(defn branch+ [ctx relative-branch-id]
+  ; todo WIP
+  (let [ctx (update ctx :branch branch/child-branch-id relative-branch-id)]
+    (if-let [e @(runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :error])]
+      (either/left e)
+      (either/right ctx))))
 
 (defrecord Context [ident]
   hf/Browser

@@ -1,12 +1,11 @@
 (ns hyperfiddle.ui
   (:require-macros [hyperfiddle.ui :refer [-build-fiddle]])
   (:require
-    [cats.core :as cats :refer [fmap >>=]]
-    [cats.monad.either :as either :refer [branch]]
+    [cats.core :refer [fmap >>=]]
+    [cats.monad.either :as either]
     [cljs.spec.alpha :as s]
     [clojure.core.match :refer [match match*]]
     [clojure.string :as string]
-    [contrib.ct :refer [unwrap]]
     [contrib.css :refer [css css-slugify]]
     [contrib.data :refer [unqualify]]
     [contrib.eval :as eval]
@@ -27,16 +26,15 @@
     [hyperfiddle.api :as hf]
     [hyperfiddle.data :as data]
     [hyperfiddle.domain :as domain]
-    [hyperfiddle.route :as route]
     [hyperfiddle.runtime :as runtime]
-    [hyperfiddle.security.client :as security]
     [hyperfiddle.ui.controls :as controls :refer [label-with-docs identity-label ref-label element-label magic-new]]
     [hyperfiddle.ui.docstring :refer [semantic-docstring]]
     [hyperfiddle.ui.iframe :refer [iframe-cmp]]
     [hyperfiddle.ui.popover :refer [effect-cmp popover-cmp]]
     [hyperfiddle.ui.select$]
     [hyperfiddle.ui.sort :as sort]
-    [hyperfiddle.ui.util :refer [writable-entity?]]))
+    [hyperfiddle.ui.util :refer [writable-entity?]]
+    [taoensso.timbre :as timbre]))
 
 
 (let [memoized-eval-expr-str!+ (memoize eval/eval-expr-str!+) ; don't actually need to safely eval, just want to memoize exceptions)
@@ -216,89 +214,79 @@ User renderers should not be exposed to the reaction."
                   (select-keys [:class :href :style]))]
     (into [:a props] children)))
 
-(letfn [(prompt [ctx ?label]
+(defn validated-route-tooltip-props [+?route link-ref ctx props] ; link is for validation
+  ; this is a fine place to eval, put error message in the tooltip prop
+  ; each prop might have special rules about his default, for example :visible is default true,
+  ; does this get handled here?
+  (-> +?route
+      (>>= #(routing/validated-route+ (:link/fiddle @link-ref) % ctx))
+      (either/branch
+        (fn [e]
+          (-> props
+              (assoc :route nil
+                     :tooltip [:warning (pprint-str #{e})])
+              (update :class css "invalid")))
+        (fn [route]
+          (cond-> (assoc props :route route)
+            (:hyperfiddle.ui/debug-tooltips ctx)
+            (assoc :tooltip [nil (if-let [[fiddle-ident args] route] ; Show how it routed. The rest is obvious from data mode
+                                   (->> (concat #_[fiddle-ident] args)
+                                        (map pr-str) (interpose " ") (apply str)))]))))))
+
+(letfn [(prompt [link ?label]
           (or ?label
-              (->> (set (context/link-class ctx))
+              (->> (set (:link/class link))
                    (remove #(= "hf" (namespace %)))         ; "iframe" is not a good name
                    (map name)
                    (interpose " ")
                    (apply str)
                    blank->nil)
-              (some-> (context/link-fiddle ctx) :fiddle/ident name)
-              (some-> (context/link-tx ctx) name)))
-        (link-tooltip [?route ctx]                          ; Show how it routed. The rest is obvious from data mode
-          (if-let [[fiddle-ident args] ?route]
-            (->> (concat #_[fiddle-ident] args)
-                 (map pr-str) (interpose " ") (apply str))))
-        (validated-route-tooltip-props [+?route link-ref ctx props] ; link is for validation
-          ; this is a fine place to eval, put error message in the tooltip prop
-          ; each prop might have special rules about his default, for example :visible is default true,
-          ; does this get handled here?
-          (let [+route (>>= +?route #(routing/validated-route+ (:link/fiddle @link-ref) % ctx))
-                errors (->> [+route] (filter either/left?) (map cats/extract) (into #{}))
-                ?route (unwrap (constantly nil) +route)]
-            (-> props
-                (assoc :route ?route)
-                (update :tooltip (fn [existing-tooltip]
-                                   (if-not (empty? errors)
-                                     [:warning (pprint-str errors)]
-                                     (if (:hyperfiddle.ui/debug-tooltips ctx)
-                                       [nil (link-tooltip ?route ctx)]
-                                       existing-tooltip))))
-                (update :class css (when-not (empty? errors) "invalid")))))
-        (disabled? [link-ref ctx]
-          (condp some @(r/fmap :link/class link-ref)
-            #{:hf/new} nil #_(not @(r/track security/can-create? ctx)) ; flag
-            #{:hf/remove} (if (let [[_ a _] @(:hypercrud.browser/eav ctx)] a)
-                            (if-let [ctx (:hypercrud.browser/parent ctx)] (not @(r/track security/writable-entity? ctx))) ; check logic
-                            (not @(r/track security/writable-entity? ctx)))
-            ; else we don't know the semantics, just nil out
-            nil))]
+              (some-> link :link/fiddle :fiddle/ident name)
+              ; todo link/tx-fn should be a kw already, @(r/cursor link-ref [:link/tx-fn])
+              (some-> (context/link-tx {:hypercrud.browser/link (r/pure link)}) name)))]
   (defn ui-from-link [link-ref ctx & [props ?label]]
     {:pre [link-ref (r/reactive? link-ref)]}
     ; Once this link changes, pretty much everything below here needs to recompute
     ; Reactions are unlikely to be faster than render-tree-pruning.
-    (let [visual-ctx ctx                                    ; visual-ctx should be tracked in the link context.
-          +route-and-ctx (context/refocus-to-link+ ctx link-ref) ; Can fail if formula dependency isn't satisfied
-          +route (fmap second +route-and-ctx)
-          ?ctx (branch +route-and-ctx (constantly nil) first)
-          ; Changed behavior: if the link failed to focus, there isn't a txfn or iframe now.
-          has-tx-fn (boolean (context/link-tx ?ctx))
-          is-iframe (some #{:hf/iframe} (context/link-class ?ctx))]
-      ;(assert ?ctx "not sure what there is that can be done")
+    (let [has-tx-fn (boolean (context/link-tx {:hypercrud.browser/link link-ref})) ; todo link/tx-fn should be a kw already, @(r/cursor link-ref [:link/tx-fn])
+          is-iframe (some #{:hf/iframe} @(r/cursor link-ref [:link/class]))]
       (cond
-        (and has-tx-fn (nil? (context/link-fiddle ?ctx)))
-        (let [props (-> props
-                        (update :class css "hyperfiddle")
-                        (update :disabled #(or % (disabled? link-ref ?ctx))))]
-          [effect-cmp ?ctx props (prompt ?ctx ?label)])
+        (and has-tx-fn (nil? @(r/cursor link-ref [:link/fiddle])))
+        [effect-cmp ctx link-ref props @(r/fmap-> link-ref (prompt ?label))]
 
         (or has-tx-fn (and is-iframe (:iframe-as-popover props)))
-        (let [props (-> (validated-route-tooltip-props +route link-ref ?ctx props)
-                        (dissoc :iframe-as-popover)
-                        (update :class css "hyperfiddle")   ; should this be in popover-cmp? unify with semantic css
-                        (update :disabled #(or % (disabled? link-ref ?ctx)))
-                        (assoc :hyperfiddle.ui.popover/visual-eav (context/eav visual-ctx)))
-              label (prompt ?ctx ?label)]
-          [popover-cmp ?ctx props label])
+        (let [props (dissoc props :iframe-as-popover)]
+          [popover-cmp ctx link-ref props @(r/fmap-> link-ref (prompt ?label))])
 
         is-iframe
-        [stale/loading (stale/can-be-loading? ctx)          ; was just ctx before
-         +route
-         (fn [e] [(ui-error/error-comp ctx) e])
-         (fn [route]
-           [iframe-cmp ?ctx (-> props                       ; flagged - :class
-                                (assoc :route route)
-                                (update :class css (->> (context/link-class ?ctx)
-                                                        (string/join " ")
-                                                        css-slugify)))])]
+        (let [+route-and-ctx (context/refocus-build-route-and-occlude+ ctx link-ref) ; Can fail if formula dependency isn't satisfied
+              +route (fmap second +route-and-ctx)
+              link-ctx (either/branch
+                         +route-and-ctx
+                         (constantly nil)                   ; how can this safely be nil
+                         first)]
+          [stale/loading (r/track runtime/branch-is-loading? (:peer ctx) (:branch ctx)) ; was just ctx before
+           +route
+           (fn [e] [(ui-error/error-comp ctx) e])
+           (fn [route]
+             [iframe-cmp link-ctx (-> props                 ; flagged - :class
+                                      (assoc :route route)
+                                      (update :class css (->> (context/link-class link-ctx)
+                                                              (string/join " ")
+                                                              css-slugify)))])])
 
-        :else (let [props (validated-route-tooltip-props +route link-ref ?ctx props)]
+        :else (let [+route-and-ctx (context/refocus-build-route-and-occlude+ ctx link-ref) ; Can fail if formula dependency isn't satisfied
+                    +route (fmap second +route-and-ctx)
+                    link-ctx (either/branch
+                               +route-and-ctx
+                               (constantly nil)             ; how can this safely be nil
+                               first)
+                    props (validated-route-tooltip-props +route link-ref link-ctx props)]
                 [tooltip (tooltip-props (:tooltip props))
                  (let [props (dissoc props :tooltip)]
                    ; what about class - flagged
                    ; No eav, the route is the same info
-                   [anchor ?ctx props (prompt ?ctx ?label)])])))))
+                   [anchor link-ctx props @(r/fmap-> link-ref (prompt ?label))])])))))
 
 (defn ^:export link "Render a link. :hf/iframes have managed loading component."
   [corcs ctx & [?label props]]
@@ -511,11 +499,19 @@ nil. call site must wrap with a Reagent component"          ; is this just hyper
        [:dt "route"] [:dd (pr-str @(:hypercrud.browser/route ctx))]]]
      (render-edn (some-> (:hypercrud.browser/result ctx) deref))
      (->> (hyperfiddle.data/select-many ctx #{:hf/iframe})  ; this omits deep dependent iframes fixme
-          (map #(base/data-from-link! % ctx))
+          (map (fn [link]
+                 (let [link-ref (r/pure link)]              ; todo fix reactions
+                   (either/branch
+                     (base/browse-link+ link-ref ctx)
+                     (fn [e] (timbre/warn e))               ; todo why would this ever error? cant we just throw?
+                     identity))))
           (concat (when @(r/fmap :fiddle/hydrate-result-as-fiddle (:hypercrud.browser/fiddle ctx))
                     (let [[_ [inner-fiddle & inner-args]] @(:hypercrud.browser/route ctx)
                           route [inner-fiddle (vec inner-args)]]
-                      [(base/data-from-route! route ctx)])))
+                      [(either/branch
+                         (base/browse-route+ route ctx)
+                         (fn [e] (timbre/warn e))           ; todo why would this ever error? cant we just throw?
+                         identity)])))
           (map (fn [ctx]
                  (let [route (some-> (:hypercrud.browser/route ctx) deref)]
                    ^{:key (str (hash route))}

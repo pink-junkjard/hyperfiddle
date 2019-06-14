@@ -926,18 +926,18 @@
   (testing ":identity link refocus v is lookup-ref"
     (def r-link (->> (hyperfiddle.data/select-here+ ctx-blog2 :dustingetz.tutorial/view-post)
                      (unwrap #(throw (ex-info % {})))))
-    (is (= (mlet [[ctx ?route] (context/refocus-to-link+ ctx-blog2 r-link)]
+    (is (= (mlet [[ctx ?route] (context/refocus-build-route-and-occlude+ ctx-blog2 r-link)]
              (context/eav ctx))
            [nil nil [:dustingetz.post/slug :automatic-CRUD-links]]))
     )
 
   (testing "at fiddle level, link :hf/new eav does not have a parent"
     (let [link1 (extract (hyperfiddle.data/select-here+ ctx-blog2 :hf/new))]
-      (is (= (mlet [[ctx r+route] (context/refocus-to-link+ ctx-blog2 link1)]
+      (is (= (mlet [[ctx r+route] (context/refocus-build-route-and-occlude+ ctx-blog2 link1)]
                (context/eav ctx))
              ; should it be [nil nil "479925454"] from the txfn perspective?
              [nil nil "hyperfiddle.tempid--853640389"]))
-      (is (= (mlet [[ctx +route] (context/refocus-to-link+ ctx-blog2 link1)]
+      (is (= (mlet [[ctx +route] (context/refocus-build-route-and-occlude+ ctx-blog2 link1)]
                (return +route))
              (right [:dustingetz.tutorial.blog/new-post [#entity["$" "hyperfiddle.tempid--853640389"]]])))))
 
@@ -955,7 +955,7 @@
                  (context/attribute :dustingetz.post/slug)))
     (def r-link (->> (hyperfiddle.data/select-here+ ctx :hf/new) (unwrap (constantly nil))))
     (testing "at fiddle level, link :hf/new eav does not have a parent"
-      (is (= (let [[ctx r+route] (context/refocus-to-link+ ctx r-link)]
+      (is (= (let [[ctx r+route] (context/refocus-build-route-and-occlude+ ctx r-link)]
                (context/eav ctx))
              ; should it be [nil nil "479925454"] from the txfn perspective?
              [nil :dustingetz.tutorial/blog "479925454"])))
@@ -973,10 +973,10 @@
     ; This exercises tag-v-with-color edge cases
 
     (def link (hyperfiddle.data/select ctx-blog3 :hf/new))
-    (is (= (mlet [[ctx route] (context/refocus-to-link+ ctx-blog3 link)]
+    (is (= (mlet [[ctx route] (context/refocus-build-route-and-occlude+ ctx-blog3 link)]
              (context/eav ctx))
            [nil nil "hyperfiddle.tempid--853640389"]))
-    (is (= (mlet [[ctx route] (context/refocus-to-link+ ctx-blog3 link)]
+    (is (= (mlet [[ctx route] (context/refocus-build-route-and-occlude+ ctx-blog3 link)]
              (return route))
            ; This works because refocus hardcodes element 0, which it turns out is almost always
            ; what the custom renderer wants.

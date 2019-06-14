@@ -14,15 +14,15 @@
 
 (defn request-from-route [route ctx]
   (either/branch
-    (base/data-from-route route ctx)
+    (base/browse-route+ route ctx)
     (fn [e] (timbre/warn e))                                ; do we actually care about this error?
     (fn [ctx] (requests ctx))))
 
 (defn request-from-link [link ctx]
   (either/branch
-    (base/from-link link ctx (fn [route ctx]
-                               (request-from-route route ctx)
-                               (either/right nil)))
+    (base/from-link+ (r/pure link) ctx (fn [route ctx]
+                                         (request-from-route route ctx)
+                                         (either/right nil)))
     (fn [e] (timbre/warn e))                                ; do we actually care about this error?
     (constantly nil)))
 

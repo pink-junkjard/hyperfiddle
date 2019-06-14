@@ -1,12 +1,9 @@
 (ns hypercrud.browser.base
   (:require [cats.core :refer [>>= mlet return]]
-            [cats.monad.either :as either :refer [left right]]
-            [contrib.ct :refer [unwrap]]
-            [contrib.data]
+            [cats.monad.either :as either]
             [contrib.reactive :as r]
             [contrib.reader :as reader :refer [memoized-read-edn-string+]]
             [contrib.try$ :refer [try-either]]
-            [datascript.parser #?@(:cljs [:refer [FindRel FindColl FindTuple FindScalar Variable Aggregate Pull]])]
             [hypercrud.browser.context :as context]
             [hypercrud.browser.routing :as routing]
             [hypercrud.types.DbName :refer [#?(:cljs DbName)]]
@@ -15,12 +12,9 @@
             [hypercrud.types.QueryRequest :refer [->QueryRequest]]
             [hyperfiddle.domain :as domain]
             [hyperfiddle.fiddle :as fiddle]
-            [hyperfiddle.runtime :as runtime]
-            [hyperfiddle.ui.sort]
-            [taoensso.timbre :as timbre])
+            [hyperfiddle.runtime :as runtime])
   #?(:clj
      (:import
-       (datascript.parser FindRel FindColl FindTuple FindScalar Variable Aggregate Pull)
        (hypercrud.types.DbName DbName))))
 
 
@@ -91,7 +85,7 @@
                        (if-let [?request @request]
                          @(runtime/hydrate rt branch ?request)
                          (either/right nil)))]
-  (defn data-from-route "either ctx, ctx-from-route" [route ctx] ; todo rename
+  (defn browse-route+ "either ctx, ctx-from-route" [route ctx]
     (mlet [ctx (-> (context/clean ctx)
                    (routing/route+ route))
            meta-fiddle-request @(r/apply-inner-r (r/track meta-request-for-fiddle ctx))
@@ -100,26 +94,16 @@
            fiddle-request @(r/apply-inner-r (r/track request-for-fiddle ctx))
            ; result SHOULD be sorted out of jvm, though isn't yet
            r-result @(r/apply-inner-r (r/track nil-or-hydrate (:peer ctx) (:branch ctx) fiddle-request))
-           :let [#_#_sort-fn (hyperfiddle.ui.sort/sort-fn % sort-col)
-                 ctx (hypercrud.browser.context/result ctx r-result)]]
+           :let [ctx (hypercrud.browser.context/result ctx r-result)]]
       ; fiddle request can be nil for no-arg pulls (just draw readonly form)
       (return ctx))))
 
-(defn data-from-route! [route ctx]
-  (unwrap (constantly nil) (data-from-route route ctx)))
+(defn from-link+ [link-ref ctx with-route+]                   ; ctx is for formula and routing (tempids and domain)
+  (mlet [ctx (context/refocus-to-link+ ctx link-ref)
+         args (context/build-args+ ctx @link-ref)
+         route (context/build-route+ args ctx)]
+    (with-route+ route ctx)))
 
-(defn from-link [link ctx with-route]                       ; ctx is for formula and routing (tempids and domain)
-  {:post [%]}
-  (let [target-a (hyperfiddle.fiddle/read-path (:link/path link))]
-    (mlet [ctx (context/refocus+ ctx target-a)
-           args (context/build-args+ ctx link)
-           ?route (context/build-route+ args ctx link)]
-      (with-route ?route ctx))))
-
-(defn data-from-link [link ctx]                             ; todo rename
-  {:pre [link ctx]}
-  (from-link link ctx data-from-route))
-
-(defn data-from-link! [link ctx]                            ; mapcat, this can return tuple
-  (unwrap #(timbre/warn %) #_(constantly nil)
-          (data-from-link link ctx)))
+(defn browse-link+ [link-ref ctx]
+  {:pre [link-ref ctx]}
+  (from-link+ link-ref ctx browse-route+))

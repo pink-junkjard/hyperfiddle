@@ -1,13 +1,21 @@
 (ns hyperfiddle.ui.select$                                  ; Namespace clashes with var hyperfiddle.ui/select
   (:require
     [cats.core :refer [mlet return]]
-    [cats.monad.either :refer [left right branch]]
+    [cats.monad.either :as either :refer [left right branch]]
     [contrib.ct :refer [unwrap]]
     [contrib.data :refer [unqualify]]
     [contrib.eval]
+    [contrib.reactive :as r]
     [contrib.reader]
     [contrib.string :refer [blank->nil]]
+    [hypercrud.browser.base :as base]
+    [hypercrud.browser.context :as context]
+    [hypercrud.ui.error :as ui-error]
+    [hypercrud.ui.stale :as stale]
     [hyperfiddle.api :as hf]
+    [hyperfiddle.data :as data]
+    [hyperfiddle.runtime :as runtime]
+    [hyperfiddle.ui.popover :as popover]
     [hyperfiddle.ui.util :refer [with-entity-change! writable-entity?]]
     [taoensso.timbre :as timbre]))
 
@@ -204,3 +212,105 @@
    (assoc props
      :user-renderer typeahead-html
      ::value-ctx ctx)])
+
+(defn- select-needle-typeahead [{rt :peer branch :branch :as branched-unrouted-ctx} value
+                                ; todo these props need cleaned up, shouldn't be adapting them over and over again
+                                select-props options-props]
+  (let [common-props {
+                      #_#_"delay" 200
+                      "isLoading" (runtime/branch-is-loading? rt branch)
+                      #_#_"minLength" 2
+                      "onSearch" (fn [s]
+                                   (-> (context/build-route+ [s] branched-unrouted-ctx)
+                                       (either/branch
+                                         (fn [e] (runtime/set-branch-error rt branch e))
+                                         (fn [route]
+                                           (when-not (runtime/branch-exists? rt branch) ; todo this is crap
+                                             (runtime/dispatch! rt [:create-partition branch]))
+                                           (runtime/set-route rt branch route)))))
+
+                      ; Must return string otherwise "invariant undefined"; you can pr-str from userland
+                      "labelKey" (comp str (:option-label select-props))
+                      "placeholder" (:placeholder select-props)
+                      ; V might not be in options - widget accounts for this by taking a selected record rather than identity
+                      ; V might have different keys than options - as long as :option-label works, it doesn't matter
+                      "selected" (if value #js [value] #js [])
+
+                      "highlightOnlyResult" true            ; this helps avoid
+
+                      ; Rendering strategy that works in tables
+                      ; http://hyperfiddle.hyperfiddle.site/:hyperfiddle.ide!edit/(:fiddle!ident,:hyperfiddle!ide)
+                      "bodyContainer" true
+                      "align" "left"
+
+                      #_#_"promptText" "Type to search..."
+                      #_#_"searchText" "Searching..."
+                      "useCache" false}
+        props->typeahead (fn [props]
+                           (let [j-props (apply js-obj (apply concat props))]
+                             (reagent.core/create-element js/ReactBootstrapTypeahead.AsyncTypeahead j-props)))]
+    [:div
+     [stale/loading (r/track runtime/branch-is-loading? rt branch)
+      (if-let [route (runtime/get-route rt branch)]         ; no route means no data yet
+        (base/browse-route+ route branched-unrouted-ctx)
+        (either/right nil))
+      (fn [e]
+        ; even if browsing fails, the user needs a chance to alter their search, so just add an ugly error message
+        [:<>
+         [select-error-cmp (or (ex-message e) (str e))]     ; should use error-comp, wrong ctx in scope though
+         (props->typeahead
+           (assoc common-props
+             "options" #js []
+             "onChange" (fn [jrecord]
+                          ; foreign lib state is js array, single select is lifted into List like multi-select
+                          ; unselected is []
+                          (let [[?record] (array-seq jrecord)]
+                            (if (nil? ?record)              ; not sure how this can be anything but nil
+                              ((:on-change select-props) nil)
+                              (runtime/set-branch-error rt branch (ex-info "Record selected when no records hydrated"
+                                                                           {:record (pr-str ?record)})))))))])
+      (fn [?options-ctx]
+        (if-let [options-ctx ?options-ctx]
+          (props->typeahead
+            (assoc common-props
+              ; widget requires the option records, not ids
+              "options" (->> (condp some [(unqualify (contrib.datomic/parser-type (hf/qfind options-ctx)))]
+                               #{:find-coll :find-scalar} (hf/data options-ctx)
+                               #{:find-rel :find-tuple} (mapv #(get % (:option-element select-props 0))
+                                                              (hf/data options-ctx)))
+                             (sort-by (:option-label select-props))
+                             to-array)
+              "onChange" (fn [jrecord]
+                           ; foreign lib state is js array, single select is lifted into List like multi-select
+                           ; unselected is []
+                           (let [[?record] (array-seq jrecord)
+                                 element-ctx (hf/browse-element options-ctx (:option-element select-props 0))
+                                 ?id (hf/id element-ctx ?record)]
+                             ((:on-change select-props) ?id)))))
+          (props->typeahead
+            (assoc common-props
+              "options" #js []
+              "onChange" (fn [jrecord]
+                           ; foreign lib state is js array, single select is lifted into List like multi-select
+                           ; unselected is []
+                           (let [[?record] (array-seq jrecord)]
+                             (if (nil? ?record)             ; not sure how this can be anything but nil
+                               ((:on-change select-props) nil)
+                               (runtime/set-branch-error rt branch (ex-info "Record selected when no records hydrated"
+                                                                            {:record (pr-str ?record)})))))))))]
+     ]))
+
+(defn ^:export select-needle
+  ([_ ctx props] (select-needle ctx props))
+  ([ctx props]
+   (assert (:options props) "select: :options prop is required")
+   ; any error in this mlet is fatal, don't bother rendering the typeahead
+   (-> (mlet [link-ref (data/select+ ctx (keyword (:options props)))
+              link-ctx (context/refocus-to-link+ ctx link-ref)
+              :let [relative-branch-id (popover/build-child-branch-relative-id ctx link-ref (context/eav ctx))]
+              branched-unrouted-ctx (context/branch+ link-ctx relative-branch-id)
+              [select-props options-props] (options-value-bridge+ ctx props)]
+         (return [select-needle-typeahead branched-unrouted-ctx (hf/data ctx) select-props options-props]))
+       (either/branch
+         (fn [e] [(ui-error/error-comp ctx) e])
+         identity))))
