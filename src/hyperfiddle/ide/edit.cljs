@@ -3,7 +3,6 @@
     [cats.monad.either :as either]
     [contrib.css :refer [css]]
     [contrib.reactive :as r]
-    [hypercrud.ui.error :as error-cmps]
     [hypercrud.browser.context :refer [map->Context]]
     [hyperfiddle.ide.domain :as ide-domain]
     [hyperfiddle.ide.fiddles.fiddle-src :as fiddle-src]
@@ -12,6 +11,7 @@
     [hyperfiddle.ide.preview.view :as preview]
     [hyperfiddle.io.browser :refer [->IOImpl]]
     [hyperfiddle.runtime :as runtime]
+    [hyperfiddle.ui.error :as ui-error]
     [hyperfiddle.ui.staging :as staging]))
 
 
@@ -60,7 +60,7 @@
                (fn [e]
                  [:<>
                   [:h2 "Domain misconfigured"]              ; todo improve me
-                  [error-cmps/error-block e]])
+                  [ui-error/error-block e]])
                (fn [user-domain]
                  ; todo build the preview-rt here
                  (let [preview-ctx (map->Context

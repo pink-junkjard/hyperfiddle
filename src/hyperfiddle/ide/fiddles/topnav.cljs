@@ -2,7 +2,6 @@
   (:require
     [contrib.reactive :as r]
     [contrib.ui.tooltip :refer [tooltip]]
-    [hypercrud.ui.error]
     [hyperfiddle.api :as hf]
     [hyperfiddle.data]
     [hyperfiddle.domain :as domain]
@@ -11,7 +10,8 @@
     [hyperfiddle.ide.routing :as ide-routing]
     [hyperfiddle.runtime :as runtime]
     [hyperfiddle.security.client :as security]
-    [hyperfiddle.ui :as ui]))
+    [hyperfiddle.ui :as ui]
+    [hyperfiddle.ui.error :as ui-error]))
 
 
 (defn any-loading? [peer]
@@ -68,7 +68,7 @@
     [loading-spinner ctx]
     right-child
     [hyperfiddle.ui/link :hyperfiddle.ide/topnav-new
-     ctx nil {:hyperfiddle.ui/error-render-custom hypercrud.ui.error/error-inline
+     ctx nil {:hyperfiddle.ui/error-render-custom ui-error/error-inline
               :user-renderer topnav-new-wrapper-render}]
     [tooltip {:label "Environment administration"} (ui/link :hyperfiddle.ide/env ctx "env")]
     (when (-> (runtime/domain (:peer ctx)) (domain/database "$users"))
