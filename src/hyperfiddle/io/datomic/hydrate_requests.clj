@@ -39,15 +39,12 @@
       (contrib.datomic/tempid? e) {:db/id e}                ; This introduces sloppy thinking about time!   https://github.com/hyperfiddle/hyperfiddle/issues/584
       :happy (d/pull pull-db {:selector pull-exp :eid e}))))
 
-(def default-query-limit -1 #_100)
-
 (defmethod hydrate-request* QueryRequest [{:keys [query params opts]} domain get-secure-db-with]
   (assert query "hydrate: missing query")
   (let [q (d/qf domain params)
-        arg-map (-> (select-keys opts [:offset])
+        arg-map (-> (select-keys opts [:limit :offset])
                     (assoc :query query
-                           :args (map #(parameter % get-secure-db-with) params)
-                           :limit (or (:limit opts) default-query-limit)))]
+                           :args (map #(parameter % get-secure-db-with) params)))]
     (q arg-map)))
 
 ; todo i18n

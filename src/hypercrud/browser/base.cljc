@@ -57,12 +57,14 @@
       (domain/hydrate-system-fiddle (runtime/domain (:peer ctx)) fiddle-ident)
       (>>= @(runtime/hydrate (:peer ctx) (:branch ctx) @meta-fiddle-request) validate-fiddle))))
 
+(def browser-query-limit -1 #_100)
+
 (defn request-for-fiddle [{fiddle :hypercrud.browser/fiddle :as ctx}] ; depends on route
   ; it's a fiddle-ctx now, which has the defaults applied
   (case @(r/cursor fiddle [:fiddle/type])
     :query (mlet [q (reader/memoized-read-string+ @(r/cursor fiddle [:fiddle/query]))
                   args (context/validate-query-params+ q @(r/fmap second (:hypercrud.browser/route ctx)) ctx)]
-             (return (->QueryRequest q args nil)))
+             (return (->QueryRequest q args {:limit browser-query-limit})))
 
     :entity
     (let [[_ args] @(:hypercrud.browser/route ctx)          ; Missing entity param is valid state now https://github.com/hyperfiddle/hyperfiddle/issues/268
