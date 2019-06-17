@@ -162,11 +162,11 @@
                                  :is-refreshing false))))
          (add-watch (runtime/state rt) this
                     (fn [k r o n]
-                      (let [o (get-in o [::runtime/partitions (:branch ctx) :route])
-                            n (get-in n [::runtime/partitions (:branch ctx) :route])]
-                        (when-not (= o n)
+                      (let [old-route (get-in o [::runtime/partitions (:branch ctx) :route])
+                            new-route (get-in n [::runtime/partitions (:branch ctx) :route])]
+                        (when-not (= old-route new-route)
                           (swap! preview-state assoc :is-refreshing true)
-                          (-> (actions/set-route rt (:branch ctx) n false (partial runtime/dispatch! rt) (constantly o))
+                          (-> (actions/set-route rt (:branch ctx) new-route false (partial runtime/dispatch! rt) (constantly o))
                               (p/finally (fn [] (swap! preview-state assoc
                                                        :staleness (ide-branch-reference rt ide-branch)
                                                        :is-refreshing false))))))))))
