@@ -158,10 +158,11 @@
    [branched-popover-body-cmp ctx props]])
 
 (defn- unbranched-popover-body-cmp [ctx props]
-  [iframe-cmp                                               ; cycle
-   (context/clean ctx)                                      ; hack clean for block level errors
-   {:route (:route props)}]
-  [:button {:on-click #(runtime/close-popover (:peer ctx) (:branch ctx) (::popover-id props))} "close"])
+  [:<>
+   [iframe-cmp                                              ; cycle
+    (context/clean ctx)                                     ; hack clean for block level errors
+    {:route (:route props)}]
+   [:button {:on-click #(runtime/close-popover (:peer ctx) (:branch ctx) (::popover-id props))} "close"]])
 
 (defn- unbranched-popover-cmp [ctx props label]
   [popover-cmp-impl ctx (assoc props
