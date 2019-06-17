@@ -17,6 +17,7 @@
     [contrib.ui.safe-render :refer [user-portal]]
     [contrib.ui.tooltip :refer [tooltip tooltip-props]]
     [contrib.validation]
+    [cuerdas.core :as str]
     [datascript.parser :refer [FindRel FindColl FindTuple FindScalar Variable Aggregate Pull]]
     [hypercrud.browser.base :as base]
     [hypercrud.browser.context :as context]
@@ -393,11 +394,14 @@ User renderers should not be exposed to the reaction."
              (= n 0) [:div "no results"]))]))))
 
 (defn hint [val {:keys [hypercrud.browser/fiddle] :as ctx} props]
-  (if (and (-> (:fiddle/type @fiddle) (= :entity))
-           (empty? val))
-    [:div.alert.alert-warning "Warning: invalid route (d/pull requires an entity argument). To add a tempid entity to
-    the URL, click here: "
-     [:a {:href "~entity('$','tempid')"} [:code "~entity('$','tempid')"]] "."]))
+  (case @(r/fmap :fiddle/type fiddle)
+    :entity (when (empty? val)
+              [:div.alert.alert-warning "Warning: invalid route (d/pull requires an entity argument). To add a tempid entity to the URL, click here: "
+               [:a {:href "~entity('$','tempid')"} [:code "~entity('$','tempid')"]] "."])
+    :query (when (= base/browser-query-limit (count val))
+             [:div.alert.alert-warning (str/format "Warning: Query resultset has been truncated to %s records. Please add additional filters to your query" base/browser-query-limit)])
+    :blank nil
+    ))
 
 (defn form "Not an abstraction." [columns val ctx & [props]]
   {:pre [(s/assert :hypercrud/context ctx)]}
