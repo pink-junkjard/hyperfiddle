@@ -1,5 +1,4 @@
 (ns hyperfiddle.ui
-  (:require-macros [hyperfiddle.ui :refer [-build-fiddle]])
   (:require
     [cats.core :refer [fmap >>=]]
     [cats.monad.either :as either]
@@ -484,7 +483,12 @@ nil. call site must wrap with a Reagent component"          ; is this just hyper
 
 (def ^:dynamic markdown)                                    ; this should be hf-contrib or something
 
-(def ^:export fiddle (-build-fiddle))
+; to be manually kept in sync with hf.fiddle/default-renderer-str
+(defn ^:export fiddle [val ctx props]
+  (let [{:keys [:hypercrud.browser/fiddle]} ctx]
+    [:div.container-fluid props
+     [hyperfiddle.ui/markdown (:fiddle/markdown @fiddle) ctx]
+     [hyperfiddle.ui/result val ctx {}]]))
 
 (defn ^:export fiddle-xray [val ctx & [props]]
   [:<>

@@ -20,7 +20,7 @@
     [hypercrud.types.ThinEntity :refer [->ThinEntity #?(:cljs ThinEntity)]]
     [hyperfiddle.api :as hf]
     [hyperfiddle.branch :as branch]
-    [hyperfiddle.fiddle]
+    [hyperfiddle.fiddle :as fiddle]
     [hyperfiddle.route :as route]
     [hyperfiddle.runtime :as runtime])
   #?(:clj
@@ -518,6 +518,11 @@ a speculative db/id."
                                      (partial row-key-v ctx))))]
           [?k (row ctx k)])))))
 
+(defn- validate-fiddle [fiddle]
+  (if-let [ed (s/explain-data ::fiddle/fiddle fiddle)]
+    (either/left (ex-info "Invalid fiddle" ed))
+    (either/right fiddle)))
+
 (defn fiddle+ "Runtime sets this up, it's not public api.
   Responsible for setting defaults.
   Careful this is highly sensitive to order of initialization."
@@ -535,7 +540,8 @@ a speculative db/id."
          r-fiddle @(r/apply-inner-r (r/apply hyperfiddle.fiddle/apply-fiddle-links-defaults+
                                              [r-fiddle
                                               (runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :schemas])
-                                              r-qparsed]))]
+                                              r-qparsed]))
+         r-fiddle @(r/apply-inner-r (r/fmap validate-fiddle r-fiddle))]
     (return
       ; Can't keep track of reaction types. Just set the key to (reactive nil) rather than omit the key.
       (assoc ctx

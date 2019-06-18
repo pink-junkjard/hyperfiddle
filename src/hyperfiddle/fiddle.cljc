@@ -12,7 +12,6 @@
     [contrib.try$ :refer [try-either]]
     [cuerdas.core :as str]
     [datascript.parser]
-    #_[hyperfiddle.ui]
     #_[hyperfiddle.api]                                     ; tempid formulas
     [taoensso.timbre :as timbre]))
 
@@ -51,7 +50,7 @@
 (s/def :fiddle/renderer string?)
 (s/def :fiddle/css string?)
 (s/def :fiddle/cljs-ns string?)
-(s/def :fiddle/hydrate-result-as-fiddle string?)
+(s/def :fiddle/hydrate-result-as-fiddle boolean?)
 
 (s/def :link/class (s/coll-of keyword?))                    ; hf/new is not allowed on FindScalar at the top (no parent)
 ;(s/def :link/fiddle (s/keys))
@@ -62,9 +61,22 @@
 (s/def :hyperfiddle/owners (s/coll-of uuid?))
 
 (defmethod fiddle-type :blank [_] (s/keys))
-(defmethod fiddle-type :query [_] (s/keys :opt [:fiddle/query]))
-(defmethod fiddle-type :entity [_] (s/keys :opt [:fiddle/pull :fiddle/pull-database]))
-(defmethod fiddle-type nil [_] (s/keys))
+(defmethod fiddle-type :query [_] (s/keys :req [:fiddle/query]))
+(defmethod fiddle-type :entity [_] (s/keys :req [:fiddle/pull :fiddle/pull-database]))
+
+(s/def ::fiddle
+  (s/merge
+    (s/multi-spec fiddle-type :fiddle/type)
+    (s/keys :req [:fiddle/ident]
+            :opt [:fiddle/cljs-ns
+                  :fiddle/css
+                  :fiddle/hydrate-result-as-fiddle
+                  :fiddle/links
+                  :fiddle/markdown
+                  :fiddle/renderer
+                  :fiddle/type
+                  :fiddle/uuid
+                  :hyperfiddle/owners])))
 
 (declare fiddle-defaults)
 (declare apply-defaults)
@@ -148,22 +160,34 @@
                                      :else ":db.fn/retractEntity")) ; legacy compat, remove
                    nil))})
 
+; to be manually kept in sync with hf.ui/fiddle
+(def ^:private default-renderer-str
+  ; Format this manually:
+  ; - Syntax quote will expand @ into `(clojure.core/deref ..)`
+  ; - pretty printers suck at clojure, even the slow one
+  ; embedded newline lets this pass the cursive clojure formatter
+  (-> "
+(let [{:keys [:hypercrud.browser/fiddle]} ctx]
+  [:div.container-fluid props
+   [hyperfiddle.ui/markdown (:fiddle/markdown @fiddle) ctx]
+   [hyperfiddle.ui/result val ctx {}]])"
+      (str/ltrim "\n")))
+
 (def fiddle-defaults
   {:fiddle/markdown (fn [fiddle] (str/fmt "### %s" (some-> fiddle :fiddle/ident str)))
    :fiddle/pull (constantly "[:db/id *]")
    :fiddle/pull-database (constantly "$")
    :fiddle/query (constantly (template/load-resource "fiddle-query-default.edn"))
-   :fiddle/renderer (fn [fiddle]
-                      #?(:cljs (-> hyperfiddle.ui/fiddle meta :expr-str)
-                         :clj  nil))
+   :fiddle/renderer (constantly default-renderer-str)
    :fiddle/type (constantly :blank)})                       ; Toggling default to :query degrades perf in ide
 
 (defn auto-link+ [schemas qin link]
   (try-either                                               ; link/txfn could throw, todo wrap tighter
-    (-> link
-        (update-existing :link/fiddle apply-defaults)
-        (update :link/formula or-str ((:link/formula link-defaults) link))
-        (update :link/tx-fn or-str ((:link/tx-fn link-defaults) schemas qin link)))))
+    (let [formula (or-str (:link/formula link) ((:link/formula link-defaults) link))
+          tx-fn (or-str (:link/tx-fn link) ((:link/tx-fn link-defaults) schemas qin link))]
+      (cond-> (update-existing link :link/fiddle apply-defaults)
+        formula (assoc :link/formula formula)
+        tx-fn (assoc :link/tx-fn tx-fn)))))
 
 (defn apply-defaults "Fiddle-level defaults but not links.
   Links need the qfind, but qfind needs the fiddle defaults.
