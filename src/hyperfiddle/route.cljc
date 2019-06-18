@@ -26,7 +26,7 @@
                   :uuid :fiddle/uuid))
 (s/def ::datomic-args seqable?)
 (s/def ::service-args some?)
-(s/def ::fragment some?)
+(s/def ::fragment string?)
 
 (s/def :hyperfiddle/route
   ; todo routes should be maps #243 and errors become sensible
