@@ -90,11 +90,6 @@
          :anchor "↻"
          :label "Re-compute stale preview (alt+enter)"]])
      [:span.url]
-     #_[contrib.ui/debounced
-        {:value @(runtime/state preview-rt [::runtime/partitions preview-branch :route])
-         :on-change (fn [o n] (runtime/set-route preview-rt preview-branch n))
-         :lineNumbers false}
-        contrib.ui/cm-edn]
      (into [:span]
            (->> [{:label "edn" :tooltip "What the API client sees" :value :hypercrud.browser.browser-ui/api}
                  {:label "data" :tooltip "Ignore :fiddle/renderer" :value :hypercrud.browser.browser-ui/xray}

@@ -42,6 +42,20 @@
       :hyperfiddle.ui.popover/redirect (fn [popover-data]
                                          (ide-routing/preview-route->ide-route [(:fiddle/ident popover-data)]))})])
 
+(defn route->fiddle-label [[fiddle-ident :as route]]
+  (cond
+    (= fiddle-ident :hyperfiddle.ide/edit) (let [[_ [user-fiddle-ident]] route]
+                                             (str #_"edit: "
+                                               (if (and (coll? user-fiddle-ident) (= :fiddle/ident (first user-fiddle-ident)))
+                                                 (let [user-fiddle-ident (second user-fiddle-ident)]
+                                                   (if (keyword? user-fiddle-ident)
+                                                     (name user-fiddle-ident)
+                                                     user-fiddle-ident))
+                                                 user-fiddle-ident)))
+    (keyword? fiddle-ident) (name fiddle-ident)
+    (string? fiddle-ident) fiddle-ident
+    :else (pr-str fiddle-ident)))
+
 (defn renderer' [ctx props left-child right-child]
   [:div props
    [:div.left-nav
@@ -50,18 +64,6 @@
     (let [props {:tooltip [nil "Fiddles in this domain"]
                  :iframe-as-popover true}]
       [ui/link :hyperfiddle.ide/entry-point-fiddles ctx "index" props])
-    [:span (let [[fiddle-ident :as route] @(runtime/state (:peer ctx) [::runtime/partitions foundation/root-branch :route])]
-             (cond
-               (= fiddle-ident :hyperfiddle.ide/edit) (let [[_ [user-fiddle-ident]] route]
-                                                        (str #_"edit: "
-                                                             (if (and (coll? user-fiddle-ident) (= :fiddle/ident (first user-fiddle-ident)))
-                                                               (let [user-fiddle-ident (second user-fiddle-ident)]
-                                                                 (if (keyword? user-fiddle-ident)
-                                                                   (name user-fiddle-ident)
-                                                                   user-fiddle-ident))
-                                                               user-fiddle-ident)))
-               (keyword? fiddle-ident) (name fiddle-ident)
-               :else fiddle-ident))]
     left-child]
 
    [:div.right-nav {:key "right-nav"}                       ; CAREFUL; this key prevents popover flickering
@@ -79,12 +81,14 @@
 (defn hack-login-renderer [ctx props _ _]
   [:div props
    [:div.left-nav
-    [tooltip {:label "Home"} [:a (or (-> (runtime/domain (:peer ctx)) ::ide-directory/app-domain-ident) "Home")]]]
+    [tooltip {:label "Home"} [:a (or (-> (runtime/domain (:peer ctx)) ::ide-directory/app-domain-ident) "Home")]]
+    [:span (route->fiddle-label (runtime/get-route (:peer ctx) foundation/root-branch))]]
    [:div.right-nav {:key "right-nav"}                       ; CAREFUL; this key prevents popover flickering
     [loading-spinner ctx]]])
 
 (defn renderer [_ ctx props left-child right-child]
-  (let [f (if (= :hyperfiddle.ide/please-login (first @(runtime/state (:peer ctx) [::runtime/partitions foundation/root-branch :route])))
+  (let [f (if (= :hyperfiddle.ide/please-login (first (runtime/get-route (:peer ctx) foundation/root-branch)))
             hack-login-renderer
-            renderer')]
+            renderer')
+        left-child (or left-child [:span (route->fiddle-label (runtime/get-route (:peer ctx) foundation/root-branch))])]
     [f ctx props left-child right-child]))
