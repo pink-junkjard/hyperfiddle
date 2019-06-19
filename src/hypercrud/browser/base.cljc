@@ -57,7 +57,7 @@
             fiddle/apply-defaults)
         (hydrate-fiddle-from-datomic+ rt branch fiddle-ident))))
 
-(def browser-query-limit 5)
+(def browser-query-limit -1 #_100)
 
 (defn- request-for-fiddle+ [rt branch route fiddle]         ; no ctx
   ; it's a fiddle-ctx now, which has the defaults applied
