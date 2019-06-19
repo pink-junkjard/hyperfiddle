@@ -57,6 +57,7 @@
      :fiddle/links
      [{:db/id 17592186046199,
        :link/class [:hf/iframe],
+       :link/path ":tutorial.race/submission"
        :link/fiddle
        {:db/id 17592186046200,
         :fiddle/ident :tutorial.race/genders,
@@ -186,7 +187,8 @@
      :fiddle/links
      [{:db/id 17592186061848,
        :link/class [:hf/remove],
-       :link/rel :hf/remove}
+       :link/rel :hf/remove
+       :link/path ":fiddle/ident"}
       {:db/id 17592186061849,
        :link/class [:hf/remove],
        :link/path ":fiddle/links",
@@ -200,6 +202,7 @@
         :fiddle/query
         "[:find (pull ?link [:db/id :fiddle/ident])\n :where (or [?link :fiddle/ident] [?link :fiddle/type])]",
         :fiddle/type :query},
+       :link/path ":hyperfiddle/ide"
        :link/rel :hf/iframe}
       {:db/id 17592186061851,
        :link/class [:hf/new],
@@ -229,7 +232,7 @@
     {:db/id 17592186061847,
      :fiddle/renderer "hyperfiddle.ide.fiddles.fiddle-src/fiddle-src-renderer",
      :fiddle/links
-     [{:db/id 17592186061848, :link/class [:hf/remove], :link/rel :hf/remove}
+     [{:db/id 17592186061848, :link/class [:hf/remove], :link/rel :hf/remove :link/path ":fiddle/ident"}
       {:db/id 17592186061849, :link/class [:hf/remove], :link/path ":fiddle/links", :link/rel :hf/remove}
       {:db/id 17592186061850,
        :link/class [:hf/iframe],
@@ -238,6 +241,7 @@
         :fiddle/ident :hyperfiddle.ide/fiddle-options,
         :fiddle/query "[:find (pull ?link [:db/id :fiddle/ident])\n :where (or [?link :fiddle/ident] [?link :fiddle/type])]",
         :fiddle/type :query},
+       :link/path ":hyperfiddle/ide"
        :link/rel :hf/iframe}
       {:db/id 17592186061851,
        :link/class [:hf/new],
@@ -290,7 +294,8 @@
      "hyperfiddle.ide.fiddles.fiddle-src/fiddle-src-renderer",
      :fiddle/links
      [{:db/id 17592186061848,
-       :link/class [:hf/remove]}
+       :link/class [:hf/remove]
+       :link/path ":fiddle/ident"}
       {:db/id 17592186061849,
        :link/class [:hf/remove],
        :link/path ":fiddle/links"}
@@ -331,7 +336,8 @@
      "hyperfiddle.ide.fiddles.fiddle-src/fiddle-src-renderer",
      :fiddle/links
      [{:db/id 17592186061848,
-       :link/class [:hf/remove]}
+       :link/class [:hf/remove]
+       :link/path ":fiddle/ident"}
       {:db/id 17592186061849,
        :link/class [:hf/remove],
        :link/path ":fiddle/links"}

@@ -2,6 +2,7 @@
   (:require
     [cats.core :refer [mlet return fmap extract]]
     [cats.monad.either :as either :refer [left right left? right?]]
+    [clojure.spec.alpha :as s]
     [contrib.ct :refer [unwrap]]
     [contrib.reactive :as r]
     [clojure.test :refer [deftest is testing]]
@@ -10,6 +11,7 @@
     [hypercrud.browser.context :as context]
     [hyperfiddle.core]                                      ; avoid cycle hyperfiddle.api
     [hyperfiddle.data]
+    [hyperfiddle.domain :as domain]
     [hyperfiddle.fiddle :as fiddle]
     [hyperfiddle.foundation :as foundation]
     [hyperfiddle.reducers]
@@ -21,8 +23,13 @@
   ; Stop NPEs in tempid that inspect the stage.
   (let [state-atom (-> {::runtime/partitions {branch-id {:schemas schemas}}}
                        (hyperfiddle.reducers/root-reducer nil)
-                       (r/atom))]
+                       (r/atom))
+        databases (zipmap (keys schemas) (repeatedly (constantly {})))
+        domain (reify domain/Domain
+                 (databases [domain] databases))]
     (reify
+      runtime/HF-Runtime
+      (domain [rt] domain)
       runtime/State
       (state [rt] state-atom)
       (state [rt path] (r/cursor state-atom path)))))
@@ -240,10 +247,10 @@
         (let [ctx (context/attribute ctx :fiddle/links)]
           (is (= (context/eav ctx) [[:fiddle/ident :hyperfiddle/ide] :fiddle/links nil]))
           (is (= (count (context/data ctx)) 5))
-          (is (= (first (context/data ctx)) {:db/id 17592186061848, :link/class [:hf/remove], :link/rel :hf/remove}))
+          (is (= (first (context/data ctx)) {:db/id 17592186061848, :link/class [:hf/remove], :link/rel :hf/remove, :link/path ":fiddle/ident"}))
           (let [ctx (context/row ctx 17592186061848)]
             (is (= (context/eav ctx) [[:fiddle/ident :hyperfiddle/ide] :fiddle/links 17592186061848]))
-            (is (= (context/data ctx) {:db/id 17592186061848, :link/class [:hf/remove], :link/rel :hf/remove})))))
+            (is (= (context/data ctx) {:db/id 17592186061848, :link/class [:hf/remove], :link/rel :hf/remove, :link/path ":fiddle/ident"})))))
 
       (testing "nested scalar many"
         (let [ctx (context/attribute ctx :hyperfiddle/owners)]
@@ -260,10 +267,10 @@
       (let [ctx (context/attribute ctx :fiddle/links)]
         (is (= (context/eav ctx) [[:fiddle/ident :hyperfiddle/ide] :fiddle/links nil]))
         (is (= (count (context/data ctx)) 5))
-        (is (= (first (context/data ctx)) {:db/id 17592186061848, :link/class [:hf/remove], :link/rel :hf/remove}))
+        (is (= (first (context/data ctx)) {:db/id 17592186061848, :link/class [:hf/remove], :link/rel :hf/remove, :link/path ":fiddle/ident"}))
         (let [ctx (context/row ctx 17592186061848)]
           (is (= (context/eav ctx) [[:fiddle/ident :hyperfiddle/ide] :fiddle/links 17592186061848]))
-          (is (= (context/data ctx) {:db/id 17592186061848, :link/class [:hf/remove], :link/rel :hf/remove}))))))
+          (is (= (context/data ctx) {:db/id 17592186061848, :link/class [:hf/remove], :link/rel :hf/remove, :link/path ":fiddle/ident"}))))))
 
   (testing "a is fiddle-ident if no element set"
     (is (= (for [[_ ctx] (context/spread-result ctx-genders)
@@ -1257,34 +1264,36 @@
 ;
 ;  )
 
-(def ctx-tank1 (mock-fiddle! fixtures.tank/schemas fixtures.tank/fiddles :fixtures.tank/new-link1))
-(def ctx-tank2 (mock-fiddle! fixtures.tank/schemas fixtures.tank/fiddles :fixtures.tank/new-link2))
-(def table-ctx (mock-fiddle! fixtures.tank/schemas fixtures.tank/fiddles :fixtures.tank/test-links-table-validation))
+(deftest fiddle-validation                                  ; todo move to hyperfiddle.ide
+  (s/def :hyperfiddle/ide (s/keys))
+  (s/def :hyperfiddle.ide/new-fiddle (s/keys :req [:fiddle/ident]))
+  (s/def :hyperfiddle.ide/new-link (s/keys :req [:link/path]))
 
-(deftest fiddle-validation
   (testing "new fiddle popover validation"
-    (is (= (context/tree-invalid? ctx-tank1) true))
-    (is (= (context/leaf-invalid? (context/attribute ctx-tank1 :link/path)) true))
-    (is (= (context/leaf-invalid? (context/attribute ctx-tank1 :db/id)) false))
-    (is (= (context/tree-invalid? ctx-tank2) false))
-    (is (= (context/leaf-invalid? (context/attribute ctx-tank2 :link/path)) false))
-    (is (= (context/leaf-invalid? (context/attribute ctx-tank2 :db/id)) false)))
+    (let [ctx-tank1 (mock-fiddle! fixtures.tank/schemas fixtures.tank/fiddles :fixtures.tank/new-link1)
+          ctx-tank2 (mock-fiddle! fixtures.tank/schemas fixtures.tank/fiddles :fixtures.tank/new-link2)]
+      (is (= (context/tree-invalid? ctx-tank1) true))
+      (is (= (context/leaf-invalid? (context/attribute ctx-tank1 :link/path)) true))
+      (is (= (context/leaf-invalid? (context/attribute ctx-tank1 :db/id)) false))
+      (is (= (context/tree-invalid? ctx-tank2) false))
+      (is (= (context/leaf-invalid? (context/attribute ctx-tank2 :link/path)) false))
+      (is (= (context/leaf-invalid? (context/attribute ctx-tank2 :db/id)) false))))
 
   (testing "links table validation"
-    (is (= (context/tree-invalid? table-ctx) true))
-    (let [a (-> table-ctx
-                (context/attribute :fiddle/links)
-                (context/row 17592186061849)
-                (context/attribute :link/path))
-          b (-> table-ctx
-                (context/attribute :fiddle/links)
-                (context/row 17592186061848)
-                (context/attribute :link/path))]
-      (is (= (context/eav a) [17592186061849 :link/path ":fiddle/links"]))
-      (is (= (context/leaf-invalid? a) false))
-      (is (= (context/eav b) [17592186061848 :link/path nil]))
-      (is (= (context/leaf-invalid? b) true))
-      (is (= (context/leaf-invalid? (context/attribute b :db/id)) false)))))
+    (let [table-ctx (mock-fiddle! fixtures.tank/schemas fixtures.tank/fiddles :fixtures.tank/test-links-table-validation)]
+      (let [a (-> table-ctx
+                  (context/attribute :fiddle/links)
+                  (context/row 17592186061849)
+                  (context/attribute :link/path))
+            b (-> table-ctx
+                  (context/attribute :fiddle/links)
+                  (context/row 17592186061848)
+                  (context/attribute :link/path))]
+        (is (= (context/eav a) [17592186061849 :link/path ":fiddle/links"]))
+        (is (= (context/leaf-invalid? a) false))
+        (is (= (context/eav b) [17592186061848 :link/path ":fiddle/ident"]))
+        (is (= (context/leaf-invalid? b) false))
+        (is (= (context/leaf-invalid? (context/attribute b :db/id)) false))))))
 
 #_(deftest deps-satisfied-1
     []

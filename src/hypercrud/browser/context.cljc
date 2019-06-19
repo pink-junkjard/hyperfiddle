@@ -118,7 +118,8 @@
   (cond
     (contrib.datomic/tempid? id) id
     :else (when-let [dbname (dbname ctx)]
-            (runtime/id->tempid! (:peer ctx) (:branch ctx) dbname id))))
+            (let [id' (runtime/id->tempid! (:peer ctx) (:branch ctx) dbname id)]
+              (when (contrib.datomic/tempid? id') id')))))
 
 (defn lookup-ref [schema e-map]
   (if-let [a (contrib.datomic/find-identity-attr schema e-map)]
@@ -510,7 +511,8 @@ a speculative db/id."
 
 (defn- validate-fiddle [fiddle]
   (if-let [ed (s/explain-data :hyperfiddle/fiddle fiddle)]
-    (either/left (ex-info "Invalid fiddle" (select-keys ed [::s/problems])))
+    (either/left (ex-info "Invalid fiddle" {:fiddle/ident (:fiddle/ident fiddle)
+                                            ::s/problems (::s/problems ed)}))
     (either/right fiddle)))
 
 (defn fiddle+ "Runtime sets this up, it's not public api.
