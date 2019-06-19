@@ -517,7 +517,7 @@ nil. call site must wrap with a Reagent component"          ; is this just hyper
                     (let [[_ [inner-fiddle & inner-args]] @(:hypercrud.browser/route ctx)
                           route [inner-fiddle (vec inner-args)]]
                       [(either/branch
-                         (base/browse-route+ route ctx)
+                         (base/browse-route+ ctx route)
                          (fn [e] (timbre/warn e))           ; todo why would this ever error? cant we just throw?
                          identity)])))
           (map (fn [ctx]

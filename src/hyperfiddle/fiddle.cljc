@@ -6,6 +6,7 @@
     [clojure.spec.alpha :as s]
     [contrib.ct :refer [unwrap]]
     [contrib.data :refer [update-existing]]
+    [contrib.datomic-pull :as datomic-pull]
     [contrib.reader]
     [contrib.string :refer [or-str]]
     [contrib.template :as template]
@@ -15,27 +16,6 @@
     #_[hyperfiddle.api]                                     ; tempid formulas
     [taoensso.timbre :as timbre]))
 
-
-(defmulti fiddle-type :fiddle/type)
-
-(s/def :hyperfiddle/ide                                     ; !! fiddle/ident overlap with attributes
-  (s/and
-    #_(s/multi-spec fiddle-type :fiddle/type)
-    #_(s/or :ident (s/keys :req [:fiddle/ident])
-            :uuid (s/keys :req [:fiddle/uuid]))
-    (s/keys :opt [:fiddle/ident
-                  :fiddle/uuid
-                  :fiddle/type
-                  :fiddle/links
-                  :fiddle/markdown
-                  :fiddle/renderer
-                  :fiddle/css
-                  :fiddle/cljs-ns
-                  :fiddle/hydrate-result-as-fiddle
-                  :hyperfiddle/owners])))
-
-(s/def :hyperfiddle.ide/new-fiddle (s/keys :req [:fiddle/ident])) ; todo remove from this ns
-(s/def :hyperfiddle.ide/new-link (s/keys :req [:link/path])) ; todo remove from this ns
 
 (s/def :fiddle/ident keyword?)
 (s/def :fiddle/uuid uuid?)
@@ -60,23 +40,18 @@
 
 (s/def :hyperfiddle/owners (s/coll-of uuid?))
 
-(defmethod fiddle-type :blank [_] (s/keys))
-(defmethod fiddle-type :query [_] (s/keys :req [:fiddle/query]))
-(defmethod fiddle-type :entity [_] (s/keys :req [:fiddle/pull :fiddle/pull-database]))
+(defmulti fiddle-type :fiddle/type)
+(defmethod fiddle-type :blank [_]
+  (s/keys :req [:fiddle/ident]))
+(defmethod fiddle-type :query [_]
+  (s/keys :req [:fiddle/ident
+                :fiddle/query]))
+(defmethod fiddle-type :entity [_]
+  (s/keys :req [:fiddle/ident
+                :fiddle/pull
+                :fiddle/pull-database]))
 
-(s/def ::fiddle
-  (s/merge
-    (s/multi-spec fiddle-type :fiddle/type)
-    (s/keys :req [:fiddle/ident]
-            :opt [:fiddle/cljs-ns
-                  :fiddle/css
-                  :fiddle/hydrate-result-as-fiddle
-                  :fiddle/links
-                  :fiddle/markdown
-                  :fiddle/renderer
-                  :fiddle/type
-                  :fiddle/uuid
-                  :hyperfiddle/owners])))
+(s/def :hyperfiddle/fiddle (s/multi-spec fiddle-type :fiddle/type))
 
 (declare fiddle-defaults)
 (declare apply-defaults)
@@ -195,10 +170,13 @@
   [fiddle]
   (as-> fiddle fiddle
     (update fiddle :fiddle/type #(or % ((:fiddle/type fiddle-defaults) fiddle)))
-    (cond-> fiddle
-      (= :query (:fiddle/type fiddle)) (update :fiddle/query or-str ((:fiddle/query fiddle-defaults) fiddle))
-      (= :entity (:fiddle/type fiddle)) (-> (update :fiddle/pull or-str ((:fiddle/pull fiddle-defaults) fiddle))
-                                            (update :fiddle/pull-database or-str ((:fiddle/pull-database fiddle-defaults) fiddle))))
+    (case (:fiddle/type fiddle)
+      :query (update fiddle :fiddle/query or-str ((:fiddle/query fiddle-defaults) fiddle))
+      :entity (-> fiddle
+                  (update :fiddle/pull-database or-str ((:fiddle/pull-database fiddle-defaults) fiddle))
+                  (cond->
+                    (empty? (:fiddle/pull fiddle)) (assoc :fiddle/pull ((:fiddle/pull fiddle-defaults) fiddle))))
+      :blank fiddle)
     (update fiddle :fiddle/markdown or-str ((:fiddle/markdown fiddle-defaults) fiddle))
     (update fiddle :fiddle/renderer or-str ((:fiddle/renderer fiddle-defaults) fiddle))))
 

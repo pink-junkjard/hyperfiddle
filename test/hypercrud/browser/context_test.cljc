@@ -10,7 +10,7 @@
     [hypercrud.browser.context :as context]
     [hyperfiddle.core]                                      ; avoid cycle hyperfiddle.api
     [hyperfiddle.data]
-    [hyperfiddle.fiddle]
+    [hyperfiddle.fiddle :as fiddle]
     [hyperfiddle.foundation :as foundation]
     [hyperfiddle.reducers]
     [hyperfiddle.runtime :as runtime]
@@ -33,7 +33,8 @@
   ([ident] (mock-fiddle! fixtures.tank/schemas fixtures.tank/fiddles ident))
   ([schemas fiddles ident]
    (let [branch-id foundation/root-branch
-         [fiddle result] (-> fiddles ident)]
+         [fiddle result] (-> fiddles ident)
+         fiddle (fiddle/apply-defaults fiddle)]
      (-> (context/map->Context
            {:branch branch-id
             :hypercrud.browser/route nil

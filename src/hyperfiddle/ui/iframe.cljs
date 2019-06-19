@@ -76,7 +76,7 @@
 
 (defn iframe-cmp [ctx {:keys [route] :as props}]            ; :: [route ctx & [?f props]]
   (let [either-v (or (some-> @(runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :error]) either/left) ; todo this partition-error check should happen higher
-                     (base/browse-route+ route ctx))
+                     (base/browse-route+ ctx route))
         error-comp (or (:hyperfiddle.ui/error-render-custom props) ; try props first
                        (ui-error/error-comp ctx))
         props (dissoc props :route :hyperfiddle.ui/error-render-custom)]

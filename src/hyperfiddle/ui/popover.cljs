@@ -137,7 +137,7 @@
   (let [branched-ctx (-> (context/clean ctx)                ; hack clean for block level errors
                          (assoc :branch child-branch-id
                                 :hyperfiddle.ui/error-with-stage? true))
-        +popover-ctx-post (base/browse-route+ (:route props) branched-ctx) ; todo browse once, write a custom iframe-cmp
+        +popover-ctx-post (base/browse-route+ branched-ctx (:route props)) ; todo browse once, write a custom iframe-cmp
         r-popover-data (r/>>= :hypercrud.browser/result +popover-ctx-post) ; focus the fiddle at least then call @(context/data) ?
         popover-invalid (->> +popover-ctx-post (unwrap (constantly nil)) context/tree-invalid?)]
     [:<>

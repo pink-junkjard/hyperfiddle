@@ -5,8 +5,7 @@
     [clojure.spec.alpha :as s]
     [clojure.string :as string]
     [contrib.uri :refer [is-uri?]]
-    [hyperfiddle.database.color :as color]
-    [hyperfiddle.route]))
+    [hyperfiddle.database.color :as color]))
 
 
 ; todo these db specs belong somewhere else

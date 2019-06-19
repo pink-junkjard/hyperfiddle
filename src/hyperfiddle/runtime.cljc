@@ -1,5 +1,8 @@
 (ns hyperfiddle.runtime
   (:require
+    [clojure.set :as set]
+    [contrib.datomic]
+    [hyperfiddle.domain :as domain]
     [hyperfiddle.reducers :as reducers]
     [hyperfiddle.state :as state]))
 
@@ -31,6 +34,30 @@
 
 (defn get-route [rt branch]
   @(state rt [::partitions branch :route]))
+
+(defn- get-tempid-lookup!
+  ; todo this is too low level an api to be worth making public
+  "Returns the tempid lookup for the given branch and dbname.
+  May throw an exception (e.g. if the branch has an invalid stage)"
+  [rt branch dbname]
+  {:pre [(domain/valid-dbname? (domain rt) dbname)]}
+  (some-> @(state rt [::partitions branch :tempid-lookups dbname])
+          deref))
+
+(defn id->tempid! [rt branch dbname id]
+  ; todo what about if the tempid is on a higher branch in the uri?
+  (if (contrib.datomic/tempid? id)
+    id
+    (let [id->tempid (get-tempid-lookup! rt branch dbname)]
+      (get id->tempid id id))))
+
+(defn tempid->id! [rt branch dbname tempid]
+  ; todo what about if the tempid is on a higher branch in the uri?
+  (if (contrib.datomic/tempid? tempid)
+    (let [tempid->id (-> (get-tempid-lookup! rt branch dbname)
+                         (set/map-invert))]
+      (get tempid->id tempid tempid))
+    tempid))
 
 (defn branch-is-loading? [rt branch]
   (some? @(state rt [::partitions branch :hydrate-id])))

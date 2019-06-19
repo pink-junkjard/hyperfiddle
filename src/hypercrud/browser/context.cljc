@@ -2,7 +2,6 @@
   (:require
     [cats.core :as cats :refer [mlet return >>=]]
     [cats.monad.either :as either :refer [left right either?]]
-    [clojure.set :as set]
     [clojure.spec.alpha :as s]
     [clojure.string :as string]
     [contrib.ct :refer [unwrap]]
@@ -20,7 +19,7 @@
     [hypercrud.types.ThinEntity :refer [->ThinEntity #?(:cljs ThinEntity)]]
     [hyperfiddle.api :as hf]
     [hyperfiddle.branch :as branch]
-    [hyperfiddle.fiddle :as fiddle]
+    [hyperfiddle.fiddle]
     [hyperfiddle.route :as route]
     [hyperfiddle.runtime :as runtime])
   #?(:clj
@@ -114,21 +113,12 @@
     :hypercrud.browser/element deref
     :source :symbol str))
 
-(defn ctx->id-lookup "light ctx dependency - needs :branch and :peer"
-  ([ctx] (ctx->id-lookup (dbname ctx) ctx))
-  ([dbname ctx]
-   ; todo what about if the tempid is on a higher branch in the uri?
-   (some-> dbname
-           (->> (conj [::runtime/partitions (:branch ctx) :tempid-lookups])
-                (runtime/state (:peer ctx))
-                deref)
-           deref)))
-
 (defn underlying-tempid "ctx just needs :branch and :peer" [ctx id]
   ; This muddled thinking is caused by https://github.com/hyperfiddle/hyperfiddle/issues/584
   (cond
     (contrib.datomic/tempid? id) id
-    :else (get (ctx->id-lookup ctx) id)))
+    :else (when-let [dbname (dbname ctx)]
+            (runtime/id->tempid! (:peer ctx) (:branch ctx) dbname id))))
 
 (defn lookup-ref [schema e-map]
   (if-let [a (contrib.datomic/find-identity-attr schema e-map)]
@@ -519,8 +509,8 @@ a speculative db/id."
           [?k (row ctx k)])))))
 
 (defn- validate-fiddle [fiddle]
-  (if-let [ed (s/explain-data ::fiddle/fiddle fiddle)]
-    (either/left (ex-info "Invalid fiddle" ed))
+  (if-let [ed (s/explain-data :hyperfiddle/fiddle fiddle)]
+    (either/left (ex-info "Invalid fiddle" (select-keys ed [::s/problems])))
     (either/right fiddle)))
 
 (defn fiddle+ "Runtime sets this up, it's not public api.
@@ -528,8 +518,9 @@ a speculative db/id."
   Careful this is highly sensitive to order of initialization."
   [ctx r-fiddle]
   {:pre [r-fiddle]}
-  (mlet [:let [r-fiddle (r/fmap hyperfiddle.fiddle/apply-defaults r-fiddle)]
-         r-qparsed @(r/apply-inner-r (r/fmap hyperfiddle.fiddle/parse-fiddle-query+ r-fiddle))
+  ; todo applying fiddle defaults should happen above here
+  ; todo fiddle should already be valid
+  (mlet [r-qparsed @(r/apply-inner-r (r/fmap hyperfiddle.fiddle/parse-fiddle-query+ r-fiddle))
          _ (if (and (not= :blank @(r/cursor r-fiddle [:fiddle/type]))
                     @(r/fmap (r/comp nil? :qfind) r-qparsed))
              (either/left (ex-info "Invalid qfind" {}))     ; how would this ever happen?
@@ -927,23 +918,6 @@ a speculative db/id."
     ; each link individually. This hack probably never needs to get fixed.
     (refocus-in-element+ (browse-element ctx 0) a')))
 
-(defn id->tempid+ [route ctx]
-  (let [invert-id (fn [dbname id]
-                    (if (contrib.datomic/tempid? id)
-                      id
-                      (let [id->tempid (ctx->id-lookup dbname ctx)]
-                        (get id->tempid id id))))]
-    (try-either (route/invert-route route invert-id))))
-
-(defn tempid->id+ [route ctx]
-  (let [invert-id (fn [dbname id]
-                    (if (contrib.datomic/tempid? id)
-                      (let [tempid->id (-> (ctx->id-lookup dbname ctx)
-                                           (set/map-invert))]
-                        (get tempid->id id id))
-                      id))]
-    (try-either (route/invert-route route invert-id))))
-
 (defn tag-v-with-color' [ctx v]
   (if v
     (->ThinEntity (or (dbname ctx) "$")                     ; busted element level
@@ -1020,8 +994,10 @@ a speculative db/id."
                        (right (:fiddle/ident fiddle))
                        (left {:message ":link/fiddle required" :data {:link link}})))
          ; Why must we reverse into tempids? For the URL, of course.
-         :let [colored-args (mapv (partial tag-v-with-color ctx) args)] ; this ctx is refocused to some eav
-         route (id->tempid+ (hyperfiddle.route/canonicalize fiddle-id colored-args) ctx)
+         :let [colored-args (mapv (partial tag-v-with-color ctx) args) ; this ctx is refocused to some eav
+               route (hyperfiddle.route/canonicalize fiddle-id colored-args)]
+         route (try-either (route/invert-route route (partial runtime/id->tempid! (:peer ctx) (:branch ctx))))
+         ; why would this function ever construct an invalid route? this check seems unnecessary
          route (hyperfiddle.route/validate-route+ route)]
     (return route)))
 
@@ -1082,23 +1058,23 @@ a speculative db/id."
   (if-let [link-ref (:hypercrud.browser/link ?ctx)]
     (link-tx-read-memoized! @(r/fmap-> link-ref :link/tx-fn))))
 
-(defn- fix-param [ctx param]
+(defn- fix-param [rt branch param]
   (if (instance? ThinEntity param)
     ; I think it already has the correct identity and tempid is already accounted
     #_(smart-entity-identifier ctx param)
     (.-id param)                                            ; throw away dbname
     param))
 
-(defn validate-query-params+ [q args ctx]
+(defn validate-query-params+ [rt branch q args]
   (mlet [query-holes (try-either (hypercrud.browser.q-util/parse-holes q)) #_"normalizes for :in $"
          :let [[params' unused] (loop [acc []
                                        [arg & next-args :as args] args
                                        [hole & next-holes] query-holes]
                                   (let [[arg next-args] (if (string/starts-with? hole "$")
                                                           (if false #_(instance? DbName arg)
-                                                            [(->DbRef (:dbname arg) (:branch ctx)) next-args]
-                                                            [(->DbRef hole (:branch ctx)) args])
-                                                          [(fix-param ctx arg) next-args])
+                                                            [(->DbRef (:dbname arg) branch) next-args]
+                                                            [(->DbRef hole branch) args])
+                                                          [(fix-param rt branch arg) next-args])
                                         acc (conj acc arg)]
                                     (if next-holes
                                       (recur acc next-args next-holes)
