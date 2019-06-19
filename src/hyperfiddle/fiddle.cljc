@@ -221,7 +221,7 @@
                  (fn [pull]
                    (try-either
                      (let [source (symbol pull-database)
-                           fake-q `[:find (~'pull ~source ~'?e ~pull) . :where [~'?e]]]
+                           fake-q `[:find (~'pull ~source ~'?e ~pull) . :in ~source :where [~source ~'?e]]]
                        (datascript.parser/parse-query fake-q)))))
     :query (>>= (contrib.reader/memoized-read-edn-string+ query)
                 #(try-either
