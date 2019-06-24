@@ -1,21 +1,26 @@
 (ns hypercrud.browser.base
-  (:require [cats.core :refer [mlet return]]
-            [cats.monad.either :as either]
-            [contrib.reactive :as r]
-            [contrib.reader :as reader :refer [memoized-read-edn-string+]]
-            [contrib.try$ :refer [try-either]]
-            [hypercrud.browser.context :as context]
-            [hypercrud.types.DbName :refer [#?(:cljs DbName)]]
-            [hypercrud.types.DbRef :refer [->DbRef]]
-            [hypercrud.types.EntityRequest :refer [->EntityRequest]]
-            [hypercrud.types.QueryRequest :refer [->QueryRequest]]
-            [hyperfiddle.domain :as domain]
-            [hyperfiddle.fiddle :as fiddle]
-            [hyperfiddle.route :as route]
-            [hyperfiddle.runtime :as runtime])
+  (:require
+    [cats.core :as cats :refer [mlet return]]
+    [cats.monad.either :as either]
+    [clojure.string :as string]
+    [contrib.datomic.common.query :as query]
+    [contrib.reactive :as r]
+    [contrib.reader :as reader :refer [memoized-read-edn-string+]]
+    [contrib.try$ :refer [try-either]]
+    [hypercrud.browser.context :as context]
+    [hypercrud.types.DbName :refer [#?(:cljs DbName)]]
+    [hypercrud.types.DbRef :refer [->DbRef]]
+    [hypercrud.types.EntityRequest :refer [->EntityRequest]]
+    [hypercrud.types.QueryRequest :refer [->QueryRequest]]
+    [hypercrud.types.ThinEntity :refer [#?(:cljs ThinEntity)]]
+    [hyperfiddle.domain :as domain]
+    [hyperfiddle.fiddle :as fiddle]
+    [hyperfiddle.route :as route]
+    [hyperfiddle.runtime :as runtime])
   #?(:clj
      (:import
-       (hypercrud.types.DbName DbName))))
+       (hypercrud.types.DbName DbName)
+       (hypercrud.types.ThinEntity ThinEntity))))
 
 
 (defn legacy-fiddle-ident->lookup-ref [fiddle]              ; SHould be an ident but sometimes is a long today
@@ -45,7 +50,8 @@
                                          :human-hint "Did you just edit :fiddle/ident?"}))
                   (either/right record))
          fiddle (case (:fiddle/type record :blank)          ; defaults have NOT yet been applied
-                  :query (either/right record)
+                  :query (mlet [query-needle (memoized-read-edn-string+ (:fiddle/query-needle record))]
+                           (return record))
                   :entity (either/right record) #_(mlet [pull (memoized-read-edn-string+ (:fiddle/pull record))]
                                                     (return (assoc record :fiddle/pull pull)))
                   :blank (either/right record))]
@@ -53,18 +59,55 @@
 
 (defn- hydrate-fiddle+ [rt branch fiddle-ident]             ; no ctx
   (-> (if (domain/system-fiddle? (runtime/domain rt) fiddle-ident)
-        (-> (domain/hydrate-system-fiddle (runtime/domain rt) fiddle-ident)
-            fiddle/apply-defaults)
+        (->> (domain/hydrate-system-fiddle (runtime/domain rt) fiddle-ident)
+             (cats/fmap fiddle/apply-defaults))
         (hydrate-fiddle-from-datomic+ rt branch fiddle-ident))))
 
 (def browser-query-limit -1 #_100)
 
-(defn- request-for-fiddle+ [rt branch route fiddle]         ; no ctx
-  ; it's a fiddle-ctx now, which has the defaults applied
+(defn request-for-fiddle+ [rt branch route fiddle]          ; no ctx
   (case (:fiddle/type fiddle)
-    :query (mlet [q (reader/memoized-read-string+ (:fiddle/query fiddle))
-                  args (context/validate-query-params+ rt branch q (second route))]
-             (return (->QueryRequest q args {:limit browser-query-limit})))
+    :query (mlet [q (reader/memoized-read-string+ (:fiddle/query fiddle)) ; todo why read-string instead of read-edn-string?
+                  needle-clauses (reader/memoized-read-edn-string+ (:fiddle/query-needle fiddle))
+                  :let [inputs (->> (or (:in (query/q->map q)) ['$])
+                                    (mapv str))
+                        [query-args unused appended-needle]
+                        (loop [query-args []
+                               [route-arg & next-route-args :as route-args] (second route)
+                               [hole & next-holes] inputs
+                               needle-input (when (some? needle-clauses)
+                                              "?hf-needle")
+                               appended-needle false]
+                          (let [[query-arg next-route-args] (cond
+                                                              (string/starts-with? hole "$")
+                                                              (if false #_(instance? DbName route-arg)
+                                                                [(->DbRef (:dbname route-arg) branch) next-route-args]
+                                                                [(->DbRef hole branch) (seq route-args)])
+
+                                                              (instance? ThinEntity route-arg)
+                                                              ; I think it already has the correct identity and tempid is already accounted
+                                                              #_(context/smart-entity-identifier ctx route-arg)
+                                                              [(.-id route-arg) next-route-args] ; throw away dbname
+
+                                                              :else [route-arg next-route-args])
+                                query-args (conj query-args query-arg)]
+                            (cond
+                              next-holes (recur query-args next-route-args next-holes needle-input appended-needle)
+                              (and next-route-args needle-input) (recur query-args next-route-args [needle-input] nil true)
+                              :else [query-args next-route-args appended-needle])))]]
+             (cond
+               #_#_(seq unused) (either/left (ex-info "unused param" {:query q :params query-args :unused unused}))
+
+               (not= (count query-args) (if appended-needle
+                                          (+ 1 (count inputs))
+                                          (count inputs)))
+               (either/left (ex-info "missing params" {:query q :params query-args :unused unused}))
+
+               appended-needle (return (-> (apply query/append-where-clauses q needle-clauses)
+                                           (query/append-inputs '?needle)
+                                           (->QueryRequest query-args {:limit browser-query-limit})))
+
+               :else (return (->QueryRequest q query-args {:limit browser-query-limit}))))
 
     :entity
     (let [args (second route)                               ; Missing entity param is valid state now https://github.com/hyperfiddle/hyperfiddle/issues/268
@@ -76,6 +119,8 @@
               pull-exp (or (-> (memoized-read-edn-string+ (:fiddle/pull fiddle))
                                ; todo it SHOULD be assertable that fiddle/pull is valid edn (and datomic-pull) by now (but its not yet)
                                (either/branch (constantly nil) identity))
+                           ; todo this default is garbage, fiddle/pull should never be nil (defaults already applied)
+                           ; and invalid edn should just fail, not nil-pun
                            ['*])]
           (either/right (->EntityRequest (or (:db/id ?e) ?e) db pull-exp)))
         (either/left (ex-info "Missing :fiddle/pull-database" {:fiddle (:fiddle/ident fiddle)}))))

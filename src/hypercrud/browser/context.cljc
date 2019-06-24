@@ -3,7 +3,6 @@
     [cats.core :as cats :refer [mlet return >>=]]
     [cats.monad.either :as either :refer [left right either?]]
     [clojure.spec.alpha :as s]
-    [clojure.string :as string]
     [contrib.ct :refer [unwrap]]
     [contrib.data :refer [ancestry-common ancestry-divergence unqualify]]
     [contrib.datomic]
@@ -1059,36 +1058,6 @@ a speculative db/id."
               (nil? %))]}
   (if-let [link-ref (:hypercrud.browser/link ?ctx)]
     (link-tx-read-memoized! @(r/fmap-> link-ref :link/tx-fn))))
-
-(defn- fix-param [rt branch param]
-  (if (instance? ThinEntity param)
-    ; I think it already has the correct identity and tempid is already accounted
-    #_(smart-entity-identifier ctx param)
-    (.-id param)                                            ; throw away dbname
-    param))
-
-(defn validate-query-params+ [rt branch q args]
-  (mlet [query-holes (try-either (hypercrud.browser.q-util/parse-holes q)) #_"normalizes for :in $"
-         :let [[params' unused] (loop [acc []
-                                       [arg & next-args :as args] args
-                                       [hole & next-holes] query-holes]
-                                  (let [[arg next-args] (if (string/starts-with? hole "$")
-                                                          (if false #_(instance? DbName arg)
-                                                            [(->DbRef (:dbname arg) branch) next-args]
-                                                            [(->DbRef hole branch) args])
-                                                          [(fix-param rt branch arg) next-args])
-                                        acc (conj acc arg)]
-                                    (if next-holes
-                                      (recur acc next-args next-holes)
-                                      [acc next-args])))]]
-    ;(assert (= 0 (count (filter nil? params')))) ; datomic will give a data source error
-    ; validation. better to show the query and overlay the params or something?
-    (cond #_#_(seq unused) (either/left {:message "unused param" :data {:query q :params params' :unused unused}})
-      (not= (count params') (count query-holes))
-      (either/left {:message "missing params" :data {:query q :params params' :unused unused}})
-
-      :else-valid
-      (either/right params'))))
 
 (defn hash-portable [v]
   ; Transactions have db/id longs and longs hash differently on cljs vs clj

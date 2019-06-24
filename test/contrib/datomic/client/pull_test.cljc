@@ -1,8 +1,8 @@
-(ns contrib.datomic-pull-test
+(ns contrib.datomic.client.pull-test
   (:require
     [clojure.spec.alpha :as s]
     [clojure.test :refer [deftest is]]
-    [contrib.datomic-pull :as datomic-pull]))
+    [contrib.datomic.client.pull :as client-pull]))
 
 
 (deftest valid-pull-patterns []
@@ -36,4 +36,4 @@
                          [:artist/name (default :artist/endYear 0)]
                          [:artist/name (default :artist/endYear "N/A")]
                          ]]
-    (is (nil? (s/explain-data ::datomic-pull/pattern pull-pattern)))))
+    (is (nil? (s/explain-data ::client-pull/pattern pull-pattern)))))

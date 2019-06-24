@@ -6,7 +6,7 @@
     [clojure.spec.alpha :as s]
     [contrib.ct :refer [unwrap]]
     [contrib.data :refer [update-existing]]
-    [contrib.datomic-pull :as datomic-pull]
+    [contrib.datomic.client.pull :as client-pull]
     [contrib.reader]
     [contrib.string :refer [or-str]]
     [contrib.template :as template]
@@ -21,6 +21,7 @@
 (s/def :fiddle/uuid uuid?)
 (s/def :fiddle/type #{:blank :entity :query})
 (s/def :fiddle/query string?)
+(s/def :fiddle/query-needle string?)
 (s/def :fiddle/pull string?)
 (s/def :fiddle/pull-database string?)
 (s/def :fiddle/links (s/coll-of (s/and (s/keys :req [:link/path]
@@ -197,6 +198,7 @@
                    {:link/fiddle [:db/id
                                   :fiddle/ident             ; routing
                                   :fiddle/query             ; validation
+                                  :fiddle/query-needle      ; validation
                                   :fiddle/type              ; validation
                                   ]}
                    :link/formula
@@ -206,6 +208,7 @@
    :fiddle/pull
    :fiddle/pull-database
    :fiddle/query
+   :fiddle/query-needle
    :fiddle/cljs-ns
    :fiddle/renderer
    :fiddle/type

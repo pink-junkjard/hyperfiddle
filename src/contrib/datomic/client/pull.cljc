@@ -1,4 +1,4 @@
-(ns contrib.datomic-pull
+(ns contrib.datomic.client.pull
   (:require
     [clojure.spec.alpha :as s]))
 

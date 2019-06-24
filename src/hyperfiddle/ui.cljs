@@ -1,6 +1,6 @@
 (ns hyperfiddle.ui
   (:require
-    [cats.core :refer [fmap >>=]]
+    [cats.core :as cats :refer [fmap >>=]]
     [cats.monad.either :as either]
     [cljs.spec.alpha :as s]
     [clojure.core.match :refer [match match*]]
@@ -20,7 +20,6 @@
     [datascript.parser :refer [FindRel FindColl FindTuple FindScalar Variable Aggregate Pull]]
     [hypercrud.browser.base :as base]
     [hypercrud.browser.context :as context]
-    [hypercrud.browser.routing :as routing]
     [hyperfiddle.api :as hf]
     [hyperfiddle.data :as data]
     [hyperfiddle.domain :as domain]
@@ -219,7 +218,22 @@ User renderers should not be exposed to the reaction."
   ; each prop might have special rules about his default, for example :visible is default true,
   ; does this get handled here?
   (-> +?route
-      (>>= #(routing/validated-route+ (:link/fiddle @link-ref) % ctx))
+      (>>= (fn [?route]
+             ; todo should still allow routing even if these checks fail, all that matters if it can be encoded to an url
+             ; We specifically hydrate this deep just so we can validate anchors like this.
+             (let [?fiddle (:link/fiddle @link-ref)]
+               (case (:fiddle/type ?fiddle)
+                 :query (->>
+                          ; just check if a request can be built
+                          (base/request-for-fiddle+ (:peer ctx) (:branch ctx) ?route ?fiddle)
+                          (cats/fmap (constantly ?route)))
+                 :entity (let [[_ [$1 :as params]] ?route]
+                           ; todo just run base/request-for-fiddle+
+                           (if (not= nil $1)                ; todo check conn
+                             (either/right ?route)
+                             (either/left {:message "malformed entity param" :data {:params params}})))
+                 ; nil means :blank
+                 (either/right ?route)))))
       (either/branch
         (fn [e]
           (-> props
