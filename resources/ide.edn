@@ -37,6 +37,8 @@
              :renderer "(fn [value ctx props]\n  (let [props (assoc props :debounce/interval contrib.ui/default-debounce-ms)]\n    [hyperfiddle.ui.controls/code value ctx props]))"}
  #:attribute{:ident :fiddle/query
              :renderer "(fn [value ctx props]\n  (let [props (assoc props :debounce/interval contrib.ui/default-debounce-ms)]\n    [hyperfiddle.ui.controls/code value ctx props]))"}
+ #:attribute{:ident :fiddle/query-needle
+             :renderer "(fn [value ctx props]\n  (let [props (assoc props :debounce/interval contrib.ui/default-debounce-ms)]\n    [hyperfiddle.ui.controls/code value ctx props]))"}
  #:attribute{:ident :fiddle/renderer
              :renderer "(fn [value ctx props]\n  (let [props (assoc props :debounce/interval contrib.ui/default-debounce-ms)]\n    [hyperfiddle.ui.controls/code value ctx props]))"}
  #:attribute{:ident :fiddle/type

@@ -3,6 +3,7 @@
     [cats.monad.either :as either]
     [clojure.spec.alpha :as s]
     [clojure.pprint]
+    [contrib.css :refer [css]]
     [contrib.data :refer [assoc-if]]
     [contrib.ednish]
     [contrib.hfrecom :refer [anchor-tabs]]
@@ -14,7 +15,7 @@
     [hyperfiddle.fiddle :as fiddle]
     [hyperfiddle.ide.domain :as ide-domain]
     [hyperfiddle.runtime :as runtime]
-    [hyperfiddle.ui :refer [anchor field value hyper-control link table]]
+    [hyperfiddle.ui :as ui :refer [anchor field value hyper-control link table]]
     [hyperfiddle.ui.controls :as controls]))
 
 
@@ -34,7 +35,8 @@
 
 (defn query-composite-stable [ctx-top val ctx-fiddle-type props]
   ; The divs are for styling
-  [:div (select-keys props [:class])
+  [:div (-> (select-keys props [:class])
+            (assoc-in [:style :flex] "0 0 auto"))
    [hyper-control val ctx-fiddle-type (with-fiddle-default props val :fiddle/type)]
    [:div.pull-db
     (if (= val :entity)
@@ -97,9 +99,23 @@
       (value [:fiddle/type] ctx (r/partial query-composite-stable ctx) props)
       (case (or (:fiddle/type val)
                 ((:fiddle/type fiddle/fiddle-defaults)
-                  val))
+                 val))
         :entity ^{:key "pull"} [value [:fiddle/pull] ctx hyper-control (with-fiddle-default props val :fiddle/pull)]
-        :query ^{:key "query"} [value [:fiddle/query] ctx hyper-control (with-fiddle-default props val :fiddle/query)]
+        :query
+        ^{:key "query"}
+        [:<>
+         [:div.query.cm-wrap
+          [value [:fiddle/query] ctx hyper-control (with-fiddle-default props val :fiddle/query)]]
+
+         [:div.query-needle-label
+          (let [ctx (context/focus ctx [:fiddle/query-needle])
+                props (-> props
+                          (dissoc :label-fn)
+                          (update :class css (ui/semantic-css ctx)))]
+            [ui/hyper-label nil ctx props])]
+
+         [:div.query-needle.cm-wrap
+          [value [:fiddle/query-needle] ctx hyper-control (with-fiddle-default props val :fiddle/query-needle)]]]
         :blank nil)])
 
    :hf/links
