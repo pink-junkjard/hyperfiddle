@@ -5,6 +5,8 @@
     ; NOT clj tests, this is only for CLJS tests
     contrib.char$-test
     contrib.data-test
+    contrib.datomic.client.pull-test
+    contrib.datomic.client.query-test
     contrib.datomic-test
     contrib.datomic-tx-test
     contrib.ednish-test
@@ -15,8 +17,8 @@
     contrib.rfc3986-test
     contrib.string-test
     contrib.validation-test
-    hypercrud.browser.router-bidi-test
     hypercrud.browser.context-test
+    hypercrud.browser.router-bidi-test
     hyperfiddle.fiddle-test
     hyperfiddle.io.basis-test
     hyperfiddle.readers-test
@@ -28,6 +30,8 @@
   (doo-tests
     'contrib.char$-test
     'contrib.data-test
+    'contrib.datomic.client.pull-test
+    'contrib.datomic.client.query-test
     'contrib.datomic-test
     'contrib.datomic-tx-test
     'contrib.ednish-test
@@ -38,8 +42,8 @@
     'contrib.rfc3986-test
     'contrib.string-test
     'contrib.validation-test
-    'hypercrud.browser.router-bidi-test
     'hypercrud.browser.context-test
+    'hypercrud.browser.router-bidi-test
     'hyperfiddle.fiddle-test
     'hyperfiddle.io.basis-test
     'hyperfiddle.readers-test
