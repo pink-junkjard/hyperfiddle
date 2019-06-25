@@ -252,7 +252,7 @@
     [:div
      [stale/loading (r/track runtime/branch-is-loading? rt branch)
       (if-let [route (runtime/get-route rt branch)]         ; no route means no data yet
-        (base/browse-route+ route branched-unrouted-ctx)
+        (base/browse-route+ branched-unrouted-ctx route)
         (either/right nil))
       (fn [e]
         ; even if browsing fails, the user needs a chance to alter their search, so just add an ugly error message
