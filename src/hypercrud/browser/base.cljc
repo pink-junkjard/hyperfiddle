@@ -75,8 +75,6 @@
                         (loop [query-args []
                                [route-arg & next-route-args :as route-args] (second route)
                                [hole & next-holes] inputs
-                               needle-input (when (some? needle-clauses)
-                                              "?hf-needle")
                                appended-needle false]
                           (let [[query-arg next-route-args] (cond
                                                               (string/starts-with? hole "$")
@@ -92,8 +90,8 @@
                                                               :else [route-arg next-route-args])
                                 query-args (conj query-args query-arg)]
                             (cond
-                              next-holes (recur query-args next-route-args next-holes needle-input appended-needle)
-                              (and next-route-args needle-input) (recur query-args next-route-args [needle-input] nil true)
+                              next-holes (recur query-args next-route-args next-holes appended-needle)
+                              (and next-route-args (some? needle-clauses)) (recur query-args next-route-args ["?hf-needle"] true)
                               :else [query-args next-route-args appended-needle])))]]
              (cond
                #_#_(seq unused) (either/left (ex-info "unused param" {:query q :params query-args :unused unused}))
@@ -104,7 +102,7 @@
                (either/left (ex-info "missing params" {:query q :params query-args :unused unused}))
 
                appended-needle (return (-> (apply query/append-where-clauses q needle-clauses)
-                                           (query/append-inputs '?needle)
+                                           (query/append-inputs '?hf-needle)
                                            (->QueryRequest query-args {:limit browser-query-limit})))
 
                :else (return (->QueryRequest q query-args {:limit browser-query-limit}))))
