@@ -1,6 +1,6 @@
 (ns hyperfiddle.ui.select$                                  ; Namespace clashes with var hyperfiddle.ui/select
   (:require
-    [cats.core :refer [mlet return]]
+    [cats.core :as cats :refer [mlet return]]
     [cats.monad.either :as either :refer [left right branch]]
     [contrib.ct :refer [unwrap]]
     [contrib.data :refer [unqualify]]
@@ -8,6 +8,8 @@
     [contrib.reactive :as r]
     [contrib.reader]
     [contrib.string :refer [blank->nil]]
+    [cuerdas.core :as str]
+    [goog.object :as object]
     [hypercrud.browser.base :as base]
     [hypercrud.browser.context :as context]
     [hyperfiddle.api :as hf]
@@ -132,23 +134,16 @@
             option-props {:disabled (compute-disabled anchor-ctx select-props)}]
         (right [select-props option-props])))))
 
-(declare typeahead)
+(defn- options-values [options-ctx select-props]
+  (condp some [(unqualify (contrib.datomic/parser-type (hf/qfind options-ctx)))]
+    #{:find-coll :find-scalar} (hf/data options-ctx)
+    #{:find-rel :find-tuple} (mapv #(get % (:option-element select-props 0))
+                                   (hf/data options-ctx))))
 
-(defn ^:export select
-  ([ctx props]
-   (select nil ctx props))
-  ([_ ctx props]
-   [typeahead ctx props]
-   #_#_#_{:pre [ctx]}
-   (assert (:options props) "select: :options prop is required")
-    ; http://hyperfiddle.hyperfiddle.net/:database!options-list/
-    ; http://hyperfiddle.hyperfiddle.site/:hyperfiddle.ide!domain/~entity('$domains',(:domain!ident,'hyperfiddle'))
-   [hyperfiddle.ui/link (keyword (:options props))
-    #_#_ctx (assoc ctx :hyperfiddle.ui/display-mode (r/pure :hypercrud.browser.browser-ui/user))
-    ctx nil
-    (assoc props
-      :user-renderer select-html
-      ::value-ctx ctx)]))
+(defn- truncated-options [n]
+  ; todo this destroys table cells
+  #_(when (= base/browser-query-limit n)
+      [:div.alert.alert-warning (str/format "Warning: Options resultset has been truncated to %s records. Please add additional filters" base/browser-query-limit)]))
 
 (defn typeahead-html [_ options-ctx props]                  ; element, etc
   (branch
@@ -168,52 +163,47 @@
             ?v (hf/data (::value-ctx props))
 
             ; Need schema set and in multicolor case you need to know which element
-            option-records-untupled
-            (condp some [(unqualify (contrib.datomic/parser-type (hf/qfind options-ctx)))]
-              #{:find-coll :find-scalar} (hf/data options-ctx)
-              #{:find-rel :find-tuple} (mapv #(get % (:option-element select-props 0))
-                                             (hf/data options-ctx)))
+            option-records-untupled (options-values options-ctx select-props)
+
 
             ; Convoluted context manipulation due to https://github.com/hyperfiddle/hyperfiddle/issues/949
             ; The above untupling logic should be done by hyperfiddle
             options-ctx (hf/browse-element options-ctx (:option-element select-props 0))
             #_#_option-records-untupled' (hf/data options-ctx)
             #_#__ (js/console.log option-records-untupled option-records-untupled')]
+        [:<>
+         [truncated-options (count option-records-untupled)]
+         (reagent.core/create-element
+           js/ReactBootstrapTypeahead.Typeahead
+           #js {"labelKey" (fn [record]
+                             ; Must return string otherwise "invariant undefined"; you can pr-str from userland
+                             (str ((:option-label select-props) record)))
+                "placeholder" (:placeholder select-props)
+                ; widget requires the option records, not ids
+                "options" (->> option-records-untupled (sort-by (:option-label select-props)) to-array)
+                "onChange" (fn [jrecord]
+                             ; foreign lib state is js array, single select is lifted into List like multi-select
+                             ; unselected is []
+                             (let [[?record] (array-seq jrecord)
+                                   ?v (hf/id options-ctx ?record)]
+                               ((:on-change select-props) ?v)))
+                ; V might not be in options - widget accounts for this by taking a selected record rather than identity
+                ; V might have different keys than options - as long as :option-label works, it doesn't matter
+                "selected" (if ?v #js [?v] #js [])
 
-        (reagent.core/create-element
-          js/ReactBootstrapTypeahead.Typeahead
-          #js {"labelKey" (fn [record]
-                            ; Must return string otherwise "invariant undefined"; you can pr-str from userland
-                            (str ((:option-label select-props) record)))
-               "placeholder" (:placeholder select-props)
-               ; widget requires the option records, not ids
-               "options" (->> option-records-untupled (sort-by (:option-label select-props)) to-array)
-               "onChange" (fn [jrecord]
-                            ; foreign lib state is js array, single select is lifted into List like multi-select
-                            ; unselected is []
-                            (let [[?record] (array-seq jrecord)
-                                  ?v (hf/id options-ctx ?record)]
-                              ((:on-change select-props) ?v)))
-               ; V might not be in options - widget accounts for this by taking a selected record rather than identity
-               ; V might have different keys than options - as long as :option-label works, it doesn't matter
-               "selected" (if ?v #js [?v] #js [])
+                "highlightOnlyResult" true                  ; this helps avoid
 
-               "highlightOnlyResult" true                   ; this helps avoid
+                ; Rendering strategy that works in tables
+                ; http://hyperfiddle.hyperfiddle.site/:hyperfiddle.ide!edit/(:fiddle!ident,:hyperfiddle!ide)
+                "bodyContainer" true
+                "align" "left"})]))))
 
-               ; Rendering strategy that works in tables
-               ; http://hyperfiddle.hyperfiddle.site/:hyperfiddle.ide!edit/(:fiddle!ident,:hyperfiddle!ide)
-               "bodyContainer" true
-               "align" "left"})))))
-
-(defn ^:export typeahead
-  [ctx props]
-  (assert (:options props) "select: :options prop is required")
-  [hyperfiddle.ui/link (keyword (:options props)) ctx nil
-   (assoc props
-     :user-renderer typeahead-html
-     ::value-ctx ctx)])
+(defn- props->async-typeahead [props]
+  (let [j-props (apply js-obj (apply concat props))]
+    (reagent.core/create-element js/ReactBootstrapTypeahead.AsyncTypeahead j-props)))
 
 (defn- select-needle-typeahead [{rt :peer branch :branch :as branched-unrouted-ctx} value
+                                initial-options
                                 ; todo these props need cleaned up, shouldn't be adapting them over and over again
                                 select-props options-props]
   (let [common-props {
@@ -246,9 +236,7 @@
                       #_#_"promptText" "Type to search..."
                       #_#_"searchText" "Searching..."
                       "useCache" false}
-        props->typeahead (fn [props]
-                           (let [j-props (apply js-obj (apply concat props))]
-                             (reagent.core/create-element js/ReactBootstrapTypeahead.AsyncTypeahead j-props)))]
+        adapt-options (fn [options] (to-array (sort-by (:option-label select-props) options)))]
     [:div
      [stale/loading (r/track runtime/branch-is-loading? rt branch)
       (if-let [route (runtime/get-route rt branch)]         ; no route means no data yet
@@ -258,38 +246,45 @@
         ; even if browsing fails, the user needs a chance to alter their search, so just add an ugly error message
         [:<>
          [select-error-cmp (or (ex-message e) (str e))]     ; should use error-comp, wrong ctx in scope though
-         (props->typeahead
-           (assoc common-props
-             "options" #js []
-             "onChange" (fn [jrecord]
-                          ; foreign lib state is js array, single select is lifted into List like multi-select
-                          ; unselected is []
-                          (let [[?record] (array-seq jrecord)]
-                            (if (nil? ?record)              ; not sure how this can be anything but nil
-                              ((:on-change select-props) nil)
-                              (runtime/set-branch-error rt branch (ex-info "Record selected when no records hydrated"
-                                                                           {:record (pr-str ?record)})))))))])
+         [truncated-options (count initial-options)]
+         ^{:key :async-typeahead}
+         [props->async-typeahead
+          (assoc common-props
+            "options" (adapt-options initial-options)
+            "onChange" (fn [jrecord]
+                         ; foreign lib state is js array, single select is lifted into List like multi-select
+                         ; unselected is []
+                         (let [[?record] (array-seq jrecord)]
+                           (if (nil? ?record)               ; not sure how this can be anything but nil
+                             ((:on-change select-props) nil)
+                             (runtime/set-branch-error rt branch (ex-info "Record selected when no records hydrated"
+                                                                          {:record (pr-str ?record)}))))))]])
       (fn [?options-ctx]
         (if-let [options-ctx ?options-ctx]
-          (props->typeahead
+          [:<>
+           [truncated-options @(r/fmap count (:hypercrud.browser/result options-ctx))]
+           ^{:key :async-typeahead}
+           [props->async-typeahead
             (assoc common-props
               ; widget requires the option records, not ids
               "options" (->> (condp some [(unqualify (contrib.datomic/parser-type (hf/qfind options-ctx)))]
                                #{:find-coll :find-scalar} (hf/data options-ctx)
                                #{:find-rel :find-tuple} (mapv #(get % (:option-element select-props 0))
                                                               (hf/data options-ctx)))
-                             (sort-by (:option-label select-props))
-                             to-array)
+                             adapt-options)
               "onChange" (fn [jrecord]
                            ; foreign lib state is js array, single select is lifted into List like multi-select
                            ; unselected is []
                            (let [[?record] (array-seq jrecord)
                                  element-ctx (hf/browse-element options-ctx (:option-element select-props 0))
                                  ?id (hf/id element-ctx ?record)]
-                             ((:on-change select-props) ?id)))))
-          (props->typeahead
+                             ((:on-change select-props) ?id))))]]
+          [:<>
+           [truncated-options (count initial-options)]
+           ^{:key :async-typeahead}
+           [props->async-typeahead
             (assoc common-props
-              "options" #js []
+              "options" (adapt-options initial-options)
               "onChange" (fn [jrecord]
                            ; foreign lib state is js array, single select is lifted into List like multi-select
                            ; unselected is []
@@ -297,8 +292,7 @@
                              (if (nil? ?record)             ; not sure how this can be anything but nil
                                ((:on-change select-props) nil)
                                (runtime/set-branch-error rt branch (ex-info "Record selected when no records hydrated"
-                                                                            {:record (pr-str ?record)})))))))))]
-     ]))
+                                                                            {:record (pr-str ?record)}))))))]]))]]))
 
 (defn ^:export select-needle
   ([_ ctx props] (select-needle ctx props))
@@ -306,11 +300,40 @@
    (assert (:options props) "select: :options prop is required")
    ; any error in this mlet is fatal, don't bother rendering the typeahead
    (-> (mlet [link-ref (data/select+ ctx (keyword (:options props)))
-              link-ctx (context/refocus-to-link+ ctx link-ref)
-              :let [relative-branch-id (popover/build-child-branch-relative-id ctx link-ref (context/eav ctx))]
-              branched-unrouted-ctx (context/branch+ link-ctx relative-branch-id)
-              [select-props options-props] (options-value-bridge+ ctx props)]
-         (return [select-needle-typeahead branched-unrouted-ctx (hf/data ctx) select-props options-props]))
+              link-ctx (context/refocus-to-link+ ctx link-ref)]
+         (-> #_(context/build-route-and-occlude+ link-ctx link-ref) ; todo too many errors are being caught in build-route-and-occlude+ that are completely fatal (e.g. formula eval errors); need to direct more control over route building here
+           (context/build-route+ [] link-ctx)               ; hand craft args, independent iframes cannot be represented in the links model
+           (cats/bind (fn [route] (base/browse-route+ link-ctx route)))
+           (either/branch
+             (fn [e]
+               ; if this failed we don't care, either not an iframe or the route is likely incomplete, just show no initial options
+               (mlet [:let [relative-branch-id (popover/build-child-branch-relative-id ctx link-ref (context/eav ctx))]
+                      branched-unrouted-ctx (context/branch+ link-ctx relative-branch-id)
+                      [select-props options-props] (options-value-bridge+ ctx props)]
+                 (return [select-needle-typeahead branched-unrouted-ctx (hf/data ctx) [] select-props options-props])))
+             (fn [options-ctx]
+               (cond
+                 ; hybrid, use the existing iframe to render initial options, but use the needle to filter on server
+                 @(r/fmap-> link-ref :link/fiddle :fiddle/query-needle some?)
+                 (mlet [:let [relative-branch-id (popover/build-child-branch-relative-id ctx link-ref (context/eav ctx))]
+                        branched-unrouted-ctx (context/branch+ link-ctx relative-branch-id)
+                        [select-props options-props] (options-value-bridge+ ctx props)]
+                   (return
+                     [select-needle-typeahead branched-unrouted-ctx (hf/data ctx)
+                      (options-values options-ctx select-props)
+                      select-props options-props]))
+
+                 ; iframe (data is local), complete-route, and no needle
+                 ; just use client side filtering on the intial options
+                 :else (return [typeahead-html nil options-ctx (assoc props ::value-ctx ctx)]))
+               ))))
        (either/branch
          (fn [e] [(ui-error/error-comp ctx) e])
          identity))))
+
+(defn ^:export typeahead [ctx props]
+  [select-needle ctx props])
+
+(defn ^:export select
+  ([ctx props] [select-needle ctx props])
+  ([_ ctx props] (select ctx props)))
