@@ -107,15 +107,15 @@
          [:div.query.cm-wrap
           [value [:fiddle/query] ctx hyper-control (with-fiddle-default props val :fiddle/query)]]
 
-         [:div.query-needle-label
-          (let [ctx (context/focus ctx [:fiddle/query-needle])
-                props (-> props
-                          (dissoc :label-fn)
-                          (update :class css (ui/semantic-css ctx)))]
-            [ui/hyper-label nil ctx props])]
+         #_[:div.query-needle-label
+            (let [ctx (context/focus ctx [:fiddle/query-needle])
+                  props (-> props
+                            (dissoc :label-fn)
+                            (update :class css (ui/semantic-css ctx)))]
+              [ui/hyper-label nil ctx props])]
 
-         [:div.query-needle.cm-wrap
-          [value [:fiddle/query-needle] ctx hyper-control (with-fiddle-default props val :fiddle/query-needle)]]]
+         #_[:div.query-needle.cm-wrap
+            [value [:fiddle/query-needle] ctx hyper-control (with-fiddle-default props val :fiddle/query-needle)]]]
         :blank nil)])
 
    :hf/links
