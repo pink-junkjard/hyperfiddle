@@ -69,8 +69,9 @@
   (case (:fiddle/type fiddle)
     :query (mlet [q (reader/memoized-read-string+ (:fiddle/query fiddle)) ; todo why read-string instead of read-edn-string?
                   needle-clauses (either/right nil) #_(reader/memoized-read-edn-string+ (:fiddle/query-needle fiddle))
-                  :let [inputs (->> (or (:in (query/q->map q)) ['$])
-                                    (mapv str))
+                  :let [[inputs appended-$] (if-let [in (:in (query/q->map q))]
+                                              [(mapv str in) false]
+                                              [["$"] true])
                         [query-args unused appended-needle]
                         (loop [query-args []
                                [route-arg & next-route-args :as route-args] (second route)
@@ -101,9 +102,11 @@
                                           (count inputs)))
                (either/left (ex-info "missing params" {:query q :params query-args :unused unused}))
 
-               appended-needle (return (-> (apply query/append-where-clauses q needle-clauses)
-                                           (query/append-inputs '?hf-needle)
-                                           (->QueryRequest query-args {:limit browser-query-limit})))
+               appended-needle (let [q (as-> (apply query/append-where-clauses q needle-clauses) q
+                                         (if appended-$
+                                           (query/append-inputs q '$ '?hf-needle)
+                                           (query/append-inputs q '?hf-needle)))]
+                                 (return (->QueryRequest q query-args {:limit browser-query-limit})))
 
                :else (return (->QueryRequest q query-args {:limit browser-query-limit}))))
 
