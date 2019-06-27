@@ -314,14 +314,14 @@
              (fn [options-ctx]
                (cond
                  ; hybrid, use the existing iframe to render initial options, but use the needle to filter on server
-                 @(r/fmap-> link-ref :link/fiddle :fiddle/query-needle some?)
-                 (mlet [:let [relative-branch-id (popover/build-child-branch-relative-id ctx link-ref (context/eav ctx))]
-                        branched-unrouted-ctx (context/branch+ link-ctx relative-branch-id)
-                        [select-props options-props] (options-value-bridge+ ctx props)]
-                   (return
-                     [select-needle-typeahead branched-unrouted-ctx (hf/data ctx)
-                      (options-values options-ctx select-props)
-                      select-props options-props]))
+                 #_@(r/fmap-> link-ref :link/fiddle :fiddle/query-needle some?)
+                 #_(mlet [:let [relative-branch-id (popover/build-child-branch-relative-id ctx link-ref (context/eav ctx))]
+                          branched-unrouted-ctx (context/branch+ link-ctx relative-branch-id)
+                          [select-props options-props] (options-value-bridge+ ctx props)]
+                     (return
+                       [select-needle-typeahead branched-unrouted-ctx (hf/data ctx)
+                        (options-values options-ctx select-props)
+                        select-props options-props]))
 
                  ; iframe (data is local), complete-route, and no needle
                  ; just use client side filtering on the intial options

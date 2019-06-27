@@ -50,8 +50,8 @@
                                          :human-hint "Did you just edit :fiddle/ident?"}))
                   (either/right record))
          fiddle (case (:fiddle/type record :blank)          ; defaults have NOT yet been applied
-                  :query (mlet [query-needle (memoized-read-edn-string+ (:fiddle/query-needle record))]
-                           (return record))
+                  :query (either/right record)  #_(mlet [query-needle (memoized-read-edn-string+ (:fiddle/query-needle record))]
+                                                    (return record))
                   :entity (either/right record) #_(mlet [pull (memoized-read-edn-string+ (:fiddle/pull record))]
                                                     (return (assoc record :fiddle/pull pull)))
                   :blank (either/right record))]
@@ -68,7 +68,7 @@
 (defn request-for-fiddle+ [rt branch route fiddle]          ; no ctx
   (case (:fiddle/type fiddle)
     :query (mlet [q (reader/memoized-read-string+ (:fiddle/query fiddle)) ; todo why read-string instead of read-edn-string?
-                  needle-clauses (reader/memoized-read-edn-string+ (:fiddle/query-needle fiddle))
+                  needle-clauses (either/right nil) #_(reader/memoized-read-edn-string+ (:fiddle/query-needle fiddle))
                   :let [inputs (->> (or (:in (query/q->map q)) ['$])
                                     (mapv str))
                         [query-args unused appended-needle]
