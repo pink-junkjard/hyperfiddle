@@ -56,7 +56,6 @@
               :asc [p :desc]
               :desc nil                                     ; [ nil nil ]
               [p :asc])]
-      (println "sort-path: " (pr-str p))
       (reset! (::sort-col ctx) v))))
 
 (defn sort-fn [relations-val sort-col]
