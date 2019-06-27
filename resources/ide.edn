@@ -1,8 +1,8 @@
 ; AUTO-GENERATED FILE - DO NOT EDIT BY HAND
 ; AUTO-GENERATED FILE - DO NOT EDIT BY HAND
 ;
-; generated at: Mon Jun 10 16:59:33 EDT 2019
-; basis: 17818
+; generated at: Thu Jun 27 14:34:54 EDT 2019
+; basis: 17819
 ;
 ; AUTO-GENERATED FILE - DO NOT EDIT BY HAND
 ; AUTO-GENERATED FILE - DO NOT EDIT BY HAND
@@ -36,8 +36,6 @@
  #:attribute{:ident :fiddle/pull
              :renderer "(fn [value ctx props]\n  (let [props (assoc props :debounce/interval contrib.ui/default-debounce-ms)]\n    [hyperfiddle.ui.controls/code value ctx props]))"}
  #:attribute{:ident :fiddle/query
-             :renderer "(fn [value ctx props]\n  (let [props (assoc props :debounce/interval contrib.ui/default-debounce-ms)]\n    [hyperfiddle.ui.controls/code value ctx props]))"}
- #:attribute{:ident :fiddle/query-needle
              :renderer "(fn [value ctx props]\n  (let [props (assoc props :debounce/interval contrib.ui/default-debounce-ms)]\n    [hyperfiddle.ui.controls/code value ctx props]))"}
  #:attribute{:ident :fiddle/renderer
              :renderer "(fn [value ctx props]\n  (let [props (assoc props :debounce/interval contrib.ui/default-debounce-ms)]\n    [hyperfiddle.ui.controls/code value ctx props]))"}
@@ -191,7 +189,7 @@
   :fiddle/renderer "(if (= \"nodejs\" *target*)\n  (hyperfiddle.ui.loading/page (hyperfiddle.runtime/domain (:peer ctx)))\n  ; slow to ssr\n  [:div props\n   [hyperfiddle.ui/result val ctx props]])"
   :fiddle/type :entity}
  {:db/id "34"
-  :fiddle/css ".-hyperfiddle-ide-edit {\n  flex: 1 1;\n  overflow-y: auto;\n}\n\n@media (min-width: 576px) {\n  .-hyperfiddle-ide-edit {\n    display: flex;\n  }\n  .-hyperfiddle-ide-edit > div {\n    flex: 1 1 50%;\n  }\n}\n\n.fiddle-editor-col {\n  display: flex;\n  flex-direction: column;\n  min-height: calc(100vh - 22px);\n}\n\n.fiddle-editor-header {\n  padding: .1em .5em;\n  background-color: #d7ebff;\n}\n\n.fiddle-editor-header > label {\n  float: right;\n}\n\n.fiddle-editor {\n  flex: 1 1;\n}\n\n.fiddle-editor > .CodeMirror {\n    height: 100%;\n}\n"
+  :fiddle/css ".-hyperfiddle-ide-edit {\n  flex: 1 1;\n  overflow-y: auto;\n}\n\n@media (min-width: 576px) {\n  .-hyperfiddle-ide-edit {\n    display: flex;\n  }\n  .-hyperfiddle-ide-edit > div {\n    flex: 1 1 50%;\n  }\n}\n\n.fiddle-editor-col {\n  display: flex;\n  flex-direction: column;\n  /*min-height: calc(100vh - 22px);*/\n}\n\n.fiddle-editor-header {\n  padding: .1em .5em;\n  background-color: #d7ebff;\n}\n\n.fiddle-editor-header > label {\n  float: right;\n}\n\n.fiddle-editor {\n  flex: 1 1;\n}\n\n.fiddle-editor > .CodeMirror {\n    height: 100%;\n}\n"
   :fiddle/ident :hyperfiddle.ide/edit
   :fiddle/links [#:link{:class [:hf/iframe]
                         :fiddle #:db{:id "23"}
