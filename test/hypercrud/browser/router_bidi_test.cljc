@@ -3,7 +3,8 @@
     [bidi.bidi :as bidi]
     [clojure.test :refer [deftest is]]
     [contrib.reader]
-    [hypercrud.browser.router-bidi :refer [decode]]))
+    [hypercrud.browser.router-bidi :refer [decode]]
+    [hyperfiddle.route :as route]))
 
 
 (def router ["/"
@@ -15,14 +16,20 @@
   (is (= (some-> router (bidi/match-route "/:rdbms-denormalize")) {:route-params {:a #entity["$" :rdbms-denormalize]}, :handler :hyperblog/post})))
 
 (deftest bidi-hf-1 []
-  (is (= (decode router "/:rdbms-denormalize") [:hyperblog/post [#entity["$" :rdbms-denormalize]]]))
-  (is (= (decode router "/:rdbms-denormalize#:src") [:hyperblog/post [#entity["$" :rdbms-denormalize]] nil ":src"]))
-  (is (= (decode router "/:capitalism") [:hyperblog/post [#entity["$" :capitalism]]]))
-  (is (= (decode router "/:capitalism#:src") [:hyperblog/post [#entity["$" :capitalism]] nil ":src"]))
+  (is (= (decode router "/:rdbms-denormalize") {::route/fiddle :hyperblog/post
+                                                ::route/datomic-args [#entity["$" :rdbms-denormalize]]}))
+  (is (= (decode router "/:rdbms-denormalize#:src") {::route/fiddle :hyperblog/post
+                                                     ::route/datomic-args [#entity["$" :rdbms-denormalize]]
+                                                     ::route/fragment ":src"}))
+  (is (= (decode router "/:capitalism") {::route/fiddle :hyperblog/post
+                                         ::route/datomic-args [#entity["$" :capitalism]]}))
+  (is (= (decode router "/:capitalism#:src") {::route/fiddle :hyperblog/post
+                                              ::route/datomic-args [#entity["$" :capitalism]]
+                                              ::route/fragment ":src"}))
 
   ; Unhandled routes are not handled here
-  (is (= (decode router "/:hyperblog.2!tag/:hyperfiddle") [:hyperfiddle.system/not-found]))
-  (is (= (decode router "/:hyperblog.2!tag/:hyperfiddle#:src") [:hyperfiddle.system/not-found]))
+  (is (= (decode router "/:hyperblog.2!tag/:hyperfiddle") {::route/fiddle :hyperfiddle.system/not-found}))
+  (is (= (decode router "/:hyperblog.2!tag/:hyperfiddle#:src") {::route/fiddle :hyperfiddle.system/not-found}))
   )
 
 (comment

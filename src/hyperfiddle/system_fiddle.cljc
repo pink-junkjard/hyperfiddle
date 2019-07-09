@@ -7,7 +7,7 @@
   {:fiddle/ident :hyperfiddle.system/decoding-error
    :fiddle/type :blank
    :fiddle/renderer (str
-                      '(let [[_ [s message data]] @(:hypercrud.browser/route ctx)]
+                      '(let [[s message data] (:hyperfiddle.route/datomic-args @(:hypercrud.browser/route ctx))]
                          [:div
                           [:h3 (str "Unable to decode route: " s)]
                           [:h4 message]

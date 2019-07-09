@@ -6,7 +6,7 @@
     [contrib.reader :refer [read-edn-string!]]
     [contrib.string :refer [abc empty->nil]]
     [cuerdas.core :as str]
-    [hyperfiddle.route :refer [assoc-frag]]
+    [hyperfiddle.route :as route]
     [hypercrud.types.ThinEntity :refer [->ThinEntity #?(:cljs ThinEntity)]])
   #?(:clj
      (:import (hypercrud.types.ThinEntity ThinEntity))))
@@ -75,31 +75,34 @@
 
 (defn bidi->hf [[handler & ?route-params :as ?r]]
   (if ?r
-    [handler
-     (->> ?route-params                                     ; bidi gives us alternating k/v
-          (partition-all 2)
-          (map vec)
-          sort                                              ; order by keys for hyperfiddle, router should use kw or int
-          (mapv second)                                     ; drop keys; hyperfiddle params are associative by index
-          )]))
+    (let [datomic-args (->> ?route-params                   ; bidi gives us alternating k/v
+                            (partition-all 2)
+                            (map vec)
+                            sort                            ; order by keys for hyperfiddle, router should use kw or int
+                            (mapv second)                   ; drop keys; hyperfiddle params are associative by index
+                            )]
+      (cond-> {::route/fiddle handler}
+        (seq datomic-args) (assoc ::route/datomic-args datomic-args)))))
 
 (defn bidi-match->path-for "adapt bidi's inconsistent interface" [[h & ps :as ?r]]
   (if ?r {:handler h :route-params ps}))
 
-(defn ->bidi [[fiddle ?datomic-args ?serivce-args ?frag :as ?r]]
+(defn ->bidi [{:keys [::route/fiddle ::route/datomic-args] :as route}]
   ; this is going to generate param names of 0, 1, ... which maybe doesn't work for all routes
   ; we would need to disallow bidi keywords for this to be valid. Can bidi use ints? I think not :(
-  (if ?r (apply conj [fiddle] (mapcat vector (abc) ?datomic-args))))
+  (if route (apply conj [fiddle] (mapcat vector (abc) datomic-args))))
 
 
 (defn decode [router path-and-frag]
   {:pre [(str/starts-with? path-and-frag "/")]
    :post [(s/valid? :hyperfiddle/route %)]}
   (let [[path frag] (string/split path-and-frag #"#" 2)
+        frag (empty->nil frag)
         route (some-> (bidi/match-route router path) ->bidi-consistency-wrapper bidi->hf)]
     (if route
-      (assoc-frag route (empty->nil frag))
-      [:hyperfiddle.system/not-found])))
+      (cond-> route
+        frag (assoc ::route/fragment frag))
+      {::route/fiddle :hyperfiddle.system/not-found})))
 
 (comment
   (def path-and-frag "/:hyperblog.2!tag/:hyperfiddle#:src")
@@ -116,10 +119,9 @@
 (defn encode [router route]
   {:pre [(s/valid? :hyperfiddle/route route)]
    :post [(str/starts-with? % "/")]}
-  (let [[_ _ _ frag] route]
-    (if-let [url (apply bidi/path-for router (->bidi route))]
-      (if (empty->nil frag)
-        (str url "#" frag)
-        url)
-      ; todo attempt to write an error url in this else case
-      )))
+  (if-let [url (apply bidi/path-for router (->bidi route))]
+    (if (empty->nil (::route/fragment route))
+      (str url "#" (::route/fragment route))
+      url)
+    ; todo attempt to write an error url in this else case
+    ))

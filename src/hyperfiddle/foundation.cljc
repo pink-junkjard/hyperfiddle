@@ -48,4 +48,4 @@
         (either/branch
           (project/eval-domain-code!+ @(runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :project :project/code]))
           (fn [e] [:div [:h2 {:style {:margin-top "10%" :text-align "center"}} "Misconfigured domain"]])
-          (fn [_] [iframe-cmp ctx {:route @(runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :route])}]))])))
+          (fn [_] [iframe-cmp ctx {:route (runtime/get-route (:peer ctx) (:branch ctx))}]))])))

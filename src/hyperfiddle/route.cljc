@@ -5,7 +5,7 @@
     [clojure.spec.alpha :as s]
     [clojure.string :as string]
     [clojure.walk]
-    [contrib.data :refer [orp rtrim-coll]]
+    [contrib.data]
     [contrib.ednish :as ednish :refer [decode-ednish encode-ednish]]
     [contrib.pprint :refer [pprint-str]]
     [contrib.rfc3986 :refer [decode-rfc3986-pchar encode-rfc3986-pchar]]
@@ -14,7 +14,7 @@
     [cuerdas.core :as str]
     [hypercrud.types.ThinEntity :refer [->ThinEntity #?(:cljs ThinEntity)]]
     [hyperfiddle.fiddle]                                    ; for ::fiddle spec
-    )
+    [taoensso.timbre :as timbre])
   #?(:clj
      (:import (hypercrud.types.ThinEntity ThinEntity))))
 
@@ -24,20 +24,14 @@
                   :dbid number?
                   ;:lookup ...
                   :uuid :fiddle/uuid))
-(s/def ::datomic-args seqable?)
+(s/def ::datomic-args vector?)
 (s/def ::service-args some?)
 (s/def ::fragment string?)
 
 (s/def :hyperfiddle/route
-  ; todo routes should be maps #243 and errors become sensible
-  #_(s/keys
-      :req [::fiddle]
-      :opt [::datomic-args ::service-args ::fragment])
-  (s/or
-    :a (s/tuple ::fiddle)
-    :b (s/tuple ::fiddle ::datomic-args)
-    :c (s/tuple ::fiddle (s/nilable ::datomic-args) ::service-args)
-    :d (s/tuple ::fiddle (s/nilable ::datomic-args) (s/nilable ::service-args) ::fragment)))
+  (s/keys
+    :req [::fiddle]
+    :opt [::datomic-args ::service-args ::fragment]))
 
 (defn validate-route+ [route]
   (if (s/valid? :hyperfiddle/route route)
@@ -45,36 +39,19 @@
     (either/left (ex-info (str "Invalid route\n" (s/explain-str :hyperfiddle/route route))
                           (s/explain-data :hyperfiddle/route route)))))
 
-(defn canonicalize "(apply canonicalize route)"
-  [& [fiddle ?datomic-params ?service-args ?fragment]]
-  {:post [(let [[_ params] %]
-            ; Route params are indexed by position
-            (or (nil? params) (vector? params)))]}
-  (orp seq (rtrim-coll nil? [fiddle ?datomic-params ?service-args ?fragment])))
-
-(defn update-frag [[fiddle ?datomic-args ?service-args ?fragment] f]
-  (canonicalize fiddle ?datomic-args ?service-args (f ?fragment)))
-
-(defn assoc-frag [[_ _ _ ?fragment :as route] frag]
-  ; why must the existing fragment be nil?
-  {:pre [(nil? ?fragment)]}
-  (update-frag route (constantly frag)))
-
-(defn dissoc-frag [route]
-  (update-frag route (constantly nil)))
-
 (defn equal-without-frag? [a b]
-  (= (dissoc-frag a) (dissoc-frag b)))
+  (= (dissoc a ::fragment) (dissoc b ::fragment)))
 
 (defn decoding-error [e s]
-  [:hyperfiddle.system/decoding-error [s (ex-message e) (pprint-str (ex-data e))]])
+  {::fiddle :hyperfiddle.system/decoding-error
+   ::datomic-args [s (ex-message e) (pprint-str (ex-data e))]})
 
 (defn url-encode [route home-route]
   {:pre [(s/valid? :hyperfiddle/route route) (s/valid? :hyperfiddle/route home-route)]
    :post [(str/starts-with? % "/")]}
-  (let [[fiddle datomic-args service-args frag] route]
+  (let [{:keys [::fiddle ::datomic-args ::service-args ::fragment]} route]
     (if (equal-without-frag? route home-route)
-      (str "/" (some->> frag empty->nil (str "#")))
+      (str "/" (some->> fragment empty->nil (str "#")))
       (case fiddle
         :hyperfiddle.system/decoding-error (first datomic-args)
         (str "/"
@@ -83,7 +60,7 @@
              (str/join "/" (map ednish/encode-uri datomic-args))
              ; hash and query aren't used today, todo i would prefer to encode as edn hashmap instead of k=v
              (if (seq service-args) (str "?" (str/join "&" (->> service-args (map (fn [[k v]] (ednish/encode-uri k "=" (ednish/encode-uri v))))))))
-             (if (empty->nil frag) (str "#" (-> frag encode-ednish encode-rfc3986-pchar))))))))
+             (if (empty->nil fragment) (str "#" (-> fragment encode-ednish encode-rfc3986-pchar))))))))
 
 
 (def url-regex #"/([^/?#]*)(?:/([^?#]*))?(?:\?([^#]*))?(?:#(.*))?")
@@ -95,28 +72,49 @@
 (defn url-decode [s home-route]
   {:pre [(str/starts-with? s "/") (s/valid? :hyperfiddle/route home-route)]
    :post [(s/valid? :hyperfiddle/route %)]}
-  (let [[path frag] (string/split s #"#" 2)]
+  (let [[path s-fragment] (string/split s #"#" 2)
+        fragment (-> s-fragment decode-rfc3986-pchar decode-ednish empty->nil)]
     (if (= "/" path)
-      (assoc-frag home-route (empty->nil frag))
+      (cond-> home-route
+        fragment (assoc ::fragment fragment))
       (-> (try-either
-            (let [[_ fiddle datomic-args query frag] (re-find url-regex s)]
-              (canonicalize
-                (ednish/decode-uri fiddle)
-                (if-let [as (->> (str/split datomic-args "/") ; careful: (str/split "" "/") => [""]
-                                 (remove str/empty-or-nil?) seq)]
-                  (mapv ednish/decode-uri as))
-                (ednish/decode-uri query)
-                (-> frag decode-rfc3986-pchar decode-ednish empty->nil))))
+            (let [[_ s-fiddle s-datomic-args s-service-args s-fragment] (re-find url-regex s)]
+              (contrib.data/dissoc-nils
+                {::fiddle (ednish/decode-uri s-fiddle)
+                 ::datomic-args (some-> (->> (str/split s-datomic-args "/") ; careful: (str/split "" "/") => [""]
+                                             (remove str/empty-or-nil?)
+                                             (map ednish/decode-uri)
+                                             seq)
+                                        vec)
+                 ::service-args (ednish/decode-uri s-service-args)
+                 ::fragment (-> s-fragment decode-rfc3986-pchar decode-ednish empty->nil)})))
           (>>= validate-route+)
           (either/branch
             (fn [e] (decoding-error e s))
             identity)))))
 
-(defn invert-route [[_ args :as route] invert-id]
-  (->> args
-       (mapv (fn [v]
-               (if (instance? ThinEntity v)
-                 (->ThinEntity (.-dbname v) (invert-id (.-dbname v) (.-id v)))
-                 v)))
-       (assoc route 1)
-       (apply canonicalize)))
+(defn invert-datomic-arg [v invert-id]
+  (if (instance? ThinEntity v)
+    (->ThinEntity (.-dbname v) (invert-id (.-dbname v) (.-id v)))
+    v))
+
+(defn invert-datomic-args [invert-id datomic-args]
+  (mapv #(invert-datomic-arg % invert-id) datomic-args))
+
+(defn invert-route [route invert-id]
+  (if (contains? route ::datomic-args)
+    (update route ::datomic-args (partial invert-datomic-args invert-id))
+    route))
+
+(defn legacy-route-adapter [route]
+  (cond
+    (nil? route) route
+    (map? route) route
+    (vector? route) (let [[fiddle datomic-args service-args fragment] route
+                          m-route (contrib.data/dissoc-nils
+                                    {::fiddle fiddle
+                                     ::datomic-args datomic-args
+                                     ::service-args service-args
+                                     ::fragment fragment})]
+                      (timbre/warnf "Deprecated route format detected `%s` use a map instead: `%s`" (pr-str route) (pr-str m-route))
+                      m-route)))

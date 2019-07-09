@@ -7,6 +7,7 @@
     [hypercrud.browser.base :as base]
     [hypercrud.browser.context :as context]
     [hyperfiddle.data :as data]
+    [hyperfiddle.route :as route]
     [taoensso.timbre :as timbre]))
 
 
@@ -39,8 +40,10 @@
   (if @(r/fmap :fiddle/hydrate-result-as-fiddle (:hypercrud.browser/fiddle ctx))
     ; This only makes sense on :fiddle/type :query because it has arbitrary arguments
     ; EntityRequest args are too structured.
-    (let [[_ [inner-fiddle & inner-args]] @(:hypercrud.browser/route ctx)]
-      (request-from-route [inner-fiddle (vec inner-args)] ctx))))
+    (let [[inner-fiddle & inner-args] (::route/datomic-args @(:hypercrud.browser/route ctx))
+          route (cond-> {:hyperfiddle.route/fiddle inner-fiddle}
+                  (seq inner-args) (assoc :hyperfiddle.route/datomic-args (vec inner-args)))]
+      (request-from-route route ctx))))
 
 (defn request-attr-level [ctx]
   (doseq [[a ctx] (context/spread-attributes ctx)]

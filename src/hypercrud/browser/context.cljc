@@ -996,7 +996,8 @@ a speculative db/id."
                        (left {:message ":link/fiddle required" :data {:link link}})))
          ; Why must we reverse into tempids? For the URL, of course.
          :let [colored-args (mapv (partial tag-v-with-color ctx) args) ; this ctx is refocused to some eav
-               route (hyperfiddle.route/canonicalize fiddle-id colored-args)]
+               route (cond-> {::route/fiddle fiddle-id}
+                       (seq colored-args) (assoc ::route/datomic-args colored-args))]
          route (try-either (route/invert-route route (partial runtime/id->tempid! (:peer ctx) (:branch ctx))))
          ; why would this function ever construct an invalid route? this check seems unnecessary
          route (hyperfiddle.route/validate-route+ route)]

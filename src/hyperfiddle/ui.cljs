@@ -23,6 +23,7 @@
     [hyperfiddle.api :as hf]
     [hyperfiddle.data :as data]
     [hyperfiddle.domain :as domain]
+    [hyperfiddle.route :as route]
     [hyperfiddle.runtime :as runtime]
     [hyperfiddle.ui.controls :as controls :refer [label-with-docs identity-label ref-label element-label magic-new]]
     [hyperfiddle.ui.docstring :refer [semantic-docstring]]
@@ -206,10 +207,11 @@ User renderers should not be exposed to the reaction."
     [(or ?f hyper-control) (hypercrud.browser.context/data ctx) ctx props]))
 
 (defn ^:export anchor [ctx props & children]
-  (let [props (-> props
+  (let [route (route/legacy-route-adapter (:route props))   ; todo migrate fiddles and remove
+        props (-> props
                   (update :class css "hyperfiddle")
                   (dissoc :route)
-                  (assoc :href (some->> (:route props) (domain/url-encode (runtime/domain (:peer ctx)))))
+                  (assoc :href (some->> route (domain/url-encode (runtime/domain (:peer ctx)))))
                   (select-keys [:class :href :style]))]
     (into [:a props] children)))
 
@@ -227,7 +229,7 @@ User renderers should not be exposed to the reaction."
                           ; just check if a request can be built
                           (base/request-for-fiddle+ (:peer ctx) (:branch ctx) ?route ?fiddle)
                           (cats/fmap (constantly ?route)))
-                 :entity (let [[_ [$1 :as params]] ?route]
+                 :entity (let [[$1 :as params] (::route/datomic-args ?route)]
                            ; todo just run base/request-for-fiddle+
                            (if (not= nil $1)                ; todo check conn
                              (either/right ?route)
@@ -528,7 +530,7 @@ nil. call site must wrap with a Reagent component"          ; is this just hyper
                      (fn [e] (timbre/warn e))               ; todo why would this ever error? cant we just throw?
                      identity))))
           (concat (when @(r/fmap :fiddle/hydrate-result-as-fiddle (:hypercrud.browser/fiddle ctx))
-                    (let [[_ [inner-fiddle & inner-args]] @(:hypercrud.browser/route ctx)
+                    (let [[inner-fiddle & inner-args] (::route/datomic-args @(:hypercrud.browser/route ctx))
                           route [inner-fiddle (vec inner-args)]]
                       [(either/branch
                          (base/browse-route+ ctx route)

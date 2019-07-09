@@ -11,6 +11,7 @@
     [hyperfiddle.io.datomic.hydrate-route :as hydrate-route]
     [hyperfiddle.io.datomic.peer :as peer]                  ; todo run tests for client as well
     [hyperfiddle.io.datomic.sync :as datomic-sync]
+    [hyperfiddle.route :as route]
     [promesa.core :as p]
     [taoensso.timbre :as timbre])
   (:import
@@ -52,7 +53,7 @@
   (testing "non source db"
     (let [response (timbre/with-config {:enabled? false}
                      (let [local-basis (datomic-sync/sync test-domain ["$" "$src"])
-                           route [:persons]
+                           route {::route/fiddle :persons}
                            branch foundation/root-branch
                            stage {foundation/root-branch {"$" [[:db/add [:person/name "Bob"] :person/age 41]
                                                                [:db/add [:person/name "Bob"] :person/age 42]]}}
@@ -64,7 +65,7 @@
   (testing "source db"
     (let [response+ (timbre/with-config {:enabled? false}
                       (let [local-basis (datomic-sync/sync test-domain ["$" "$src"])
-                            route [:persons]
+                            route {::route/fiddle :persons}
                             branch foundation/root-branch
                             stage {foundation/root-branch {"$src" [[:db/add [:fiddle/ident :persons] :db/doc "foo"]
                                                                    [:db/add [:fiddle/ident :persons] :db/doc "bar"]]}}

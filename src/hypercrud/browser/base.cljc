@@ -74,7 +74,7 @@
                                               [["$"] true])
                         [query-args unused appended-needle]
                         (loop [query-args []
-                               [route-arg & next-route-args :as route-args] (second route)
+                               [route-arg & next-route-args :as route-args] (::route/datomic-args route)
                                [hole & next-holes] inputs
                                appended-needle false]
                           (let [[query-arg next-route-args] (cond
@@ -111,7 +111,7 @@
                :else (return (->QueryRequest q query-args {:limit browser-query-limit}))))
 
     :entity
-    (let [args (second route)                               ; Missing entity param is valid state now https://github.com/hyperfiddle/hyperfiddle/issues/268
+    (let [args (::route/datomic-args route)                 ; Missing entity param is valid state now https://github.com/hyperfiddle/hyperfiddle/issues/268
           [dbname ?e] (if false #_(instance? DbName (first args))
                         [(:dbname (first args)) (second args)]
                         [nil (first args)])]
@@ -135,7 +135,7 @@
   (defn browse-route+ [{rt :peer branch :branch :as ctx} route]
     (mlet [route (route/validate-route+ route)              ; terminate immediately on a bad route
            route (try-either (route/invert-route route (partial runtime/tempid->id! rt branch)))
-           r-fiddle @(r/apply-inner-r (r/track hydrate-fiddle+ rt branch (first route)))
+           r-fiddle @(r/apply-inner-r (r/track hydrate-fiddle+ rt branch (::route/fiddle route)))
            r-request @(r/apply-inner-r (r/fmap->> r-fiddle (request-for-fiddle+ rt branch route)))
            r-result @(r/apply-inner-r (r/fmap->> r-request (nil-or-hydrate+ rt branch)))
            ctx (-> (context/clean ctx)
