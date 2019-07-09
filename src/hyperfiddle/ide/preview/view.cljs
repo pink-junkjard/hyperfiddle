@@ -109,7 +109,7 @@
        (when (either/left? code+)
          (let [e @code+]
            (timbre/error e)
-           (let [href (domain/url-encode (runtime/domain (:peer ctx)) [:hyperfiddle.ide/env])
+           (let [href (domain/url-encode (runtime/domain (:peer ctx)) {::route/fiddle :hyperfiddle.ide/env})
                  message (or (some-> (ex-cause e) ex-message) (ex-message e))]
              [:h6 {:style {:text-align "center" :background-color "lightpink" :margin 0 :padding "0.5em 0"}}
               "Exception evaluating " [:a {:href href} [:code ":domain/code"]] ": " message])))
@@ -192,10 +192,9 @@
                ::runtime/user-id (::runtime/user-id parent-state))
         (assoc-in [::runtime/partitions foundation/root-branch] root-partition)
         (cond->
-          (= :hyperfiddle.ide/edit (first (:route root-partition)))
+          (= :hyperfiddle.ide/edit (get-in root-partition [:route ::route/fiddle]))
           (assoc-in [::runtime/partitions (build-user-branch-id ide-branch) :route]
-                    (-> (ide-routing/ide-route->preview-route (:route root-partition))
-                        (route/update-frag (fn [encoded-fragment]
-                                             (when-not (hyperfiddle.ide/parse-ide-fragment encoded-fragment)
-                                               encoded-fragment))))))
+                    (let [route (ide-routing/ide-route->preview-route (:route root-partition))]
+                      (cond-> route
+                        (hyperfiddle.ide/parse-ide-fragment (::route/fragment route)) (dissoc ::route/fragment)))))
         (reducers/root-reducer nil))))

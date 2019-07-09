@@ -11,6 +11,7 @@
     [hyperfiddle.ide.service.core :as ide-service]
     [hyperfiddle.io.core :as io]
     [hyperfiddle.io.http-client :as http-client]
+    [hyperfiddle.route :as route]
     [hyperfiddle.service.cookie :as cookie]
     [hyperfiddle.service.express-js.middleware :as middleware]
     [hyperfiddle.service.http :refer [handle-route]]
@@ -72,7 +73,8 @@
            (not (string/starts-with? path "/:hyperfiddle.ide!please-login/")))
       ; todo this logic should be injected into demo domain record
       (let [inner-route (domain/url-decode domain path)
-            url (domain/url-encode domain [:hyperfiddle.ide/please-login inner-route])]
+            url (domain/url-encode domain {::route/fiddle :hyperfiddle.ide/please-login
+                                           ::route/datomic-args [inner-route]})]
         (.redirect res url))
       :else (do
               (object/set req "route-params" route-params)

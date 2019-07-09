@@ -61,12 +61,12 @@
   (environment [domain] environment)
 
   (url-decode [domain s]
-    (let [[fiddle-ident :as route] (route/url-decode s home-route)]
-      (if (and (keyword? fiddle-ident) (#{"hyperfiddle.ide" "hyperfiddle.ide.schema"} (namespace fiddle-ident)))
+    (let [{:keys [::route/fiddle] :as route} (route/url-decode s home-route)]
+      (if (and (keyword? fiddle) (#{"hyperfiddle.ide" "hyperfiddle.ide.schema"} (namespace fiddle)))
         route
         (ide-routing/preview-route->ide-route route))))
   (url-encode [domain route]
-    (-> (if (not= :hyperfiddle.ide/edit (first route))
+    (-> (if (not= :hyperfiddle.ide/edit (::route/fiddle route))
           route
           (ide-routing/ide-route->preview-route route))
         (route/url-encode home-route)))
@@ -116,7 +116,7 @@
    ide-databases ide-fiddle-dbname
    & {:keys [ide-environment ide-home-route]
       :or {ide-environment {}
-           ide-home-route [:hyperfiddle.ide/home]}}]
+           ide-home-route {::route/fiddle :hyperfiddle.ide/home}}}]
   (-> {:basis basis
        :fiddle-dbname ide-fiddle-dbname
        :databases (let [user-dbs (->> (dissoc user-databases user-fiddle-dbname)

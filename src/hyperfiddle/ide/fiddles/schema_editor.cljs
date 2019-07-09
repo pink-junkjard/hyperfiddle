@@ -16,7 +16,7 @@
     (fn [_ ctx props]
       [:<>
        [:div.container-fluid.-hyperfiddle-ide-schema-editor props
-        [:h3 (str "Datomic schema for " (let [ide-dbname (-> @(:hypercrud.browser/route ctx) first name (subs (count "editor")))]
+        [:h3 (str "Datomic schema for " (let [ide-dbname (-> @(:hypercrud.browser/route ctx) :hyperfiddle.route/fiddle name (subs (count "editor")))]
                                           (-> (hyperfiddle.runtime/domain (:peer ctx))
                                               :hyperfiddle.ide.domain/user-dbname->ide
                                               clojure.set/map-invert

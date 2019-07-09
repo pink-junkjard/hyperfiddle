@@ -12,6 +12,7 @@
     [hyperfiddle.ide.preview.view :as preview]
     [hyperfiddle.ide.ui.route-editor :as route-editor]
     [hyperfiddle.io.browser :refer [->IOImpl]]
+    [hyperfiddle.route :as route]
     [hyperfiddle.runtime :as runtime]
     [hyperfiddle.ui.error :as ui-error]
     [hyperfiddle.ui.staging :as staging]
@@ -58,7 +59,7 @@
                                :staleness (when preview-rt
                                             (preview/ide-branch-reference preview-rt (:branch ctx)))})
         ; fiddle-src
-        initial-tab (-> @(:hypercrud.browser/route ctx) (get 3) hyperfiddle.ide/parse-ide-fragment)
+        initial-tab (-> @(:hypercrud.browser/route ctx) ::route/fragment hyperfiddle.ide/parse-ide-fragment)
         ;:initial-tab @(contrib.reactive/fmap-> (:hypercrud.browser/route ctx) (get 3) hyperfiddle.ide/parse-ide-fragment)
         tab-state (r/atom (if (contains? fiddle-src/tabs initial-tab)
                             initial-tab

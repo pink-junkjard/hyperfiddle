@@ -14,6 +14,7 @@
     [hyperfiddle.domain]
     [hyperfiddle.fiddle :as fiddle]
     [hyperfiddle.ide.domain :as ide-domain]
+    [hyperfiddle.route :as route]
     [hyperfiddle.runtime :as runtime]
     [hyperfiddle.ui :as ui :refer [anchor field value hyper-control link table]]
     [hyperfiddle.ui.controls :as controls]))
@@ -27,7 +28,7 @@
 (defn schema-links [ctx]
   (->> (runtime/domain (:peer ctx)) ::ide-domain/user-dbname->ide keys sort
        (map (fn [user-dbname]
-              (let [props {:route [(keyword "hyperfiddle.ide.schema" user-dbname)]
+              (let [props {:route {::route/fiddle (keyword "hyperfiddle.ide.schema" user-dbname)}
                            #_#_:target "_blank"}]
                 ^{:key user-dbname}
                 [anchor ctx props (hyperfiddle.domain/dbname-label user-dbname)])))

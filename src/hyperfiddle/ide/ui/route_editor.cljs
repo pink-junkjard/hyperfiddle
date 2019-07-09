@@ -9,50 +9,42 @@
     [hyperfiddle.runtime :as runtime]))
 
 
-(defn- route-vec->route-map [[fiddle datomic-args service-args fragment]]
-  {::route/fiddle fiddle
-   ::route/datomic-args datomic-args
-   ::route/service-args service-args
-   ::route/fragment fragment})
-
-(defn- route-map->route-vec [{:keys [::route/fiddle ::route/datomic-args ::route/service-args ::route/fragment]}]
-  [fiddle datomic-args service-args fragment])
-
-(defn- assert-new-v [m-route attr new-v]
-  (->> (assoc m-route attr new-v)
-       route-map->route-vec
-       (apply route/canonicalize)
+(defn- assert-new-v [route attr new-v]
+  (->> (if (nil? new-v)
+         (dissoc route attr)
+         (assoc route attr new-v))
        (s/assert :hyperfiddle/route))
   new-v)
 
-(defn- route-element [rt branch m-route attr]
-  (let [parse-string (fn [s] (assert-new-v m-route attr (contrib.reader/read-edn-string! s)))
+(defn- route-element [rt branch attr]
+  (let [route (runtime/get-route rt branch)
+        parse-string (fn [s] (assert-new-v route attr (contrib.reader/read-edn-string! s)))
         to-string pprint-str]
     [contrib.ui/debounced
-     {:value (get m-route attr)
+     {:value (get route attr)
       :on-change (fn [o n]
-                   (->> (assoc m-route attr n)
-                        route-map->route-vec
-                        (apply route/canonicalize)
+                   (->> (if (nil? n)
+                          (dissoc route attr)
+                          (assoc route attr n))
                         (runtime/set-route rt branch)))
       :mode "clojure"
       :lineNumbers false}
      contrib.ui/validated-cmp parse-string to-string contrib.ui/code]))
 
-(defn- datomic-args [rt branch m-route]
-  [route-element rt branch m-route ::route/datomic-args]
+(defn- datomic-args [rt branch]
+  [route-element rt branch ::route/datomic-args]
   #_(either/branch
-    (base/hydrate-fiddle+ rt branch (::route/fiddle m-route))
-    (fn [e]
-      ; no fiddle for whatever reason, just hand the user a raw edn editor
-      [route-element rt branch m-route ::route/datomic-args])
-    (fn [fiddle]
-      (case (:fiddle/type fiddle)
-        :query (let []
-                 [route-element rt branch m-route ::route/datomic-args])
-        :entity (let []
-                  [route-element rt branch m-route ::route/datomic-args])
-        :blank [route-element rt branch m-route ::route/datomic-args]))))
+      (base/hydrate-fiddle+ rt branch (::route/fiddle (runtime/get-route rt branch)))
+      (fn [e]
+        ; no fiddle for whatever reason, just hand the user a raw edn editor
+        [route-element rt branch ::route/datomic-args])
+      (fn [fiddle]
+        (case (:fiddle/type fiddle)
+          :query (let []
+                   [route-element rt branch ::route/datomic-args])
+          :entity (let []
+                    [route-element rt branch ::route/datomic-args])
+          :blank [route-element rt branch ::route/datomic-args]))))
 
 (defn- form-row [label & content]
   [:div.row
@@ -60,12 +52,11 @@
    (into [:div.col-sm-10] content)])
 
 (defn form-editor [rt branch]
-  (let [m-route (route-vec->route-map (runtime/get-route rt branch))]
-    [:form {:style {:padding "0 1rem" :background-color "#def"}}
-     [form-row "fiddle" [route-element rt branch m-route ::route/fiddle]]
-     [form-row "inputs" [datomic-args rt branch m-route]]
-     ;[form-row "service args" [route-element rt branch m-route ::route/service-args]]
-     [form-row "fragment" [route-element rt branch m-route ::route/fragment]]]))
+  [:form {:style {:padding "0 1rem" :background-color "#def"}}
+   [form-row "fiddle" [route-element rt branch ::route/fiddle]]
+   [form-row "inputs" [datomic-args rt branch]]
+   ;[form-row "service args" [route-element rt branch ::route/service-args]]
+   [form-row "fragment" [route-element rt branch ::route/fragment]]])
 
 (defn edn-editor [rt branch]
   [contrib.ui/debounced

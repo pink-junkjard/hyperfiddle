@@ -8,6 +8,7 @@
     [hyperfiddle.foundation :as foundation]
     [hyperfiddle.ide.directory :as ide-directory]
     [hyperfiddle.ide.routing :as ide-routing]
+    [hyperfiddle.route :as route]
     [hyperfiddle.runtime :as runtime]
     [hyperfiddle.security.client :as security]
     [hyperfiddle.ui :as ui]
@@ -42,19 +43,19 @@
       :hyperfiddle.ui.popover/redirect (fn [popover-data]
                                          (ide-routing/preview-route->ide-route [(:fiddle/ident popover-data)]))})])
 
-(defn route->fiddle-label [[fiddle-ident :as route]]
+(defn route->fiddle-label [{:keys [::route/fiddle] :as route}]
   (cond
-    (= fiddle-ident :hyperfiddle.ide/edit) (let [[_ [user-fiddle-ident]] route]
-                                             (str #_"edit: "
-                                               (if (and (coll? user-fiddle-ident) (= :fiddle/ident (first user-fiddle-ident)))
-                                                 (let [user-fiddle-ident (second user-fiddle-ident)]
-                                                   (if (keyword? user-fiddle-ident)
-                                                     (name user-fiddle-ident)
-                                                     user-fiddle-ident))
-                                                 user-fiddle-ident)))
-    (keyword? fiddle-ident) (name fiddle-ident)
-    (string? fiddle-ident) fiddle-ident
-    :else (pr-str fiddle-ident)))
+    (= fiddle :hyperfiddle.ide/edit) (let [user-fiddle-ident (get-in route [::route/datomic-args 0])]
+                                       (str #_"edit: "
+                                         (if (and (coll? user-fiddle-ident) (= :fiddle/ident (first user-fiddle-ident)))
+                                           (let [user-fiddle-ident (second user-fiddle-ident)]
+                                             (if (keyword? user-fiddle-ident)
+                                               (name user-fiddle-ident)
+                                               user-fiddle-ident))
+                                           user-fiddle-ident)))
+    (keyword? fiddle) (name fiddle)
+    (string? fiddle) fiddle
+    :else (pr-str fiddle)))
 
 (defn renderer' [ctx props left-child right-child]
   [:div props
@@ -87,7 +88,7 @@
     [loading-spinner ctx]]])
 
 (defn renderer [_ ctx props left-child right-child]
-  (let [f (if (= :hyperfiddle.ide/please-login (first (runtime/get-route (:peer ctx) foundation/root-branch)))
+  (let [f (if (= :hyperfiddle.ide/please-login (::route/fiddle (runtime/get-route (:peer ctx) foundation/root-branch)))
             hack-login-renderer
             renderer')
         left-child (or left-child [:span (route->fiddle-label (runtime/get-route (:peer ctx) foundation/root-branch))])]

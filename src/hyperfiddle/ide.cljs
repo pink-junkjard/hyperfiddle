@@ -47,7 +47,7 @@
       (keyword "hf" (unqualify fragment)))))
 
 (defn stateless-login-url
-  ([ctx] (stateless-login-url ctx (domain/url-encode (runtime/domain (:peer ctx)) @(runtime/state (:peer ctx) [::runtime/partitions foundation/root-branch :route]))))
+  ([ctx] (stateless-login-url ctx (domain/url-encode (runtime/domain (:peer ctx)) (runtime/get-route (:peer ctx) foundation/root-branch))))
   ([ctx state]
    (let [{:keys [hyperfiddle.ide.directory/service-uri
                  hyperfiddle.ide.directory/ide-domain] :as domain} (runtime/domain (:peer ctx))

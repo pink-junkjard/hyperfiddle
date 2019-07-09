@@ -13,6 +13,7 @@
     [hyperfiddle.io.datomic.hydrate-requests :refer [hydrate-requests]]
     [hyperfiddle.io.datomic.sync :refer [sync]]
     [hyperfiddle.io.datomic.transact :refer [transact!]]
+    [hyperfiddle.route :as route]
     [hyperfiddle.service.cookie :as cookie]
     [hyperfiddle.service.domain :as service-domain]
     [hyperfiddle.service.http :refer [handle-route]]
@@ -82,7 +83,8 @@
            (not (string/starts-with? path "/:hyperfiddle.ide!please-login/")))
       ; todo this logic should be injected into demo domain record
       (let [inner-route (domain/url-decode domain path)
-            url (domain/url-encode domain [:hyperfiddle.ide/please-login inner-route])]
+            url (domain/url-encode domain {::route/fiddle :hyperfiddle.ide/please-login
+                                           ::route/datomic-args [inner-route]})]
         (-> context
             (assoc-in [:response :status] 302)
             (assoc-in [:response :headers "Location"] url)))
