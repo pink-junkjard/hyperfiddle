@@ -245,8 +245,8 @@ User renderers should not be exposed to the reaction."
         (fn [route]
           (cond-> (assoc props :route route)
             (:hyperfiddle.ui/debug-tooltips ctx)
-            (assoc :tooltip [nil (if-let [[fiddle-ident args] route] ; Show how it routed. The rest is obvious from data mode
-                                   (->> (concat #_[fiddle-ident] args)
+            (assoc :tooltip [nil (when route ; Show how it routed. The rest is obvious from data mode
+                                   (->> (concat #_[fiddle-ident] (::route/datomic-args route))
                                         (map pr-str) (interpose " ") (apply str)))]))))))
 
 (letfn [(prompt [link ?label]
