@@ -41,7 +41,7 @@
                  (and anonymous? disabled?) [:warning "Please login"]
                  disabled? [:warning "Writes restricted"])
       :hyperfiddle.ui.popover/redirect (fn [popover-data]
-                                         (ide-routing/preview-route->ide-route [(:fiddle/ident popover-data)]))})])
+                                         (ide-routing/preview-route->ide-route {::route/fiddle (:fiddle/ident popover-data)}))})])
 
 (defn route->fiddle-label [{:keys [::route/fiddle] :as route}]
   (cond
