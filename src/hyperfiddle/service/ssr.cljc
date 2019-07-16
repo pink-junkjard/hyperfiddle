@@ -79,14 +79,14 @@
             [:script {:id "preamble" :src (domain/api-path-for (runtime/domain rt) :static-resource :build build :resource-name "preamble.js")}]
             [:script {:id "main" :src (domain/api-path-for (runtime/domain rt) :static-resource :build build :resource-name "main.js")}]]))])
 
-(defn bootstrap-html-cmp [env domain io path user-id]
+(defn bootstrap-html-cmp [env domain io route user-id]
   (let [initial-state {::runtime/auto-transact (data/map-values
                                                  (fn [hf-db]
                                                    (if-some [auto-tx (:database/auto-transact hf-db)]
                                                      auto-tx
                                                      (either/right? (security/subject-can-transact? hf-db user-id))))
                                                  (domain/databases domain))
-                       ::runtime/partitions {foundation/root-branch {:route (domain/url-decode domain path)}}
+                       ::runtime/partitions {foundation/root-branch {:route route}}
                        ::runtime/user-id user-id}
         rt (->RT domain io (r/atom (reducers/root-reducer initial-state nil)))]
     (-> (actions/bootstrap-data rt foundation/root-branch actions/LEVEL-NONE)

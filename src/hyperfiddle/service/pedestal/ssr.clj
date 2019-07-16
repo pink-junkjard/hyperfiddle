@@ -2,6 +2,7 @@
   (:require
     [clojure.core.async :refer [chan put!]]
     [hiccup.core :as hiccup]
+    [hyperfiddle.domain :as domain]
     [hyperfiddle.io.core :as io]
     [hyperfiddle.io.datomic.hydrate-requests :refer [hydrate-requests]]
     [hyperfiddle.io.datomic.hydrate-route :refer [hydrate-route]]
@@ -35,9 +36,10 @@
   (let [domain (get-in context [:request :domain])
         user-id (get-in context [:request :user-id])
         io (->IOImpl domain user-id)
-        path (get-in context [:request :path-info])
+        route (->> (str (get-in context [:request :path-info]) "?" (get-in context [:request :query-string]))
+                   (domain/url-decode domain))
         channel (chan)]
-    (-> (ssr/bootstrap-html-cmp env domain io path user-id)
+    (-> (ssr/bootstrap-html-cmp env domain io route user-id)
         (p/then (fn [{:keys [http-status-code component]}]
                   {:status http-status-code
                    :headers {"Content-Type" "text/html"}
