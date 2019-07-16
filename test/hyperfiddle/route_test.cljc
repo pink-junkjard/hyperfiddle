@@ -48,6 +48,16 @@
 
   )
 
+(deftest query-params []
+  (is (= (decode "/:bar?utm=asdfdsaf") {::route/fiddle :bar}))
+  (is (= (decode "/:bar/?utm=asdfdsaf") {::route/fiddle :bar}))
+  (is (= (decode "/:bar?:hyperfiddle.route!where=W1s_ZSA6Zm9vID9hXV0,&utm=asdfdsaf") {::route/fiddle :bar
+                                                                                      ::route/where '[[?e :foo ?a]]}))
+  (is (= (decode "/:bar?:hyperfiddle.route!where=W1s_ZSA6Zm9vID9hXV0,&utm=asdfdsaf#blah") {::route/fiddle :bar
+                                                                                           ::route/where '[[?e :foo ?a]]
+                                                                                           ::route/fragment "blah"}))
+  )
+
 (deftest router-malformed-1
   []
   ;#entity["$" [:user/sub "google-oauth2|116635422485042503270"]]

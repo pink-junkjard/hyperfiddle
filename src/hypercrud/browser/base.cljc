@@ -102,13 +102,14 @@
                                           (count inputs)))
                (either/left (ex-info "missing params" {:query q :params query-args :unused unused}))
 
-               appended-needle (let [q (as-> (apply query/append-where-clauses q needle-clauses) q
-                                         (if appended-$
-                                           (query/append-inputs q '$ '?hf-needle)
-                                           (query/append-inputs q '?hf-needle)))]
-                                 (return (->QueryRequest q query-args {:limit browser-query-limit})))
+               :else (let [q (cond-> q
+                               appended-needle (-> ((partial apply query/append-where-clauses) needle-clauses)
+                                                   (as-> q (if appended-$
+                                                             (query/append-inputs q '$ '?hf-needle)
+                                                             (query/append-inputs q '?hf-needle))))
 
-               :else (return (->QueryRequest q query-args {:limit browser-query-limit}))))
+                               (seq (::route/where route)) ((partial apply query/append-where-clauses) (::route/where route)))]
+                       (return (->QueryRequest q query-args {:limit browser-query-limit})))))
 
     :entity
     (let [args (::route/datomic-args route)                 ; Missing entity param is valid state now https://github.com/hyperfiddle/hyperfiddle/issues/268
@@ -148,12 +149,8 @@
       ; fiddle request can be nil for no-arg pulls (just draw readonly form)
       (return ctx))))
 
-(defn from-link+ [link-ref ctx with-route+]                 ; ctx is for formula and routing (tempids and domain)
+(defn browse-link+ [ctx link-ref]
   (mlet [ctx (context/refocus-to-link+ ctx link-ref)
          args (context/build-args+ ctx @link-ref)
          route (context/build-route+ args ctx)]
-    (with-route+ ctx route)))
-
-(defn browse-link+ [link-ref ctx]
-  {:pre [link-ref ctx]}
-  (from-link+ link-ref ctx browse-route+))
+    (browse-route+ ctx route)))

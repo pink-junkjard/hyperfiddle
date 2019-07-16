@@ -1,9 +1,11 @@
 (ns hyperfiddle.io.datomic.hydrate-route
   (:require
     [cats.core :refer [alet]]
+    [cats.monad.either :as either]
     [cats.labs.promise]
     [contrib.performance :as perf]
     [contrib.reactive :as r]
+    [hypercrud.browser.base :as base]
     [hypercrud.browser.browser-request :as browser-request]
     [hypercrud.browser.context :refer [map->Context]]
     [hyperfiddle.io.core :as io]
@@ -70,5 +72,8 @@
                        (timbre/debugf "request function %sms" total-time)
                        (when (> total-time 500)
                          (timbre/warnf "Slow request function %sms :: route: %s" total-time route)))
-                     (browser-request/request-from-route route (map->Context {:ident nil :branch branch :peer rt})))
+                     (-> (base/browse-route+ (map->Context {:ident nil :branch branch :peer rt}) route)
+                         (either/branch
+                           (fn [e] (timbre/warn e))
+                           browser-request/requests)))
           (select-keys @(runtime/state rt [::runtime/partitions branch]) [:local-basis :attr-renderers :project :ptm :schemas :tempid-lookups]))))))

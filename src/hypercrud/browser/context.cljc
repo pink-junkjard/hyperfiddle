@@ -1083,6 +1083,15 @@ a speculative db/id."
      ; Use hash of current dbval, which changes with each edit
      @(r/track impl (:peer ctx) (:branch ctx) dbname))))
 
+(defn build-child-branch-relative-id [ctx & more]
+  (->> (into [(if (:hypercrud.browser/qfind ctx)            ; guard crash on :blank fiddles
+                (eav ctx)                                   ; if this is nested table head, [e a nil] is ambiguous. test: /:intents/
+                (:hypercrud.browser/result-path ctx))
+              @(r/fmap (r/partial entity-viewkey ctx)
+                       (:hypercrud.browser/fiddle ctx))]
+             more)
+       #_hash str))
+
 (defn branch+ [ctx relative-branch-id]
   ; todo WIP
   (let [ctx (update ctx :branch branch/child-branch-id relative-branch-id)]

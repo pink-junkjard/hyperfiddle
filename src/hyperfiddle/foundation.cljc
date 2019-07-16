@@ -7,7 +7,7 @@
     [hyperfiddle.project :as project]
     [hyperfiddle.runtime :as runtime]
     [hyperfiddle.security.domains]
-    #?(:cljs [hyperfiddle.ui.iframe :refer [iframe-cmp]])
+    #?(:cljs [hyperfiddle.ui.iframe :as iframe])
     #?(:cljs [hyperfiddle.ui.staging :as staging])))
 
 
@@ -48,4 +48,7 @@
         (either/branch
           (project/eval-domain-code!+ @(runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :project :project/code]))
           (fn [e] [:div [:h2 {:style {:margin-top "10%" :text-align "center"}} "Misconfigured domain"]])
-          (fn [_] [iframe-cmp ctx {:route (runtime/get-route (:peer ctx) (:branch ctx))}]))])))
+          (fn [_] [iframe/iframe-cmp-impl
+                   (runtime/get-route (:peer ctx) (:branch ctx))
+                   (r/partial runtime/set-route (:peer ctx) (:branch ctx))
+                   ctx]))])))

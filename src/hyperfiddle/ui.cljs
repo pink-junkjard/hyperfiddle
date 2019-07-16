@@ -28,7 +28,7 @@
     [hyperfiddle.ui.controls :as controls :refer [label-with-docs identity-label ref-label element-label magic-new]]
     [hyperfiddle.ui.docstring :refer [semantic-docstring]]
     [hyperfiddle.ui.error :as ui-error]
-    [hyperfiddle.ui.iframe :refer [iframe-cmp]]
+    [hyperfiddle.ui.iframe :as iframe]
     [hyperfiddle.ui.popover :refer [effect-cmp popover-cmp]]
     [hyperfiddle.ui.select$]
     [hyperfiddle.ui.sort :as sort]
@@ -245,7 +245,7 @@ User renderers should not be exposed to the reaction."
         (fn [route]
           (cond-> (assoc props :route route)
             (:hyperfiddle.ui/debug-tooltips ctx)
-            (assoc :tooltip [nil (when route ; Show how it routed. The rest is obvious from data mode
+            (assoc :tooltip [nil (when route                ; Show how it routed. The rest is obvious from data mode
                                    (->> (concat #_[fiddle-ident] (::route/datomic-args route))
                                         (map pr-str) (interpose " ") (apply str)))]))))))
 
@@ -285,11 +285,10 @@ User renderers should not be exposed to the reaction."
            +route
            (fn [e] [(ui-error/error-comp ctx) e])
            (fn [route]
-             [iframe-cmp link-ctx (-> props                 ; flagged - :class
-                                      (assoc :route route)
-                                      (update :class css (->> (context/link-class link-ctx)
-                                                              (string/join " ")
-                                                              css-slugify)))])])
+             (let [props (update props :class css (->> (context/link-class link-ctx) ; flagged - :class
+                                                       (string/join " ")
+                                                       css-slugify))]
+               [iframe/iframe-cmp route link-ctx props]))])
 
         :else (let [+route-and-ctx (context/refocus-build-route-and-occlude+ ctx link-ref) ; Can fail if formula dependency isn't satisfied
                     +route (fmap second +route-and-ctx)
@@ -509,7 +508,6 @@ nil. call site must wrap with a Reagent component"          ; is this just hyper
 (defn ^:export fiddle-xray [val ctx & [props]]
   [:<>
    [:div.container-fluid (select-keys props [:class :on-click])
-    [:h3 (pr-str @(:hypercrud.browser/route ctx))]
     [result val ctx {}]]
    [entity-links-iframe ctx props]])
 
@@ -524,11 +522,10 @@ nil. call site must wrap with a Reagent component"          ; is this just hyper
      (render-edn (some-> (:hypercrud.browser/result ctx) deref))
      (->> (hyperfiddle.data/select-many ctx #{:hf/iframe})  ; this omits deep dependent iframes fixme
           (map (fn [link]
-                 (let [link-ref (r/pure link)]              ; todo fix reactions
-                   (either/branch
-                     (base/browse-link+ link-ref ctx)
-                     (fn [e] (timbre/warn e))               ; todo why would this ever error? cant we just throw?
-                     identity))))
+                 (either/branch
+                   (base/browse-link+ ctx (r/pure link))
+                   (fn [e] (timbre/warn e))                 ; todo why would this ever error? cant we just throw?
+                   identity)))
           (concat (when @(r/fmap :fiddle/hydrate-result-as-fiddle (:hypercrud.browser/fiddle ctx))
                     (let [[inner-fiddle & inner-args] (::route/datomic-args @(:hypercrud.browser/route ctx))
                           route [inner-fiddle (vec inner-args)]]

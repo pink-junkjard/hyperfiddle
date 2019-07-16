@@ -59,6 +59,14 @@
       (get tempid->id tempid tempid))
     tempid))
 
+(defn create-branch [rt branch]
+  (dispatch! rt [:create-partition branch]))
+
+(defn discard-branch [rt branch]
+  ; todo intermediary hack for circular deps while we move away from dispatch! as the public api
+  (let [discard-branch (resolve 'hyperfiddle.actions/discard-partition)]
+    (dispatch! rt (fn [dispatch! get-state] (discard-branch get-state branch)))))
+
 (defn branch-is-loading? [rt branch]
   (some? @(state rt [::partitions branch :hydrate-id])))
 

@@ -6,13 +6,13 @@
 (defn encode [s]
   (-> s
       (base-64/encode-string)
-      (string/replace "+" "-")
-      (string/replace "/" "_")
-      (string/replace "=" ",")))
+      (string/replace \+ \-)
+      (string/replace \/ \_)
+      (string/replace \= \,)))
 
 (defn decode [s]
   (-> s
-      (string/replace "-" "+")
-      (string/replace "_" "/")
-      (string/replace "," "=")
+      (string/replace \- \+)
+      (string/replace \_ \/)
+      (string/replace \, \=)
       (base-64/decode-string)))

@@ -85,7 +85,7 @@
   {:pre [(s/assert :hypercrud/context ctx)]}
   ; No focusing, can select from root, and data-from-link manufactures a new context
   (>>= (select+ ctx ?corcs)                                 ; even one hflink can explode to two iframes
-       #(base/browse-link+ % ctx)))                       ; can return tuple
+       #(base/browse-link+ ctx %)))                       ; can return tuple
 
 (defn ^:export browse [ctx & [?corcs]]                      ; returns a ctx, not reactive, has reactive keys
   {:pre [(s/assert :hypercrud/context ctx)]}

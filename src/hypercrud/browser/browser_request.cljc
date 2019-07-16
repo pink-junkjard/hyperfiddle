@@ -13,23 +13,12 @@
 
 (declare requests)
 
-(defn request-from-route [route ctx]
-  (either/branch
-    (base/browse-route+ ctx route)
-    (fn [e] (timbre/warn e))                                ; do we actually care about this error?
-    (fn [ctx] (requests ctx))))
-
-(defn request-from-link [link ctx]
-  (either/branch
-    (base/from-link+ (r/pure link) ctx (fn [ctx route]
-                                         (request-from-route route ctx)
-                                         (either/right nil)))
-    (fn [e] (timbre/warn e))                                ; do we actually care about this error?
-    (constantly nil)))
-
 (defn requests-here [ctx]
   (doseq [link @(data/select-many-here ctx #{:hf/iframe})]
-    (request-from-link link ctx)))
+    (either/branch
+      (base/browse-link+ ctx (r/pure link))
+      (fn [e] (timbre/warn e))                                ; do we actually care about this error?
+      requests)))
 
 ; at this point we only care about inline links and popovers are hydrated on their on hydrate-route calls
 ; On the request side, we walk the whole resultset and load each iframe from exactly the right place
@@ -43,7 +32,10 @@
     (let [[inner-fiddle & inner-args] (::route/datomic-args @(:hypercrud.browser/route ctx))
           route (cond-> {:hyperfiddle.route/fiddle inner-fiddle}
                   (seq inner-args) (assoc :hyperfiddle.route/datomic-args (vec inner-args)))]
-      (request-from-route route ctx))))
+      (either/branch
+        (base/browse-route+ ctx route)
+        (fn [e] (timbre/warn e))                                ; do we actually care about this error?
+        requests))))
 
 (defn request-attr-level [ctx]
   (doseq [[a ctx] (context/spread-attributes ctx)]
