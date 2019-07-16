@@ -19,7 +19,8 @@
     [hyperfiddle.reducers :as reducers]
     [hyperfiddle.route :as route]
     [hyperfiddle.runtime :as runtime]
-    [hyperfiddle.ui.iframe :refer [iframe-cmp]]
+    [hyperfiddle.ui.error :as error]
+    [hyperfiddle.ui.iframe :as iframe]
     [hyperfiddle.ui.loading :as loading]
     [re-com.core :as re-com]
     [reagent.core :as reagent]
@@ -113,14 +114,18 @@
                  message (or (some-> (ex-cause e) ex-message) (ex-message e))]
              [:h6 {:style {:text-align "center" :background-color "lightpink" :margin 0 :padding "0.5em 0"}}
               "Exception evaluating " [:a {:href href} [:code ":domain/code"]] ": " message])))
-       [:div#root (merge {}
-                         (when is-stale {:class "hyperfiddle-preview-stale"})
-                         (when @(r/cursor preview-state [:alt-key-pressed]) {:style {:cursor "pointer"}}))
-        [:style {:dangerouslySetInnerHTML {:__html @(runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :project :project/css])}}]
-        ^{:key "user-iframe"}
-        [iframe-cmp ctx
-         {:route @(runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :route])
-          :class (some-> @(r/cursor preview-state [:display-mode]) name (->> (str "display-mode-")))}]]])))
+       (if-let [e (some-> @(runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :error]))]
+         [error/error-block e]
+         [:div#root (merge {}
+                           (when is-stale {:class "hyperfiddle-preview-stale"})
+                           (when @(r/cursor preview-state [:alt-key-pressed]) {:style {:cursor "pointer"}}))
+          [:style {:dangerouslySetInnerHTML {:__html @(runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :project :project/css])}}]
+          ^{:key "user-iframe"}
+          [iframe/iframe-cmp-impl
+           (runtime/get-route (:peer ctx) (:branch ctx))
+           (r/partial runtime/set-route (:peer ctx) (:branch ctx))
+           (assoc ctx :hyperfiddle.ui/show-route-editor true)
+           {:class (some-> @(r/cursor preview-state [:display-mode]) name (->> (str "display-mode-")))}]])])))
 
 (defn- ctx->ls [ctx]
   (atom (map->LocalStorageSync {:rt (:peer ctx) :branch-id (:branch ctx) :ls-key :USER-STATE})))
