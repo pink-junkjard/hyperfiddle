@@ -373,7 +373,7 @@ User renderers should not be exposed to the reaction."
   {:pre [(s/assert :hypercrud/context ctx)]}
   ; Need backwards compat arity
   (let [sort-col (r/atom (::sort/initial-sort props))
-        page-size 20
+        page-size hypercrud.browser.base/browser-query-limit
         page (r/atom 0)]
     (fn [columns ctx & [props]]
       {:pre [(s/assert :hypercrud/context ctx)]}
