@@ -70,7 +70,8 @@
          [topnav/renderer _ ctx
           {:class (hyperfiddle.ui.iframe/auto-ui-css-class ctx)}
           [:<>
-           [route-editor-button preview-rt preview-branch preview-state]
+           [:span (topnav/route->fiddle-label (runtime/get-route preview-rt preview-branch))]
+           #_[route-editor-button preview-rt preview-branch preview-state]
            (-> (runtime/domain (:peer ctx)) ::ide-domain/user-domain+
                (either/branch
                  (fn [e]
@@ -99,7 +100,7 @@
                                       :hyperfiddle.ui/display-mode (r/cursor preview-state [:display-mode])
                                       :hyperfiddle.ui.iframe/on-click (r/partial preview/frame-on-click preview-rt)})]
                    [:<>
-                    [route-editor preview-rt preview-branch (r/cursor preview-state [:show-route-editor])]
+                    #_[route-editor preview-rt preview-branch (r/cursor preview-state [:show-route-editor])]
                     [preview/preview-effects preview-ctx (:branch ctx) preview-state]
                     [staging/inline-stage preview-ctx]]))))]
 
