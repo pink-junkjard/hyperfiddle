@@ -127,23 +127,28 @@
    (timbre/warn "Deprecated arity of hyperfiddle.ui.iframe/iframe-cmp. Explicitly provide route argument")
    [iframe-cmp (:route props) ctx (dissoc props :route)])
   ([route {rt :peer :as ctx} {:keys [::relative-child-branch-id] :as props}]
-   (let [local-route (r/atom route)                         ; todo what happens on route update from above?
+   (let [local-state (r/atom {:initial route :current route})
          relative-branch-id (or relative-child-branch-id (context/build-child-branch-relative-id ctx (context/eav ctx)))
          child-branch-id (branch/child-branch-id (:branch ctx) relative-branch-id)
          on-change (fn [new-route]
-                     (if (= new-route route)
+                     (if (= new-route (:initial @local-state))
                        (when (runtime/branch-exists? rt child-branch-id)
                          (runtime/discard-branch rt child-branch-id))
                        (do
                          (when-not (runtime/branch-exists? rt child-branch-id)
                            (runtime/create-branch rt child-branch-id))
                          (runtime/set-route rt child-branch-id new-route)))
-                     (reset! local-route new-route))]
+                     (swap! local-state assoc :current new-route))]
      (fn [route ctx props]
-       (let [props (dissoc props ::relative-child-branch-id)]
-         (-> (if (= route @local-route)
+       (when-not (= (:initial @local-state) route)
+         (reset! local-state {:initial route :current route}))
+       (let [local-route (:current @local-state)
+             props (dissoc props ::relative-child-branch-id)]
+         (-> (if (or (= route local-route))
                (either/right ctx)
-               (context/branch+ ctx relative-branch-id))
+               (do
+                 (println "!!!branching!!!")
+                 (context/branch+ ctx relative-branch-id)))
              (either/branch
                (fn [e] [(ui-error/error-comp ctx) e])
-               (fn [ctx] [iframe-cmp-impl @local-route on-change ctx props]))))))))
+               (fn [ctx] [iframe-cmp-impl local-route on-change ctx props]))))))))
