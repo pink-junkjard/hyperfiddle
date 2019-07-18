@@ -146,9 +146,7 @@
              props (dissoc props ::relative-child-branch-id)]
          (-> (if (or (= route local-route))
                (either/right ctx)
-               (do
-                 (println "!!!branching!!!")
-                 (context/branch+ ctx relative-branch-id)))
+               (context/branch+ ctx relative-branch-id))
              (either/branch
                (fn [e] [(ui-error/error-comp ctx) e])
                (fn [ctx] [iframe-cmp-impl local-route on-change ctx props]))))))))
