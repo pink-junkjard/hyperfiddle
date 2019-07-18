@@ -63,7 +63,7 @@
              (cats/fmap fiddle/apply-defaults))
         (hydrate-fiddle-from-datomic+ rt branch fiddle-ident))))
 
-(def browser-query-limit -1 #_100)
+(def browser-query-limit 100)
 
 (defn request-for-fiddle+ [rt branch route fiddle]          ; no ctx
   (case (:fiddle/type fiddle)
