@@ -14,6 +14,7 @@
     [hypercrud.browser.context :as context]
     [hyperfiddle.api :as hf]
     [hyperfiddle.data :as data]
+    [hyperfiddle.route :as route]
     [hyperfiddle.runtime :as runtime]
     [hyperfiddle.ui.error :as ui-error]
     [hyperfiddle.ui.stale :as stale]
@@ -201,6 +202,11 @@
   (let [j-props (apply js-obj (apply concat props))]
     (reagent.core/create-element js/ReactBootstrapTypeahead.AsyncTypeahead j-props)))
 
+(defn- build-options-route [args where ctx]
+  (cats/bind (context/build-route+ args ctx)
+             (fn [route]
+               (route/validate-route+ (cond-> route where (assoc ::route/where where))))))
+
 (defn- select-needle-typeahead [{rt :peer branch :branch :as branched-unrouted-ctx} value
                                 initial-options
                                 ; todo these props need cleaned up, shouldn't be adapting them over and over again
@@ -210,7 +216,7 @@
                       "isLoading" (runtime/branch-is-loading? rt branch)
                       #_#_"minLength" 2
                       "onSearch" (fn [s]
-                                   (-> (context/build-route+ [s] branched-unrouted-ctx)
+                                   (-> (build-options-route [s] (:options-where select-props) branched-unrouted-ctx)
                                        (either/branch
                                          (fn [e] (runtime/set-branch-error rt branch e))
                                          (fn [route]
@@ -301,7 +307,7 @@
    (-> (mlet [link-ref (data/select+ ctx (keyword (:options props)))
               link-ctx (context/refocus-to-link+ ctx link-ref)]
          (-> #_(context/build-route-and-occlude+ link-ctx link-ref) ; todo too many errors are being caught in build-route-and-occlude+ that are completely fatal (e.g. formula eval errors); need to direct more control over route building here
-           (context/build-route+ [] link-ctx)               ; hand craft args, independent iframes cannot be represented in the links model
+           (build-options-route [] (:options-where props) link-ctx) ; hand craft args, independent iframes cannot be represented in the links model
            (cats/bind (fn [route] (base/browse-route+ link-ctx route)))
            (either/branch
              (fn [e]
