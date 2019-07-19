@@ -56,8 +56,8 @@
     (cond
 
       ; ![hyperfiddle.ui/img](https://i.imgur.com/ewdY65H.png) -> [hyperfiddle.ui/img val ctx props]
-      (ifn? content) (let [argument (if (symbol? argument) (str argument) argument)] ; yolo
-                       [content argument ctx props])
+      (fn? content) (let [argument (if (symbol? argument) (str argument) argument)] ; yolo
+                      [content argument ctx props])
 
       ;(= :div content) [:div props (markdown argument)]     ; !f[:div](yo) --- doesn't work though right now
 
