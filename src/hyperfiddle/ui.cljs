@@ -423,7 +423,7 @@ User renderers should not be exposed to the reaction."
               [:div.alert.alert-warning "Warning: invalid route (d/pull requires an entity argument). To add a tempid entity to the URL, click here: "
                [:a {:href "~entity('$','tempid')"} [:code "~entity('$','tempid')"]] "."])
     :query (when (= base/browser-query-limit (count val))
-             [:div.alert.alert-warning (str/format "Warning: Query resultset has been truncated to %s records. Please add additional filters to your query" base/browser-query-limit)])
+             [:div.alert.alert-warning (str/format "Warning: Query resultset has been truncated to %s records." base/browser-query-limit)])
     :blank nil
     ))
 
@@ -482,9 +482,7 @@ nil. call site must wrap with a Reagent component"          ; is this just hyper
        [:<> {:key k}
         (hint val ctx props)
         (when-let [unfilled-where (:hf/where props)]
-          [:form.row
-           [:label.col-sm-2.col-form-label "Needle:"]
-           [needle-input unfilled-where ctx {:placeholder "foo"}]])
+          [needle-input unfilled-where ctx {:placeholder "filter" :class "form-control"}])
         (condp some [(type @(:hypercrud.browser/qfind ctx))] ; spread-rows
 
           #{FindRel FindColl}
