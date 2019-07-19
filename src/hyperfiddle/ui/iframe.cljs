@@ -98,6 +98,7 @@
 (defn iframe-cmp-impl [route route-on-change ctx & [props]]
   (let [error-comp (or (:hyperfiddle.ui/error-render-custom props) ; try props first
                        (ui-error/error-comp ctx))
+        ctx (assoc ctx :hyperfiddle.ui/-set-route route-on-change) ; todo runtime/set-route
         props (dissoc props :hyperfiddle.ui/error-render-custom)]
     [:<>
      (when (or (not= :hypercrud.browser.browser-ui/user (or (some-> (:hyperfiddle.ui/display-mode ctx) deref) :hypercrud.browser.browser-ui/user))

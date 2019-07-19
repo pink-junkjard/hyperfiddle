@@ -5,6 +5,7 @@
     [cljs.spec.alpha :as s]
     [clojure.core.match :refer [match match*]]
     [clojure.string :as string]
+    [clojure.walk :as walk]
     [contrib.css :refer [css css-slugify]]
     [contrib.data :refer [unqualify]]
     [contrib.eval :as eval]
@@ -407,6 +408,15 @@ User renderers should not be exposed to the reaction."
              (< n page-size) nil
              (= n 0) [:div "no results"]))]))))
 
+(defn needle-input [unfilled-where {:keys [:hypercrud.browser/route ::-set-route] :as ctx}]
+  [contrib.ui/debounced
+   {:on-change (fn [_ needle]
+                 (let [route (->> (walk/prewalk (fn [sym] (if (= '% sym) needle sym)) unfilled-where)
+                                  (assoc @route ::route/where))]
+                   (-set-route route)))
+    :placeholder "foo"}
+   contrib.ui/text])
+
 (defn hint [val {:keys [hypercrud.browser/fiddle] :as ctx} props]
   (case @(r/fmap :fiddle/type fiddle)
     :entity (when (empty? val)
@@ -471,6 +481,10 @@ nil. call site must wrap with a Reagent component"          ; is this just hyper
      (for [[k ctx] (hypercrud.browser.context/spread-result ctx)]
        [:<> {:key k}
         (hint val ctx props)
+        (when-let [unfilled-where (:hf/where props)]
+          [:form.row
+           [:label.col-sm-2.col-form-label "Needle:"]
+           [needle-input unfilled-where ctx]])
         (condp some [(type @(:hypercrud.browser/qfind ctx))] ; spread-rows
 
           #{FindRel FindColl}
