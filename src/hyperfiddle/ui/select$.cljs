@@ -2,6 +2,7 @@
   (:require
     [cats.core :as cats :refer [mlet return]]
     [cats.monad.either :as either :refer [left right branch]]
+    [clojure.walk :as walk]
     [contrib.ct :refer [unwrap]]
     [contrib.data :refer [unqualify]]
     [contrib.eval]
@@ -202,10 +203,14 @@
   (let [j-props (apply js-obj (apply concat props))]
     (reagent.core/create-element js/ReactBootstrapTypeahead.AsyncTypeahead j-props)))
 
-(defn- build-options-route [args where ctx]
-  (cats/bind (context/build-route+ args ctx)
+(defn- build-options-route+ [needle unfilled-where ctx]
+  (cats/bind (context/build-route+ [] ctx)
              (fn [route]
-               (route/validate-route+ (cond-> route where (assoc ::route/where where))))))
+               (if (and needle unfilled-where)
+                 (->> (walk/prewalk (fn [sym] (if (= '% sym) needle sym)) unfilled-where)
+                      (assoc route ::route/where)
+                      route/validate-route+)
+                 (either/right route)))))
 
 (defn- select-needle-typeahead [{rt :peer branch :branch :as branched-unrouted-ctx} value
                                 initial-options
@@ -215,8 +220,9 @@
                       #_#_"delay" 200
                       "isLoading" (runtime/branch-is-loading? rt branch)
                       #_#_"minLength" 2
+                      "filterBy" (constantly true)          ; no client side filtering
                       "onSearch" (fn [s]
-                                   (-> (build-options-route [s] (:options-where select-props) branched-unrouted-ctx)
+                                   (-> (build-options-route+ s (:options-where select-props) branched-unrouted-ctx)
                                        (either/branch
                                          (fn [e] (runtime/set-branch-error rt branch e))
                                          (fn [route]
@@ -307,7 +313,7 @@
    (-> (mlet [link-ref (data/select+ ctx (keyword (:options props)))
               link-ctx (context/refocus-to-link+ ctx link-ref)]
          (-> #_(context/build-route-and-occlude+ link-ctx link-ref) ; todo too many errors are being caught in build-route-and-occlude+ that are completely fatal (e.g. formula eval errors); need to direct more control over route building here
-           (build-options-route [] (:options-where props) link-ctx) ; hand craft args, independent iframes cannot be represented in the links model
+           (build-options-route+ nil (:options-where props) link-ctx) ; hand craft args, independent iframes cannot be represented in the links model
            (cats/bind (fn [route] (base/browse-route+ link-ctx route)))
            (either/branch
              (fn [e]
@@ -319,14 +325,14 @@
              (fn [options-ctx]
                (cond
                  ; hybrid, use the existing iframe to render initial options, but use the needle to filter on server
-                 #_@(r/fmap-> link-ref :link/fiddle :fiddle/query-needle some?)
-                 #_(mlet [:let [relative-branch-id (context/build-child-branch-relative-id ctx @(r/fmap :db/id link-ref) (context/eav ctx))]
-                          branched-unrouted-ctx (context/branch+ link-ctx relative-branch-id)
-                          [select-props options-props] (options-value-bridge+ ctx props)]
-                     (return
-                       [select-needle-typeahead branched-unrouted-ctx (hf/data ctx)
-                        (options-values options-ctx select-props)
-                        select-props options-props]))
+                 (:options-where props)
+                 (mlet [:let [relative-branch-id (context/build-child-branch-relative-id ctx @(r/fmap :db/id link-ref) (context/eav ctx))]
+                        branched-unrouted-ctx (context/branch+ link-ctx relative-branch-id)
+                        [select-props options-props] (options-value-bridge+ ctx props)]
+                   (return
+                     [select-needle-typeahead branched-unrouted-ctx (hf/data ctx)
+                      (options-values options-ctx select-props)
+                      select-props options-props]))
 
                  ; iframe (data is local), complete-route, and no needle
                  ; just use client side filtering on the intial options
