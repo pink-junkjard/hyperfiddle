@@ -204,13 +204,13 @@
     (reagent.core/create-element js/ReactBootstrapTypeahead.AsyncTypeahead j-props)))
 
 (defn- build-options-route+ [needle unfilled-where ctx]
-  (cats/bind (context/build-route+ [] ctx)
-             (fn [route]
-               (if (and needle unfilled-where)
-                 (->> (walk/prewalk (fn [sym] (if (= '% sym) needle sym)) unfilled-where)
-                      (assoc route ::route/where)
-                      route/validate-route+)
-                 (either/right route)))))
+  (mlet [args (context/build-args+ ctx @(:hypercrud.browser/link ctx))
+         route (context/build-route+ args ctx)]
+    (if (and needle unfilled-where)
+      (->> (walk/prewalk (fn [sym] (if (= '% sym) needle sym)) unfilled-where)
+           (assoc route ::route/where)
+           route/validate-route+)
+      (return route))))
 
 (defn- select-needle-typeahead [{rt :peer branch :branch :as branched-unrouted-ctx} value
                                 initial-options
