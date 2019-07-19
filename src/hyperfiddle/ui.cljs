@@ -408,13 +408,13 @@ User renderers should not be exposed to the reaction."
              (< n page-size) nil
              (= n 0) [:div "no results"]))]))))
 
-(defn needle-input [unfilled-where {:keys [:hypercrud.browser/route ::-set-route] :as ctx}]
+(defn needle-input [unfilled-where {:keys [:hypercrud.browser/route ::-set-route] :as ctx} & [input-props]]
   [contrib.ui/debounced
-   {:on-change (fn [_ needle]
-                 (let [route (->> (walk/prewalk (fn [sym] (if (= '% sym) needle sym)) unfilled-where)
-                                  (assoc @route ::route/where))]
-                   (-set-route route)))
-    :placeholder "foo"}
+   (assoc input-props
+     :on-change (fn [_ needle]
+                  (let [route (->> (walk/prewalk (fn [sym] (if (= '% sym) needle sym)) unfilled-where)
+                                   (assoc @route ::route/where))]
+                    (-set-route route))))
    contrib.ui/text])
 
 (defn hint [val {:keys [hypercrud.browser/fiddle] :as ctx} props]
@@ -484,7 +484,7 @@ nil. call site must wrap with a Reagent component"          ; is this just hyper
         (when-let [unfilled-where (:hf/where props)]
           [:form.row
            [:label.col-sm-2.col-form-label "Needle:"]
-           [needle-input unfilled-where ctx]])
+           [needle-input unfilled-where ctx {:placeholder "foo"}]])
         (condp some [(type @(:hypercrud.browser/qfind ctx))] ; spread-rows
 
           #{FindRel FindColl}
