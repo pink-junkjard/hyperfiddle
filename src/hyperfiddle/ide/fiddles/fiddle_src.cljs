@@ -52,6 +52,8 @@
    [controls/ref
     (context/data ctx) ctx
     {:options :hyperfiddle.ide/fiddle-options
+     :options-where '[[?link :fiddle/ident ?ident]
+                      [(clojure.string/includes? ?ident %)]]
      :option-label (r/comp pr-str :fiddle/ident)}]
    [link :hyperfiddle.ide/new-fiddle ctx "new"]])
 
