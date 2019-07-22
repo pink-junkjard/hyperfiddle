@@ -427,8 +427,10 @@ User renderers should not be exposed to the reaction."
                   (when (= (fill-where unfilled-where needle) filled-where)
                     needle))))
      :on-change (fn [_ needle]
-                  (let [route (assoc @route ::route/where (fill-where unfilled-where needle))]
-                    (-set-route route))))
+                  (-> (if (empty? needle)
+                        (dissoc @route ::route/where)
+                        (assoc @route ::route/where (fill-where unfilled-where needle)))
+                      -set-route)))
    contrib.ui/text])
 
 (defn hint [val {:keys [hypercrud.browser/fiddle] :as ctx} props]
