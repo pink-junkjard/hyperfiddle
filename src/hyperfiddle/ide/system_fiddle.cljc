@@ -80,7 +80,9 @@
                                               {:db/cardinality [:db/ident]}
                                               {:db/unique [:db/ident]}
                                               :db/isComponent :db/fulltext :db/doc])
-                         :where [$db :db.part/db :db.install/attribute '?attr]]))
+                         :where [$db :db.part/db :db.install/attribute '?attr]
+                         ; binding for ui
+                         [$db '?attr :db/ident '?ident]]))
    :fiddle/renderer "hyperfiddle.ide.fiddles.schema-editor/renderer"
    :fiddle/links #{{:db/id :hyperfiddle.ide.schema.link/edit-attribute
                     :link/path (str ide-dbname " :db/ident")
