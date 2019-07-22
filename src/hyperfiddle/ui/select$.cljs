@@ -221,7 +221,7 @@
                       #_#_"minLength" 2
                       "filterBy" (constantly true)          ; no client side filtering
                       "onSearch" (fn [s]
-                                   (-> (build-options-route+ s (:options-where select-props) branched-unrouted-ctx)
+                                   (-> (build-options-route+ s (:hf/where select-props) branched-unrouted-ctx)
                                        (either/branch
                                          (fn [e] (runtime/set-branch-error rt branch e))
                                          (fn [route]
@@ -312,7 +312,7 @@
    (-> (mlet [link-ref (data/select+ ctx (keyword (:options props)))
               link-ctx (context/refocus-to-link+ ctx link-ref)]
          (-> #_(context/build-route-and-occlude+ link-ctx link-ref) ; todo too many errors are being caught in build-route-and-occlude+ that are completely fatal (e.g. formula eval errors); need to direct more control over route building here
-           (build-options-route+ nil (:options-where props) link-ctx) ; hand craft args, independent iframes cannot be represented in the links model
+           (build-options-route+ nil (:hf/where props) link-ctx) ; hand craft args, independent iframes cannot be represented in the links model
            (cats/bind (fn [route] (base/browse-route+ link-ctx route)))
            (either/branch
              (fn [e]
@@ -324,7 +324,7 @@
              (fn [options-ctx]
                (cond
                  ; hybrid, use the existing iframe to render initial options, but use the needle to filter on server
-                 (:options-where props)
+                 (:hf/where props)
                  (mlet [:let [relative-branch-id (context/build-child-branch-relative-id ctx @(r/fmap :db/id link-ref) (context/eav ctx))]
                         branched-unrouted-ctx (context/branch+ link-ctx relative-branch-id)
                         [select-props options-props] (options-value-bridge+ ctx props)]
