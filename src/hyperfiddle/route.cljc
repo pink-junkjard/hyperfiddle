@@ -4,6 +4,7 @@
     [cats.monad.either :as either]
     [clojure.spec.alpha :as s]
     [clojure.string :as string]
+    [clojure.walk :as walk]
     [contrib.base-64-url-safe :as base-64-url-safe]
     [contrib.data]
     [contrib.ednish :as ednish :refer [decode-ednish encode-ednish]]
@@ -148,3 +149,6 @@
                                      ::fragment fragment})]
                       (timbre/warnf "Deprecated route format detected `%s` use a map instead: `%s`" (pr-str route) (pr-str m-route))
                       m-route)))
+
+(defn fill-where [unfilled-where needle]
+  (walk/prewalk (fn [sym] (if (= '% sym) needle sym)) unfilled-where))

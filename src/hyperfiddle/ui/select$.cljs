@@ -2,7 +2,6 @@
   (:require
     [cats.core :as cats :refer [mlet return]]
     [cats.monad.either :as either :refer [left right branch]]
-    [clojure.walk :as walk]
     [contrib.ct :refer [unwrap]]
     [contrib.data :refer [unqualify]]
     [contrib.eval]
@@ -207,7 +206,7 @@
   (mlet [args (context/build-args+ ctx @(:hypercrud.browser/link ctx))
          route (context/build-route+ args ctx)]
     (if (and needle unfilled-where)
-      (->> (walk/prewalk (fn [sym] (if (= '% sym) needle sym)) unfilled-where)
+      (->> (route/fill-where unfilled-where needle)
            (assoc route ::route/where)
            route/validate-route+)
       (return route))))

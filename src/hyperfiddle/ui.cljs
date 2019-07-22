@@ -5,7 +5,6 @@
     [cljs.spec.alpha :as s]
     [clojure.core.match :refer [match match*]]
     [clojure.string :as string]
-    [clojure.walk :as walk]
     [contrib.css :refer [css css-slugify]]
     [contrib.data :refer [unqualify]]
     [contrib.eval :as eval]
@@ -416,20 +415,18 @@ User renderers should not be exposed to the reaction."
                                    (comp path #(get % idx) vec)))))
     (= v form) identity))
 
-(defn- fill-where [unfilled-where needle] (walk/prewalk (fn [sym] (if (= '% sym) needle sym)) unfilled-where))
-
 (defn needle-input [unfilled-where {:keys [:hypercrud.browser/route ::-set-route] :as ctx} & [input-props]]
   [contrib.ui/debounced
    (assoc input-props
      :value (when-let [f (path-fn '% unfilled-where)]
               (let [filled-where (::route/where @route)]
                 (when-let [needle (f filled-where)]
-                  (when (= (fill-where unfilled-where needle) filled-where)
+                  (when (= (route/fill-where unfilled-where needle) filled-where)
                     needle))))
      :on-change (fn [_ needle]
                   (-> (if (empty? needle)
                         (dissoc @route ::route/where)
-                        (assoc @route ::route/where (fill-where unfilled-where needle)))
+                        (assoc @route ::route/where (route/fill-where unfilled-where needle)))
                       -set-route)))
    contrib.ui/text])
 
