@@ -408,12 +408,26 @@ User renderers should not be exposed to the reaction."
              (< n page-size) nil
              (= n 0) [:div "no results"]))]))))
 
+(defn- path-fn [v form]
+  (cond
+    (seqable? form) (->> (map-indexed (fn [idx form] [idx form]) (vec form))
+                         (some (fn [[idx form]]
+                                 (when-let [path (path-fn v form)]
+                                   (comp path #(get % idx) vec)))))
+    (= v form) identity))
+
+(defn- fill-where [unfilled-where needle] (walk/prewalk (fn [sym] (if (= '% sym) needle sym)) unfilled-where))
+
 (defn needle-input [unfilled-where {:keys [:hypercrud.browser/route ::-set-route] :as ctx} & [input-props]]
   [contrib.ui/debounced
    (assoc input-props
+     :value (when-let [f (path-fn '% unfilled-where)]
+              (let [filled-where (::route/where @route)]
+                (when-let [needle (f filled-where)]
+                  (when (= (fill-where unfilled-where needle) filled-where)
+                    needle))))
      :on-change (fn [_ needle]
-                  (let [route (->> (walk/prewalk (fn [sym] (if (= '% sym) needle sym)) unfilled-where)
-                                   (assoc @route ::route/where))]
+                  (let [route (assoc @route ::route/where (fill-where unfilled-where needle))]
                     (-set-route route))))
    contrib.ui/text])
 
