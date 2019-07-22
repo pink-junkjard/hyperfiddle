@@ -124,7 +124,7 @@
           [iframe/iframe-cmp-impl
            (runtime/get-route (:peer ctx) (:branch ctx))
            (r/partial runtime/set-route (:peer ctx) (:branch ctx))
-           (assoc ctx :hyperfiddle.ui/show-route-editor true)
+           ctx
            {:class (some-> @(r/cursor preview-state [:display-mode]) name (->> (str "display-mode-")))}]])])))
 
 (defn- ctx->ls [ctx]
