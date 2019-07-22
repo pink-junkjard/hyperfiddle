@@ -101,8 +101,7 @@
         ctx (assoc ctx :hyperfiddle.ui/-set-route route-on-change) ; todo runtime/set-route
         props (dissoc props :hyperfiddle.ui/error-render-custom)]
     [:<>
-     (when (or (not= :hypercrud.browser.browser-ui/user (or (some-> (:hyperfiddle.ui/display-mode ctx) deref) :hypercrud.browser.browser-ui/user))
-               (:hyperfiddle.ui/show-route-editor ctx))
+     (when-not (= :hypercrud.browser.browser-ui/user (or (some-> (:hyperfiddle.ui/display-mode ctx) deref) :hypercrud.browser.browser-ui/user))
        [route-editor route route-on-change])
      [stale/loading
       (r/track runtime/branch-is-loading? (:peer ctx) (:branch ctx))
