@@ -532,7 +532,7 @@ nil. call site must wrap with a Reagent component"          ; is this just hyper
 
 (defn ^:export fiddle-xray [val ctx & [props]]
   [:<>
-   [:div.container-fluid (select-keys props [:class :on-click])
+   [:div (select-keys props [:class :on-click])
     [result val ctx {}]]
    [entity-links-iframe ctx props]])
 
