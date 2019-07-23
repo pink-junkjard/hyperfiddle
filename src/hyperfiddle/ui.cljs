@@ -1,6 +1,6 @@
 (ns hyperfiddle.ui
   (:require
-    [cats.core :as cats :refer [fmap >>=]]
+    [cats.core :as cats :refer [>>= fmap mlet return]]
     [cats.monad.either :as either]
     [cljs.spec.alpha :as s]
     [clojure.core.match :refer [match match*]]
@@ -540,31 +540,37 @@ nil. call site must wrap with a Reagent component"          ; is this just hyper
           (let [edn-str (pprint-str data 160)]
             [contrib.ui/code {:value edn-str :read-only true}]))]
   (defn ^:export fiddle-api [_ ctx & [props]]
-    [:div.hyperfiddle.display-mode-api.container-fluid (select-keys props [:class])
-     [:h3
-      [:dl
-       [:dt "route"] [:dd (pr-str @(:hypercrud.browser/route ctx))]]]
+    [:div.hyperfiddle.display-mode-api (select-keys props [:class])
      (render-edn (some-> (:hypercrud.browser/result ctx) deref))
-     (->> (hyperfiddle.data/select-many ctx #{:hf/iframe})  ; this omits deep dependent iframes fixme
-          (map (fn [link]
-                 (either/branch
-                   (base/browse-link+ ctx (r/pure link))
-                   (fn [e] (timbre/warn e))                 ; todo why would this ever error? cant we just throw?
-                   identity)))
-          (concat (when @(r/fmap :fiddle/hydrate-result-as-fiddle (:hypercrud.browser/fiddle ctx))
-                    (let [[inner-fiddle & inner-args] (::route/datomic-args @(:hypercrud.browser/route ctx))
-                          route [inner-fiddle (vec inner-args)]]
-                      [(either/branch
-                         (base/browse-route+ ctx route)
-                         (fn [e] (timbre/warn e))           ; todo why would this ever error? cant we just throw?
-                         identity)])))
-          (map (fn [ctx]
-                 (let [route (some-> (:hypercrud.browser/route ctx) deref)]
-                   ^{:key (str (hash route))}
-                   [:div
-                    [:dl [:dt "route"] [:dd (pr-str route)]]
-                    (render-edn (some-> (:hypercrud.browser/result ctx) deref))])))
-          doall)]))
+     (when-let [iframes (->> (hyperfiddle.data/select-many ctx #{:hf/iframe}) ; this omits deep dependent iframes fixme
+                             (map (fn [link]
+                                    (either/branch
+                                      (mlet [link-ctx (context/refocus-to-link+ ctx (r/pure link))
+                                             args (context/build-args+ link-ctx link)
+                                             route (context/build-route+ args link-ctx)]
+                                        (return [route link-ctx]))
+                                      (fn [e] (timbre/warn e))
+                                      identity)))
+                             (cons (when @(r/fmap :fiddle/hydrate-result-as-fiddle (:hypercrud.browser/fiddle ctx))
+                                     (let [[inner-fiddle & inner-args] (::route/datomic-args @(:hypercrud.browser/route ctx))
+                                           route (cond-> {:hyperfiddle.route/fiddle inner-fiddle}
+                                                   (seq inner-args) (assoc :hyperfiddle.route/datomic-args (vec inner-args)))]
+                                       [route ctx])))
+                             (remove nil?)
+                             (map (fn [[route ctx]]
+                                    ^{:key (str (hash route))}
+                                    [iframe/managed-route-editor-state
+                                     (fn [route route-on-change ctx & [props]]
+                                       [:<>
+                                        [:dt [iframe/route-editor route route-on-change]]
+                                        [:dd [iframe/stale-browse route ctx
+                                              (fn [e] [ui-error/error-block e])
+                                              (fn [ctx] (render-edn (some-> (:hypercrud.browser/result ctx) deref)))]]])
+                                     route ctx {}]))
+                             seq)]
+       [:div.container-fluid.iframes
+        [:h4 "iframes"]
+        (into [:dl] iframes)])]))
 
 (defn ^:export img [val ctx & [props]]
   [:img (merge props {:src val})])

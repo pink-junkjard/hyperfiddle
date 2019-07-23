@@ -95,6 +95,16 @@
       :lineNumbers false}
      contrib.ui/validated-cmp parse-string to-string contrib.ui/code]))
 
+(defn stale-browse
+  ([route ctx error success] (stale-browse route ctx error success success))
+  ([route ctx error success loading]
+   [stale/loading
+    (r/track runtime/branch-is-loading? (:peer ctx) (:branch ctx))
+    (base/browse-route+ ctx route)
+    (fn [e] [error e])
+    (fn [ctx] [success ctx])
+    (fn [ctx] [loading ctx])]))
+
 (defn iframe-cmp-impl [route route-on-change ctx & [props]]
   (let [error-comp (or (:hyperfiddle.ui/error-render-custom props) ; try props first
                        (ui-error/error-comp ctx))
@@ -103,9 +113,7 @@
     [:<>
      (when-not (= :hypercrud.browser.browser-ui/user (or (some-> (:hyperfiddle.ui/display-mode ctx) deref) :hypercrud.browser.browser-ui/user))
        [route-editor route route-on-change])
-     [stale/loading
-      (r/track runtime/branch-is-loading? (:peer ctx) (:branch ctx))
-      (base/browse-route+ ctx route)
+     [stale-browse route ctx
       (fn [e]
         [error-comp e (cond-> {:class (css "hyperfiddle-error" (:class props) "ui")}
                         (::on-click ctx) (assoc :on-click (r/partial (::on-click ctx) route)))])
@@ -122,31 +130,33 @@
                         (::on-click ctx) (assoc :on-click (r/partial (::on-click ctx) @(:hypercrud.browser/route ctx))))]
          [fiddle-css-renderer (r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/css])]])]]))
 
+(defn managed-route-editor-state [display-cmp route {rt :peer :as ctx} {:keys [::relative-child-branch-id] :as props}]
+  (let [local-state (r/atom {:initial route :current route})
+        relative-branch-id (or relative-child-branch-id (context/build-child-branch-relative-id ctx (context/eav ctx)))
+        child-branch-id (branch/child-branch-id (:branch ctx) relative-branch-id)
+        on-change (fn [new-route]
+                    (if (= new-route (:initial @local-state))
+                      (when (runtime/branch-exists? rt child-branch-id)
+                        (runtime/discard-branch rt child-branch-id))
+                      (do
+                        (when-not (runtime/branch-exists? rt child-branch-id)
+                          (runtime/create-branch rt child-branch-id))
+                        (runtime/set-route rt child-branch-id new-route)))
+                    (swap! local-state assoc :current new-route))]
+    (fn [display-cmp route ctx props]
+      (when-not (= (:initial @local-state) route)
+        (reset! local-state {:initial route :current route}))
+      (let [local-route (:current @local-state)
+            props (dissoc props ::relative-child-branch-id)]
+        (-> (if (or (= route local-route))
+              (either/right ctx)
+              (context/branch+ ctx relative-branch-id))
+            (either/branch
+              (fn [e] [(ui-error/error-comp ctx) e])
+              (fn [ctx] [display-cmp local-route on-change ctx props])))))))
+
 (defn iframe-cmp
   ([ctx props]
    (timbre/warn "Deprecated arity of hyperfiddle.ui.iframe/iframe-cmp. Explicitly provide route argument")
    [iframe-cmp (:route props) ctx (dissoc props :route)])
-  ([route {rt :peer :as ctx} {:keys [::relative-child-branch-id] :as props}]
-   (let [local-state (r/atom {:initial route :current route})
-         relative-branch-id (or relative-child-branch-id (context/build-child-branch-relative-id ctx (context/eav ctx)))
-         child-branch-id (branch/child-branch-id (:branch ctx) relative-branch-id)
-         on-change (fn [new-route]
-                     (if (= new-route (:initial @local-state))
-                       (when (runtime/branch-exists? rt child-branch-id)
-                         (runtime/discard-branch rt child-branch-id))
-                       (do
-                         (when-not (runtime/branch-exists? rt child-branch-id)
-                           (runtime/create-branch rt child-branch-id))
-                         (runtime/set-route rt child-branch-id new-route)))
-                     (swap! local-state assoc :current new-route))]
-     (fn [route ctx props]
-       (when-not (= (:initial @local-state) route)
-         (reset! local-state {:initial route :current route}))
-       (let [local-route (:current @local-state)
-             props (dissoc props ::relative-child-branch-id)]
-         (-> (if (or (= route local-route))
-               (either/right ctx)
-               (context/branch+ ctx relative-branch-id))
-             (either/branch
-               (fn [e] [(ui-error/error-comp ctx) e])
-               (fn [ctx] [iframe-cmp-impl local-route on-change ctx props]))))))))
+  ([route ctx props] [managed-route-editor-state iframe-cmp-impl route ctx props]))
