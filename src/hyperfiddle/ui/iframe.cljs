@@ -121,12 +121,7 @@
         [:<>
          [ui-comp ctx (cond-> (update props :class css "ui")
                         ; @route here is a broken reaction, see routing/route+ returns a severed reaciton
-                        (::on-click ctx) (assoc :on-click (r/partial (::on-click ctx) @(:hypercrud.browser/route ctx))))]
-         [fiddle-css-renderer (r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/css])]])
-      (fn [ctx]
-        [:<>
-         [ui-comp ctx (cond-> (update props :class css "hyperfiddle-loading" "ui")
-                        ; use the stale ctx's route, otherwise alt clicking while loading could take you to the new route, which is jarring
+                        ; use the ctx's route, otherwise alt clicking while loading could take you to the new route, which is jarring
                         (::on-click ctx) (assoc :on-click (r/partial (::on-click ctx) @(:hypercrud.browser/route ctx))))]
          [fiddle-css-renderer (r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/css])]])]]))
 
