@@ -27,6 +27,8 @@
           (css-slugify ident)]
          (apply css))))
 
+(defn- fiddle-css-renderer [s] [:style {:dangerouslySetInnerHTML {:__html @s}}])
+
 (defn- build-wrapped-render-expr-str [user-str] (str "(fn [val ctx props]\n" user-str ")"))
 
 (def ^:private eval-renderer (memoize (fn [code-str & cache-bust] (eval/eval-expr-str!+ code-str))))
@@ -46,21 +48,25 @@
           (case display-mode
 
             :hypercrud.browser.browser-ui/user
-            (if-let [user-renderer (:user-renderer props)]  ; validate qfind and stuff?
-              [user-renderer value ctx props]
-              (-> @(r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/renderer])
-                  build-wrapped-render-expr-str
-                  (eval-renderer cljs-ns)
-                  (either/branch
-                    (fn [e] (throw e))
-                    (fn [f] [f value ctx props]))))
+            [:<>
+             (if-let [user-renderer (:user-renderer props)] ; validate qfind and stuff?
+               [user-renderer value ctx props]
+               (-> @(r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/renderer])
+                   build-wrapped-render-expr-str
+                   (eval-renderer cljs-ns)
+                   (either/branch
+                     (fn [e] (throw e))
+                     (fn [f] [f value ctx props]))))
+             [fiddle-css-renderer (r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/css])]]
 
             :hypercrud.browser.browser-ui/xray
-            (if-let [user-renderer (:user-renderer props)]
-              ; don't use r/partial with user-renderer, r/partial useful for args, not components
-              ; Select user-renderer is valid in xray mode now
-              [user-renderer value ctx props]
-              [hyperfiddle.ui/fiddle-xray value ctx props])
+            [:<>
+             (if-let [user-renderer (:user-renderer props)]
+               ; don't use r/partial with user-renderer, r/partial useful for args, not components
+               ; Select user-renderer is valid in xray mode now
+               [user-renderer value ctx props]
+               [hyperfiddle.ui/fiddle-xray value ctx props])
+             [fiddle-css-renderer (r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/css])]]
 
             :hypercrud.browser.browser-ui/api
             [hyperfiddle.ui/fiddle-api value ctx props]))))))
@@ -78,8 +84,6 @@
      ; If userland crashes (fiddle/renderer OR cljs-ns), reactions don't take hold, we need to reset here.
      ; Cheaper to pass fiddle-value as a prop than to hash everything
      [fiddle-renderer-cmp value ctx props @(:hypercrud.browser/fiddle ctx)]]))
-
-(defn- fiddle-css-renderer [s] [:style {:dangerouslySetInnerHTML {:__html @s}}])
 
 (defn route-editor [route on-change]
   (let [parse-string (fn [s]
@@ -118,12 +122,10 @@
         [error-comp e (cond-> {:class (css "hyperfiddle-error" (:class props) "ui")}
                         (::on-click ctx) (assoc :on-click (r/partial (::on-click ctx) route)))])
       (fn [ctx]                                             ; fresh clean ctx
-        [:<>
-         [ui-comp ctx (cond-> (update props :class css "ui")
-                        ; @route here is a broken reaction, see routing/route+ returns a severed reaciton
-                        ; use the ctx's route, otherwise alt clicking while loading could take you to the new route, which is jarring
-                        (::on-click ctx) (assoc :on-click (r/partial (::on-click ctx) @(:hypercrud.browser/route ctx))))]
-         [fiddle-css-renderer (r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/css])]])]]))
+        [ui-comp ctx (cond-> (update props :class css "ui")
+                       ; @route here is a broken reaction, see routing/route+ returns a severed reaciton
+                       ; use the ctx's route, otherwise alt clicking while loading could take you to the new route, which is jarring
+                       (::on-click ctx) (assoc :on-click (r/partial (::on-click ctx) @(:hypercrud.browser/route ctx))))])]]))
 
 (defn managed-route-editor-state [display-cmp route {rt :peer :as ctx} {:keys [::relative-child-branch-id] :as props}]
   (let [local-state (r/atom {:initial route :current route})
