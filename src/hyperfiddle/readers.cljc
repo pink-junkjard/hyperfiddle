@@ -1,6 +1,6 @@
 (ns hyperfiddle.readers
   (:require
-    [contrib.datomic :refer [indexed-schema]]
+    [contrib.datomic :refer [->Schema]]
     [contrib.uri :refer [read-URI]]
     #?(:cljs [goog.math])
     [hypercrud.types.DbName :refer [->DbName]]
@@ -13,7 +13,7 @@
 (def dbname #(list `->DbName %))
 (def entity #(list `read-ThinEntity %))
 (def uri #(list `read-URI %))
-(def schema #(list `indexed-schema %))
+(def schema #(list `->Schema %))
 
 (defn read-goog-math-long [s]
   ; #goog.math.Long "65332980922449989"

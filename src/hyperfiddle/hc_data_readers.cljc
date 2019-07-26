@@ -1,7 +1,7 @@
 (ns hyperfiddle.hc_data_readers
   (:require
     #?(:cljs [contrib.uuid :refer [read-uuid]])
-    [contrib.datomic :refer [indexed-schema]]
+    [contrib.datomic :refer [->Schema]]
     [#?(:cljs cljs.reader :clj clojure.tools.reader.default-data-readers)]
     [hyperfiddle.readers]                                   ; important
     [hypercrud.types.DbName :refer [->DbName]]
@@ -20,7 +20,7 @@
    ;'js #?(:cljs cljs.tagged-literals/read-js) ; compiler, not reader ?
    'dbname ->DbName
    'entity read-ThinEntity
-   'schema indexed-schema
+   'schema ->Schema
    'uri read-URI
    'goog.math.Long hyperfiddle.readers/read-goog-math-long
    'hypercrud.types.DbRef.DbRef map->DbRef

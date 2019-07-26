@@ -30,7 +30,7 @@
 
 (def read-handlers
   {
-   "schema" (t/read-handler #(contrib.datomic/indexed-schema (vec %))) ; it's a javascript array wut
+   "schema-v" (t/read-handler #(apply ->Schema %))
    "DbName" (t/read-handler ->DbName)
    "DbRef" (t/read-handler #(apply ->DbRef %))
    "EReq" (t/read-handler #(apply ->EntityRequest %))
@@ -51,7 +51,7 @@
 
 (def write-handlers
   {
-   Schema (t/write-handler (constantly "schema") (fn [^Schema v] (.-schema-pulledtree v)))
+   Schema (t/write-handler (constantly "schema-v") (fn [^Schema v] (vector (.-schema-by-attr v))))
    DbName (t/write-handler (constantly "DbName") (fn [v] (:dbname v)))
    DbRef (t/write-handler (constantly "DbRef") (fn [v] [(:dbname v) (:branch v)]))
    EntityRequest (t/write-handler (constantly "EReq") (fn [v] [(:e v) (:db v) (:pull-exp v)]))

@@ -46,16 +46,21 @@
 (defprotocol SchemaIndexedNormalized
   ; Implement this interface in both peer and Hypercrud client
   (-repr-portable-hack [this])
-  (attr [this a])
-  (attr? [this a corcs])
-  (cardinality [this a])
-  (cardinality? [this a k])
-  (isComponent [this a])                                    ; follows Datomic naming case conventions
-  (valueType [this a])
-  (valueType? [this a k])
-  (ref? [this a])
-  (unique [this a])
-  (unique? [this a k]))
+  (attr [this a]))
+
+(defn attr? [this a corcs]
+  (let [haystack (into #{} (vals (attr this a)))            ; component
+        needles (contrib.data/xorxs corcs #{})]
+    ; haystack must have all the needles
+    (clojure.set/superset? haystack needles)))
+(defn cardinality [this a] (get (attr this a) :db/cardinality))
+(defn cardinality? [this a k] (= k (cardinality this a)))
+(defn isComponent [this a] (get (attr this a) :db/isComponent)) ; follows Datomic naming case conventions
+(defn valueType [this a] (get (attr this a) :db/valueType))
+(defn valueType? [this a k] (= k (valueType this a)))
+(defn ref? [this k] (valueType? this k :db.type/ref))
+(defn unique [this a] (get (attr this a) :db/unique))
+(defn unique? [this a k] (= k (unique this a)))
 
 (defn attr-unreverse [a]
   {:pre [(-> (name a) (subs 0 1) (= "_"))]}
@@ -77,24 +82,9 @@
            :db/valueType :db.type/long
            #_#_:db/unique :db.unique/identity})
 
-(deftype Schema [schema-pulledtree schema-by-attr]
-  #?@(:clj
-      [Object (equals [o other] (and (instance? Schema other) (= (.-schema-pulledtree o) (.-schema-pulledtree other))))
-       IHashEq (hasheq [o] (hash (.-schema-pulledtree o)))
-       ILookup
-       (valAt [this k] (get (.-schema-by-attr this) k))
-       (valAt [this k not-found] (get (.-schema-by-attr this) k not-found))]
-      :cljs
-      [IEquiv (-equiv [o other] (and (instance? Schema other) (= (.-schema-pulledtree o) (.-schema-pulledtree other))))
-       IHash (-hash [o] (hash (.-schema-pulledtree o)))
-       IPrintWithWriter (-pr-writer [o writer _] (-write writer (-repr-portable-hack o)))
-       ILookup
-       (-lookup [o k] (get (.-schema-by-attr o) k))
-       (-lookup [o k not-found] (get (.-schema-by-attr o) k not-found))]))
-
-(extend-protocol SchemaIndexedNormalized
-  Schema
-  (-repr-portable-hack [this] (str "#schema " (pr-str (.-schema-pulledtree this))))
+(deftype Schema [schema-by-attr]
+  SchemaIndexedNormalized
+  (-repr-portable-hack [this] (str "#schema " (pr-str (.-schema-by-attr this))))
   (attr [this a]
     (when a
       (s/assert keyword? a)
@@ -108,38 +98,31 @@
               (contrib.data/update-existing :db/cardinality smart-lookup-ref-no-tempids)
               (contrib.data/update-existing :db/isComponent smart-lookup-ref-no-tempids)
               (contrib.data/update-existing :db/unique smart-lookup-ref-no-tempids))))))
-  (attr? [this a corcs]
-    (let [haystack (into #{} (vals (attr this a)))          ; component
-          needles (contrib.data/xorxs corcs #{})]
-      ; haystack must have all the needles
-      (clojure.set/superset? haystack needles)))
-  (valueType [this a] (get (attr this a) :db/valueType))
-  (cardinality [this a] (get (attr this a) :db/cardinality))
-  (isComponent [this a] (get (attr this a) :db/isComponent))
-  (unique [this a] (get (attr this a) :db/unique))
-  (unique? [this a k] (= k (unique this a)))
-  (valueType? [this a k] (= k (valueType this a)))
-  (cardinality? [this a k] (= k (cardinality this a)))
-  (ref? [this k] (valueType? this k :db.type/ref))
 
+  #?@(:clj
+      [Object (equals [o other] (and (instance? Schema other) (= (.-schema-by-attr o) (.-schema-by-attr other))))
+       IHashEq (hasheq [o] (hash (.-schema-by-attr o)))
+       ILookup
+       (valAt [this k] (get (.-schema-by-attr this) k))
+       (valAt [this k not-found] (get (.-schema-by-attr this) k not-found))]
+      :cljs
+      [IEquiv (-equiv [o other] (and (instance? Schema other) (= (.-schema-by-attr o) (.-schema-by-attr other))))
+       IHash (-hash [o] (hash (.-schema-by-attr o)))
+       IPrintWithWriter (-pr-writer [o writer _] (-write writer (-repr-portable-hack o)))
+       ILookup
+       (-lookup [o k] (get (.-schema-by-attr o) k))
+       (-lookup [o k not-found] (get (.-schema-by-attr o) k not-found))]))
+
+; this has to be a hack, when ever are we asking questions about a schema that does not exist
+(extend-protocol SchemaIndexedNormalized
   nil
   (-repr-portable-hack [this] (str "#schema " (pr-str nil)))
-  (attr [this a] nil)
-  (attr? [this a corcs] false)
-  (valueType [this a] nil)
-  (cardinality [this a] nil)
-  (isComponent [this a] nil)
-  (unique [this a] nil)
-  (unique? [this a k] nil)
-  (valueType? [this a k] nil)
-  (cardinality? [this a k] nil)
-  (ref? [this k] nil))
+  (attr [this a] nil))
 
 #?(:clj (defmethod print-method Schema [o ^java.io.Writer w] (.write w (-repr-portable-hack o))))
 #?(:clj (defmethod print-dup Schema [o w] (print-method o w)))
 
-(defn indexed-schema [schema-pulledtree]
-  (Schema. schema-pulledtree (contrib.data/group-by-unique :db/ident schema-pulledtree)))
+(defn indexed-schema [schema-pulledtree] (->Schema (contrib.data/group-by-unique :db/ident schema-pulledtree)))
 
 (declare pull-shape)
 
