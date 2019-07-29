@@ -46,35 +46,43 @@
       on-change (fn [os-ref n]                              ; letfn not working #470
                   (swap! os-ref assoc :value n)
                   n)]
-  (defn debounced [props comp & args]
-    (let [os-ref (r/atom {:value (:value props)
-                          :old-values [(:value props)]})]
-      (reagent/create-class
-        {:reagent-render
-         (fn [props comp & args]
-           (let [props (-> (if-some [value @(r/cursor os-ref [:value])]
-                             (assoc props :value value)
-                             (dissoc props :value))
-                           (dissoc :debounce/interval)
-                           (update :on-change (fn [f]
-                                                (let [f (debounce (r/partial debounced-adapter os-ref f)
-                                                                  (or (:debounce/interval props) default-debounce-ms))]
-                                                  (r/comp f (r/partial on-change os-ref))))))]
-             (into [comp props] args)))
-         :component-did-update
-         (fn [this]
-           (let [[_ props comp & args] (reagent/argv this)
-                 b (:value props)
-                 {os :old-values a :value} @os-ref]
-             (let [[discards rest] (split-with #(not= % b) os)]
-               (if (empty? rest)
-                 (do
-                   (when (< 1 (count discards))
-                     ; this is either not a big deal, e.g. default values have been applied
-                     ; or multiple users are editing the same value and changes are probably being lost
-                     (timbre/warn "Potential conflicting concurrent edits detected, discarding local state" {:a a :b b :os os}))
-                   (reset! os-ref {:old-values [b] :value b}))
-                 (swap! os-ref assoc :old-values (vec rest))))))}))))
+  (def ^:private debounced-impl
+    (reagent/create-class
+      {:reagent-render
+       (fn [os-ref props comp & args]
+         (let [props (-> (if-some [value @(r/cursor os-ref [:value])]
+                           (assoc props :value value)
+                           (dissoc props :value))
+                         (dissoc :debounce/interval)
+                         (update :on-change (fn [f]
+                                              (let [f (debounce (r/partial debounced-adapter os-ref f)
+                                                                (or (:debounce/interval props) default-debounce-ms))]
+                                                (r/comp f (r/partial on-change os-ref))))))]
+           (into [comp props] args)))
+       :component-did-update
+       (fn [this]
+         (let [[_ os-ref props comp & args] (reagent/argv this)
+               b (:value props)
+               {os :old-values a :value} @os-ref]
+           (let [[discards rest] (split-with #(not= % b) os)]
+             (if (empty? rest)
+               (do
+                 (when (< 1 (count discards))
+                   ; this is either not a big deal, e.g. default values have been applied
+                   ; or multiple users are editing the same value and changes are probably being lost
+                   (timbre/warn "Potential conflicting concurrent edits detected, discarding local state" {:a a :b b :os os}))
+                 (reset! os-ref {:old-values [b] :value b}))
+               (swap! os-ref assoc :old-values (vec rest))))))})))
+
+(defn debounced [props comp & args]
+  (let [os-ref (r/atom {:value (:value props)
+                        :old-values [(:value props)]})]
+    (fn [props comp & args]
+      (into [debounced-impl os-ref props comp] args))))
+
+(defn- validated-cmp-initial-state-val [to-string props]
+  {:s-value (to-string (:value props))
+   :last-valid-value (:value props)})
 
 (let [on-change (fn [f state parse-string new-s-value]
                   (swap! state assoc :s-value new-s-value)
@@ -84,32 +92,33 @@
                            new-value))
                        (cats/fmap f))
                   nil)
-      initial-state-val (fn [to-string props]
-                          {:s-value (to-string (:value props))
-                           :last-valid-value (:value props)})
       on-blur (fn [state f e]
                 (f (:last-valid-value @state)))]
-  (defn validated-cmp [props parse-string to-string cmp & args]
-    (let [state (r/atom (initial-state-val to-string props))]
-      (reagent/create-class
-        {:reagent-render
-         (fn [props parse-string to-string cmp & args]
-           (let [s-value @(r/cursor state [:s-value])
-                 props (-> (assoc props :value s-value)
-                           (assoc :is-invalid (or (try (parse-string s-value) false (catch :default e true))
-                                                  (:is-invalid props)))
-                           (update-existing :on-blur (fn [f]
-                                                       (r/partial on-blur state f)))
-                           (update :on-change (fn [f]
-                                                (r/partial on-change f state parse-string)))
-                           (dissoc :magic-new-mode))]
-             (into [cmp props] args)))
-         :component-did-update
-         (fn [this]
-           (let [[_ props parse-string to-string cmp & args] (reagent/argv this)]
-             (when-not (:magic-new-mode props)              ; https://github.com/hyperfiddle/hyperfiddle/issues/586
-               (when-not (= (:last-valid-value @state) (:value props))
-                 (reset! state (initial-state-val to-string props))))))}))))
+  (def ^:private validated-cmp-impl
+    (reagent/create-class
+      {:reagent-render
+       (fn [state props parse-string to-string cmp & args]
+         (let [s-value @(r/cursor state [:s-value])
+               props (-> (assoc props :value s-value)
+                         (assoc :is-invalid (or (try (parse-string s-value) false (catch :default e true))
+                                                (:is-invalid props)))
+                         (update-existing :on-blur (fn [f]
+                                                     (r/partial on-blur state f)))
+                         (update :on-change (fn [f]
+                                              (r/partial on-change f state parse-string)))
+                         (dissoc :magic-new-mode))]
+           (into [cmp props] args)))
+       :component-did-update
+       (fn [this]
+         (let [[_ state props parse-string to-string cmp & args] (reagent/argv this)]
+           (when-not (:magic-new-mode props)                ; https://github.com/hyperfiddle/hyperfiddle/issues/586
+             (when-not (= (:last-valid-value @state) (:value props))
+               (reset! state (validated-cmp-initial-state-val to-string props))))))})))
+
+(defn validated-cmp [props parse-string to-string cmp & args]
+  (let [state (r/atom (validated-cmp-initial-state-val to-string props))]
+    (fn [props parse-string to-string cmp & args]
+      (into [validated-cmp-impl state props parse-string to-string cmp] args))))
 
 (let [target-value (fn [e] (.. e -target -value))]          ; letfn not working #470
   (defn textarea [props]
