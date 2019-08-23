@@ -11,8 +11,8 @@
 
 (deftype IOImpl [domain jwt ?subject]
   io/IO
-  (hydrate-route [io local-basis route branch stage]
-    (hydrate-route domain local-basis route branch stage ?subject))
+  (hydrate-route [io local-basis route pid partitions]
+    (hydrate-route domain local-basis route pid partitions ?subject))
 
   (sync [io dbnames]
     (p/do* (sync domain dbnames))))

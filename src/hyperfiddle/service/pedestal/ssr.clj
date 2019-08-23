@@ -23,11 +23,11 @@
   (local-basis [io global-basis route]
     (p/resolved (local-basis/local-basis io global-basis route)))
 
-  (hydrate-requests [io local-basis staged-branches requests]
-    (p/do* (hydrate-requests domain local-basis requests staged-branches nil)))
+  (hydrate-requests [io local-basis partitions requests]
+    (p/do* (hydrate-requests domain local-basis requests partitions ?subject)))
 
-  (hydrate-route [io local-basis route branch-id stage]
-    (hydrate-route domain local-basis route branch-id stage ?subject))
+  (hydrate-route [io local-basis route pid partitions]
+    (hydrate-route domain local-basis route pid partitions ?subject))
 
   (sync [io dbnames]
     (p/do* (sync/sync domain dbnames))))

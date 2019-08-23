@@ -62,7 +62,7 @@
       (timbre/error e)
       (p/resolved (e->platform-response e)))))
 
-(defn hydrate-route-handler [->IO & {:keys [domain route-params user-id jwt] stage :request-body}]
+(defn hydrate-route-handler [->IO & {:keys [domain route-params user-id jwt] partitions :request-body}]
   (try
     (let [io (->IO domain jwt user-id)
           local-basis (ednish/decode-uri (:local-basis route-params)) ; todo this decoding can throw
@@ -73,8 +73,9 @@
               (route/validate-route+ route)
               (fn [e] (throw (ex-info "Invalid encoded-route" {:route route :hyperfiddle.io/http-status-code 400} e)))
               (constantly nil))
-          branch (-> (:branch route-params) base-64-url-safe/decode read-edn-string!)]
-      (-> (->> (mapcat second stage)
+          pid (-> (:partition-id route-params) base-64-url-safe/decode read-edn-string!)]
+      (-> (->> (vals partitions)
+               (mapcat :stage)
                (remove (comp empty? second))
                (map first)
                (filter #(domain/database domain %))         ; only sync declared dbnames
@@ -82,9 +83,9 @@
                (io/sync io))
           (p/then (fn [sync-results]
                     (let [local-basis (reduce-kv assoc (into {} local-basis) sync-results)]
-                      (io/hydrate-route io local-basis route branch stage))))
+                      (io/hydrate-route io local-basis route pid partitions))))
           (p/then (fn [data]
-                    (let [cache-control (if (some seq (vals stage))
+                    (let [cache-control (if true #_(some seq (vals stage)) ; todo
                                           "max-age=0"
                                           "max-age=31536000")]
                       {:status 200

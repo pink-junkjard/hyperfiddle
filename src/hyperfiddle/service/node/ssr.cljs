@@ -18,11 +18,11 @@
   (local-basis [io global-basis route]
     (p/resolved (local-basis/local-basis io global-basis route)))
 
-  (hydrate-requests [io local-basis staged-branches requests]
-    (http-client/hydrate-requests! domain service-uri local-basis staged-branches requests ?jwt))
+  (hydrate-requests [io local-basis partitions requests]
+    (http-client/hydrate-requests! domain service-uri local-basis partitions requests ?jwt))
 
-  (hydrate-route [io local-basis route branch-id stage]
-    (http-client/hydrate-route! domain service-uri local-basis route branch-id stage ?jwt))
+  (hydrate-route [io local-basis route pid partitions]
+    (http-client/hydrate-route! domain service-uri local-basis route pid partitions ?jwt))
 
   (sync [io dbnames]
     (http-client/sync! domain service-uri dbnames ?jwt)))

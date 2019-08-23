@@ -26,10 +26,10 @@
   (try
     (let [{:keys [body-params domain route-params]} req
           local-basis (ednish/decode-uri (:local-basis route-params))
-          {staged-branches :staged-branches requests :request} body-params
+          {partitions :partitions requests :request} body-params
           r (perf/time
-              (fn [total-time] (timbre/debugf "hydrate-requests: count %s, has stage? %s, total time: %sms" (count requests) (not (empty? staged-branches)) total-time))
-              (hydrate-requests domain local-basis requests staged-branches (:user-id req)))]
+              (fn [total-time] (timbre/debugf "hydrate-requests: count %s, total time: %sms" (count requests) total-time))
+              (hydrate-requests domain local-basis requests partitions (:user-id req)))]
       (ring-resp/response r))
     (catch Exception e
       (timbre/error e)
