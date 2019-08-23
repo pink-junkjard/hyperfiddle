@@ -7,7 +7,7 @@
     [hypercrud.browser.context :as context]
     [hyperfiddle.runtime :as runtime]
     [hyperfiddle.ui :refer [field markdown]]
-    [hyperfiddle.ui.util :refer [entity-change->tx with-tx!]]))
+    [hyperfiddle.ui.util :refer [entity-change->tx]]))
 
 
 (def special-attrs #{:db/ident :db/cardinality :db/valueType})
@@ -23,10 +23,10 @@
           entity
           tx))
 
-(defn valueType-and-cardinality-with-tx! [special-attrs-state ctx tx]
+(defn valueType-and-cardinality-with-tx! [special-attrs-state {rt :runtime pid :partition-id :as ctx} tx]
   (let [entity @(:hypercrud.browser/result ctx)             ; the whole form, not the data
         dbname (context/dbname ctx)
-        schema @@(runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :schemas dbname])
+        schema @(runtime/get-schema+ rt pid dbname)
         new-entity (merge-in-tx entity tx ctx)]
     (case [(completed? entity) (completed? new-entity)]
       [false false]
@@ -34,36 +34,36 @@
 
       [false true]
       (do
-        (with-tx! ctx (tx/into-tx schema @special-attrs-state tx))
+        (runtime/with-tx rt pid (context/dbname ctx) (tx/into-tx schema @special-attrs-state tx))
         (reset! special-attrs-state nil))
 
       [true false]
       ; todo this case WILL throw (going from a valid tx to invalid)
-      (with-tx! ctx tx)
+      (runtime/with-tx rt pid (context/dbname ctx) tx)
 
       [true true]
-      (with-tx! ctx tx))))
+      (runtime/with-tx rt pid (context/dbname ctx) tx))))
 
-(defn ident-with-tx! [special-attrs-state ctx tx]
+(defn ident-with-tx! [special-attrs-state {rt :runtime pid :partition-id :as ctx} tx]
   (let [entity (context/data (context/unwind ctx 1))        ; ctx is focused to :db/ident
         dbname (context/dbname ctx)
-        schema @@(runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :schemas dbname])
+        schema @(runtime/get-schema+ rt pid dbname)
         new-entity (merge-in-tx entity tx ctx)]
     (case [(completed? entity) (completed? new-entity)]
       [false false]
-      (with-tx! ctx tx)
+      (runtime/with-tx rt pid (context/dbname ctx) tx)
 
       [false true]
       (do
-        (with-tx! ctx (tx/into-tx schema @special-attrs-state tx))
+        (runtime/with-tx rt pid (context/dbname ctx) (tx/into-tx schema @special-attrs-state tx))
         (reset! special-attrs-state nil))
 
       [true false]
       ; todo this case WILL throw (going from a valid tx to invalid)
-      (with-tx! ctx tx)
+      (runtime/with-tx rt pid (context/dbname ctx) tx)
 
       [true true]
-      (with-tx! ctx tx))))
+      (runtime/with-tx rt pid (context/dbname ctx) tx))))
 
 (defn renderer [val ctx props]
   (let [special-attrs-state (r/atom nil)

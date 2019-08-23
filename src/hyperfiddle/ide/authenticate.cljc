@@ -46,9 +46,9 @@
                     (p/do* (verify encoded-id-token)))
          basis (io/sync io #{"$users"})
          user-record (->> (map->EntityRequest {:e [:user/sub (:sub id-token)]
-                                               :db (->DbRef "$users" foundation/root-branch)
+                                               :db (->DbRef "$users" foundation/root-pid)
                                                :pull-exp [:db/id :user/user-id :user/created-date]})
-                          (io/hydrate-one! io basis nil))
+                          (io/hydrate-one! io basis {foundation/root-pid {:is-branched true}}))
          :let [user-id (:user/user-id user-record #?(:clj (UUID/randomUUID) :cljs (random-uuid)))
                now #?(:clj (Date.) :cljs (js/Date.))]
          _ (io/transact! io {"$users" [(cond-> {:user/name (:nickname id-token)

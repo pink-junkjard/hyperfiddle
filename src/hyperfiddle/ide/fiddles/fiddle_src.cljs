@@ -26,7 +26,7 @@
     props))
 
 (defn schema-links [ctx]
-  (->> (runtime/domain (:peer ctx)) ::ide-domain/user-dbname->ide keys sort
+  (->> (runtime/domain (:runtime ctx)) ::ide-domain/user-dbname->ide keys sort
        (map (fn [user-dbname]
               (let [props {:route {::route/fiddle (keyword "hyperfiddle.ide.schema" user-dbname)}
                            #_#_:target "_blank"}]
@@ -80,7 +80,7 @@
    (fn [ctx]
      (let [ctx (assoc-if ctx ::record (if-not (:hypercrud.browser/head-sentinel ctx)
                                         ; todo shouldn't this be a meta-ctx? all these arguments look extremely suspect
-                                        (-> (fiddle/auto-link+ @(runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :schemas])
+                                        (-> (fiddle/auto-link+ (runtime/get-schemas (:runtime ctx) (:partition-id ctx))
                                                                (:qin @(:hypercrud.browser/qparsed ctx))
                                                                (context/data ctx))
                                             ; just throw, unlikely we can ever get this far if there was an issue

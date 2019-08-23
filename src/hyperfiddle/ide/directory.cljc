@@ -55,9 +55,9 @@
         :ide-home-route home-route))))
 
 (defn- hydrate-ide-domain [?datomic-client io local-basis app-domain-ident]
-  (let [requests [(->EntityRequest [:domain/ident "hyperfiddle"] (->DbRef "$domains" foundation/root-branch) directory/domain-pull)
-                  (->EntityRequest [:domain/ident app-domain-ident] (->DbRef "$domains" foundation/root-branch) directory/domain-pull)]]
-    (-> (io/hydrate-all-or-nothing! io local-basis nil requests)
+  (let [requests [(->EntityRequest [:domain/ident "hyperfiddle"] (->DbRef "$domains" foundation/root-pid) directory/domain-pull)
+                  (->EntityRequest [:domain/ident app-domain-ident] (->DbRef "$domains" foundation/root-pid) directory/domain-pull)]]
+    (-> (io/hydrate-all-or-nothing! io local-basis {foundation/root-pid {:is-branched true}} requests)
         (p/then (fn [[ide-domain user-domain]]
                   (cond
                     (nil? (:db/id ide-domain)) (p/rejected (ex-info "IDE misconfigured; ide domain not found" {:hyperfiddle.io/http-status-code 500}))

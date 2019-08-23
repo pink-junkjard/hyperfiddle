@@ -7,13 +7,15 @@
     [hyperfiddle.ide.domain :as ide-domain]
     [hyperfiddle.ide.fiddles.fiddle-src :as fiddle-src]
     [hyperfiddle.ide.fiddles.topnav :as topnav]
-    [hyperfiddle.ide.preview.runtime :refer [->Runtime]]
+    [hyperfiddle.ide.preview.runtime :as preview-rt :refer [->Runtime]]
     [hyperfiddle.ide.preview.state :refer [->FAtom]]
     [hyperfiddle.ide.preview.view :as preview]
     [hyperfiddle.ide.ui.route-editor :as route-editor]
     [hyperfiddle.io.browser :refer [->IOImpl]]
     [hyperfiddle.route :as route]
     [hyperfiddle.runtime :as runtime]
+    [hyperfiddle.state :as state]
+    [hyperfiddle.ui :as ui]
     [hyperfiddle.ui.error :as ui-error]
     [hyperfiddle.ui.staging :as staging]
     [re-com.core :as re-com]))
@@ -41,14 +43,13 @@
     [route-editor/form-editor rt branch]))
 
 (defn view [_ ctx props]
-  (let [preview-branch (preview/build-user-branch-id (:branch ctx))
-        preview-rt (-> (runtime/domain (:peer ctx)) ::ide-domain/user-domain+
+  (let [preview-rt (-> (runtime/domain (:runtime ctx)) ::ide-domain/user-domain+
                        (either/branch
                          (constantly nil)
                          (fn [user-domain]
-                           (let [preview-state (->FAtom (runtime/state (:peer ctx)) preview/to (r/partial preview/from (runtime/domain (:peer ctx)) (:branch ctx)))
+                           (let [preview-state (->FAtom (state/state (:runtime ctx)) preview/to (r/partial preview/from (runtime/domain (:runtime ctx)) (:partition-id ctx)))
                                  user-io (->IOImpl user-domain)]
-                             (->Runtime (:peer ctx) preview-branch user-domain user-io preview-state)))))
+                             (->Runtime (:runtime ctx) preview-rt/preview-pid user-domain user-io preview-state)))))
         preview-state (r/atom {:initial-render true
                                :is-refreshing true
                                :is-hovering-refresh-button false
@@ -57,7 +58,7 @@
                                :show-route-editor false
                                ; specifically deref and re-wrap this ref on mount because we are tracking deviation from this value
                                :staleness (when preview-rt
-                                            (preview/ide-branch-reference preview-rt (:branch ctx)))})
+                                            (preview/ide-partition-reference preview-rt (:partition-id ctx)))})
         ; fiddle-src
         initial-tab (-> @(:hypercrud.browser/route ctx) ::route/fragment hyperfiddle.ide/parse-ide-fragment)
         ;:initial-tab @(contrib.reactive/fmap-> (:hypercrud.browser/route ctx) (get 3) hyperfiddle.ide/parse-ide-fragment)
@@ -66,25 +67,25 @@
                             :hf/query))]
     (fn [_ ctx props]
       [:<>
-       (let [ctx (hyperfiddle.data/browse ctx :hyperfiddle/topnav)]
-         [topnav/renderer _ ctx
-          {:class (hyperfiddle.ui.iframe/auto-ui-css-class ctx)}
-          [:<>
-           [:span (topnav/route->fiddle-label (runtime/get-route preview-rt preview-branch))]
-           #_[route-editor-button preview-rt preview-branch preview-state]
-           (-> (runtime/domain (:peer ctx)) ::ide-domain/user-domain+
-               (either/branch
-                 (fn [e]
-                   ; todo why does an error hide the toolbar
-                   nil)
-                 (fn [user-domain]
-                   ; todo build the preview-rt here
-                   [preview/preview-toolbar preview-rt (:branch ctx) preview-branch preview-state])))]
-          [fiddle-src/fiddle-src-tabs tab-state]])
+       [ui/browse :hyperfiddle/topnav ctx nil
+        {::topnav/left-child
+         [:<>
+          [:span (topnav/route->fiddle-label (runtime/get-route preview-rt preview-rt/preview-pid))]
+          #_[route-editor-button preview-rt preview-branch preview-state]
+          (-> (runtime/domain (:runtime ctx)) ::ide-domain/user-domain+
+              (either/branch
+                (fn [e]
+                  ; todo why does an error hide the toolbar
+                  nil)
+                (fn [user-domain]
+                  ; todo build the preview-rt here
+                  [preview/preview-toolbar preview-rt (:partition-id ctx) preview-rt/preview-pid preview-state])))]
+
+         ::topnav/right-child [fiddle-src/fiddle-src-tabs tab-state]}]
 
        [:div (select-keys props [:class])
         [:div {:class "-hyperfiddle-ide-preview"}
-         (-> (runtime/domain (:peer ctx)) ::ide-domain/user-domain+
+         (-> (runtime/domain (:runtime ctx)) ::ide-domain/user-domain+
              (either/branch
                (fn [e]
                  [:<>
@@ -94,14 +95,14 @@
                  ; todo build the preview-rt here
                  (let [preview-ctx (map->Context
                                      {:ident nil
-                                      :peer preview-rt
-                                      :branch preview-branch
+                                      :runtime preview-rt
+                                      :partition-id preview-rt/preview-pid
                                       :hyperfiddle.ui/debug-tooltips true
                                       :hyperfiddle.ui/display-mode (r/cursor preview-state [:display-mode])
                                       :hyperfiddle.ui.iframe/on-click (r/partial preview/frame-on-click preview-rt)})]
                    [:<>
                     #_[route-editor preview-rt preview-branch (r/cursor preview-state [:show-route-editor])]
-                    [preview/preview-effects preview-ctx (:branch ctx) preview-state]
+                    [preview/preview-effects preview-ctx (:partition-id ctx) preview-state]
                     [staging/inline-stage preview-ctx]]))))]
 
         [:div.fiddle-editor-col

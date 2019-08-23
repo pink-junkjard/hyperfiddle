@@ -26,9 +26,9 @@
     (fn [& {:keys [domain service-uri]}]
       ; todo configure on domain
       (let [io (reify io/IO
-                 (hydrate-requests [io local-basis staged-branches requests]
+                 (hydrate-requests [io local-basis partitions requests]
                    ; todo who is this executed on behalf of? system/root or the end user?
-                   (http-client/hydrate-requests! domain service-uri local-basis staged-branches requests))
+                   (http-client/hydrate-requests! domain service-uri local-basis partitions requests))
 
                  (sync [io dbnames]
                    ; todo who is this executed on behalf of? system/root or the end user?

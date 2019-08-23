@@ -28,9 +28,9 @@
 
 (def-data-route :hyperfiddle.ide/auth0-redirect [handler env req]
   (let [io (reify io/IO
-             (hydrate-requests [io local-basis staged-branches requests]
+             (hydrate-requests [io local-basis partitions requests]
                ; todo who is this executed on behalf of? system/root or the end user?
-               (p/do* (hydrate-requests (:domain req) local-basis requests staged-branches nil)))
+               (p/do* (hydrate-requests (:domain req) local-basis requests partitions nil)))
 
              (sync [io dbnames]
                ; todo who is this executed on behalf of? system/root or the end user?

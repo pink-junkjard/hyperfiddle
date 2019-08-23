@@ -1,4 +1,6 @@
-(ns hyperfiddle.ide.fiddles.schema-editor)
+(ns hyperfiddle.ide.fiddles.schema-editor
+  (:require
+    [hyperfiddle.runtime :as runtime]))
 
 
 (defn renderer' [_ ctx props]
@@ -6,7 +8,7 @@
                                             :hide-archived false
                                             :needle nil})
         is-edn (contrib.reactive/atom false)]
-    (fn [_ {:keys [:hypercrud.browser/route :hyperfiddle.ui/-set-route] :as ctx} props]
+    (fn [_ {:keys [:hypercrud.browser/route] :as ctx} props]
       [:<>
        (let [{:keys [hide-datomic hide-archived needle]} @route-state
              swap-route-state! (fn [k f]
@@ -19,13 +21,13 @@
                                                     hide-datomic (cons '[(> ?attr 62)])
                                                     (seq needle) (cons [(list 'clojure.string/includes? '?ident needle)]))
                                                   vec)]
-                                   (-> (if (seq where)
-                                         (assoc @route :hyperfiddle.route/where where)
-                                         (dissoc @route :hyperfiddle.route/where))
-                                       -set-route)))]
+                                   (->> (if (seq where)
+                                          (assoc @route :hyperfiddle.route/where where)
+                                          (dissoc @route :hyperfiddle.route/where))
+                                        (runtime/set-route (:runtime ctx) (:partition-id ctx)))))]
          [:div.container-fluid.-hyperfiddle-ide-schema-editor props
           [:h3 (str "Datomic schema for " (let [ide-dbname (-> @(:hypercrud.browser/route ctx) :hyperfiddle.route/fiddle name (subs (count "editor")))]
-                                            (-> (hyperfiddle.runtime/domain (:peer ctx))
+                                            (-> (hyperfiddle.runtime/domain (:runtime ctx))
                                                 :hyperfiddle.ide.domain/user-dbname->ide
                                                 clojure.set/map-invert
                                                 (get ide-dbname))))]
@@ -60,5 +62,5 @@
 
 (defn renderer [& [_ ctx :as args]]
   (if (= "nodejs" *target*)
-    (hyperfiddle.ui.loading/page (hyperfiddle.runtime/domain (:peer ctx)))
+    (hyperfiddle.ui.loading/page (hyperfiddle.runtime/domain (:runtime ctx)))
     (into [renderer'] args)))

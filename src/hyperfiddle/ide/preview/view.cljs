@@ -7,18 +7,17 @@
     [contrib.local-storage :as local-storage]
     [contrib.reactive :as r]
     [contrib.ui]
-    [hyperfiddle.actions :as actions]
-    [hyperfiddle.branch :as branch]
     [hyperfiddle.domain :as domain]
     [hyperfiddle.foundation :as foundation]
     [hyperfiddle.ide.domain :as ide-domain]
+    [hyperfiddle.ide.preview.runtime :as preview-rt]
     [hyperfiddle.ide.routing :as ide-routing]
     [hyperfiddle.io.basis :as basis]
     [hyperfiddle.local-storage-sync :refer [map->LocalStorageSync]]
     [hyperfiddle.project :as project]
-    [hyperfiddle.reducers :as reducers]
     [hyperfiddle.route :as route]
     [hyperfiddle.runtime :as runtime]
+    [hyperfiddle.state :as state]
     [hyperfiddle.ui.error :as error]
     [hyperfiddle.ui.iframe :as iframe]
     [hyperfiddle.ui.loading :as loading]
@@ -39,50 +38,48 @@
         (.stopPropagation event)
         (js/window.open (domain/url-encode (runtime/domain rt) route) "_blank")))))
 
-(defn build-user-branch-id [ide-branch] (branch/child-branch-id ide-branch "user"))
-
-(defn ide-branch-reference [rt ide-branch]
-  (-> @(runtime/state rt [::runtime/partitions ide-branch])
-      (select-keys [:stage :local-basis])))
+(defn ide-partition-reference [rt ide-pid]
+  @(r/fmap-> (r/cursor (state/state rt) [::runtime/partitions ide-pid])
+             (select-keys [:stage :local-basis])))
 
 (defn stale-global-basis? [rt]
-  (= -1 (basis/compare-uri-maps @(runtime/state rt [::runtime/global-basis :user])
-                                @(runtime/state rt [::ide-user-global-basis]))))
+  (= -1 (basis/compare-uri-maps (:user (runtime/get-global-basis rt))
+                                @(r/cursor (state/state rt) [::ide-user-global-basis]))))
 
-(defn stale-local-basis? [rt user-branch ide-branch]
+(defn stale-local-basis? [rt preview-pid ide-pid]
   (= -1 (basis/compare-uri-maps
-          @(runtime/state rt [::runtime/partitions user-branch :local-basis])
-          @(runtime/state rt [::runtime/partitions ide-branch :local-basis]))))
+          (runtime/get-local-basis rt preview-pid)
+          (runtime/get-local-basis rt ide-pid))))
 
-(defn preview-stale? [preview-rt ide-branch preview-branch preview-state]
+(defn preview-stale? [preview-rt ide-pid preview-pid preview-state]
   #_(println (pr-str {:initial-render @(r/cursor preview-state [:initial-render])
-                      :staleness-not= (not= @(r/cursor preview-state [:staleness]) (ide-branch-reference rt ide-branch))
+                      :staleness-not= (not= @(r/cursor preview-state [:staleness]) (ide-partition-reference rt ide-pid))
                       :stale-gb? (stale-global-basis?)
                       :stale-lb (stale-local-basis?)}))
   (and (not @(r/cursor preview-state [:initial-render]))
-       (or (not= @(r/cursor preview-state [:staleness]) (ide-branch-reference preview-rt ide-branch))
+       (or (not= @(r/cursor preview-state [:staleness]) (ide-partition-reference preview-rt ide-pid))
            (stale-global-basis? preview-rt)
-           (stale-local-basis? preview-rt preview-branch ide-branch))))
+           (stale-local-basis? preview-rt preview-pid ide-pid))))
 
-(defn refresh! [preview-rt ide-branch preview-branch preview-state]
+(defn refresh! [preview-rt ide-pid preview-pid preview-state]
   (when-not (or @(r/cursor preview-state [:is-refreshing])
                 @(r/cursor preview-state [:initial-render]))
     (let [init-level (cond
-                       (stale-global-basis? preview-rt) actions/LEVEL-NONE
-                       (stale-local-basis? preview-rt preview-branch ide-branch) actions/LEVEL-GLOBAL-BASIS
-                       :else actions/LEVEL-LOCAL-BASIS)]
+                       (stale-global-basis? preview-rt) runtime/LEVEL-NONE
+                       (stale-local-basis? preview-rt preview-pid ide-pid) runtime/LEVEL-GLOBAL-BASIS
+                       :else runtime/LEVEL-LOCAL-BASIS)]
       (swap! preview-state assoc
-             :staleness (ide-branch-reference preview-rt ide-branch)
+             :staleness (ide-partition-reference preview-rt ide-pid)
              :is-refreshing true)
-      (-> (actions/bootstrap-data preview-rt preview-branch init-level)
+      (-> (runtime/bootstrap-data preview-rt preview-pid init-level)
           (p/finally (fn [] (swap! preview-state assoc :is-refreshing false)))))))
 
-(defn preview-toolbar [preview-rt ide-branch preview-branch preview-state]
-  (let [stale @(r/track preview-stale? preview-rt ide-branch preview-branch preview-state)]
+(defn preview-toolbar [preview-rt ide-pid preview-pid preview-state]
+  (let [stale @(r/track preview-stale? preview-rt ide-pid preview-pid preview-state)]
     [:span.preview-toolbar (when stale {:class "hyperfiddle-preview-stale"})
      ; todo animation
      (let [is-hovering-refresh-button (r/cursor preview-state [:is-hovering-refresh-button])]
-       [:button {:class "refresh" :on-click #(refresh! preview-rt ide-branch preview-branch preview-state)
+       [:button {:class "refresh" :on-click #(refresh! preview-rt ide-pid preview-pid preview-state)
                  :disabled @(r/cursor preview-state [:is-refreshing])
                  :on-mouse-over #(do (reset! is-hovering-refresh-button true) nil)
                  :on-mouse-out #(do (reset! is-hovering-refresh-button false) nil)}
@@ -101,52 +98,47 @@
                           :checked (= (:value props) @(r/cursor preview-state [:display-mode]))
                           :on-change #(swap! preview-state assoc :display-mode %))]))))]))
 
-(defn preview-content [ctx ide-branch preview-state]
+(defn preview-content [{rt :runtime pid :partition-id :as ctx} ide-pid preview-state]
   (if @(r/cursor preview-state [:initial-render])
-    [loading/page (runtime/domain (:peer ctx))]
-    (let [code+ (project/eval-domain-code!+ @(runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :project :project/code]))
-          is-stale @(r/track preview-stale? (:peer ctx) ide-branch (:branch ctx) preview-state)]
+    [loading/page (runtime/domain rt)]
+    (let [code+ (project/eval-domain-code!+ (:project/code (runtime/get-project (:runtime ctx) (:partition-id ctx))))
+          is-stale @(r/track preview-stale? rt ide-pid pid preview-state)]
       [:<>
        (when (either/left? code+)
          (let [e @code+]
            (timbre/error e)
-           (let [href (domain/url-encode (runtime/domain (:peer ctx)) {::route/fiddle :hyperfiddle.ide/env})
+           (let [href (domain/url-encode (runtime/domain rt) {::route/fiddle :hyperfiddle.ide/env})
                  message (or (some-> (ex-cause e) ex-message) (ex-message e))]
              [:h6 {:style {:text-align "center" :background-color "lightpink" :margin 0 :padding "0.5em 0"}}
               "Exception evaluating " [:a {:href href} [:code ":domain/code"]] ": " message])))
-       (if-let [e (some-> @(runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :error]))]
+       (if-let [e (some-> (runtime/get-error rt pid))]
          [error/error-block e]
          [:div#root (merge {}
                            (when is-stale {:class "hyperfiddle-preview-stale"})
                            (when @(r/cursor preview-state [:alt-key-pressed]) {:style {:cursor "pointer"}}))
-          [:style {:dangerouslySetInnerHTML {:__html @(runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :project :project/css])}}]
+          [:style {:dangerouslySetInnerHTML {:__html (:project/css (runtime/get-project (:runtime ctx) (:partition-id ctx)))}}]
           ^{:key "user-iframe"}
-          [iframe/iframe-cmp-impl
-           (runtime/get-route (:peer ctx) (:branch ctx))
-           (r/partial runtime/set-route (:peer ctx) (:branch ctx))
-           ctx
+          [iframe/iframe-cmp ctx
            {:class (some-> @(r/cursor preview-state [:display-mode]) name (->> (str "display-mode-")))}]])])))
 
 (defn- ctx->ls [ctx]
-  (atom (map->LocalStorageSync {:rt (:peer ctx) :branch-id (:branch ctx) :ls-key :USER-STATE})))
+  (atom (map->LocalStorageSync {:rt (:runtime ctx) :pid (:partition-id ctx) :ls-key :USER-STATE})))
 
 (def preview-effects
   (reagent/create-class
     {:reagent-render
-     (fn [ctx ide-branch preview-state]
-       [preview-content ctx ide-branch preview-state])
+     (fn [ctx ide-pid preview-state]
+       [preview-content ctx ide-pid preview-state])
 
      :component-did-mount
      (fn [this]
-       (let [[_ ctx ide-branch preview-state] (reagent/argv this)
-             user-branch (:branch ctx)
-             rt (:peer ctx)]
+       (let [[_ {rt :runtime preview-pid :partition-id :as ctx} ide-pid preview-state] (reagent/argv this)]
          (.register-many keypress (clj->js [{"keys" "alt"
                                              "prevent_repeat" true
                                              "on_keydown" #(swap! preview-state assoc :alt-key-pressed true)
                                              "on_keyup" #(swap! preview-state assoc :alt-key-pressed false)}
                                             {"keys" "alt enter"
-                                             "on_keydown" #(refresh! rt ide-branch (:branch ctx) preview-state)}
+                                             "on_keydown" #(refresh! rt ide-pid preview-pid preview-state)}
                                             {"keys" "ctrl `"
                                              "on_keydown" (fn []
                                                             (swap! preview-state update :display-mode
@@ -155,51 +147,55 @@
                                                                       :hypercrud.browser.browser-ui/xray)))}]))
          (when local-storage/is-supported
            (swap! (ctx->ls ctx) component/start))
-         (-> (actions/bootstrap-data rt user-branch actions/LEVEL-NONE)
+         (-> (runtime/bootstrap-data rt preview-pid runtime/LEVEL-NONE)
              (p/finally (fn []
                           (swap! preview-state assoc
                                  :initial-render false
                                  :is-refreshing false))))
-         (add-watch (runtime/state rt) this
+         (add-watch (state/state rt) this
                     (fn [k r o n]
-                      (let [old-route (get-in o [::runtime/partitions (:branch ctx) :route])
-                            new-route (get-in n [::runtime/partitions (:branch ctx) :route])]
+                      (let [old-route (get-in o [::runtime/partitions preview-pid :route])
+                            new-route (get-in n [::runtime/partitions preview-pid :route])]
                         (when-not (= old-route new-route)
                           (swap! preview-state assoc :is-refreshing true)
-                          (-> (actions/set-route rt (:branch ctx) new-route false (partial runtime/dispatch! rt) (constantly o))
+                          (-> (runtime/set-route rt preview-pid new-route)
                               (p/finally (fn [] (swap! preview-state assoc
-                                                       :staleness (ide-branch-reference rt ide-branch)
+                                                       :staleness (ide-partition-reference rt ide-pid)
                                                        :is-refreshing false))))))))))
 
      :component-will-unmount
      (fn [this]
-       (let [[_ ctx ide-branch preview-state] (reagent/argv this)]
+       (let [[_ ctx ide-pid preview-state] (reagent/argv this)]
          (when local-storage/is-supported
            (component/stop @(ctx->ls ctx)))
-         (remove-watch (runtime/state (:peer ctx)) this))
+         (remove-watch (state/state (:runtime ctx)) this))
        (.reset keypress))
      }))
 
 (defn- to [parent-state user-state]
-  (let [user-state (-> (update user-state ::runtime/partitions dissoc foundation/root-branch) ; root branch is readonly to users
+  (let [user-state (-> (update user-state ::runtime/partitions dissoc foundation/root-pid) ; root branch is readonly to users
                        (dissoc ::ide-user-global-basis ::runtime/user-id)
-                       (reducers/root-reducer nil))]
+                       state/initialize)]
     (assoc parent-state ::runtime/user-state user-state)))
 
-(defn- from [ide-domain ide-branch parent-state]
-  (let [root-partition (-> (get-in parent-state [::runtime/partitions ide-branch])
-                           (select-keys [:route :stage :local-basis])
+(defn- from [ide-domain ide-pid parent-state]
+  (let [root-partition (-> (get-in parent-state [::runtime/partitions ide-pid])
+                           (select-keys [:is-branched :route :stage :local-basis])
                            (update :local-basis (fn [local-basis] (map-values #(get local-basis %) (::ide-domain/user-dbname->ide ide-domain))))
                            (update :stage (fn [stage] (map-values #(get stage %) (::ide-domain/user-dbname->ide ide-domain)))))]
     (-> (::runtime/user-state parent-state)
         (assoc ::ide-user-global-basis (map-values #(get-in parent-state [::runtime/global-basis :user %])
                                                    (::ide-domain/user-dbname->ide ide-domain))
                ::runtime/user-id (::runtime/user-id parent-state))
-        (assoc-in [::runtime/partitions foundation/root-branch] root-partition)
+        (assoc-in [::runtime/partitions foundation/root-pid] root-partition)
         (cond->
           (= :hyperfiddle.ide/edit (get-in root-partition [:route ::route/fiddle]))
-          (assoc-in [::runtime/partitions (build-user-branch-id ide-branch) :route]
-                    (let [route (ide-routing/ide-route->preview-route (:route root-partition))]
-                      (cond-> route
-                        (hyperfiddle.ide/parse-ide-fragment (::route/fragment route)) (dissoc ::route/fragment)))))
-        (reducers/root-reducer nil))))
+          (update-in [::runtime/partitions preview-rt/preview-pid]
+                     (fn [v]
+                       (assoc v
+                         :is-branched true
+                         :parent-pid ide-pid
+                         :route (let [route (ide-routing/ide-route->preview-route (:route root-partition))]
+                                  (cond-> route
+                                    (hyperfiddle.ide/parse-ide-fragment (::route/fragment route)) (dissoc ::route/fragment)))))))
+        state/initialize)))

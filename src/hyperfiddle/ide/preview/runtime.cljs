@@ -1,37 +1,37 @@
 (ns hyperfiddle.ide.preview.runtime
   (:require
-    [contrib.reactive :as r]
-    [hypercrud.client.peer :as peer]
-    [hyperfiddle.actions :as actions]
-    [hyperfiddle.branch :as branch]
     [hyperfiddle.ide.routing :as ide-routing]
-    [hyperfiddle.runtime :as runtime]))
+    [hyperfiddle.runtime :as runtime]
+    [hyperfiddle.runtime-impl :as runtime-impl]
+    [hyperfiddle.state :as state]))
 
 
-(deftype Runtime [ide-rt preview-root-branch domain io state-atom]
-  runtime/State
+(def preview-pid "user")
+
+(deftype Runtime [ide-rt preview-pid domain io state-atom]
+  state/State
   (state [rt] state-atom)
-  (state [rt path] (r/cursor state-atom path))
 
   runtime/HF-Runtime
   (domain [rt] domain)
   (io [rt] io)
-  (hydrate [rt branch request] (peer/hydrate state-atom branch request))
-  (-set-route [rt branch preview-route force-hydrate]
-    (if (= preview-root-branch branch)
+  (hydrate [rt pid request] (runtime-impl/hydrate-impl rt pid request))
+  (set-route [rt pid route] (runtime/set-route rt pid route false))
+  (set-route [rt pid preview-route force-hydrate]
+    (if (= preview-pid pid)
       ; just blast the ide's route and let things trickle down
       (let [ide-route (ide-routing/preview-route->ide-route preview-route)]
-        (actions/set-route ide-rt (branch/parent-branch-id branch) ide-route force-hydrate))
-      (actions/set-route rt branch preview-route force-hydrate)))
+        (runtime-impl/set-route ide-rt (runtime/parent-pid rt pid) ide-route force-hydrate))
+      (runtime-impl/set-route rt pid preview-route force-hydrate)))
 
   IEquiv
   (-equiv [o other]
     (and (instance? Runtime other)
          (= (.-ide-rt o) (.-ide-rt other))
-         (= (.-preview-root-branch o) (.-preview-root-branch other))
+         (= (.-preview-pid o) (.-preview-pid other))
          (= (.-domain o) (.-domain other))
          (= (.-io o) (.-io other))
          (= (.-state-atom o) (.-state-atom other))))
 
   IHash
-  (-hash [this] (hash [ide-rt preview-root-branch domain io state-atom])))
+  (-hash [this] (hash [ide-rt preview-pid domain io state-atom])))
