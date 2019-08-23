@@ -2,12 +2,10 @@
   (:require
     [contrib.component :as component]
     [contrib.local-storage :as local-storage]
-    [contrib.try$ :refer [try-either]]
-    [hyperfiddle.actions :as actions]
-    [hyperfiddle.branch :as branch]
     [hyperfiddle.domain :as domain]
     [hyperfiddle.io.basis :as basis]
     [hyperfiddle.runtime :as runtime]
+    [hyperfiddle.state :as state]
     [taoensso.timbre :as timbre]))
 
 
@@ -38,17 +36,19 @@
            (assoc :version 6)))
    })
 
-(defn- state->local-storage [branch-id state-val]
+(defn- state->local-storage [pid state-val]
   (-> (select-keys state-val [::runtime/auto-transact
                               ::runtime/global-basis
                               ::runtime/user-id])
-      (cond-> (branch/root-branch? branch-id) (assoc ::runtime/global-basis (::runtime/global-basis state-val)))
+      (cond->
+        (not (get-in state-val [::runtime/partitions pid :parent-pid]))
+        (assoc ::runtime/global-basis (::runtime/global-basis state-val)))
       (assoc :version running-ls-schema-version
-             :stage (get-in state-val [::runtime/partitions branch-id :stage]))))
+             :stage (get-in state-val [::runtime/partitions pid :stage]))))
 
-(defn- local-storage-state-watcher [branch-id ls-key k r o n]
-  (let [o (state->local-storage branch-id o)
-        n (state->local-storage branch-id n)]
+(defn- local-storage-state-watcher [pid ls-key k r o n]
+  (let [o (state->local-storage pid o)
+        n (state->local-storage pid n)]
     (when-not (= o n)
       ; only sync if the LS values have changed
       (let [ls-state (try (local-storage/get-item ls-key) (catch :default e nil))]
@@ -58,47 +58,46 @@
 
 (defn watch-key [branch-id] (keyword (str (hash branch-id)) "local-storage"))
 
-(defn- update-state [rt branch-id ls-key new-value different-basis]
-  (let [current-state @(runtime/state rt)
-        {:keys [::runtime/auto-transact ::runtime/global-basis ::runtime/user-id :stage :version]} new-value
-        different-user (not= user-id (::runtime/user-id current-state))
-        different-stage (not= stage (get-in current-state [::runtime/partitions branch-id :stage]))
-        different-autotx (not= auto-transact (::runtime/auto-transact current-state))
+(defn- update-state [rt pid ls-key new-value different-basis]
+  (let [{:keys [::runtime/auto-transact ::runtime/global-basis ::runtime/user-id :stage :version]} new-value
+        different-user (not= user-id (runtime/get-user-id rt))
+        different-stage (not= stage (runtime/get-stage rt pid))
+        different-autotx (some (fn [[dbname auto-tx]] (not= auto-tx (runtime/get-auto-transact rt dbname))) auto-transact)
         init-level (cond
-                     different-user actions/LEVEL-NONE
-                     different-basis actions/LEVEL-GLOBAL-BASIS
-                     different-stage actions/LEVEL-LOCAL-BASIS
-                     :else actions/LEVEL-HYDRATE-PAGE)
+                     different-user runtime/LEVEL-NONE
+                     different-basis runtime/LEVEL-GLOBAL-BASIS
+                     different-stage runtime/LEVEL-LOCAL-BASIS
+                     :else runtime/LEVEL-HYDRATE-PAGE)
         action (cond-> [:batch]
                  different-user (conj [:set-user-id user-id])
                  different-basis (conj [:set-global-basis global-basis])
-                 different-stage (conj [:reset-stage-branch branch-id stage])
+                 different-stage (conj [:reset-stage-branch pid stage])
                  different-autotx (conj [:set-auto-transact auto-transact]))]
-    (remove-watch (runtime/state rt) (watch-key branch-id))
+    (remove-watch (state/state rt) (watch-key pid))
     ; this dispatch! is syncronous, so we can safely, temporarily stop the localstorage sync
     ; this is desired so an inactive tab does NOT
-    (runtime/dispatch! rt action)
-    (add-watch (runtime/state rt) (watch-key branch-id) (partial local-storage-state-watcher branch-id ls-key))
+    (state/dispatch! rt action)
+    (add-watch (state/state rt) (watch-key pid) (partial local-storage-state-watcher pid ls-key))
     (try
-      (when (branch/root-branch? branch-id)
+      (when-not (runtime/parent-pid rt pid)
         (let [route (domain/url-decode (runtime/domain rt) (str js/document.location.pathname js/document.location.hash))]
-          (runtime/dispatch! rt [:partition-route branch-id route])))
-      (actions/bootstrap-data rt branch-id init-level :hydrate-page? (constantly different-stage))
+          (state/dispatch! rt [:partition-route pid route])))
+      (runtime/bootstrap-data rt pid init-level :hydrate-page? (constantly different-stage))
       (catch js/Error e
-        (runtime/dispatch! rt [:set-error e])))))
+        (runtime/set-error rt pid e)))))
 
-(defn- local-storage-event-action [rt branch-id ls-key new-value]
+(defn- local-storage-event-action [rt pid ls-key new-value]
   (let [{:keys [::runtime/auto-transact ::runtime/global-basis ::runtime/user-id :stage :version]} new-value]
     (if (not= running-ls-schema-version version)
       (let [error "Hyperfiddle has been updated, please refresh!"]
-        (when (not= @(runtime/state rt [::runtime/fatal-error]) error)
+        (when (not= (runtime/get-error rt pid) error)
           ; turn off localstorage sync, this tab is dead
-          (remove-watch (runtime/state rt) (watch-key branch-id))
-          (runtime/dispatch! rt [:set-error error])))
-      (let [action (fn [different-basis] (update-state rt branch-id ls-key new-value different-basis))
-            init-gb @(runtime/state rt [::runtime/global-basis])]
+          (remove-watch (state/state rt) (watch-key pid))
+          (runtime/set-error rt pid error)))
+      (let [action (fn [different-basis] (update-state rt pid ls-key new-value different-basis))
+            init-gb (runtime/get-global-basis rt)]
         (cond
-          (not (branch/root-branch? branch-id)) (action false) ; this event listener is not on the root-branch, ignore basis differences
+          (runtime/parent-pid rt pid) (action false)        ; this event listener is not on the root-branch, ignore basis differences
           (identical? init-gb global-basis) (action false)  ; do nothing with basis
           :else (case (compare (get-in init-gb [:domain :t]) (get-in global-basis [:domain :t])) ; compare domain first, if different, the user keys might be different which is ok
                   1 (action false)                          ; should not happen, but if poorly behaving tabs could write a stale value to local storage, ignore it
@@ -106,9 +105,9 @@
                        (do
                          ; compared to this tab, the event was fired from a tab using a domain in the future, force a hard refresh
                          ; todo this branch needs improvement. Currently there is no facility to reload the domain record, but there could be
-                         (remove-watch (runtime/state rt) (watch-key branch-id))
-                         (runtime/dispatch! rt [:set-error (ex-info "Stale domain. Please reload this page to continue."
-                                                                    {:current (:domain init-gb) :local-storage-event (:domain global-basis)})]))
+                         (remove-watch (state/state rt) (watch-key pid))
+                         (runtime/set-error rt pid (ex-info "Stale domain. Please reload this page to continue."
+                                                            {:current (:domain init-gb) :local-storage-event (:domain global-basis)})))
                        (case (basis/compare-uri-maps (:user init-gb) (:user global-basis))
                          -1 (action true)                   ; refresh global-basis
                          1 (action false)                   ; should not happen, but if poorly behaving tabs could write a stale value to local storage, ignore it
@@ -117,9 +116,9 @@
                   0 (if (not= (get-in init-gb [:domain :hash]) (get-in global-basis [:domain :hash]))
                       (do
                         ; stop the show; there is nothing that can be done
-                        (remove-watch (runtime/state rt) (watch-key branch-id))
-                        (runtime/dispatch! rt [:set-error (ex-info "Domain bases not comparable. t cannot be the same when hash is different"
-                                                                   {:current (:domain init-gb) :local-storage-event (:domain global-basis)})]))
+                        (remove-watch (state/state rt) (watch-key pid))
+                        (runtime/set-error rt pid (ex-info "Domain bases not comparable. t cannot be the same when hash is different"
+                                                           {:current (:domain init-gb) :local-storage-event (:domain global-basis)})))
                       (case (basis/compare-uri-maps (:user init-gb) (:user global-basis))
                         -1 (action true)                    ; refresh global-basis
                         1 (action false)                    ; should not happen, but if poorly behaving tabs could write a stale value to local storage, ignore it
@@ -149,14 +148,14 @@
       (cond->
         global-basis (assoc ::runtime/global-basis global-basis))))
 
-(defrecord LocalStorageSync [rt branch-id ls-key event-listener]
+(defrecord LocalStorageSync [rt pid ls-key event-listener]
   component/Lifecycle
   (start [component]
-    (let [initial-state @(runtime/state rt)
+    (let [initial-state @(state/state rt)
           ls-state (try (local-storage/get-item ls-key) (catch :default e {}))
           new-ls-state (loop [ls-state ls-state]
                          (if (= running-ls-schema-version (:version ls-state))
-                           (if-not (branch/root-branch? branch-id)
+                           (if-not (runtime/parent-pid rt pid)
                              (init-state (runtime/domain rt) initial-state ls-state)
                              (let [global-basis (let [init-gb (::runtime/global-basis initial-state)
                                                       ls-gb (get ls-state [::runtime/global-basis])]
@@ -180,24 +179,24 @@
                              (recur (migrate ls-state))
                              (do
                                (when-not (nil? ls-state) (timbre/error "Unable to migrate local-storage: " ls-state))
-                               (-> (state->local-storage branch-id initial-state)
+                               (-> (state->local-storage pid initial-state)
                                    (assoc :last-modified (.now js/Date))
                                    (update ::runtime/auto-transact #(init-auto-tx nil %)))))))]
       (when-not (= ls-state new-ls-state)
         (local-storage/set-item! ls-key new-ls-state))
       ; todo, we should be dispatching
-      (reset! (runtime/state rt)
+      (reset! (state/state rt)
               (-> (merge initial-state (dissoc new-ls-state :stage :version :last-modified))
-                  (assoc-in [::runtime/partitions branch-id :stage] (:stage new-ls-state)))))
+                  (assoc-in [::runtime/partitions pid :stage] (:stage new-ls-state)))))
 
     (let [event-listener (fn [e]
                            (when (local-storage/same-key? ls-key e)
-                             (local-storage-event-action rt branch-id ls-key (local-storage/event-new-value e))))]
+                             (local-storage-event-action rt pid ls-key (local-storage/event-new-value e))))]
       (.addEventListener js/window "storage" event-listener)
-      (add-watch (runtime/state rt) (watch-key branch-id) (partial local-storage-state-watcher branch-id ls-key))
+      (add-watch (state/state rt) (watch-key pid) (partial local-storage-state-watcher pid ls-key))
       (assoc component :event-listener event-listener)))
 
   (stop [component]
     (.removeEventListener js/window "storage" event-listener)
-    (remove-watch (runtime/state rt) (watch-key branch-id))
+    (remove-watch (state/state rt) (watch-key pid))
     component))

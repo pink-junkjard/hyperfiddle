@@ -49,7 +49,8 @@
                           (select-keys datomic-record [:domain/ident :domain/fiddle-database])))))
 
 (defn hydrate-app-domain [?datomic-client io local-basis domain-eid]
-  (-> (io/hydrate-one! io local-basis nil (->EntityRequest domain-eid (->DbRef "$domains" foundation/root-branch) domain-pull))
+  (-> (io/hydrate-one! io local-basis {foundation/root-pid {:is-branched true}}
+                       (->EntityRequest domain-eid (->DbRef "$domains" foundation/root-pid) domain-pull))
       (p/then (fn [datomic-record]
                 (if (nil? (:db/id datomic-record))
                   (p/rejected (ex-info "Domain not found" {:hyperfiddle.io/http-status-code 404}))

@@ -33,8 +33,7 @@
     [hyperfiddle.ui.select$]
     [hyperfiddle.ui.sort :as sort]
     [hyperfiddle.ui.stale :as stale]
-    [hyperfiddle.ui.util :refer [writable-entity?]]
-    [taoensso.timbre :as timbre]))
+    [hyperfiddle.ui.util :refer [writable-entity?]]))
 
 
 (let [memoized-eval-expr-str!+ (memoize eval/eval-expr-str!+) ; don't actually need to safely eval, just want to memoize exceptions)
@@ -47,7 +46,7 @@
   (defn attr-renderer-control [val ctx & [props]]
     ; The only way to stabilize this is for this type signature to become a react class.
     (when-let [user-f (->> (second (context/eav ctx))
-                           (runtime/attribute-renderer (:peer ctx) (:branch ctx))
+                           (runtime/get-attr-renderer (:runtime ctx) (:partition-id ctx))
                            blank->nil)]
       [user-portal (ui-error/error-comp ctx) nil
        ; ?user-f is stable due to memoizing eval (and only due to this)
@@ -211,7 +210,7 @@ User renderers should not be exposed to the reaction."
         props (-> props
                   (update :class css "hyperfiddle")
                   (dissoc :route)
-                  (assoc :href (some->> route (domain/url-encode (runtime/domain (:peer ctx)))))
+                  (assoc :href (some->> route (domain/url-encode (runtime/domain (:runtime ctx)))))
                   (select-keys [:class :href :style]))]
     (into [:a props] children)))
 
@@ -227,7 +226,7 @@ User renderers should not be exposed to the reaction."
                (case (:fiddle/type ?fiddle)
                  :query (->>
                           ; just check if a request can be built
-                          (base/request-for-fiddle+ (:peer ctx) (:branch ctx) ?route ?fiddle)
+                          (base/request-for-fiddle+ (:runtime ctx) (:partition-id ctx) ?route ?fiddle)
                           (cats/fmap (constantly ?route)))
                  :entity (let [[$1 :as params] (::route/datomic-args ?route)]
                            ; todo just run base/request-for-fiddle+
@@ -281,14 +280,15 @@ User renderers should not be exposed to the reaction."
                          +route-and-ctx
                          (constantly nil)                   ; how can this safely be nil
                          first)]
-          [stale/loading (r/track runtime/branch-is-loading? (:peer ctx) (:branch ctx)) ; was just ctx before
+          [stale/loading (r/track runtime/loading? (:runtime ctx) (:partition-id ctx)) ; was just ctx before
            +route
            (fn [e] [(ui-error/error-comp ctx) e])
            (fn [route]
              (let [props (update props :class css (->> (context/link-class link-ctx) ; flagged - :class
                                                        (string/join " ")
-                                                       css-slugify))]
-               [iframe/iframe-cmp route link-ctx props]))])
+                                                       css-slugify))
+                   partition-id (context/build-pid-from-link ctx link-ctx route)]
+               [iframe/iframe-cmp (context/set-partition link-ctx partition-id) props]))])
 
         :else (let [+route-and-ctx (context/refocus-build-route-and-occlude+ ctx link-ref) ; Can fail if formula dependency isn't satisfied
                     +route (fmap second +route-and-ctx)
@@ -328,7 +328,7 @@ User renderers should not be exposed to the reaction."
   [ctx Body Head props]
   (let []
     [:div {:class (css "field" (:class props))
-           :style {:border-color (domain/database-color (runtime/domain (:peer ctx)) (context/dbname ctx))}}
+           :style {:border-color (domain/database-color (runtime/domain (:runtime ctx)) (context/dbname ctx))}}
      [Head nil ctx props]                                   ; suppress ?v in head even if defined
      [Body (hypercrud.browser.context/data ctx) ctx (value-props props ctx)]]))
 
@@ -336,7 +336,7 @@ User renderers should not be exposed to the reaction."
   [ctx Body Head props]                                     ; Body :: (val props ctx) => DOM, invoked as component
   (case (if (:hypercrud.browser/head-sentinel ctx) :head :body) ; broken
     :head [:th {:class (css "field" (:class props))         ; hoist
-                :style {:background-color (domain/database-color (runtime/domain (:peer ctx)) (context/dbname ctx))}}
+                :style {:background-color (domain/database-color (runtime/domain (:runtime ctx)) (context/dbname ctx))}}
            [Head nil ctx (-> props
                              (update :class css (when (sort/sortable? ctx) "sortable")
                                      (if-let [[p ?d] (sort/sort-directive ctx)]
@@ -345,7 +345,7 @@ User renderers should not be exposed to the reaction."
                              (assoc :on-click (r/partial sort/toggle-sort! ctx)))]]
     ; Field omits [] but table does not, because we use it to specifically draw repeating anchors with a field renderer.
     :body [:td {:class (css "field" (:class props))
-                :style {:border-color (domain/database-color (runtime/domain (:peer ctx)) (context/dbname ctx))}}
+                :style {:border-color (domain/database-color (runtime/domain (:runtime ctx)) (context/dbname ctx))}}
            [Body (hypercrud.browser.context/data ctx) ctx (value-props props ctx)]]))
 
 (defn ^:export field "Works in a form or table context. Draws label and/or value."
@@ -415,7 +415,7 @@ User renderers should not be exposed to the reaction."
                                    (comp path #(get % idx) vec)))))
     (= v form) identity))
 
-(defn needle-input [unfilled-where {:keys [:hypercrud.browser/route ::-set-route] :as ctx} & [input-props]]
+(defn needle-input [unfilled-where {:keys [:hypercrud.browser/route] :as ctx} & [input-props]]
   [contrib.ui/debounced
    (assoc input-props
      :value (when-let [f (path-fn '% unfilled-where)]
@@ -424,10 +424,10 @@ User renderers should not be exposed to the reaction."
                   (when (= (route/fill-where unfilled-where needle) filled-where)
                     needle))))
      :on-change (fn [_ needle]
-                  (-> (if (empty? needle)
-                        (dissoc @route ::route/where)
-                        (assoc @route ::route/where (route/fill-where unfilled-where needle)))
-                      -set-route)))
+                  (->> (if (empty? needle)
+                         (dissoc @route ::route/where)
+                         (assoc @route ::route/where (route/fill-where unfilled-where needle)))
+                       (runtime/set-route (:runtime ctx) (:partition-id ctx)))))
    contrib.ui/text])
 
 (defn hint [val {:keys [hypercrud.browser/fiddle] :as ctx} props]
@@ -539,34 +539,18 @@ nil. call site must wrap with a Reagent component"          ; is this just hyper
 (letfn [(render-edn [data]
           (let [edn-str (pprint-str data 160)]
             [contrib.ui/code {:value edn-str :read-only true}]))]
-  (defn ^:export fiddle-api [_ ctx & [props]]
+  (defn ^:export fiddle-api [_ {rt :runtime :as ctx} & [props]]
     [:div.hyperfiddle.display-mode-api (select-keys props [:class])
      (render-edn (some-> (:hypercrud.browser/result ctx) deref))
-     (when-let [iframes (->> (hyperfiddle.data/select-many ctx #{:hf/iframe}) ; this omits deep dependent iframes fixme
-                             (map (fn [link]
-                                    (either/branch
-                                      (mlet [link-ctx (context/refocus-to-link+ ctx (r/pure link))
-                                             args (context/build-args+ link-ctx link)
-                                             route (context/build-route+ args link-ctx)]
-                                        (return [route link-ctx]))
-                                      (fn [e] (timbre/warn e))
-                                      identity)))
-                             (cons (when @(r/fmap :fiddle/hydrate-result-as-fiddle (:hypercrud.browser/fiddle ctx))
-                                     (let [[inner-fiddle & inner-args] (::route/datomic-args @(:hypercrud.browser/route ctx))
-                                           route (cond-> {:hyperfiddle.route/fiddle inner-fiddle}
-                                                   (seq inner-args) (assoc :hyperfiddle.route/datomic-args (vec inner-args)))]
-                                       [route ctx])))
-                             (remove nil?)
-                             (map (fn [[route ctx]]
-                                    ^{:key (str (hash route))}
-                                    [iframe/managed-route-editor-state
-                                     (fn [route route-on-change ctx & [props]]
-                                       [:<>
-                                        [:dt [iframe/route-editor route route-on-change]]
-                                        [:dd [iframe/stale-browse route ctx
-                                              (fn [e] [ui-error/error-block e])
-                                              (fn [ctx] (render-edn (some-> (:hypercrud.browser/result ctx) deref)))]]])
-                                     route ctx {}]))
+     (when-let [iframes (->> (runtime/descendant-pids rt (:partition-id ctx))
+                             (map (fn [pid]
+                                    ^{:key (str pid)}
+                                    [:<>
+                                     [:dt [iframe/route-editor (runtime/get-route rt pid) (r/partial runtime/set-route rt pid)]]
+                                     [:dd (let [ctx (context/set-partition (context/map->Context {:runtime rt}) pid)]
+                                            [iframe/stale-browse ctx
+                                             (fn [ctx e] [ui-error/error-block e])
+                                             (fn [ctx] (render-edn (some-> (:hypercrud.browser/result ctx) deref)))])]]))
                              seq)]
        [:div.container-fluid.iframes
         [:h4 "iframes"]

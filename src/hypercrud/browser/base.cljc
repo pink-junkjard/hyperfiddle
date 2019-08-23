@@ -9,14 +9,14 @@
     [contrib.try$ :refer [try-either]]
     [hypercrud.browser.context :as context]
     [hypercrud.types.DbName :refer [#?(:cljs DbName)]]
-    [hypercrud.types.DbRef :refer [->DbRef]]
     [hypercrud.types.EntityRequest :refer [->EntityRequest]]
     [hypercrud.types.QueryRequest :refer [->QueryRequest]]
     [hypercrud.types.ThinEntity :refer [#?(:cljs ThinEntity)]]
     [hyperfiddle.domain :as domain]
     [hyperfiddle.fiddle :as fiddle]
     [hyperfiddle.route :as route]
-    [hyperfiddle.runtime :as runtime])
+    [hyperfiddle.runtime :as runtime]
+    [taoensso.timbre :as timbre])
   #?(:clj
      (:import
        (hypercrud.types.DbName DbName)
@@ -39,10 +39,10 @@
       lookup-ref)
     lookup-ref))
 
-(defn- hydrate-fiddle-from-datomic+ [rt branch fiddle-ident] ; no ctx
-  (mlet [:let [dbval (->DbRef (domain/fiddle-dbname (runtime/domain rt)) branch)
-               request (->EntityRequest (legacy-fiddle-ident->lookup-ref fiddle-ident) dbval fiddle/browser-pull)]
-         record @(runtime/hydrate rt branch request)
+(defn- hydrate-fiddle-from-datomic+ [rt pid fiddle-ident]   ; no ctx
+  (mlet [:let [db (runtime/db rt pid (domain/fiddle-dbname (runtime/domain rt)))
+               request (->EntityRequest (legacy-fiddle-ident->lookup-ref fiddle-ident) db fiddle/browser-pull)]
+         record @(runtime/hydrate rt pid request)
          record (if-not (:db/id record)
                   (either/left (ex-info (str :hyperfiddle.error/fiddle-not-found)
                                         {:ident :hyperfiddle.error/fiddle-not-found
@@ -57,15 +57,15 @@
                   :blank (either/right record))]
     (return (fiddle/apply-defaults fiddle))))
 
-(defn- hydrate-fiddle+ [rt branch fiddle-ident]             ; no ctx
+(defn- hydrate-fiddle+ [rt pid fiddle-ident]                ; no ctx
   (-> (if (domain/system-fiddle? (runtime/domain rt) fiddle-ident)
         (->> (domain/hydrate-system-fiddle (runtime/domain rt) fiddle-ident)
              (cats/fmap fiddle/apply-defaults))
-        (hydrate-fiddle-from-datomic+ rt branch fiddle-ident))))
+        (hydrate-fiddle-from-datomic+ rt pid fiddle-ident))))
 
 (def browser-query-limit 50)
 
-(defn request-for-fiddle+ [rt branch route fiddle]          ; no ctx
+(defn request-for-fiddle+ [rt pid route fiddle]             ; no ctx
   (case (:fiddle/type fiddle)
     :query (mlet [q (reader/memoized-read-string+ (:fiddle/query fiddle)) ; todo why read-string instead of read-edn-string?
                   needle-clauses (either/right nil) #_(reader/memoized-read-edn-string+ (:fiddle/query-needle fiddle))
@@ -80,8 +80,8 @@
                           (let [[query-arg next-route-args] (cond
                                                               (string/starts-with? hole "$")
                                                               (if false #_(instance? DbName route-arg)
-                                                                [(->DbRef (:dbname route-arg) branch) next-route-args]
-                                                                [(->DbRef hole branch) (seq route-args)])
+                                                                [(runtime/db rt pid (:dbname route-arg)) next-route-args]
+                                                                [(runtime/db rt pid hole) (seq route-args)])
 
                                                               (instance? ThinEntity route-arg)
                                                               ; I think it already has the correct identity and tempid is already accounted
@@ -117,7 +117,7 @@
                         [(:dbname (first args)) (second args)]
                         [nil (first args)])]
       (if-let [dbname (or dbname (:fiddle/pull-database fiddle))]
-        (let [db (->DbRef dbname branch)
+        (let [db (runtime/db rt pid dbname)
               pull-exp (or (-> (memoized-read-edn-string+ (:fiddle/pull fiddle))
                                ; todo it SHOULD be assertable that fiddle/pull is valid edn (and datomic-pull) by now (but its not yet)
                                (either/branch (constantly nil) identity))
@@ -129,28 +129,40 @@
 
     :blank (either/right nil)))
 
-(let [nil-or-hydrate+ (fn [rt branch request]
-                        (if request
-                          @(runtime/hydrate rt branch request)
-                          (either/right nil)))]
-  (defn browse-route+ [{rt :peer branch :branch :as ctx} route]
-    (mlet [route (route/validate-route+ route)              ; terminate immediately on a bad route
-           route (try-either (route/invert-route route (partial runtime/tempid->id! rt branch)))
-           r-fiddle @(r/apply-inner-r (r/track hydrate-fiddle+ rt branch (::route/fiddle route)))
-           r-request @(r/apply-inner-r (r/fmap->> r-fiddle (request-for-fiddle+ rt branch route)))
-           r-result @(r/apply-inner-r (r/fmap->> r-request (nil-or-hydrate+ rt branch)))
-           ctx (-> (context/clean ctx)
-                   ; route should be a ref, provided by the caller, that we fmap over
-                   ; because it is not, this is obviously fragile and will break on any change to the route
-                   ; this is acceptable today (Jun-2019) because changing a route in ANY way assumes the entire iframe will be re-rendered
-                   (assoc :hypercrud.browser/route (r/pure route))
-                   (context/fiddle+ r-fiddle))
-           :let [ctx (context/result ctx r-result)]]
-      ; fiddle request can be nil for no-arg pulls (just draw readonly form)
-      (return ctx))))
+(defn- nil-or-hydrate+ [rt pid request]
+  (if request
+    @(runtime/hydrate rt pid request)
+    (either/right nil)))
 
-(defn browse-link+ [ctx link-ref]
-  (mlet [ctx (context/refocus-to-link+ ctx link-ref)
-         args (context/build-args+ ctx @link-ref)
-         route (context/build-route+ args ctx)]
-    (browse-route+ ctx route)))
+; internal bs abstraction to support hydrate-result-as-fiddle
+(defn- internal-browse-route+ [{rt :runtime pid :partition-id :as ctx} route]
+  (mlet [_ (if-let [e (runtime/get-error rt pid)]
+             (either/left e)
+             (either/right nil))
+         ; todo runtime should prevent invalid routes from being set
+         route (route/validate-route+ route)                ; terminate immediately on a bad route
+         route (try-either (route/invert-route route (partial runtime/tempid->id! rt pid)))
+         r-fiddle @(r/apply-inner-r (r/track hydrate-fiddle+ rt pid (::route/fiddle route)))
+         r-request @(r/apply-inner-r (r/fmap->> r-fiddle (request-for-fiddle+ rt pid route)))
+         r-result @(r/apply-inner-r (r/fmap->> r-request (nil-or-hydrate+ rt pid)))
+         ctx (-> ctx
+                 ; route should be a ref, provided by the caller, that we fmap over
+                 ; because it is not, this is obviously fragile and will break on any change to the route
+                 ; this is acceptable today (Jun-2019) because changing a route in ANY way assumes the entire iframe will be re-rendered
+                 (assoc :hypercrud.browser/route (r/pure route))
+                 (context/fiddle+ r-fiddle))
+         :let [ctx (context/result ctx r-result)]]
+    ; fiddle request can be nil for no-arg pulls (just draw readonly form)
+    (return ctx)))
+
+(defn browse-partition+ [ctx]
+  (internal-browse-route+ ctx (runtime/get-route (:runtime ctx) (:partition-id ctx))))
+
+(defn browse-result-as-fiddle+ [{rt :runtime pid :partition-id :as ctx}]
+  (timbre/warn "legacy invocation; browse-route+ is deprecated")
+  ; This only makes sense on :fiddle/type :query because it has arbitrary arguments
+  ; EntityRequest args are too structured.
+  (let [[inner-fiddle & inner-args] (::route/datomic-args (runtime/get-route rt pid))
+        route (cond-> {:hyperfiddle.route/fiddle inner-fiddle}
+                (seq inner-args) (assoc :hyperfiddle.route/datomic-args (vec inner-args)))]
+    (internal-browse-route+ ctx route)))

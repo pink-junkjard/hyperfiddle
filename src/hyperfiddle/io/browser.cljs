@@ -27,12 +27,12 @@
   (local-basis [io global-basis route]
     (p/resolved (local-basis/local-basis io global-basis route)))
 
-  (hydrate-route [io local-basis route branch stage]
-    (-> (http-client/hydrate-route! domain nil local-basis route branch stage)
+  (hydrate-route [io local-basis route pid partitions]
+    (-> (http-client/hydrate-route! domain nil local-basis route pid partitions)
         (p/catch (partial handle-401 domain))))
 
-  (hydrate-requests [io local-basis staged-branches requests]
-    (-> (http-client/hydrate-requests! domain nil local-basis staged-branches requests)
+  (hydrate-requests [io local-basis partitions requests]
+    (-> (http-client/hydrate-requests! domain nil local-basis partitions requests)
         (p/catch (partial handle-401 domain))))
 
   (sync [io dbnames]

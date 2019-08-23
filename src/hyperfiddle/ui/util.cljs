@@ -11,8 +11,8 @@
 
 (defn entity-change->tx                                     ; :Many editor is probably not idiomatic
   ([ctx vorvs]
-    ; wut is going on with eav here in :many case
-    ; the parent would still be in scope i guess
+   ; wut is going on with eav here in :many case
+   ; the parent would still be in scope i guess
    (let [[_ a v] @(:hypercrud.browser/eav ctx)
          o (if (not= :db.type/ref (contrib.datomic/valueType @(:hypercrud.browser/schema ctx) a))
              v                                              ;(get entity a)      ; scalar
@@ -28,11 +28,13 @@
        (timbre/warn "Trimming empty value to nil. This will be removed in a future release"))
      (tx/edit-entity e attribute o n'))))
 
-(defn with-tx!                                              ; legacy. todo invoke runtime/with-tx directly
+(defn ^:deprecated with-tx!
   ([ctx tx]
-   (with-tx! ctx (context/dbname ctx) tx))
+   (timbre/warn "deprecated. invoke runtime/with-tx directly")
+   (runtime/with-tx (:runtime ctx) (:partition-id ctx) (context/dbname ctx) tx))
   ([ctx dbname tx]
-   (runtime/with-tx (:peer ctx) (:branch ctx) dbname tx)))
+   (timbre/warn "deprecated. invoke runtime/with-tx directly")
+   (runtime/with-tx (:runtime ctx) (:partition-id ctx) dbname tx)))
 
 (defn with-entity-change! [ctx] (r/comp (r/partial with-tx! ctx) (r/partial entity-change->tx ctx)))
 

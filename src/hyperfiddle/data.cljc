@@ -1,6 +1,6 @@
 (ns hyperfiddle.data
   (:require
-    [cats.core :refer [>>=]]
+    [cats.core :refer [mlet return]]
     [cats.monad.either :refer [left right]]
     [clojure.spec.alpha :as s]
     [contrib.ct :refer [unwrap]]
@@ -18,8 +18,8 @@
          #_(:hypercrud.browser/element ctx)                 ; database color
          (:hypercrud.browser/link-index ctx)
          (s/assert :hypercrud/context ctx)
-         #_(:hypercrud.browser/eav ctx)] ; it can be Reaction of [nil nil nil]
-   :post [#_(r/reactive? %)]}                                 ; its also a vector, associative by index
+         #_(:hypercrud.browser/eav ctx)]                    ; it can be Reaction of [nil nil nil]
+   :post [#_(r/reactive? %)]}                               ; its also a vector, associative by index
   (->> (context/links-in-dimension
          ctx (contrib.data/xorxs ?corcs #{}))
        #_(map second)))
@@ -66,7 +66,7 @@
       :else
       (select-many ctx (conj cs a)))))
 
-(defn ^:export select-many-here "reactive" ; collapses if eav is part of corcs
+(defn ^:export select-many-here "reactive"                  ; collapses if eav is part of corcs
   [ctx & [?corcs]]
   {:pre [(s/assert :hypercrud/context ctx)]
    :post [(r/reactive? %)]}
@@ -84,8 +84,11 @@
   [ctx & [?corcs]]
   {:pre [(s/assert :hypercrud/context ctx)]}
   ; No focusing, can select from root, and data-from-link manufactures a new context
-  (>>= (select+ ctx ?corcs)                                 ; even one hflink can explode to two iframes
-       #(base/browse-link+ ctx %)))                       ; can return tuple
+  (mlet [link-ref (select+ ctx ?corcs)                      ; even one hflink can explode to two iframes
+         [link-ctx route] (context/refocus-build-route-and-occlude+ ctx link-ref)]
+    (->> (context/build-pid-from-link ctx link-ctx route)
+         (context/set-partition ctx)
+         (base/browse-partition+))))
 
 (defn ^:export browse [ctx & [?corcs]]                      ; returns a ctx, not reactive, has reactive keys
   {:pre [(s/assert :hypercrud/context ctx)]}

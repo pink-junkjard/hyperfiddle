@@ -262,8 +262,8 @@ Shape is normalized to match the shape of the Datomic result, e.g. [:user/a-ref]
       FindTuple (vector result)
       FindScalar [[result]])))
 
-(defn spread-elements [f schemas qfind result]
-  (mapcat (partial f schemas qfind)                         ; (map (partial console-link source)) % has the source
+(defn spread-elements [f qfind result]
+  (mapcat f                                                 ; (map (partial console-link source)) % has the source
           (range)                                           ; find-element index, for source reversing
           (datascript.parser/find-elements qfind)
           (contrib.data/pad nil (contrib.data/transpose (normalize-result qfind result)))))
@@ -320,12 +320,12 @@ Shape is normalized to match the shape of the Datomic result, e.g. [:user/a-ref]
            vec))))
 
 (defn spread-elements! [f schemas qfind data]
-  (spread-elements (fn [schemas qfind ix e coll-normalized]
+  (spread-elements (fn [ix e coll-normalized]
                      (let [dbname (str (get-in e [:source :symbol]))
                            ; fmap the exception instead of throw?
                            schema (some-> (get schemas dbname) deref)]
                        (f schema e coll-normalized)))
-                   schemas qfind data))
+                   qfind data))
 
 (defn qfind-collapse-findrel-1 "Collapse FindRel-1 to FindColl, which simplifies the context business rules.
   TODO: also collapse FindRel-N where all elements are aggregates except one?"

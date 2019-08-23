@@ -14,13 +14,12 @@
     [datascript.parser #?@(:cljs [:refer [FindRel FindColl FindTuple FindScalar Variable Aggregate Pull]])]
     [hypercrud.browser.q-util]
     [hypercrud.types.DbName :refer [#?(:cljs DbName)]]
-    [hypercrud.types.DbRef :refer [->DbRef]]
     [hypercrud.types.ThinEntity :refer [->ThinEntity #?(:cljs ThinEntity)]]
     [hyperfiddle.api :as hf]
-    [hyperfiddle.branch :as branch]
     [hyperfiddle.fiddle]
     [hyperfiddle.route :as route]
-    [hyperfiddle.runtime :as runtime])
+    [hyperfiddle.runtime :as runtime]
+    [taoensso.timbre :as timbre])
   #?(:clj
      (:import
        (datascript.parser FindRel FindColl FindTuple FindScalar Variable Aggregate Pull)
@@ -66,25 +65,25 @@
 (s/def :hypercrud.browser/pull-path (s/coll-of keyword? :kind vector?))
 
 (defn clean [ctx]
-  ; Keeps the :peer which owns the schemas
+  ; Keeps the :runtime which owns the schemas
   (dissoc ctx
-          :hyperfiddle.ui/layout
-          :hypercrud.browser/head-sentinel
-          :hypercrud.browser/fiddle
-          :hypercrud.browser/qfind
-          :hypercrud.browser/result
-          :hypercrud.browser/result-index
-          :hypercrud.browser/result-enclosure
-          :hypercrud.browser/result-path
-          :hypercrud.browser/link-index
-          :hypercrud.browser/eav
-          :hypercrud.browser/element
-          :hypercrud.browser/schema
-          :hypercrud.browser/pull-enclosure
-          :hypercrud.browser/pull-path
-          :hypercrud.browser/parent
-          :hypercrud.browser/route
-          :hypercrud.browser/validation-hints))
+    :hyperfiddle.ui/layout
+    :hypercrud.browser/head-sentinel
+    :hypercrud.browser/fiddle
+    :hypercrud.browser/qfind
+    :hypercrud.browser/result
+    :hypercrud.browser/result-index
+    :hypercrud.browser/result-enclosure
+    :hypercrud.browser/result-path
+    :hypercrud.browser/link-index
+    :hypercrud.browser/eav
+    :hypercrud.browser/element
+    :hypercrud.browser/schema
+    :hypercrud.browser/pull-enclosure
+    :hypercrud.browser/pull-path
+    :hypercrud.browser/parent
+    :hypercrud.browser/route
+    :hypercrud.browser/validation-hints))
 
 (declare -infer-implicit-element)
 
@@ -112,12 +111,12 @@
     :hypercrud.browser/element deref
     :source :symbol str))
 
-(defn underlying-tempid "ctx just needs :branch and :peer" [ctx id]
+(defn underlying-tempid "ctx just needs :runtime and :partition-id" [ctx id]
   ; This muddled thinking is caused by https://github.com/hyperfiddle/hyperfiddle/issues/584
   (cond
     (contrib.datomic/tempid? id) id
     :else (when-let [dbname (dbname ctx)]
-            (let [id' (runtime/id->tempid! (:peer ctx) (:branch ctx) dbname id)]
+            (let [id' (runtime/id->tempid! (:runtime ctx) (:partition-id ctx) dbname id)]
               (when (contrib.datomic/tempid? id') id')))))
 
 (defn lookup-ref [schema e-map]
@@ -125,7 +124,7 @@
     [a (a e-map)]))
 
 (defn smart-entity-identifier "key-entity except without the pr-str fallback.
-  Generates the best Datomic lookup ref for a given pull. ctx needs :branch and :peer"
+  Generates the best Datomic lookup ref for a given pull. ctx needs :runtime and :partition-id"
   ; flip params for fmap->
   [ctx {:keys [:db/id :db/ident] :as e-map}]                ; v can be a ThinEntity or a pull i guess
   (s/assert map? e-map)                                     ; used to be very loose, track down these cases now.
@@ -147,7 +146,7 @@
 
 (let [f (fn [?schema+ path] (some->> ?schema+ (cats/fmap #(get-in % path))))]
   (defn hydrate-attribute! [ctx ident & ?more-path]
-    (some-> @(r/fmap-> (runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :schemas (dbname ctx)])
+    (some-> @(r/fmap-> (r/track runtime/get-schema+ (:runtime ctx) (:partition-id ctx) (dbname ctx))
                        (f (cons ident ?more-path)))
             deref)))
 
@@ -527,11 +526,11 @@ a speculative db/id."
              (either/left (ex-info "Invalid qfind" {}))     ; how would this ever happen?
              (either/right nil))
          _ @(r/apply contrib.datomic/validate-qfind-attrs+
-                     [(runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :schemas])
+                     [(r/track runtime/get-schemas (:runtime ctx) (:partition-id ctx))
                       (r/fmap :qfind r-qparsed)])
          r-fiddle @(r/apply-inner-r (r/apply hyperfiddle.fiddle/apply-fiddle-links-defaults+
                                              [r-fiddle
-                                              (runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :schemas])
+                                              (r/track runtime/get-schemas (:runtime ctx) (:partition-id ctx))
                                               r-qparsed]))
          r-fiddle @(r/apply-inner-r (r/fmap validate-fiddle r-fiddle))]
     (return
@@ -553,7 +552,7 @@ a speculative db/id."
 
 (defn result-enclosure! [ctx]
   (contrib.datomic/result-enclosure!
-    @(runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :schemas])
+    (runtime/get-schemas (:runtime ctx) (:partition-id ctx))
     @(:hypercrud.browser/qfind ctx)
     @(:hypercrud.browser/result ctx)))
 
@@ -576,9 +575,9 @@ a speculative db/id."
     ; Conceptually, it should be after qfind and before EAV.
     (index-result ctx)))                                    ; in row case, now indexed, but path is not aligned yet
 
-(defn stable-element-schema! [schemas element]
+(defn stable-element-schema! [rt pid element]
   (let [{{db :symbol} :source} element]
-    (some->> db str (get schemas) deref)))
+    (some->> db str (runtime/get-schema+ rt pid) deref)))
 
 ; This complects two spread-elements concerns which are separate.
 ; 1. Setting Schema and element
@@ -590,9 +589,7 @@ a speculative db/id."
       ; stable-element-schema! can throw on schema lookup
       ; this may need to be caught depending on when how/when this function is used
       ; or with reactions; we may need to unlazily throw ASAP
-      :hypercrud.browser/schema (r/apply stable-element-schema!
-                                         [(runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :schemas])
-                                          r-element]))))
+      :hypercrud.browser/schema (r/fmap->> r-element (stable-element-schema! (:runtime ctx) (:partition-id ctx))))))
 
 (defn browse-element [ctx i]                                ; [nil :seattle/neighborhoods 1234345]
   {:pre []
@@ -998,7 +995,7 @@ a speculative db/id."
          :let [colored-args (mapv (partial tag-v-with-color ctx) args) ; this ctx is refocused to some eav
                route (cond-> {::route/fiddle fiddle-id}
                        (seq colored-args) (assoc ::route/datomic-args colored-args))]
-         route (try-either (route/invert-route route (partial runtime/id->tempid! (:peer ctx) (:branch ctx))))
+         route (try-either (route/invert-route route (partial runtime/id->tempid! (:runtime ctx) (:partition-id ctx))))
          ; why would this function ever construct an invalid route? this check seems unnecessary
          route (hyperfiddle.route/validate-route+ route)]
     (return route)))
@@ -1064,13 +1061,13 @@ a speculative db/id."
   ; Transactions have db/id longs and longs hash differently on cljs vs clj
   (hash (pr-str v)))
 
-(let [impl (fn [rt branch-id dbname]
-             (->> (loop [branch-id branch-id
+(let [impl (fn [rt pid dbname]
+             (->> (loop [pid pid
                          tx nil]
-                    (let [tx (concat tx @(runtime/state rt [::runtime/partitions branch-id :stage dbname]))]
-                      (if (branch/root-branch? branch-id)
-                        tx
-                        (recur (branch/parent-branch-id branch-id) tx))))
+                    (let [tx (concat tx (runtime/get-stage rt pid dbname))]
+                      (if-let [parent-pid (runtime/get-branch-parent-pid rt pid)]
+                        (recur parent-pid tx)
+                        tx)))
                   hash-portable
                   (str "hyperfiddle.tempid-")))]
   (defn tempid! "Generate a stable unique tempid that will never collide and also can be deterministicly
@@ -1081,23 +1078,28 @@ a speculative db/id."
      (tempid! (or (dbname ctx) "$") ctx))
     ([dbname ctx]
      ; Use hash of current dbval, which changes with each edit
-     @(r/track impl (:peer ctx) (:branch ctx) dbname))))
+     @(r/track impl (:runtime ctx) (:partition-id ctx) dbname))))
 
-(defn build-child-branch-relative-id [ctx & more]
-  (->> (into [(if (:hypercrud.browser/qfind ctx)            ; guard crash on :blank fiddles
-                (eav ctx)                                   ; if this is nested table head, [e a nil] is ambiguous. test: /:intents/
-                (:hypercrud.browser/result-path ctx))
-              @(r/fmap (r/partial entity-viewkey ctx)
-                       (:hypercrud.browser/fiddle ctx))]
-             more)
-       #_hash str))
+(defn build-pid-from-link [parent-ctx link-ctx initial-route]
+  ; try to auto-generate branch/popover-id from the product of:
+  ; - link's :db/id
+  ; - route
+  ; - visual-ctx's data & path (where this popover is being drawn NOT its dependencies)
+  (let [v [(if (:hypercrud.browser/qfind link-ctx)          ; guard crash on :blank fiddles
+             (eav link-ctx)                                 ; if this is nested table head, [e a nil] is ambiguous. test: /:intents/
+             (:hypercrud.browser/result-path link-ctx))
+           @(r/fmap (r/partial entity-viewkey link-ctx)
+                    (:hypercrud.browser/fiddle link-ctx))
+           @(r/cursor (:hypercrud.browser/link link-ctx) [:db/id])
+           initial-route
+           ; visual-a de-dupes various identity columns which show exactly the same link
+           #_(eav parent-ctx)]
+        pid (str (hash (map pr-str v)))]
+    (timbre/debug {:pid pid :args v})
+    pid))
 
-(defn branch+ [ctx relative-branch-id]
-  ; todo WIP
-  (let [ctx (update ctx :branch branch/child-branch-id relative-branch-id)]
-    (if-let [e @(runtime/state (:peer ctx) [::runtime/partitions (:branch ctx) :error])]
-      (either/left e)
-      (either/right ctx))))
+(defn set-partition [ctx partition-id]
+  (clean (assoc ctx :partition-id partition-id)))
 
 (defrecord Context [ident]
   hf/Browser

@@ -2,34 +2,34 @@
   (:require
     #?(:cljs [contrib.eval-cljs :as eval-cljs])
     [contrib.try$ :refer [try-either]]
-    [hyperfiddle.domain :as domain]
-    [hyperfiddle.io.core :as io]
-    [hypercrud.types.DbRef :refer [->DbRef]]
+    [hyperfiddle.runtime :as runtime]
     [hypercrud.types.EntityRequest :refer [->EntityRequest]]
     [hypercrud.types.QueryRequest :refer [->QueryRequest]]
+    [hyperfiddle.domain :as domain]
+    [hyperfiddle.io.core :as io]
     [promesa.core :as p]))
 
 
-(defn attrs-request [domain branch]
+(defn attrs-request [rt pid]
   (->QueryRequest '[:find ?i ?r :where
                     [?attr :attribute/ident ?i]
                     [?attr :attribute/renderer ?r]]
-                  [(->DbRef (domain/fiddle-dbname domain) branch)]
+                  [(runtime/db rt pid (domain/fiddle-dbname (runtime/domain rt)))]
                   {:limit -1}))
 
-(defn hydrate-attr-renderers [io domain local-basis branch staged-branches]
-  (-> (io/hydrate-one! io local-basis staged-branches (attrs-request domain branch))
+(defn hydrate-attr-renderers [rt pid local-basis partitions]
+  (-> (io/hydrate-one! (runtime/io rt) local-basis partitions (attrs-request rt pid))
       (p/then #(into {} %))))
 
-(defn project-request [domain branch]
+(defn project-request [rt pid]
   (->EntityRequest
     :hyperfiddle/project
-    (->DbRef (domain/fiddle-dbname domain) branch)
+    (runtime/db rt pid (domain/fiddle-dbname (runtime/domain rt)))
     [:project/code
      :project/css]))
 
-(defn hydrate-project-record [io domain local-basis branch staged-branches]
-  (io/hydrate-one! io local-basis staged-branches (project-request domain branch)))
+(defn hydrate-project-record [rt pid local-basis partitions]
+  (io/hydrate-one! (runtime/io rt) local-basis partitions (project-request rt pid)))
 
 #?(:cljs
    (defn eval-domain-code!+ [code-str]

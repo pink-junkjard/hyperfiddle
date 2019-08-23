@@ -4,29 +4,27 @@
     [cats.monad.either :as either]
     [cats.monad.exception :as exception]
     [contrib.datomic]
-    [hypercrud.types.DbRef :refer [->DbRef]]
     [hypercrud.types.QueryRequest :refer [->QueryRequest]]
     [hyperfiddle.domain :as domain]
     [hyperfiddle.io.core :as io]
-    [promesa.core :as p]
-    [taoensso.timbre :as timbre]))
+    [hyperfiddle.runtime :as runtime]
+    [promesa.core :as p]))
 
 
-(defn request [dbval]
-  (->QueryRequest '[:find (pull ?attr [*
-                                       {:db/valueType [:db/ident]
-                                        :db/cardinality [:db/ident]
-                                        :db/unique [:db/ident]}])
-                    :where [:db.part/db :db.install/attribute ?attr]]
-                  [dbval]
-                  {:limit -1}))
-
-(defn hydrate-schemas [io domain local-basis branch staged-branches]
-  (let [dbnames (-> (domain/databases domain)
+(defn hydrate-schemas [rt pid local-basis partitions]
+  (let [dbnames (-> (domain/databases (runtime/domain rt))
                     keys
                     vec)
-        requests (mapv (fn [dbname] (request (->DbRef dbname branch))) dbnames)]
-    (-> (io/hydrate-requests io local-basis staged-branches requests)
+        requests (mapv (fn [dbname]
+                         (->QueryRequest '[:find (pull ?attr [*
+                                                              {:db/valueType [:db/ident]
+                                                               :db/cardinality [:db/ident]
+                                                               :db/unique [:db/ident]}])
+                                           :where [:db.part/db :db.install/attribute ?attr]]
+                                         [(runtime/db rt pid dbname)]
+                                         {:limit -1}))
+                       dbnames)]
+    (-> (io/hydrate-requests (runtime/io rt) local-basis partitions requests)
         (p/then (fn [{:keys [pulled-trees]}]
                   (->> pulled-trees
                        (map (fn [pulled-tree+]

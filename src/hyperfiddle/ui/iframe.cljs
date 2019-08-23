@@ -12,12 +12,9 @@
     [contrib.ui]
     [contrib.ui.safe-render :refer [user-portal]]
     [hypercrud.browser.base :as base]
-    [hypercrud.browser.context :as context]
-    [hyperfiddle.branch :as branch]
     [hyperfiddle.runtime :as runtime]
     [hyperfiddle.ui.error :as ui-error]
-    [hyperfiddle.ui.stale :as stale]
-    [taoensso.timbre :as timbre]))
+    [hyperfiddle.ui.stale :as stale]))
 
 
 (defn auto-ui-css-class [?ctx]                              ; semantic css
@@ -85,75 +82,57 @@
      ; Cheaper to pass fiddle-value as a prop than to hash everything
      [fiddle-renderer-cmp value ctx props @(:hypercrud.browser/fiddle ctx)]]))
 
-(defn route-editor [route on-change]
-  (let [parse-string (fn [s]
-                       (let [route (reader/read-edn-string! s)]
-                         (s/assert :hyperfiddle/route route)
-                         route))
-        to-string pprint-str]
-    [contrib.ui/debounced
-     {:value route
-      :debounce/interval 500
-      :on-change (fn [o n] (on-change n))
-      :mode "clojure"
-      :lineNumbers false}
-     contrib.ui/validated-cmp parse-string to-string contrib.ui/code]))
+(defn route-editor
+  ([{rt :runtime pid :partition-id :as ctx}]
+   [route-editor (runtime/get-route rt pid) (r/partial runtime/set-route rt pid)])
+  ([route on-change]
+   (let [parse-string (fn [s]
+                        (let [route (reader/read-edn-string! s)]
+                          (s/assert :hyperfiddle/route route)
+                          route))
+         to-string pprint-str]
+     [contrib.ui/debounced
+      {:value route
+       :debounce/interval 500
+       :on-change (fn [o n] (when-not (= o n) (on-change n)))
+       :mode "clojure"
+       :lineNumbers false}
+      contrib.ui/validated-cmp parse-string to-string contrib.ui/code])))
 
-(defn stale-browse
-  ([route ctx error success] (stale-browse route ctx error success success))
-  ([route ctx error success loading]
-   [stale/loading
-    (r/track runtime/branch-is-loading? (:peer ctx) (:branch ctx))
-    (base/browse-route+ ctx route)
-    (fn [e] [error e])
-    (fn [ctx] [success ctx])
-    (fn [ctx] [loading ctx])]))
+(defn stale-browse [ctx error success & args]
+  [stale/loading
+   (r/track runtime/loading? (:runtime ctx) (:partition-id ctx))
+   (base/browse-partition+ ctx)
+   (fn [e] (into [error ctx e] args))
+   (fn [ctx] (into [success ctx] args))
+   (fn [ctx] (into [success ctx] args))])
 
-(defn iframe-cmp-impl [route route-on-change ctx & [props]]
+(defn- browse-error [{rt :runtime pid :partition-id :as ctx} e props]
   (let [error-comp (or (:hyperfiddle.ui/error-render-custom props) ; try props first
-                       (ui-error/error-comp ctx))
-        ctx (assoc ctx :hyperfiddle.ui/-set-route route-on-change) ; todo runtime/set-route
-        props (dissoc props :hyperfiddle.ui/error-render-custom)]
-    [:<>
-     (when-not (= :hypercrud.browser.browser-ui/user (or (some-> (:hyperfiddle.ui/display-mode ctx) deref) :hypercrud.browser.browser-ui/user))
-       [route-editor route route-on-change])
-     [stale-browse route ctx
-      (fn [e]
-        [error-comp e (cond-> {:class (css "hyperfiddle-error" (:class props) "ui")}
-                        (::on-click ctx) (assoc :on-click (r/partial (::on-click ctx) route)))])
-      (fn [ctx]                                             ; fresh clean ctx
-        [ui-comp ctx (cond-> (update props :class css "ui")
-                       ; @route here is a broken reaction, see routing/route+ returns a severed reaciton
-                       ; use the ctx's route, otherwise alt clicking while loading could take you to the new route, which is jarring
-                       (::on-click ctx) (assoc :on-click (r/partial (::on-click ctx) @(:hypercrud.browser/route ctx))))])]]))
+                       (ui-error/error-comp ctx))]
+    [error-comp e (cond-> {:class (css "hyperfiddle-error" (:class props) "ui")}
+                    (::on-click ctx) (assoc :on-click (r/partial (::on-click ctx) (runtime/get-route rt pid))))]))
 
-(defn managed-route-editor-state [display-cmp route {rt :peer :as ctx} {:keys [::relative-child-branch-id] :as props}]
-  (let [local-state (r/atom {:initial route :current route})
-        relative-branch-id (or relative-child-branch-id (context/build-child-branch-relative-id ctx (context/eav ctx)))
-        child-branch-id (branch/child-branch-id (:branch ctx) relative-branch-id)
-        on-change (fn [new-route]
-                    (if (= new-route (:initial @local-state))
-                      (when (runtime/branch-exists? rt child-branch-id)
-                        (runtime/discard-branch rt child-branch-id))
-                      (do
-                        (when-not (runtime/branch-exists? rt child-branch-id)
-                          (runtime/create-branch rt child-branch-id))
-                        (runtime/set-route rt child-branch-id new-route)))
-                    (swap! local-state assoc :current new-route))]
-    (fn [display-cmp route ctx props]
-      (when-not (= (:initial @local-state) route)
-        (reset! local-state {:initial route :current route}))
-      (let [local-route (:current @local-state)
-            props (dissoc props ::relative-child-branch-id)]
-        (-> (if (or (= route local-route))
-              (either/right ctx)
-              (context/branch+ ctx relative-branch-id))
-            (either/branch
-              (fn [e] [(ui-error/error-comp ctx) e])
-              (fn [ctx] [display-cmp local-route on-change ctx props])))))))
+(defn- browse-success [ctx props]
+  [ui-comp ctx (-> props
+                   (dissoc :hyperfiddle.ui/error-render-custom)
+                   (update :class css "ui")
+                   (cond->
+                     ; @route here is a broken reaction, see routing/route+ returns a severed reaciton
+                     ; use the ctx's route, otherwise alt clicking while loading could take you to the new route, which is jarring
+                     (::on-click ctx) (assoc :on-click (r/partial (::on-click ctx) @(:hypercrud.browser/route ctx)))))])
 
-(defn iframe-cmp
-  ([ctx props]
-   (timbre/warn "Deprecated arity of hyperfiddle.ui.iframe/iframe-cmp. Explicitly provide route argument")
-   [iframe-cmp (:route props) ctx (dissoc props :route)])
-  ([route ctx props] [managed-route-editor-state iframe-cmp-impl route ctx props]))
+(defn iframe-cmp [ctx & [props]]
+  [:<> {:key (:partition-id ctx)}
+   (when-not (= :hypercrud.browser.browser-ui/user (or (some-> (:hyperfiddle.ui/display-mode ctx) deref) :hypercrud.browser.browser-ui/user))
+     [route-editor ctx])
+   [stale-browse ctx browse-error browse-success props]])
+
+(defn ^:deprecated result-as-fiddle [ctx & [props]]
+  ^{:key (str (:partition-id ctx) "-result-as-fiddle")}
+  [stale/loading
+   (r/track runtime/loading? (:runtime ctx) (:partition-id ctx))
+   (base/browse-result-as-fiddle+ ctx)
+   (fn [e] [browse-error ctx e props])
+   (fn [ctx] [browse-success ctx props])
+   (fn [ctx] [browse-success ctx props])])

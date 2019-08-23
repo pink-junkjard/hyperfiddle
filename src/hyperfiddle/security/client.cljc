@@ -9,7 +9,6 @@
     [contrib.reactive :as r]
     [contrib.try$ :refer [try-either]]
     [hypercrud.browser.context :as context]
-    [hyperfiddle.branch :as branch]
     [hyperfiddle.domain :as domain]
     [hyperfiddle.runtime :as runtime]
     [hyperfiddle.security :as security]
@@ -42,14 +41,13 @@
                  (if (:db/isComponent (context/attr ctx (context/a ctx)))
                    (parent-m (:hypercrud.browser/parent ctx))
                    (hypercrud.browser.context/data ctx)))
-      new-entity? (fn new-entity? [peer dbname dbid branch]
+      new-entity? (fn new-entity? [rt pid dbname dbid]
                     (or (contrib.datomic/tempid? dbid)
-                        (some-> @(runtime/state peer [::runtime/partitions branch :tempid-lookups dbname])
-                                deref
-                                (get dbid)
+                        (some-> (get (runtime/get-tempid-lookup! rt pid dbname) dbid)
                                 some?)
-                        (and (not (branch/root-branch? branch))
-                             (new-entity? peer dbname dbid (branch/parent-branch-id branch)))))]
+                        (if-let [parent-id (runtime/parent-pid rt pid)]
+                          (new-entity? rt parent-id dbname dbid)
+                          false)))]
   (def entity-ownership
     {:subject-can-transact? (fn [hf-db subject] (if (some? subject)
                                                   (either/right)
@@ -60,7 +58,7 @@
                               (or (contains? (set (:hyperfiddle/owners hf-db)) subject)
                                   (-> (mlet [m (maybe (parent-m ctx))
                                              dbname (maybe (context/dbname ctx))]
-                                        (return (or (new-entity? (:peer ctx) dbname (:db/id m) (:branch ctx))
+                                        (return (or (new-entity? (:runtime ctx) (:partition-id ctx) dbname (:db/id m))
                                                     (contains? (set (:hyperfiddle/owners m)) subject))))
                                       ; ui probably in an invalid/error state when m or uri are nil
                                       (maybe/from-maybe false)))))}))
@@ -83,9 +81,9 @@
 
 (defn can-create? [ctx]
   (-> (mlet [:let [dbname (context/dbname ctx)
-                   hf-db (-> (runtime/domain (:peer ctx))
+                   hf-db (-> (runtime/domain (:runtime ctx))
                              (domain/database dbname))
-                   subject @(runtime/state (:peer ctx) [::runtime/user-id])]
+                   subject (runtime/get-user-id (:runtime ctx))]
              client-sec (eval-client-sec hf-db)
              :let [f (or (:can-create? client-sec) (constantly true))]]
         (try-either (f hf-db subject ctx)))
@@ -97,9 +95,9 @@
 
 (defn writable-entity? [ctx]
   (-> (mlet [:let [dbname (context/dbname ctx)
-                   hf-db (-> (runtime/domain (:peer ctx))
+                   hf-db (-> (runtime/domain (:runtime ctx))
                              (domain/database dbname))
-                   subject @(runtime/state (:peer ctx) [::runtime/user-id])]
+                   subject (runtime/get-user-id (:runtime ctx))]
              client-sec (eval-client-sec hf-db)
              :let [f (or (:writable-entity? client-sec) (constantly true))]]
         (try-either (f hf-db subject ctx)))

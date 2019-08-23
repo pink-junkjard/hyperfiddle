@@ -1,7 +1,6 @@
 (ns hyperfiddle.ui.controls
   (:refer-clojure :exclude [boolean keyword long])
   (:require
-    [cats.monad.either :refer [branch]]
     [contrib.css]
     [contrib.data :refer [unqualify]]
     [contrib.pprint :refer [pprint-str]]
@@ -16,12 +15,12 @@
     [hypercrud.browser.context :as context]
     [hyperfiddle.api :as hf]
     [hyperfiddle.data]
+    [hyperfiddle.runtime :as runtime]
     #_[hyperfiddle.ui]
     [hyperfiddle.ui.docstring :refer [semantic-docstring]]
     [hyperfiddle.ui.select$ :refer [select]]
-    [hyperfiddle.ui.util :refer [entity-change->tx with-entity-change! with-tx!]]
-    [taoensso.timbre]
-    [hyperfiddle.fiddle :as fiddle]))
+    [hyperfiddle.ui.util :refer [entity-change->tx with-entity-change!]]
+    [taoensso.timbre]))
 
 (defn label-with-docs [label help-md props]
   [tooltip-thick (if help-md [:div.hyperfiddle.docstring [contrib.ui/markdown help-md]])
@@ -198,7 +197,7 @@
 
 (let [on-change (fn [ctx o n]
                   (->> (entity-change->tx ctx (empty->nil o) (empty->nil n))
-                       (with-tx! ctx)))]
+                       (runtime/with-tx (:runtime ctx) (:partition-id ctx) (context/dbname ctx))))]
   (defn ^:export code [val ctx & [props]]
     (let [props (-> (assoc props
                       :value val
@@ -209,7 +208,7 @@
 
 (let [on-change (fn [ctx o n]
                   (->> (entity-change->tx ctx (empty->nil o) (empty->nil n))
-                       (with-tx! ctx)))]
+                       (runtime/with-tx (:runtime ctx) (:partition-id ctx) (context/dbname ctx))))]
   (defn ^:export css [val ctx & [props]]
     (let [props (-> (assoc props
                       :value val
@@ -219,7 +218,7 @@
 
 (let [on-change (fn [ctx o n]
                   (->> (entity-change->tx ctx (empty->nil o) (empty->nil n))
-                       (with-tx! ctx)))]
+                       (runtime/with-tx (:runtime ctx) (:partition-id ctx) (context/dbname ctx))))]
   (defn ^:export markdown-editor [val ctx & [props]]        ; This is legacy; :mode=markdown should be bound in userland
     (let [props (-> (assoc props
                       :value val
@@ -301,7 +300,7 @@
 (defn -magic-new-change! [state ctx #_ov v]
   (let [[e _ _] @(:hypercrud.browser/eav ctx)]
     (assert e)
-    (with-tx! ctx [[:db/add e @state v]])))
+    (runtime/with-tx (:runtime ctx) (:partition-id ctx) (context/dbname ctx) [[:db/add e @state v]])))
 
 (defn magic-new [val ctx props]
   (let [state (r/atom nil)]
@@ -324,7 +323,7 @@
 
 (let [on-change (fn [ctx o n]
                   (->> (entity-change->tx ctx (empty->nil o) (empty->nil n))
-                       (with-tx! ctx)))]
+                       (runtime/with-tx (:runtime ctx) (:partition-id ctx) (context/dbname ctx))))]
   (defn ^:export string [val ctx & [props]]
     [:div.hyperfiddle-input-group
      (let [props (assoc props

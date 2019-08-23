@@ -1,106 +1,358 @@
 (ns hyperfiddle.runtime
   (:require
+    [cats.core :refer [mlet]]
+    [cats.labs.promise]
     [clojure.set :as set]
+    [contrib.data :as data]
     [contrib.datomic]
+    [contrib.datomic-tx :as tx]
+    [contrib.reactive :as r]
+    [hypercrud.types.DbRef :refer [->DbRef]]
     [hyperfiddle.domain :as domain]
-    [hyperfiddle.reducers :as reducers]
-    [hyperfiddle.state :as state]))
+    [hyperfiddle.io.core :as io]
+    [hyperfiddle.route :as route]
+    [hyperfiddle.state :as state]
+    [promesa.core :as p]
+    [taoensso.timbre :as timbre]))
 
 
 (defprotocol HF-Runtime
   (domain [rt])
   (io [rt])
-  (hydrate [rt branch request])
+  (hydrate [rt pid request])
+  (set-route
+    [rt pid route]
+    [rt pid route force-hydrate]
+    "Set the route of the given branch. This may or may not trigger IO.
+    Returns a promise"))
 
-  ; actions
-  (-set-route [rt branch route force-hydrate])
-  )
+(defn ^:deprecated state
+  ([rt]
+   (timbre/warn "runtime/state is no longer supported")
+   (state/state rt))
+  ([rt path]
+   (timbre/warn "runtime/state is no longer supported")
+   (r/cursor (state/state rt) path)))
 
-(defprotocol State                                          ; internal
-  (state [rt] [rt path]))
+(defn- state-ref [rt path] (r/cursor (state/state rt) path))
 
-(defn dispatch! [rt action-or-func]                         ; internal
-  (state/dispatch! (state rt) reducers/root-reducer action-or-func))
+(defn get-user-id [rt] @(state-ref rt [::user-id]))
 
-(defn attribute-renderer [rt branch ident] @(state rt [::partitions branch :attr-renderers ident]))
+(defn get-global-basis [rt] @(state-ref rt [::global-basis]))
 
-(defn set-route
-  "Set the route of the given branch. This may or may not trigger IO.
+(defn get-auto-transact [rt dbname] @(state-ref rt [::auto-transact dbname]))
+
+(defn set-auto-transact [rt dbname auto-tx]
+  {:pre [(domain/valid-dbname? (domain rt) dbname)]}
+  (state/dispatch! rt [:update-auto-transact dbname auto-tx]))
+
+; todo remove pid requirement
+(defn get-project [rt pid] @(state-ref rt [::partitions pid :project]))
+
+(defn any-partition-loading? [rt]
+  @(r/fmap->> (state-ref rt [::partitions])
+              (some (comp not nil? :hydrate-id val))))
+
+(defn create-partition
+  "Idempotent. If a partition exists for the given partition id, nothing happens.
+  Returns nil and immediately"
+  ([rt pid child-pid]
+   (create-partition rt pid child-pid false))
+  ([rt pid child-pid is-branched]
+   {:pre [pid child-pid]}
+   (when @(r/fmap nil? (state-ref rt [::partitions child-pid]))
+     (state/dispatch! rt [:create-partition pid child-pid is-branched]))
+   nil))
+
+(defn delete-partition [rt pid]
+  {:pre [pid]}
+  (state/dispatch! rt [:delete-partition pid]))
+
+(defn branch-partition
+  [rt pid]
+  {:pre [pid]}
+  (state/dispatch! rt [:branch-partition pid]))
+
+(defn branched?
+  "Returns false when a partition shares its parent's staging area"
+  [rt pid]
+  {:pre [pid]}
+  (boolean @(state-ref rt [::partitions pid :is-branched])))
+
+(defn parent-pid [rt pid]
+  {:pre [pid]}
+  @(state-ref rt [::partitions pid :parent-pid]))
+
+(defn get-branch-pid
+  "Given a partition-id, what is the most immediate partition that has a branched stage.
+  Will never return nil"
+  [rt pid]
+  {:pre [pid]}
+  (if (branched? rt pid)
+    pid
+    (get-branch-pid rt (parent-pid rt pid))))
+
+(defn get-branch-parent-pid
+  "Given a partition-id,  immediate partition that has a branched stage.
+  Returns nil if there is no parent with a branch"
+  [rt pid]
+  {:pre [pid]}
+  (let [branch-pid (get-branch-pid rt pid)]
+    (when-let [parent (parent-pid rt branch-pid)]
+      (get-branch-pid rt parent))))
+
+(defn child-pids
+  "Immediate children
+  Returns a coll of pids"
+  [rt pid]
+  {:pre [pid]}
+  @(state-ref rt [::partitions pid :partition-children]))
+
+(defn descendant-pids
+  "All children, and their children...
+  Returns a coll of pids"
+  [rt pid]
+  {:pre [pid]}
+  (->> (child-pids rt pid)
+       (mapcat (partial descendant-pids rt))
+       (cons pid)))
+
+(defn get-error [rt pid]
+  {:pre [pid]}
+  @(state-ref rt [::partitions pid :error]))
+
+(defn set-error [rt pid e]
+  {:pre [pid]}
+  (state/dispatch! rt [:partition-error pid e]))
+
+(defn loading?
+  [rt pid]
+  {:pre [pid]}
+  (some? @(state-ref rt [::partitions pid :hydrate-id])))
+
+(defn db
+  [rt pid dbname]
+  {:pre [pid]}
+  (cond
+    #_#_(not (branched? rt pid)) (db rt (parent-pid rt pid) dbname)
+    #_#_(domain/valid-dbname? (domain rt) dbname) (throw (ex-info "Invalid dbname" {:dbname dbname}))
+    :else (->DbRef dbname pid)))
+
+(defn get-schema+
+  "Returns nil or cats.monad.exception[contrib.datomic.Schema]"
+  ; todo this needs work
+  [rt pid dbname]
+  {:pre [pid]}
+  @(state-ref rt [::partitions (get-branch-pid rt pid) :schemas dbname]))
+
+(defn get-schemas
+  "Returns a map[k,v]
+  k :: dbname
+  v :: nil or cats.monad.exception[contrib.datomic.Schema]"
+  ; todo this needs work
+  [rt pid]
+  {:pre [pid]}
+  @(state-ref rt [::partitions (get-branch-pid rt pid) :schemas]))
+
+(defn get-attr-renderer
+  [rt pid ident]
+  @(state-ref rt [::partitions (get-branch-pid rt pid) :attr-renderers ident]))
+
+(defn get-local-basis [rt pid]
+  {:pre [pid]}
+  @(state-ref rt [::partitions (get-branch-pid rt pid) :local-basis]))
+
+(defn get-route [rt pid]
+  {:pre [pid]}
+  @(state-ref rt [::partitions pid :route]))
+
+(defn- refresh-global-basis [rt root-pid]
+  (-> (io/global-basis (io rt))
+      (p/then (fn [global-basis] (state/dispatch! rt [:set-global-basis global-basis])))
+      (p/catch (fn [e]
+                 (timbre/error e)
+                 (set-error rt root-pid e)
+                 (throw e)))))
+
+(defn- refresh-partition-basis [rt pid]
+  (let [{:keys [::global-basis ::partitions]} @(state/state rt)
+        route (get-in partitions [pid :route])]
+    (-> (io/local-basis (io rt) global-basis route)
+        (p/then (fn [local-basis]
+                  (state/dispatch! rt [:partition-basis pid local-basis])))
+        (p/catch (fn [error]
+                   (set-error rt pid error)
+                   (throw error))))))
+
+(defn- hydrate-partition [rt pid]
+  (let [partitions @(state-ref rt [::partitions])
+        {:keys [hydrate-id]} (get partitions pid)]
+    ; todo only grab applicable stages (my own, my children and all my parents'; NOT my siblings and their descendents)
+    (-> (->> (data/map-values #(select-keys % [:is-branched :partition-children :parent-pid :stage]) partitions)
+             (io/hydrate-route (io rt) (get-local-basis rt pid) (get-route rt pid) pid))
+        (p/then (fn [partitions]
+                  (if (= hydrate-id @(state-ref rt [::partitions pid :hydrate-id]))
+                    (let [success (->> partitions
+                                       (map (fn [[pid partition]]
+                                              ; todo if client side route is different, don't blast
+                                              [:hydrate!-route-success pid partition])))
+                          actions (into [:batch]
+                                        success
+                                        #_(if (parent-pid rt pid)
+                                            success
+                                            (conj success [:set-global-user-basis local-basis])))]
+                      ; todo rehydrate children
+                      (state/dispatch! rt actions))
+                    (timbre/info (str "Ignoring response for " hydrate-id)))))
+        (p/catch (fn [e]
+                   (timbre/info pid hydrate-id @(state-ref rt [::partitions pid :hydrate-id]))
+                   (timbre/error e)
+                   (if (= hydrate-id @(state-ref rt [::partitions pid :hydrate-id]))
+                     (set-error rt pid e)
+                     (timbre/info (str "Ignoring response for " hydrate-id)))
+                   (throw e))))))
+
+(def LEVEL-NONE 0)
+(def LEVEL-GLOBAL-BASIS 1)
+(def LEVEL-LOCAL-BASIS 2)
+(def LEVEL-HYDRATE-PAGE 3)
+
+(defn bootstrap-data
+  "Returns a promise"
+  [rt pid init-level & {:keys [hydrate-page?] :or {hydrate-page? (constantly true)}}]
+  (cond-> (p/resolved nil)
+    (< init-level LEVEL-GLOBAL-BASIS) (p/then (fn [_] (refresh-global-basis rt pid)))
+    (< init-level LEVEL-LOCAL-BASIS) (p/then (fn [_] (refresh-partition-basis rt pid)))
+    (< init-level LEVEL-HYDRATE-PAGE) (p/then (fn [_]
+                                                (if (hydrate-page?)
+                                                  (hydrate-partition rt pid)
+                                                  (p/resolved nil))))))
+
+(defn get-stage
+  ([rt pid]
+   {:pre [pid]}
+   @(state-ref rt [::partitions (get-branch-pid rt pid) :stage]))
+  ([rt pid dbname]
+   {:pre [pid]}
+   @(state-ref rt [::partitions (get-branch-pid rt pid) :stage dbname])))
+
+(defn set-stage
+  "Stages tx to the given dbname (overwrites existing tx).  This will rehydrate the given branch.
   Returns a promise"
-  ([rt branch route]
-   (-set-route rt branch route false))
-  ([rt branch route force-hydrate]
-   (-set-route rt branch route force-hydrate)))
+  [rt pid dbname tx]
+  (cond
+    (not (branched? rt pid)) (set-stage rt (get-branch-pid rt pid) dbname tx)
+    (not (domain/valid-dbname? (domain rt) dbname)) (p/rejected (ex-info "Unable to stage to an invalid db" {:dbname dbname}))
+    (get-auto-transact rt dbname) (p/rejected (ex-info "Unable to stage to a db with auto-transact on." {:dbname dbname}))
+    :else (when (not= tx (get-stage rt pid dbname))
+            (state/dispatch! rt [:batch
+                                 [:reset-stage-db pid dbname tx]
+                                 [:hydrate!-start pid]])
+            (hydrate-partition rt pid))))
 
-(defn get-route [rt branch]
-  @(state rt [::partitions branch :route]))
-
-(defn- get-tempid-lookup!
-  ; todo this is too low level an api to be worth making public
+(defn get-tempid-lookup!
   "Returns the tempid lookup for the given branch and dbname.
   May throw an exception (e.g. if the branch has an invalid stage)"
-  [rt branch dbname]
-  {:pre [(domain/valid-dbname? (domain rt) dbname)]}
-  (some-> @(state rt [::partitions branch :tempid-lookups dbname])
+  [rt pid dbname]
+  (some-> @(state-ref rt [::partitions pid :tempid-lookups dbname])
           deref))
 
-(defn id->tempid! [rt branch dbname id]
+(defn id->tempid! [rt pid dbname id]
   ; todo what about if the tempid is on a higher branch in the uri?
   (if (contrib.datomic/tempid? id)
     id
-    (let [id->tempid (get-tempid-lookup! rt branch dbname)]
+    (let [id->tempid (get-tempid-lookup! rt pid dbname)]
       (get id->tempid id id))))
 
-(defn tempid->id! [rt branch dbname tempid]
+(defn tempid->id! [rt pid dbname tempid]
   ; todo what about if the tempid is on a higher branch in the uri?
   (if (contrib.datomic/tempid? tempid)
-    (let [tempid->id (-> (get-tempid-lookup! rt branch dbname)
+    (let [tempid->id (-> (get-tempid-lookup! rt pid dbname)
                          (set/map-invert))]
       (get tempid->id tempid tempid))
     tempid))
 
-(defn create-branch [rt branch]
-  (dispatch! rt [:create-partition branch]))
+(defn- transact-impl [rt pid tx-groups & post-tx]
+  {:pre [(branched? rt pid)]}
+  (mlet [{:keys [tempid->id]} (io/transact! (io rt) tx-groups)
+         :let [route (route/invert-route (get-route rt pid) (fn [dbname id] (get-in tempid->id [dbname id] id)))
+               _ (state/dispatch! rt (into [:batch [:transact!-success pid (keys tx-groups)]] post-tx))]
+         _ (refresh-global-basis rt pid)]
+    ; todo we want to overwrite our current browser location with this new url
+    ; currently this new route breaks the back button
+    ; todo should just call foundation/bootstrap-data
+    (set-route rt pid route true)))
 
-(defn discard-branch [rt branch]
-  ; todo intermediary hack for circular deps while we move away from dispatch! as the public api
-  (let [discard-branch (resolve 'hyperfiddle.actions/discard-partition)]
-    (dispatch! rt (fn [dispatch! get-state] (discard-branch get-state branch)))))
+; todo do something when child branches exist and are not nil: hyperfiddle/hyperfiddle#99
+; can only transact one branch
+(defn transact
+  "Transacts the staging area of this partition (if the partition is unbranched, transact the parent branch).
+  If specified, the transaction can be restricted to a single database.
+  Returns a promise"
+  ([rt pid]
+   (let [pid (get-branch-pid rt pid)]
+     (transact-impl rt pid (get-stage rt pid))))
+  ([rt pid dbname]
+   (if (domain/valid-dbname? (domain rt) dbname)
+     (let [pid (get-branch-pid rt pid)]
+       (transact-impl rt pid {dbname (get-stage rt pid dbname)}))
+     (p/rejected (ex-info "Unable to transact to an invalid db" {:dbname dbname})))))
 
-(defn branch-is-loading? [rt branch]
-  (some? @(state rt [::partitions branch :hydrate-id])))
-
-(defn branch-exists? [rt branch]
-  (some? @(state rt [::partitions branch])))
-
-(defn set-branch-error [rt branch e]
-  (dispatch! rt [:partition-error branch e]))
+(defn- update-to-tempids! [rt pid dbname tx]
+  (let [schema @(get-schema+ rt pid dbname)
+        id->tempid (get-tempid-lookup! rt pid dbname)]
+    (map (partial tx/stmt-id->tempid id->tempid schema) tx)))
 
 (defn with-tx
-  "Stage tx to the given dbname.  This will rehydrate the given branch.  This may or may not immediately transact.
+  "Stage tx to the given dbname (appends to existing tx).  This will rehydrate the given branch.  This may or may not immediately transact.
   Returns a promise"
-  [rt branch dbname tx]
-  ; todo intermediary hack for circular deps while we move away from dispatch! as the public api
-  (let [with-groups (resolve 'hyperfiddle.actions/with-groups)]
-    (with-groups rt branch {dbname tx})))
+  [rt pid dbname tx]
+  (cond
+    (not (branched? rt pid)) (with-tx rt (get-branch-pid rt pid) dbname tx)
+    (not (domain/valid-dbname? (domain rt) dbname)) (p/rejected (ex-info "Unable to stage to an invalid db" {:dbname dbname}))
+    (empty? tx) (do (timbre/warn "No tx provided")
+                    (p/resolved nil))
+    :else (do
+            (let [tx (update-to-tempids! rt pid dbname tx)]
+              (state/dispatch! rt [:with pid dbname tx]))
+            (if (and (nil? (parent-pid rt pid)) (get-auto-transact rt dbname))
+              (transact pid dbname)
+              (do
+                (state/dispatch! rt [:hydrate!-start pid])
+                (hydrate-partition rt pid))))))
 
 (defn commit-branch
   "Commit the branch to its parent.  This will rehydrate the parent branch.  This may or may not immediately transact.
   Returns a promise"
-  [rt branch tx-groups on-start]
-  ; todo intermediary hack for circular deps while we move away from dispatch! as the public api
-  (let [commit-branch (resolve 'hyperfiddle.actions/commit-branch)]
-    (commit-branch rt branch tx-groups on-start)))
+  [rt pid tx-groups]                                        ; todo rewrite in terms of with-tx
+  (cond
+    (not (branched? rt pid)) (commit-branch rt (get-branch-pid rt pid) tx-groups)
+    (not (domain/valid-dbnames? (domain rt) (keys tx-groups))) (p/rejected (ex-info "Unable to commit to an invalid db" {:invalid-dbnames (remove #(domain/valid-dbname? (domain rt) %) (keys tx-groups))}))
+    :else (do
+            (let [with-actions (->> tx-groups
+                                    (remove (fn [[dbname tx]] (empty? tx)))
+                                    (mapv (fn [[dbname tx]]
+                                            (let [tx (update-to-tempids! rt pid dbname tx)]
+                                              [:with pid dbname tx]))))]
+              ; should the tx fn not be withd? if the transact! fails, do we want to run it again?
+              (state/dispatch! rt (into [:batch] with-actions)))
+            (let [tx-groups (->> (get-stage rt pid)
+                                 (filter (fn [[dbname tx]] (and (get-auto-transact rt dbname) (not (empty? tx)))))
+                                 (into {}))]
+              (if (and (nil? (parent-pid rt pid)) (not (empty? tx-groups)))
+                ; todo what if transact throws?
+                (transact-impl rt pid tx-groups [:merge pid])
+                (do
+                  (state/dispatch! rt [:batch
+                                       [:merge pid]
+                                       [:hydrate!-start (get-branch-parent-pid rt pid)]])
+                  (hydrate-partition rt (get-branch-parent-pid rt pid))))))))
 
-(defn popover-is-open? [rt branch popover-id]
-  (some? @(state rt [::partitions branch :popovers popover-id])))
+(defn open-popover [rt pid popover-id]
+  (state/dispatch! rt [:open-popover pid popover-id]))
 
-(defn open-popover [rt branch popover-id]
-  ; todo intermediary hack for circular deps while we move away from dispatch! as the public api
-  (let [open-popover (resolve 'hyperfiddle.actions/open-popover)]
-    (dispatch! rt (open-popover branch popover-id))))
+(defn close-popover [rt pid popover-id]
+  (state/dispatch! rt [:close-popover pid popover-id]))
 
-(defn close-popover [rt branch popover-id]
-  ; todo intermediary hack for circular deps while we move away from dispatch! as the public api
-  (let [close-popover (resolve 'hyperfiddle.actions/close-popover)]
-    (dispatch! rt (close-popover branch popover-id))))
+(defn popover-is-open? [rt pid popover-id]
+  (some? @(state-ref rt [::partitions pid :popovers popover-id])))

@@ -10,7 +10,7 @@
                                                   #".+" (keyword route-ns "404")
                                                   true (keyword route-ns "405")}
 
-   ["hydrate-route/" [#"[^/]*" :local-basis] "/" [#"[^/]*" :branch] "/" [#".*" :encoded-route]]
+   ["hydrate-route/" [#"[^/]*" :local-basis] "/" [#"[^/]*" :partition-id] "/" [#".*" :encoded-route]]
    {:get (keyword route-ns "hydrate-route")
     :post (keyword route-ns "hydrate-route")
     true (keyword route-ns "405")}

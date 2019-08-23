@@ -100,11 +100,11 @@
       (http-request! jwt)
       (p/then :body)))
 
-(defn hydrate-requests! [domain ?service-uri local-basis staged-branches requests & [jwt]]
+(defn hydrate-requests! [domain ?service-uri local-basis partitions requests & [jwt]]
   (let [req {:url (str ?service-uri (domain/api-path-for domain :hydrate-requests :local-basis (ednish/encode-uri local-basis))) ; serialize kvseq
              :accept :application/transit+json :as :auto
              :method :post                                  ; hydrate-requests always has a POST body, though it has a basis and is cachable
-             :form {:staged-branches staged-branches :request requests}
+             :form {:partitions partitions :request requests}
              :content-type :application/transit+json}]
     (timbre/debugf "hydrate-requests! request count= %s basis= %s form= %s" (count requests) (pr-str local-basis) (str/prune (pr-str (:form req)) 100))
     (-> (http-request! req)
@@ -112,26 +112,23 @@
                   (assert (= (count requests) (count (:pulled-trees body))) "Server contract violation; mismatched counts")
                   body)))))
 
-(defn hydrate-route! [domain ?service-uri local-basis route branch stage & [jwt]]
+(defn hydrate-route! [domain ?service-uri local-basis route pid partitions & [jwt]]
   {:pre [domain local-basis route]}
-  (let [stage (->> stage
-                   (remove (comp empty? second))
-                   (into {}))]
-    (-> (merge {:url (str ?service-uri
-                          (domain/api-path-for domain :hydrate-route
-                                               :local-basis (ednish/encode-uri local-basis)
-                                               ; todo this needs work
-                                               #_#_:encoded-route (subs (foundation/route-encode rt route) 1) ; includes "/"
-                                               :encoded-route (base-64-url-safe/encode (pr-str route))
-                                               :branch (base-64-url-safe/encode (pr-str branch))))
-                :accept :application/transit+json :as :auto}
-               (if (empty? stage)
-                 {:method :get}                             ; Try to hit CDN
-                 {:method :post
-                  :form stage
-                  :content-type :application/transit+json}))
-        (http-request! jwt)
-        (p/then :body))))
+  (-> (merge {:url (str ?service-uri
+                        (domain/api-path-for domain :hydrate-route
+                                             :local-basis (ednish/encode-uri local-basis)
+                                             ; todo this needs work
+                                             #_#_:encoded-route (subs (foundation/route-encode rt route) 1) ; includes "/"
+                                             :encoded-route (base-64-url-safe/encode (pr-str route))
+                                             :partition-id (base-64-url-safe/encode (pr-str pid))))
+              :accept :application/transit+json :as :auto}
+             (if false #_(empty? stage)                     ; todo
+               {:method :get}                               ; Try to hit CDN
+               {:method :post
+                :form partitions
+                :content-type :application/transit+json}))
+      (http-request! jwt)
+      (p/then :body)))
 
 (defn local-basis! [domain ?service-uri global-basis route & [jwt]]
   (-> {:url (str ?service-uri (domain/api-path-for domain :local-basis

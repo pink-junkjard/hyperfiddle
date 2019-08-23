@@ -51,26 +51,28 @@
 
 (deftest duplicate-datoms []
   (testing "non source db"
-    (let [response (timbre/with-config {:enabled? false}
+    (let [pid foundation/root-pid
+          response (timbre/with-config {:enabled? false}
                      (let [local-basis (datomic-sync/sync test-domain ["$" "$src"])
                            route {::route/fiddle :persons}
-                           branch foundation/root-branch
-                           stage {foundation/root-branch {"$" [[:db/add [:person/name "Bob"] :person/age 41]
-                                                               [:db/add [:person/name "Bob"] :person/age 42]]}}
+                           partitions {foundation/root-pid {:is-branched true
+                                                            :stage {"$" [[:db/add [:person/name "Bob"] :person/age 41]
+                                                                         [:db/add [:person/name "Bob"] :person/age 42]]}}}
                            subject nil]
-                       @(hydrate-route/hydrate-route test-domain local-basis route branch stage subject)))]
-      (is (-> response :schemas (get "$") exception/failure?))
-      (is (-> response :schemas (get "$src") exception/success?))))
+                       @(hydrate-route/hydrate-route test-domain local-basis route pid partitions subject)))]
+      (is (exception/failure? (get-in response [pid :schemas "$"])))
+      (is (exception/success? (get-in response [pid :schemas "$src"])))))
 
   (testing "source db"
     (let [response+ (timbre/with-config {:enabled? false}
                       (let [local-basis (datomic-sync/sync test-domain ["$" "$src"])
                             route {::route/fiddle :persons}
-                            branch foundation/root-branch
-                            stage {foundation/root-branch {"$src" [[:db/add [:fiddle/ident :persons] :db/doc "foo"]
-                                                                   [:db/add [:fiddle/ident :persons] :db/doc "bar"]]}}
+                            pid foundation/root-pid
+                            partitions {foundation/root-pid {:is-branched true
+                                                             :stage {"$src" [[:db/add [:fiddle/ident :persons] :db/doc "foo"]
+                                                                             [:db/add [:fiddle/ident :persons] :db/doc "bar"]]}}}
                             subject nil]
-                        @(p/branch (hydrate-route/hydrate-route test-domain local-basis route branch stage subject)
+                        @(p/branch (hydrate-route/hydrate-route test-domain local-basis route pid partitions subject)
                                    exception/success
                                    exception/failure)))]
       (is (thrown-with-msg? ExceptionInfo (re-pattern (Pattern/quote ":db.error/datoms-conflict")) @response+)))))

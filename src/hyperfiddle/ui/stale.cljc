@@ -1,8 +1,9 @@
 (ns hyperfiddle.ui.stale
   (:require
-    [cats.monad.either :as either]
-    [hypercrud.client.peer :refer [loading?]]))
+    [cats.monad.either :as either]))
 
+
+(defn- loading? [e] (= "Loading" (:message e)))
 
 (defn loading
   ([can-be-loading either-v error success]
