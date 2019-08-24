@@ -120,24 +120,16 @@
                :body (into [:div.hyperfiddle-popover-body] body-children)]]]])
 
 (defn- branched-popover-body-cmp [child-pid {rt :runtime :as ctx} {:keys [::popover-id] :as props}]
-  (-> (context/set-partition ctx child-pid)
-      (either/branch
-        (fn [e]
-          [:<>
-           [ui-error/error-block e]
-           [:div.hyperfiddle-popover-actions
-            [:button {:disabled true} "stage"]
-            [:button {:on-click #(cancel! rt (:partition-id ctx) child-pid popover-id)} "cancel"]]])
-        (fn [branched-ctx]
-          [:<>
-           [iframe/iframe-cmp (assoc branched-ctx :hyperfiddle.ui/error-with-stage? true)]
-           [:div.hyperfiddle-popover-actions
-            (let [+popover-ctx-post (base/browse-partition+ branched-ctx) ; todo browse once
-                  r-popover-data (r/>>= :hypercrud.browser/result +popover-ctx-post) ; focus the fiddle at least then call @(context/data) ?
-                  popover-invalid (->> +popover-ctx-post (unwrap (constantly nil)) context/tree-invalid?)]
-              [:button {:on-click #(stage! popover-id child-pid ctx r-popover-data props)
-                        :disabled popover-invalid} "stage"])
-            [:button {:on-click #(cancel! rt (:partition-id ctx) child-pid popover-id)} "cancel"]]]))))
+  (let [branched-ctx (context/set-partition ctx child-pid)]
+    [:<>
+     [iframe/iframe-cmp (assoc branched-ctx :hyperfiddle.ui/error-with-stage? true)]
+     [:div.hyperfiddle-popover-actions
+      (let [+popover-ctx-post (base/browse-partition+ branched-ctx) ; todo browse once
+            r-popover-data (r/>>= :hypercrud.browser/result +popover-ctx-post) ; focus the fiddle at least then call @(context/data) ?
+            popover-invalid (->> +popover-ctx-post (unwrap (constantly nil)) context/tree-invalid?)]
+        [:button {:on-click #(stage! popover-id child-pid ctx r-popover-data props)
+                  :disabled popover-invalid} "stage"])
+      [:button {:on-click #(cancel! rt (:partition-id ctx) child-pid popover-id)} "cancel"]]]))
 
 (let [open-branched-popover! (fn [rt pid child-pid route popover-id]
                                (runtime/create-partition rt pid child-pid true)
@@ -149,7 +141,7 @@
                             ::open-popover (r/partial open-branched-popover! (:runtime ctx) (:partition-id ctx) child-pid (:route props))
                             ::close-popover (r/partial cancel! (:runtime ctx) (:partition-id ctx) child-pid))
      ; body-cmp NOT inlined for perf
-     [branched-popover-body-cmp ctx props]]))
+     [branched-popover-body-cmp child-pid ctx props]]))
 
 (defn- unbranched-popover-body-cmp [child-pid ctx props]
   [:<>
