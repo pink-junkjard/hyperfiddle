@@ -156,9 +156,9 @@
                     (fn [k r o n]
                       (let [old-route (get-in o [::runtime/partitions preview-pid :route])
                             new-route (get-in n [::runtime/partitions preview-pid :route])]
-                        (when-not (= old-route new-route)
+                        (when-not (route/equal-without-frag? old-route new-route)
                           (swap! preview-state assoc :is-refreshing true)
-                          (-> (runtime/set-route rt preview-pid new-route)
+                          (-> (runtime/bootstrap-data rt preview-pid runtime/LEVEL-GLOBAL-BASIS)
                               (p/finally (fn [] (swap! preview-state assoc
                                                        :staleness (ide-partition-reference rt ide-pid)
                                                        :is-refreshing false))))))))))
