@@ -49,6 +49,8 @@
 ; todo remove pid requirement
 (defn get-project [rt pid] @(state-ref rt [::partitions pid :project]))
 
+(defn get-partition [rt pid] @(state-ref rt [::partitions pid]))
+
 (defn any-partition-loading? [rt]
   @(r/fmap->> (state-ref rt [::partitions])
               (some (comp not nil? :hydrate-id val))))
@@ -213,12 +215,30 @@
              :rehydrate-pids []}
             (set/union local-children new-children))))
 
+(defn- accumulate-parent-partitions [rt pid]
+  (loop [curr-pid pid
+         acc {pid (assoc (get-partition rt pid) :partition-children #{})}]
+    (if-let [ppid (parent-pid rt curr-pid)]
+      (let [p (-> (get-partition rt ppid)
+                  (assoc :partition-children #{curr-pid}))]
+        (recur ppid (assoc acc ppid p)))
+      acc)))
+
 (defn- hydrate-partition [rt pid]
-  (let [partitions @(state-ref rt [::partitions])
-        {:keys [hydrate-id]} (get partitions pid)]
-    ; todo only grab applicable stages (my own, my children and all my parents'; NOT my siblings and their descendents)
-    (-> (->> (data/map-values #(select-keys % [:is-branched :partition-children :parent-pid :stage]) partitions)
-             (io/hydrate-route (io rt) (get-local-basis rt pid) (get-route rt pid) pid))
+  (let [{:keys [hydrate-id]} (get-partition rt pid)
+        partitions (->> (or (->> (descendant-pids rt pid)
+                                 (filter #(branched? rt %))
+                                 seq)
+                            [pid])
+                        (map #(accumulate-parent-partitions rt %))
+                        (reduce (fn [as bs]
+                                  (reduce-kv (fn [acc pid p]
+                                               (if (contains? acc pid)
+                                                 (update-in acc [pid :partition-children] set/join (:partition-children p))
+                                                 (assoc acc pid p)))
+                                             as bs)))
+                        (data/map-values #(select-keys % [:is-branched :partition-children :parent-pid :stage])))]
+    (-> (io/hydrate-route (io rt) (get-local-basis rt pid) (get-route rt pid) pid partitions)
         (p/catch (fn [e]
                    (timbre/info pid hydrate-id @(state-ref rt [::partitions pid :hydrate-id]))
                    (timbre/error e)

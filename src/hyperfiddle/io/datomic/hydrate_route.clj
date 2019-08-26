@@ -87,7 +87,8 @@
         (-> @(state/state rt)
             ::runtime/partitions
             (select-keys (runtime/descendant-pids rt pid))
-            (->> (map (fn [[pid partition]]
+            (->> (filter (fn [[pid p]] (some? (:route p))))
+                 (map (fn [[pid partition]]
                         [pid (select-keys partition [:is-branched
                                                      :partition-children
                                                      :parent-pid
