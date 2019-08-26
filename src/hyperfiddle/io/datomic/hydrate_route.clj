@@ -57,8 +57,7 @@
                                                         :local-basis local-basis
                                                         :project project ; todo this is needed once total, not once per partition
                                                         :route route
-                                                        :schemas schemas
-                                                        :tempid-lookups (hydrate-requests/extract-tempid-lookups db-with-lookup pid))}
+                                                        :schemas schemas)}
             state-atom (r/atom (state/initialize initial-state))
             partitions-f (fn []
                            (->> (::runtime/partitions @state-atom)
@@ -69,10 +68,14 @@
             rt (->RT domain db-with-lookup get-secure-db-with+ state-atom ?subject)]
         (perf/time (fn [total-time] (timbre/debugf "d/with total time: %sms" total-time))
                    ; must d/with at the beginning otherwise tempid reversal breaks
-                   (doseq [[pid partition] partitions
-                           :when (runtime/branched? rt pid)
-                           [dbname _] (:stage partition)]
-                     (get-secure-db-with+ dbname pid)))
+                   (do
+                     (doseq [[pid partition] partitions
+                             :when (boolean (:is-branched partition))
+                             [dbname _] (:stage partition)]
+                       (get-secure-db-with+ dbname pid))
+                     (doseq [pid (keys @db-with-lookup)]
+                       (swap! state-atom assoc-in [::runtime/partitions pid :tempid-lookups]
+                              (hydrate-requests/extract-tempid-lookups db-with-lookup pid)))))
         (perf/time (fn [total-time]
                      (timbre/debugf "request function %sms" total-time)
                      (when (> total-time 500)
