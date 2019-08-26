@@ -36,7 +36,9 @@
    (timbre/warn "deprecated. invoke runtime/with-tx directly")
    (runtime/with-tx (:runtime ctx) (:partition-id ctx) dbname tx)))
 
-(defn with-entity-change! [ctx] (r/comp (r/partial with-tx! ctx) (r/partial entity-change->tx ctx)))
+(defn with-entity-change! [ctx]
+  (r/comp (r/partial runtime/with-tx (:runtime ctx) (:partition-id ctx) (context/dbname ctx))
+          (r/partial entity-change->tx ctx)))
 
 (defn writable-entity? [ctx]
   (and
