@@ -198,9 +198,9 @@
                                               [:hydrate!-route-success pid partition])))
                           actions (into [:batch]
                                         success
-                                        #_(if (parent-pid rt pid)
-                                            success
-                                            (conj success [:set-global-user-basis local-basis])))]
+                                        (if (parent-pid rt pid)
+                                          success
+                                          (conj success [:set-global-user-basis (get-in partitions [pid :local-basis])])))]
                       ; todo rehydrate children
                       (state/dispatch! rt actions))
                     (timbre/info (str "Ignoring response for " hydrate-id)))))
