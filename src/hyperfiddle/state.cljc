@@ -63,6 +63,11 @@
                                    (assoc child-pid {:is-branched is-branched
                                                      :parent-pid parent-pid})))
 
+           :new-hydrated-partition (let [[parent-pid child-pid partition] args]
+                                     (-> partitions
+                                         (update-in [parent-pid :partition-children] conj child-pid)
+                                         (assoc child-pid (dissoc partition [:partition-children]))))
+
            :delete-partition (let [[pid] args]
                                (delete-partition partitions pid))
 
@@ -104,7 +109,7 @@
                                              (fn [partition]
                                                (-> (into {} partition)
                                                    (dissoc :error :hydrate-id)
-                                                   (into new-partition)))))
+                                                   (into (dissoc new-partition [:partition-children]))))))
 
            :partition-error (let [[pid error] args]
                               (update partitions pid

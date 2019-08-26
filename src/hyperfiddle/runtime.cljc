@@ -184,33 +184,62 @@
                    (set-error rt pid error)
                    (throw error))))))
 
+(defn- process-children [rt pid new-partitions]
+  (let [local-children (set (child-pids rt pid))
+        new-children (set (get-in new-partitions [pid :partition-children]))]
+    (reduce (fn [acc child-pid]
+              (cond
+                (and (new-children child-pid)
+                     (local-children child-pid))
+                (if (= (get-in new-partitions [child-pid :route]) (get-route rt child-pid))
+                  (merge-with                               ; stuff in ptm and recurse for child-pid's children
+                    into
+                    (update acc :actions conj [:hydrate!-route-success child-pid (get new-partitions child-pid)])
+                    (process-children rt child-pid new-partitions))
+                  (update acc :rehydrate-pids conj child-pid))
+
+                (new-children child-pid)
+                (merge-with                                 ; stuff in ptm and recurse for child-pid's children
+                  into
+                  (update acc :actions conj [:new-hydrated-partition pid child-pid (get new-partitions child-pid)])
+                  (process-children rt child-pid new-partitions))
+
+                (local-children child-pid)
+                (if false                                   ; todo, branched? branched-popover?
+                  (update acc :rehydrate-pids conj child-pid)
+                  (update acc :actions conj [:delete-partition child-pid]))
+                ))
+            {:actions []
+             :rehydrate-pids []}
+            (set/union local-children new-children))))
+
 (defn- hydrate-partition [rt pid]
   (let [partitions @(state-ref rt [::partitions])
         {:keys [hydrate-id]} (get partitions pid)]
     ; todo only grab applicable stages (my own, my children and all my parents'; NOT my siblings and their descendents)
     (-> (->> (data/map-values #(select-keys % [:is-branched :partition-children :parent-pid :stage]) partitions)
              (io/hydrate-route (io rt) (get-local-basis rt pid) (get-route rt pid) pid))
-        (p/then (fn [partitions]
-                  (if (= hydrate-id @(state-ref rt [::partitions pid :hydrate-id]))
-                    (let [success (->> partitions
-                                       (map (fn [[pid partition]]
-                                              ; todo if client side route is different, don't blast
-                                              [:hydrate!-route-success pid partition])))
-                          actions (into [:batch]
-                                        success
-                                        (if (parent-pid rt pid)
-                                          success
-                                          (conj success [:set-global-user-basis (get-in partitions [pid :local-basis])])))]
-                      ; todo rehydrate children
-                      (state/dispatch! rt actions))
-                    (timbre/info (str "Ignoring response for " hydrate-id)))))
         (p/catch (fn [e]
                    (timbre/info pid hydrate-id @(state-ref rt [::partitions pid :hydrate-id]))
                    (timbre/error e)
                    (if (= hydrate-id @(state-ref rt [::partitions pid :hydrate-id]))
                      (set-error rt pid e)
                      (timbre/info (str "Ignoring response for " hydrate-id)))
-                   (throw e))))))
+                   (throw e)))
+        (p/then (fn [new-partitions]
+                  (if (= hydrate-id @(state-ref rt [::partitions pid :hydrate-id]))
+                    (let [{:keys [actions rehydrate-pids]} (process-children rt pid new-partitions)
+                          actions (into [:batch
+                                         [:hydrate!-route-success pid (get new-partitions pid)]]
+                                        (concat actions
+                                                (map (fn [pid] [:hydrate!-start pid]) rehydrate-pids)
+                                                (when-not (parent-pid rt pid)
+                                                  [[:set-global-user-basis (get-in new-partitions [pid :local-basis])]])))]
+                      (state/dispatch! rt actions)
+                      (-> (map #(hydrate-partition rt %) rehydrate-pids)
+                          (p/all)
+                          (p/then (constantly nil))))
+                    (timbre/info (str "Ignoring response for " hydrate-id))))))))
 
 (def LEVEL-NONE 0)
 (def LEVEL-GLOBAL-BASIS 1)
