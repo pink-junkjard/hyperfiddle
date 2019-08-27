@@ -81,8 +81,7 @@
            :with (let [[pid dbname tx] args]
                    (with partitions pid dbname tx))
 
-           :merge (let [[pid] args
-                        parent-pid (get-in partitions [pid :parent-pid])]
+           :merge (let [[parent-pid pid] args]
                     (-> (reduce-kv (fn [partitions dbname tx]
                                      (with partitions parent-pid dbname tx))
                                    partitions
@@ -159,6 +158,8 @@
                                      (reduce-kv update p))]
                   (when-not (or (:parent-pid updated-p) (:is-branched updated-p))
                     (throw (ex-info "Every partition must have a parent or be branched" {:pid pid :action action})))
+                  (when (and (not (:is-branched updated-p)) (seq (:stage updated-p)))
+                    (throw (ex-info "Cannot stage to unbranched partition" {:pid pid :action action})))
                   [pid updated-p])))
          (into {}))))
 

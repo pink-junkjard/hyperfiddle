@@ -385,17 +385,18 @@
                                               [:with pid dbname tx]))))]
               ; should the tx fn not be withd? if the transact! fails, do we want to run it again?
               (state/dispatch! rt (into [:batch] with-actions)))
-            (let [tx-groups (->> (get-stage rt pid)
+            (let [ppid (get-branch-parent-pid rt pid)
+                  tx-groups (->> (get-stage rt pid)
                                  (filter (fn [[dbname tx]] (and (get-auto-transact rt dbname) (not (empty? tx)))))
                                  (into {}))]
               (if (and (nil? (parent-pid rt pid)) (not (empty? tx-groups)))
                 ; todo what if transact throws?
-                (transact-impl rt pid tx-groups [:merge pid])
+                (transact-impl rt pid tx-groups [:merge ppid pid])
                 (do
                   (state/dispatch! rt [:batch
-                                       [:merge pid]
-                                       [:hydrate!-start (get-branch-parent-pid rt pid)]])
-                  (hydrate-partition rt (get-branch-parent-pid rt pid))))))))
+                                       [:merge ppid pid]
+                                       [:hydrate!-start ppid]])
+                  (hydrate-partition rt ppid)))))))
 
 (defn open-popover [rt pid popover-id]
   (state/dispatch! rt [:open-popover pid popover-id]))
