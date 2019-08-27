@@ -144,6 +144,13 @@
   #_(when (= base/browser-query-limit n)
       [:div.alert.alert-warning (str/format "Warning: Options resultset has been truncated to %s records. Please add additional filters" base/browser-query-limit)]))
 
+(def react-bootstrap-typeahead
+  (cond
+    (exists? js/ReactBootstrapTypeahead) js/ReactBootstrapTypeahead
+    (exists? js/require) (set! js/ReactBootstrapTypeahead (or (js/require "react-bootstrap-typeahead")
+                                                              (throw (js/Error. "require('react-bootstrap-typeahead') failed"))))
+    :else (throw (js/Error. "js/react-bootstrap-typeahead is missing"))))
+
 (defn typeahead-html [_ options-ctx props]                  ; element, etc
   (either/branch
     (options-value-bridge+ (::value-ctx props) props)
@@ -173,7 +180,7 @@
         [:<>
          [truncated-options (count option-records-untupled)]
          (reagent.core/create-element
-           js/ReactBootstrapTypeahead.Typeahead
+           (.-Typeahead react-bootstrap-typeahead)
            #js {"labelKey" (fn [record]
                              ; Must return string otherwise "invariant undefined"; you can pr-str from userland
                              (str ((:option-label select-props) record)))
@@ -199,7 +206,7 @@
 
 (defn- props->async-typeahead [props]
   (let [j-props (apply js-obj (apply concat props))]
-    (reagent.core/create-element js/ReactBootstrapTypeahead.AsyncTypeahead j-props)))
+    (reagent.core/create-element (.-AsyncTypeahead react-bootstrap-typeahead) j-props)))
 
 (defn- adapt-options [select-props options]
   (to-array (sort-by (:option-label select-props) options)))
