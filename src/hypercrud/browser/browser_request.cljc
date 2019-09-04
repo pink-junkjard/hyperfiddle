@@ -24,9 +24,9 @@
             nil (do (runtime/create-partition rt (:partition-id ctx) new-pid)
                     (runtime/set-route rt new-pid route))
             route (timbre/warn "Revisiting already created pid. Potential performance issue" route)
-            :else (throw (ex-info "pid generation non-unique" {:new-pid new-pid
-                                                               :route route
-                                                               :link link})))
+            (throw (ex-info "pid generation non-unique" {:new-pid new-pid
+                                                         :route route
+                                                         :link link})))
           (-> (context/set-partition link-ctx new-pid)
               (base/browse-partition+)
               (either/branch
