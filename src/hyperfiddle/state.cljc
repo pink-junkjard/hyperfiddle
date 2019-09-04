@@ -76,8 +76,8 @@
                               (assoc-in partitions [pid :route] route))
 
            :stage-route (let [[pid route] args]
-                               (assert (some? (get partitions pid)) "Must create-partition before setting route") ; todo move this assertion to runtime boundaries
-                               (assoc-in partitions [pid :pending-route] route))
+                          (assert (some? (get partitions pid)) "Must create-partition before setting route") ; todo move this assertion to runtime boundaries
+                          (assoc-in partitions [pid :pending-route] route))
 
            :with (let [[pid dbname tx] args]
                    (with partitions pid dbname tx))
