@@ -25,6 +25,7 @@
                     (runtime/set-route rt new-pid route))
             route (timbre/warn "Revisiting already created pid. Potential performance issue" route)
             (throw (ex-info "pid generation non-unique" {:new-pid new-pid
+                                                         :existing-route (runtime/get-route rt new-pid)
                                                          :route route
                                                          :link link})))
           (-> (context/set-partition link-ctx new-pid)
