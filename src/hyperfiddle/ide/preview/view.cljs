@@ -154,8 +154,8 @@
                                  :is-refreshing false))))
          (add-watch (state/state rt) this
                     (fn [k r o n]
-                      (let [old-route (get-in o [::runtime/partitions preview-pid :route])
-                            new-route (get-in n [::runtime/partitions preview-pid :route])]
+                      (let [old-route (get-in o [::runtime/partitions preview-pid :pending-route])
+                            new-route (get-in n [::runtime/partitions preview-pid :pending-route])]
                         (when-not (route/equal-without-frag? old-route new-route)
                           (swap! preview-state assoc :is-refreshing true)
                           (-> (runtime/bootstrap-data rt preview-pid runtime/LEVEL-GLOBAL-BASIS)
@@ -180,7 +180,7 @@
 
 (defn- from [ide-domain ide-pid parent-state]
   (let [root-partition (-> (get-in parent-state [::runtime/partitions ide-pid])
-                           (select-keys [:is-branched :route :stage :local-basis])
+                           (select-keys [:is-branched :route :pending-route :stage :local-basis])
                            (update :local-basis (fn [local-basis] (map-values #(get local-basis %) (::ide-domain/user-dbname->ide ide-domain))))
                            (update :stage (fn [stage] (map-values #(get stage %) (::ide-domain/user-dbname->ide ide-domain)))))]
     (-> (::runtime/user-state parent-state)
@@ -192,10 +192,14 @@
           (= :hyperfiddle.ide/edit (get-in root-partition [:route ::route/fiddle]))
           (update-in [::runtime/partitions preview-rt/preview-pid]
                      (fn [v]
-                       (assoc v
-                         :is-branched true
-                         :parent-pid ide-pid
-                         :route (let [route (ide-routing/ide-route->preview-route (:route root-partition))]
-                                  (cond-> route
-                                    (hyperfiddle.ide/parse-ide-fragment (::route/fragment route)) (dissoc ::route/fragment)))))))
+                       (let [route (let [route (ide-routing/ide-route->preview-route (:route root-partition))]
+                                     (cond-> route
+                                       (hyperfiddle.ide/parse-ide-fragment (::route/fragment route)) (dissoc ::route/fragment)))]
+                         (-> (assoc v
+                               :is-branched true
+                               :parent-pid ide-pid)
+                             (cond->
+                               (and (not (route/equal-without-frag? route (:pending-route v)))
+                                    (not (route/equal-without-frag? route (:route v))))
+                               (assoc :pending-route route)))))))
         state/initialize)))
