@@ -39,10 +39,11 @@
   (-> (run-txfn! ctx props)
       (p/then (fn [tx]
                 (let [tx-groups {(or (hypercrud.browser.context/dbname ctx) "$") ; https://github.com/hyperfiddle/hyperfiddle/issues/816
-                                 tx}]
+                                 tx}
+                      popover-data @r-popover-data]
                   (runtime/close-popover rt parent-pid child-pid)
                   (cond-> (runtime/commit-branch rt child-pid tx-groups)
-                    (::redirect props) (p/then (fn [_] (runtime/set-route rt parent-pid ((::redirect props) @r-popover-data))))))))
+                    (::redirect props) (p/then (fn [_] (runtime/set-route rt parent-pid ((::redirect props) popover-data))))))))
       (p/catch (fn [e]
                  ; todo something better with these exceptions (could be user error)
                  (timbre/error e)
