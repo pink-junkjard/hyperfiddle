@@ -45,6 +45,8 @@
     (update-in partitions [pid :stage dbname] (partial tx/into-tx @schema+) tx)
     (throw (ex-info "Missing schema" {:pid pid :dbname dbname}))))
 
+(defn- build-hydrate-id [partition] (hash (select-keys partition [:route :pending-route :stage :local-basis])))
+
 (let [delete-partition (fn delete-partition [partitions pid]
                          (let [{:keys [parent-pid partition-children]} (get partitions pid)]
                            (-> (reduce delete-partition partitions partition-children) ; recursively drop all children
@@ -78,6 +80,10 @@
                               (assert (some? (get partitions pid)) "Must create-partition before setting route") ; todo move this assertion to runtime boundaries
                               (assoc-in partitions [pid :route] route))
 
+           :stage-route (let [[pid route] args]
+                               (assert (some? (get partitions pid)) "Must create-partition before setting route") ; todo move this assertion to runtime boundaries
+                               (assoc-in partitions [pid :pending-route] route))
+
            :with (let [[pid dbname tx] args]
                    (with partitions pid dbname tx))
 
@@ -91,9 +97,7 @@
            :hydrate!-start (let [[pid] args]
                              (update partitions pid
                                      (fn [partition]
-                                       (assoc partition
-                                         :hydrate-id
-                                         (hash (select-keys partition [:route :stage :local-basis]))))))
+                                       (assoc partition :hydrate-id (build-hydrate-id partition)))))
 
            :hydrate!-success (let [[pid ptm tempid-lookups] args]
                                (update partitions pid
@@ -142,6 +146,7 @@
 
                                       ; data needed to hydrate a partition
                                       :route #(some->> % (s/assert :hyperfiddle/route))
+                                      :pending-route identity
                                       :stage (fn [multi-color-tx]
                                                (->> multi-color-tx
                                                     (remove (fn [[dbname tx]] (empty? tx)))

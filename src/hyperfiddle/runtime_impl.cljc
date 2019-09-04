@@ -17,7 +17,7 @@
 (defn set-route [rt pid route force-hydrate]
   {:pre [(s/valid? :hyperfiddle/route route)]}
   (let [current-route (get-in @(state/state rt) [:hyperfiddle.runtime/partitions pid :route])]
-    (state/dispatch! rt [:partition-route pid route])
+    (state/dispatch! rt [:stage-route pid route])
     (if (and (not force-hydrate) (route/equal-without-frag? route current-route))
       ; just update state without re-hydrating
       (p/resolved nil)

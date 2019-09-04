@@ -178,7 +178,8 @@
 
 (defn- refresh-partition-basis [rt pid]
   (let [{:keys [::global-basis ::partitions]} @(state/state rt)
-        route (get-in partitions [pid :route])]
+        route (or (get-in partitions [pid :pending-route])
+                  (get-in partitions [pid :route]))]
     (-> (io/local-basis (io rt) global-basis route)
         (p/then (fn [local-basis]
                   (state/dispatch! rt [:partition-basis pid local-basis])))
@@ -225,7 +226,8 @@
       acc)))
 
 (defn- hydrate-partition [rt pid]
-  (let [{:keys [hydrate-id]} (get-partition rt pid)
+  (let [{:keys [hydrate-id] :as p} (get-partition rt pid)
+        route (or (:pending-route p) (:route p))
         partitions (->> (or (->> (descendant-pids rt pid)
                                  (filter #(branched? rt %))
                                  seq)
@@ -238,7 +240,7 @@
                                                  (assoc acc pid p)))
                                              as bs)))
                         (data/map-values #(select-keys % [:is-branched :partition-children :parent-pid :stage])))]
-    (-> (io/hydrate-route (io rt) (get-local-basis rt pid) (get-route rt pid) pid partitions)
+    (-> (io/hydrate-route (io rt) (get-local-basis rt pid) route pid partitions)
         (p/catch (fn [e]
                    (timbre/info pid hydrate-id @(state-ref rt [::partitions pid :hydrate-id]))
                    (timbre/error e)

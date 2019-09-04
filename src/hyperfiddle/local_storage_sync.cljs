@@ -4,6 +4,7 @@
     [contrib.local-storage :as local-storage]
     [hyperfiddle.domain :as domain]
     [hyperfiddle.io.basis :as basis]
+    [hyperfiddle.route :as route]
     [hyperfiddle.runtime :as runtime]
     [hyperfiddle.state :as state]
     [taoensso.timbre :as timbre]))
@@ -79,10 +80,13 @@
     (state/dispatch! rt action)
     (add-watch (state/state rt) (watch-key pid) (partial local-storage-state-watcher pid ls-key))
     (try
-      (when-not (runtime/parent-pid rt pid)
-        (let [route (domain/url-decode (runtime/domain rt) (str js/document.location.pathname js/document.location.hash))]
-          (state/dispatch! rt [:partition-route pid route])))
-      (runtime/bootstrap-data rt pid init-level :hydrate-page? (constantly different-stage))
+      (let [changing-route (when-not (runtime/parent-pid rt pid)
+                             (let [existing-route (runtime/get-route rt pid)
+                                   route (domain/url-decode (runtime/domain rt) (str js/document.location.pathname js/document.location.hash))]
+                               (when-not (route/equal-without-frag? existing-route route)
+                                 (state/dispatch! rt [:stage-route pid route])
+                                 true)))]
+        (runtime/bootstrap-data rt pid init-level :hydrate-page? (constantly (or different-stage changing-route))))
       (catch js/Error e
         (runtime/set-error rt pid e)))))
 
