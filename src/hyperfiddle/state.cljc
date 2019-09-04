@@ -21,11 +21,6 @@
       ?message (assoc (->Err (str ?message)) :data (pprint-str (ex-data e)))
       :else (pr-str e))))
 
-(defn fatal-error-reducer [error action & args]
-  (case action
-    :set-global-basis nil
-    error))
-
 (defn global-basis-reducer [global-basis action & args]
   (case action
     :set-global-basis (first args)
