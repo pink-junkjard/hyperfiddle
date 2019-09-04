@@ -400,11 +400,11 @@
                                        [:hydrate!-start ppid]])
                   (hydrate-partition rt ppid)))))))
 
-(defn open-popover [rt pid popover-id]
-  (state/dispatch! rt [:open-popover pid popover-id]))
+(defn open-popover [rt pid popover-pid]
+  (state/dispatch! rt [:open-popover pid popover-pid]))
 
-(defn close-popover [rt pid popover-id]
-  (state/dispatch! rt [:close-popover pid popover-id]))
+(defn close-popover [rt pid popover-pid]
+  (state/dispatch! rt [:close-popover pid popover-pid]))
 
-(defn popover-is-open? [rt pid popover-id]
-  (some? @(state-ref rt [::partitions pid :popovers popover-id])))
+(defn popover-is-open? [rt pid popover-pid]
+  (some? @(state-ref rt [::partitions pid :popovers popover-pid])))

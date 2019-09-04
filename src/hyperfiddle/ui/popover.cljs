@@ -14,7 +14,6 @@
     [hyperfiddle.api]
     [hyperfiddle.runtime :as runtime]
     [hyperfiddle.security.client :as security]
-    [hyperfiddle.ui.error :as ui-error]
     [hyperfiddle.ui.iframe :as iframe]
     [promesa.core :as p]
     [re-com.core :as re-com]
@@ -36,12 +35,12 @@
                 (p/resolved result)))
             (catch js/Error e (p/rejected e)))))))
 
-(defn- stage! [popover-id child-pid {rt :runtime parent-pid :partition-id :as ctx} r-popover-data props]
+(defn- stage! [child-pid {rt :runtime parent-pid :partition-id :as ctx} r-popover-data props]
   (-> (run-txfn! ctx props)
       (p/then (fn [tx]
                 (let [tx-groups {(or (hypercrud.browser.context/dbname ctx) "$") ; https://github.com/hyperfiddle/hyperfiddle/issues/816
                                  tx}]
-                  (runtime/close-popover rt parent-pid popover-id)
+                  (runtime/close-popover rt parent-pid child-pid)
                   (cond-> (runtime/commit-branch rt child-pid tx-groups)
                     (::redirect props) (p/then (fn [_] (runtime/set-route rt parent-pid ((::redirect props) @r-popover-data))))))))
       (p/catch (fn [e]
@@ -50,13 +49,13 @@
                  (js/alert (cond-> (ex-message e)
                              (ex-data e) (str "\n" (pprint-str (ex-data e)))))))))
 
-(defn- cancel! [rt parent-pid child-pid popover-id]
-  (runtime/close-popover rt parent-pid popover-id)
+(defn- cancel! [rt parent-pid child-pid]
+  (runtime/close-popover rt parent-pid child-pid)
   (runtime/delete-partition rt child-pid))
 
-(defn- wrap-with-tooltip [popover-id ctx props child]
+(defn- wrap-with-tooltip [ctx child-pid props child]
   ; omit the formula tooltip when popover is open
-  (if (runtime/popover-is-open? (:runtime ctx) (:partition-id ctx) popover-id)
+  (if (runtime/popover-is-open? (:runtime ctx) (:partition-id ctx) child-pid)
     child
     [tooltip (tooltip-props (:tooltip props)) child]))
 
@@ -100,26 +99,26 @@
     [:button (select-keys props [:class :style :disabled :on-click])
      [:span (str label "!")]]))
 
-(defn- popover-cmp-impl [ctx props & body-children]
-  [wrap-with-tooltip (::popover-id props) ctx (select-keys props [:class :on-click :style :disabled :tooltip])
+(defn- popover-cmp-impl [ctx child-pid props & body-children]
+  [wrap-with-tooltip ctx child-pid (select-keys props [:class :on-click :style :disabled :tooltip])
    [with-keychord
-    "esc" #(do (js/console.warn "esc") ((::close-popover props) (::popover-id props)))
+    "esc" #(do (js/console.warn "esc") ((::close-popover props) child-pid))
     [re-com/popover-anchor-wrapper
-     :showing? (r/track runtime/popover-is-open? (:runtime ctx) (:partition-id ctx) (::popover-id props))
+     :showing? (r/track runtime/popover-is-open? (:runtime ctx) (:partition-id ctx) child-pid)
      :position :below-center
      :anchor [:button (-> props
                           ;(dissoc :route :tooltip ::redirect)
                           (select-keys [:class :style :disabled])
                           ; use twbs btn coloring but not "btn" itself
                           (update :class css "btn-default")
-                          (assoc :on-click (r/partial (::open-popover props) (::popover-id props))))
+                          (assoc :on-click (r/partial (::open-popover props) child-pid)))
               [:span (str (::label props) "▾")]]
      :popover [re-com/popover-content-wrapper
                :no-clip? true
                ; wrapper helps with popover max-width, hard to layout without this
                :body (into [:div.hyperfiddle-popover-body] body-children)]]]])
 
-(defn- branched-popover-body-cmp [child-pid {rt :runtime :as ctx} {:keys [::popover-id] :as props}]
+(defn- branched-popover-body-cmp [child-pid {rt :runtime :as ctx} props]
   (let [branched-ctx (context/set-partition ctx child-pid)]
     [:<>
      [iframe/iframe-cmp (assoc branched-ctx :hyperfiddle.ui/error-with-stage? true)]
@@ -127,34 +126,36 @@
       (let [+popover-ctx-post (base/browse-partition+ branched-ctx) ; todo browse once
             r-popover-data (r/>>= :hypercrud.browser/result +popover-ctx-post) ; focus the fiddle at least then call @(context/data) ?
             popover-invalid (->> +popover-ctx-post (unwrap (constantly nil)) context/tree-invalid?)]
-        [:button {:on-click #(stage! popover-id child-pid ctx r-popover-data props)
+        [:button {:on-click #(stage! child-pid ctx r-popover-data props)
                   :disabled popover-invalid} "stage"])
-      [:button {:on-click #(cancel! rt (:partition-id ctx) child-pid popover-id)} "cancel"]]]))
+      [:button {:on-click #(cancel! rt (:partition-id ctx) child-pid)} "cancel"]]]))
 
-(let [open-branched-popover! (fn [rt pid child-pid route popover-id]
+(let [open-branched-popover! (fn [rt pid route child-pid]
                                (runtime/create-partition rt pid child-pid true)
                                (-> (runtime/set-route rt child-pid route)
-                                   (p/finally (fn [] (runtime/open-popover rt pid popover-id)))))]
+                                   (p/finally (fn [] (runtime/open-popover rt pid child-pid)))))]
   (defn- branched-popover-cmp [child-pid ctx props label]
-    [popover-cmp-impl ctx (assoc props
-                            ::label label
-                            ::open-popover (r/partial open-branched-popover! (:runtime ctx) (:partition-id ctx) child-pid (:route props))
-                            ::close-popover (r/partial cancel! (:runtime ctx) (:partition-id ctx) child-pid))
+    [popover-cmp-impl ctx child-pid
+     (assoc props
+       ::label label
+       ::open-popover (r/partial open-branched-popover! (:runtime ctx) (:partition-id ctx) (:route props))
+       ::close-popover (r/partial cancel! (:runtime ctx) (:partition-id ctx)))
      ; body-cmp NOT inlined for perf
      [branched-popover-body-cmp child-pid ctx props]]))
 
-(defn- unbranched-popover-body-cmp [child-pid ctx props]
+(defn- unbranched-popover-body-cmp [child-pid ctx]
   [:<>
    [iframe/iframe-cmp (context/set-partition ctx child-pid)]
-   [:button {:on-click #(runtime/close-popover (:runtime ctx) (:partition-id ctx) (::popover-id props))} "close"]])
+   [:button {:on-click #(runtime/close-popover (:runtime ctx) (:partition-id ctx) child-pid)} "close"]])
 
 (defn- unbranched-popover-cmp [child-pid ctx props label]
-  [popover-cmp-impl ctx (assoc props
-                          ::label label
-                          ::open-popover (r/partial runtime/open-popover (:runtime ctx) (:partition-id ctx))
-                          ::close-popover (r/partial runtime/close-popover (:runtime ctx) (:partition-id ctx)))
+  [popover-cmp-impl ctx child-pid
+   (assoc props
+     ::label label
+     ::open-popover (r/partial runtime/open-popover (:runtime ctx) (:partition-id ctx))
+     ::close-popover (r/partial runtime/close-popover (:runtime ctx) (:partition-id ctx)))
    ; body-cmp NOT inlined for perf
-   [unbranched-popover-body-cmp child-pid ctx props]])
+   [unbranched-popover-body-cmp child-pid ctx]])
 
 (defn ^:export popover-cmp [ctx link-ref props label]
   (let [+route-and-ctx (context/refocus-build-route-and-occlude+ ctx link-ref) ; Can fail if formula dependency isn't satisfied
@@ -169,11 +170,5 @@
         child-pid (context/build-pid-from-link ctx link-ctx (:route props)) ; todo remove route from props
         should-branch @(r/fmap (r/comp some? blank->nil :link/tx-fn) link-ref)]
     (if should-branch
-      (let [props (assoc props
-                    ; just use child-pid as popover-id
-                    ::popover-id child-pid)]
-        [branched-popover-cmp child-pid link-ctx props label])
-      (let [props (assoc props
-                    ; just use child-pid as popover-id
-                    ::popover-id child-pid)]
-        [unbranched-popover-cmp child-pid link-ctx props label]))))
+      [branched-popover-cmp child-pid link-ctx props label]
+      [unbranched-popover-cmp child-pid link-ctx props label])))
