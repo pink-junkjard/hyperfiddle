@@ -31,7 +31,7 @@
           (-> (context/set-partition link-ctx new-pid)
               (base/browse-partition+)
               (either/branch
-                (fn [e] (runtime/set-error rt (:partition-id ctx) e))
+                (fn [e] (runtime/set-error rt new-pid e))
                 requests)))))))
 
 ; at this point we only care about inline links and popovers are hydrated on their on hydrate-route calls
