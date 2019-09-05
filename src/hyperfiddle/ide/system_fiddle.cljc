@@ -64,7 +64,7 @@
                       :link/path (str ident)}
                      {:link/class #{:hf/iframe}
                       :link/fiddle (attribute-editor ide-dbname)
-                      :link/formula "(constantly (first (second @(:hypercrud.browser/route ctx))))"
+                      :link/formula "(constantly (first (:hyperfiddle.route/datomic-args @(:hypercrud.browser/route ctx))))"
                       :link/path (str ident)}}
      :fiddle/renderer (str "[:<>\n [hyperfiddle.ui/ui-from-link\n  (hyperfiddle.data/select ctx :hyperfiddle/topnav) ctx {}] \n [hyperfiddle.ui/ui-from-link\n  (hyperfiddle.data/select ctx :hyperfiddle.ide.schema/editor.attribute" ide-dbname ") ctx {}]]")
      :fiddle/css ".-hyperfiddle-ide-schema-editor-attribute {\n  flex: 1 1;\n  overflow: auto;\n}"}))
