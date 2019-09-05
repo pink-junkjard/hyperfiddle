@@ -1,8 +1,8 @@
 ; AUTO-GENERATED FILE - DO NOT EDIT BY HAND
 ; AUTO-GENERATED FILE - DO NOT EDIT BY HAND
 ;
-; generated at: Mon Jul 22 18:10:43 EDT 2019
-; basis: 17827
+; generated at: Thu Sep 05 17:01:14 EDT 2019
+; basis: 17829
 ;
 ; AUTO-GENERATED FILE - DO NOT EDIT BY HAND
 ; AUTO-GENERATED FILE - DO NOT EDIT BY HAND
@@ -104,7 +104,6 @@
                         :tx-fn ":zero"}
                  #:link{:class [:hf/iframe]
                         :fiddle #:db{:id "27"}
-                        :formula "(constantly (hyperfiddle.api/tempid! ctx))"
                         :path ":hyperfiddle/topnav"}
                  #:link{:class [:hf/iframe]
                         :fiddle #:db{:id "24"}
@@ -134,7 +133,7 @@
                         :fiddle #:db{:id "14"}
                         :path ":hyperfiddle.ide/domain-attribute-renderers"}]
   :fiddle/query "[:find \n (pull ?e [:attribute/ident\n           :attribute/renderer]) \n :where [?e :attribute/ident]]"
-  :fiddle/renderer "(if (= \"nodejs\" *target*)\n  (hyperfiddle.ui.loading/page (hyperfiddle.runtime/domain (:peer ctx)))\n  ; this table is awful on ssr\n  [:div props\n   [hyperfiddle.ui/result val ctx {}]]\n  )"
+  :fiddle/renderer "(if (= \"nodejs\" *target*)\n  (hyperfiddle.ui.loading/page (hyperfiddle.runtime/domain (:runtime ctx)))\n  ; this table is awful on ssr\n  [:div props\n   [hyperfiddle.ui/result val ctx {}]]\n  )"
   :fiddle/type :query}
  {:db/doc "Databases, DNS, API keys, etc"
   :db/id "18"
@@ -153,7 +152,7 @@
                         :path ":hyperfiddle.ide/domain"}]
   :fiddle/pull "[#_:db/id\n :domain/ident\n :hyperfiddle/owners\n {:domain/databases \n  [:db/id \n   :domain.database/name \n   {:domain.database/record\n    [#_:db/id\n     :database/uri]}]}\n {:domain/fiddle-database \n  [#_:db/id \n   :database/uri]}\n :domain/aliases\n :domain/disable-javascript\n :domain/home-route\n :domain/environment]"
   :fiddle/pull-database "$domains"
-  :fiddle/renderer "(if (= \"nodejs\" *target*)\n  (hyperfiddle.ui.loading/page (hyperfiddle.runtime/domain (:peer ctx)))\n  ; slow to ssr\n  [:div props\n   [hyperfiddle.ui/result val ctx props]])"
+  :fiddle/renderer "(if (= \"nodejs\" *target*)\n  (hyperfiddle.ui.loading/page (hyperfiddle.runtime/domain (:runtime ctx)))\n  ; slow to ssr\n  [:div props\n   [hyperfiddle.ui/result val ctx props]])"
   :fiddle/type :entity}
  {:db/id "28"
   :fiddle/css ".-hyperfiddle-ide-edit {\n  flex: 1 1;\n  overflow-y: auto;\n}\n\n@media (min-width: 576px) {\n  .-hyperfiddle-ide-edit {\n    display: flex;\n  }\n  .-hyperfiddle-ide-edit > div {\n    flex: 1 1 50%;\n  }\n}\n\n.fiddle-editor-col {\n  display: flex;\n  flex-direction: column;\n  /*min-height: calc(100vh - 22px);*/\n}\n\n.fiddle-editor-header {\n  padding: .1em .5em;\n  background-color: #d7ebff;\n}\n\n.fiddle-editor-header > label {\n  float: right;\n}\n\n.fiddle-editor {\n  flex: 1 1;\n}\n\n.fiddle-editor > .CodeMirror {\n    height: 100%;\n}\n"
@@ -181,7 +180,7 @@
                         :path ":hyperfiddle.ide/env"}
                  #:link{:class [:hf/iframe]
                         :fiddle #:db{:id "18"}
-                        :formula "(constantly #entity[\"$domains\" [:domain/ident (:app-domain-ident (hyperfiddle.runtime/domain (:peer ctx)))]])"
+                        :formula "(constantly #entity[\"$domains\" [:domain/ident (:app-domain-ident (hyperfiddle.runtime/domain (:runtime ctx)))]])"
                         :path ":hyperfiddle.ide/env"}
                  #:link{:class [:hf/iframe]
                         :fiddle #:db{:id "1"}
@@ -190,7 +189,7 @@
                  #:link{:class [:hf/iframe]
                         :fiddle #:db{:id "19"}
                         :path ":hyperfiddle.ide/env"}]
-  :fiddle/renderer "[:<>\n [hyperfiddle.ui/ui-from-link\n  (hyperfiddle.data/select ctx :hyperfiddle/topnav) ctx {}] \n\n [:div.container-fluid.hyperfiddle-ide-env-content\n  (if (= \"nodejs\" *target*)\n    (hyperfiddle.ui.loading/page (hyperfiddle.runtime/domain (:peer ctx)))\n    ; this content chunk takes too long to ssr\n    [:<>\n     [:h3 \"Environment\"]\n     (if (-> (hyperfiddle.runtime/domain (:peer ctx))\n           (hyperfiddle.domain/database \"$domains\"))\n       ; $domains exists only with directory service\n       [hyperfiddle.ui/link :hyperfiddle.ide/domain ctx {}]\n       (-> (hyperfiddle.runtime/domain (:peer ctx))\n         :hyperfiddle.ide.domain/user-domain+\n         (cats.monad.either/branch\n          (fn [e] [:pre (js/pprint-str e)])\n          (fn [domain]\n            (->> (for [[label f] [#_:domain/ident\n                                  #_:hyperfiddle/owners\n                                  [\"databases\" hyperfiddle.domain/databases]\n                                  [\"fiddle-dbname\" hyperfiddle.domain/fiddle-dbname]\n                                  #_:domain/aliases\n                                  #_:domain/disable-javascript\n                                  #_:domain/home-route\n                                  [\"environment\" hyperfiddle.domain/environment]]]\n                   [:<> [:dt label] [:dd (contrib.pprint/pprint-str (f domain))]])\n              (into [:dl]))))))\n     [:h5 \"Project\"]\n     [hyperfiddle.ui/link :hyperfiddle.ide/project ctx {}]\n     (when (exists? js/show_renderers)\n       [:<>\n        [:h5 \"Attribute renderers\"]\n        [hyperfiddle.ui/link :hyperfiddle.ide/attribute-renderers ctx {}]])\n     ])\n  ]\n\n [hyperfiddle.ide/ide-stage ctx]]"}
+  :fiddle/renderer "[:<>\n [hyperfiddle.ui/ui-from-link\n  (hyperfiddle.data/select ctx :hyperfiddle/topnav) ctx {}] \n\n [:div.container-fluid.hyperfiddle-ide-env-content\n  (if (= \"nodejs\" *target*)\n    (hyperfiddle.ui.loading/page (hyperfiddle.runtime/domain (:runtime ctx)))\n    ; this content chunk takes too long to ssr\n    [:<>\n     [:h3 \"Environment\"]\n     (if (-> (hyperfiddle.runtime/domain (:runtime ctx))\n           (hyperfiddle.domain/database \"$domains\"))\n       ; $domains exists only with directory service\n       [hyperfiddle.ui/link :hyperfiddle.ide/domain ctx {}]\n       (-> (hyperfiddle.runtime/domain (:runtime ctx))\n         :hyperfiddle.ide.domain/user-domain+\n         (cats.monad.either/branch\n          (fn [e] [:pre (js/pprint-str e)])\n          (fn [domain]\n            (->> (for [[label f] [#_:domain/ident\n                                  #_:hyperfiddle/owners\n                                  [\"databases\" hyperfiddle.domain/databases]\n                                  [\"fiddle-dbname\" hyperfiddle.domain/fiddle-dbname]\n                                  #_:domain/aliases\n                                  #_:domain/disable-javascript\n                                  #_:domain/home-route\n                                  [\"environment\" hyperfiddle.domain/environment]]]\n                   [:<> [:dt label] [:dd (contrib.pprint/pprint-str (f domain))]])\n              (into [:dl]))))))\n     [:h5 \"Project\"]\n     [hyperfiddle.ui/link :hyperfiddle.ide/project ctx {}]\n     (when (exists? js/show_renderers)\n       [:<>\n        [:h5 \"Attribute renderers\"]\n        [hyperfiddle.ui/link :hyperfiddle.ide/attribute-renderers ctx {}]])\n     ])\n  ]\n\n [hyperfiddle.ide/ide-stage ctx]]"}
  {:db/id "11"
   :fiddle/cljs-ns "(def fiddle-index-needle (reagent.core/atom \"\"))"
   :fiddle/ident :hyperfiddle.ide/fiddle-index
@@ -231,7 +230,7 @@
   :fiddle/type :entity}
  {:db/id "4"
   :fiddle/ident :hyperfiddle.ide/please-login
-  :fiddle/renderer "(let [tunneled-route (first (:hyperfiddle.route/datomic-args @(:hypercrud.browser/route ctx)))\n      state (hyperfiddle.domain/url-encode (hyperfiddle.runtime/domain (:peer ctx)) tunneled-route)\n      href (hyperfiddle.ide/stateless-login-url ctx state)]\n  [:div\n   [:br]\n   [:center [:h3 \"Please \" [:a {:href href} \"login\"]]]])"}
+  :fiddle/renderer "(let [tunneled-route (first (:hyperfiddle.route/datomic-args @(:hypercrud.browser/route ctx)))\n      state (hyperfiddle.domain/url-encode (hyperfiddle.runtime/domain (:runtime ctx)) tunneled-route)\n      href (hyperfiddle.ide/stateless-login-url ctx state)]\n  [:div\n   [:br]\n   [:center [:h3 \"Please \" [:a {:href href} \"login\"]]]])"}
  {:db/id "1"
   :fiddle/ident :hyperfiddle.ide/project
   :fiddle/pull "[:db/id\n :project/code\n :project/css]"
@@ -243,7 +242,7 @@
   :fiddle/ident :hyperfiddle.ide/schema
   :fiddle/links [#:link{:class [:hf/iframe]
                         :fiddle #:db{:id "8"}
-                        :formula "(constantly (->> @(:hypercrud.browser/route ctx) second first (get (:hyperfiddle.ide.domain/user-dbname->ide (hyperfiddle.runtime/domain (:peer ctx)))) hypercrud.types.DbName/->DbName))"
+                        :formula "(constantly (->> @(:hypercrud.browser/route ctx) second first (get (:hyperfiddle.ide.domain/user-dbname->ide (hyperfiddle.runtime/domain (:runtime ctx)))) hypercrud.types.DbName/->DbName))"
                         :path ":hyperfiddle.ide/schema"}
                  #:link{:class [:hf/iframe]
                         :fiddle #:db{:id "20"}
@@ -260,7 +259,7 @@
                         :formula "(constantly [(first (second @(:hypercrud.browser/route ctx))) (hyperfiddle.api/tempid! ctx)])"
                         :path ":db/ident"}]
   :fiddle/query "[:find [(pull $_ ?attr\n              [:db/id\n               :db/ident\n               {:db/valueType [:db/ident]}\n               {:db/cardinality [:db/ident]}\n               {:db/unique [:db/ident]}\n               :db/isComponent :db/fulltext :db/doc]) ...]\n :in $_\n :where [$_ :db.part/db :db.install/attribute ?attr]]"
-  :fiddle/renderer "(let [hide-datomic (contrib.reactive/atom true)\n      hide-archived (contrib.reactive/atom true)\n      is-edn (contrib.reactive/atom false)\n      needle (contrib.reactive/atom nil)\n      db-attr? #(<= (:db/id %) 62)\n      archived? #(cuerdas.core/starts-with? (namespace (:db/ident %)) \"zzz\") ; \"zzz/\" and \"zzz.\", we are inconsistent\n      do-filter-reactive (fn [xs]                           ; perf sensitive\n                           (as-> xs xs\n                             (if @hide-datomic (remove db-attr? xs) xs)\n                             (if @hide-archived (remove archived? xs) xs)\n                             (if (contrib.string/blank->nil @needle)\n                               (filter #(cuerdas.core/includes? (-> % :db/ident str) @needle) xs) xs)))]\n  (fn [val ctx props]\n    [:div.container-fluid props\n     [:h3 (str \"Datomic schema for \" (-> (hyperfiddle.runtime/domain (:peer ctx))\n                                       :hyperfiddle.ide.domain/user-dbname->ide\n                                       clojure.set/map-invert\n                                       (get (-> @(:hypercrud.browser/route ctx) second first :dbname))))]\n     [:div [:label [:input {:type \"checkbox\" :checked @hide-datomic :on-change #(swap! hide-datomic not)}] \" hide Datomic system attributes\"]]\n     [:div [:label [:input {:type \"checkbox\" :checked @hide-archived :on-change #(swap! hide-archived not)}] \" hide Hyperfiddle archived attributes\"]]\n     [:div [:label [:input {:type \"checkbox\" :checked @is-edn :on-change #(swap! is-edn not)}] \" EDN view\"]]\n     [contrib.ui/text {:value @needle\n                       :on-change #(do (reset! needle %))}\n      {:placeholder \":task/title\"}]\n     (let [ctx (-> ctx\n                 (update :hypercrud.browser/result (partial contrib.reactive/fmap do-filter-reactive))\n                 (assoc :hyperfiddle.ui/layout :hyperfiddle.ui.layout/table))]\n       (if @is-edn\n         [contrib.ui/code {:value (-> (hypercrud.browser.context/data ctx)\n                                    (->> (sort-by :db/ident)\n                                      (map #(dissoc % :db/id)))\n                                    (contrib.pprint/pprint-str 1000))\n                           :read-only true}]\n         [hyperfiddle.ui/table\n          (fn [ctx]\n            [(hyperfiddle.ui/field [:db/ident] ctx)\n             (hyperfiddle.ui/field [:db/valueType] ctx #(hyperfiddle.ui.controls/string ((comp (fnil name :–) :db/ident) %) %2 %3) {:disabled true})\n             (hyperfiddle.ui/field [:db/cardinality] ctx #(hyperfiddle.ui.controls/string ((comp (fnil name :–) :db/ident) %) %2 %3) {:disabled true})\n             (hyperfiddle.ui/field [:db/unique] ctx #(hyperfiddle.ui.controls/string ((comp (fnil name :–) :db/ident) %) %2 %3) {:disabled true})\n             (hyperfiddle.ui/field [:db/isComponent] ctx)\n             (hyperfiddle.ui/field [:db/fulltext] ctx nil {:disabled true})\n             (hyperfiddle.ui/field [:db/doc] ctx)])\n          ctx\n          {:hyperfiddle.ui.sort/initial-sort [[:db/ident] :asc]}]))]))"
+  :fiddle/renderer "(let [hide-datomic (contrib.reactive/atom true)\n      hide-archived (contrib.reactive/atom true)\n      is-edn (contrib.reactive/atom false)\n      needle (contrib.reactive/atom nil)\n      db-attr? #(<= (:db/id %) 62)\n      archived? #(cuerdas.core/starts-with? (namespace (:db/ident %)) \"zzz\") ; \"zzz/\" and \"zzz.\", we are inconsistent\n      do-filter-reactive (fn [xs]                           ; perf sensitive\n                           (as-> xs xs\n                             (if @hide-datomic (remove db-attr? xs) xs)\n                             (if @hide-archived (remove archived? xs) xs)\n                             (if (contrib.string/blank->nil @needle)\n                               (filter #(cuerdas.core/includes? (-> % :db/ident str) @needle) xs) xs)))]\n  (fn [val ctx props]\n    [:div.container-fluid props\n     [:h3 (str \"Datomic schema for \" (-> (hyperfiddle.runtime/domain (:runtime ctx))\n                                       :hyperfiddle.ide.domain/user-dbname->ide\n                                       clojure.set/map-invert\n                                       (get (-> @(:hypercrud.browser/route ctx) second first :dbname))))]\n     [:div [:label [:input {:type \"checkbox\" :checked @hide-datomic :on-change #(swap! hide-datomic not)}] \" hide Datomic system attributes\"]]\n     [:div [:label [:input {:type \"checkbox\" :checked @hide-archived :on-change #(swap! hide-archived not)}] \" hide Hyperfiddle archived attributes\"]]\n     [:div [:label [:input {:type \"checkbox\" :checked @is-edn :on-change #(swap! is-edn not)}] \" EDN view\"]]\n     [contrib.ui/text {:value @needle\n                       :on-change #(do (reset! needle %))}\n      {:placeholder \":task/title\"}]\n     (let [ctx (-> ctx\n                 (update :hypercrud.browser/result (partial contrib.reactive/fmap do-filter-reactive))\n                 (assoc :hyperfiddle.ui/layout :hyperfiddle.ui.layout/table))]\n       (if @is-edn\n         [contrib.ui/code {:value (-> (hypercrud.browser.context/data ctx)\n                                    (->> (sort-by :db/ident)\n                                      (map #(dissoc % :db/id)))\n                                    (contrib.pprint/pprint-str 1000))\n                           :read-only true}]\n         [hyperfiddle.ui/table\n          (fn [ctx]\n            [(hyperfiddle.ui/field [:db/ident] ctx)\n             (hyperfiddle.ui/field [:db/valueType] ctx #(hyperfiddle.ui.controls/string ((comp (fnil name :–) :db/ident) %) %2 %3) {:disabled true})\n             (hyperfiddle.ui/field [:db/cardinality] ctx #(hyperfiddle.ui.controls/string ((comp (fnil name :–) :db/ident) %) %2 %3) {:disabled true})\n             (hyperfiddle.ui/field [:db/unique] ctx #(hyperfiddle.ui.controls/string ((comp (fnil name :–) :db/ident) %) %2 %3) {:disabled true})\n             (hyperfiddle.ui/field [:db/isComponent] ctx)\n             (hyperfiddle.ui/field [:db/fulltext] ctx nil {:disabled true})\n             (hyperfiddle.ui/field [:db/doc] ctx)])\n          ctx\n          {:hyperfiddle.ui.sort/initial-sort [[:db/ident] :asc]}]))]))"
   :fiddle/type :query}
  {:db/id "26"
   :fiddle/ident :hyperfiddle.ide/schema-editor.attribute
@@ -321,5 +320,5 @@
   :fiddle/ident :hyperfiddle.ide.user/domains
   :fiddle/markdown "Domains"
   :fiddle/query "[:find [(pull $domains ?domain [:domain/ident :db/id]) ...]\n :in $domains\n :where\n [(ground hyperfiddle.io.bindings/*subject*) ?user-id]\n [$domains ?domain :domain/ident]\n [$domains ?domain :hyperfiddle/owners ?user-id]]"
-  :fiddle/renderer "(let [{:keys [:hypercrud.browser/fiddle]} ctx]\n  [:div props\n   [hyperfiddle.ui/markdown (:fiddle/markdown @fiddle) ctx]\n   [:ul\n    (->> (hypercrud.browser.context/data ctx)\n      (sort-by :domain/ident)\n      (map (fn [domain]\n             [:li {:key (hash (:db/id domain))}\n              [:a\n               {:href (str \"http://\" (:domain/ident domain) \".\" (:ide-domain (hyperfiddle.runtime/domain (:peer ctx))) \"/\")}\n               (:domain/ident domain)]]))\n      (doall))]])"
+  :fiddle/renderer "(let [{:keys [:hypercrud.browser/fiddle]} ctx]\n  [:div props\n   [hyperfiddle.ui/markdown (:fiddle/markdown @fiddle) ctx]\n   [:ul\n    (->> (hypercrud.browser.context/data ctx)\n      (sort-by :domain/ident)\n      (map (fn [domain]\n             [:li {:key (hash (:db/id domain))}\n              [:a\n               {:href (str \"http://\" (:domain/ident domain) \".\" (:ide-domain (hyperfiddle.runtime/domain (:runtime ctx))) \"/\")}\n               (:domain/ident domain)]]))\n      (doall))]])"
   :fiddle/type :query}]
