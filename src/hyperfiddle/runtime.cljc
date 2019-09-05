@@ -168,6 +168,10 @@
   {:pre [pid]}
   @(state-ref rt [::partitions pid :route]))
 
+(defn get-pending-route [rt pid]
+  {:pre [pid]}
+  @(state-ref rt [::partitions pid :pending-route]))
+
 (defn- refresh-global-basis [rt root-pid]
   (-> (io/global-basis (io rt))
       (p/then (fn [global-basis] (state/dispatch! rt [:set-global-basis global-basis])))
