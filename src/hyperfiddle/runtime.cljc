@@ -309,7 +309,7 @@
   "Returns the tempid lookup for the given branch and dbname.
   May throw an exception (e.g. if the branch has an invalid stage)"
   [rt pid dbname]
-  (some-> @(state-ref rt [::partitions pid :tempid-lookups dbname])
+  (some-> @(state-ref rt [::partitions (get-branch-pid rt pid) :tempid-lookups dbname])
           deref))
 
 (defn id->tempid! [rt pid dbname id]
