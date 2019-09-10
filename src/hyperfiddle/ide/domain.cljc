@@ -33,8 +33,8 @@
         "logout" {:post :hyperfiddle.ide/logout
                   #".+" :404
                   true :405}
-        "static/" {[:build "/" :resource-name] {:get :static-resource
-                                                true :405}
+        "static/" {[:build "/" [#".+" :resource-name]] {:get :static-resource
+                                                        true :405}
                    true :404}
         "favicon.ico" :favicon
         true {:get :ssr
@@ -45,8 +45,8 @@
                      [[#"[^/]*" :version] "/"] {true :force-refresh}
                      true :404}
         ; todo this static path conflicts with the ide
-        "static/" {[:build "/" :resource-name] {:get :static-resource
-                                                true :405}
+        "static/" {[:build "/" [#".+" :resource-name]] {:get :static-resource
+                                                        true :405}
                    true :404}
         true {:get :ssr
               true :405}}])
