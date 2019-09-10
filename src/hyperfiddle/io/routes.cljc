@@ -36,8 +36,8 @@
   ["/" {"api/" {(str version "/") (api nil)
                 [[#"[^/]*" :version] "/"] {true :force-refresh}
                 true :404}
-        "static/" {[:build "/" :resource-name] {:get :static-resource
-                                                true :405}
+        "static/" {[:build "/" [#".+" :resource-name]] {:get :static-resource
+                                                        true :405}
                    true :404}
         "favicon.ico" :favicon
         true {:get :ssr
