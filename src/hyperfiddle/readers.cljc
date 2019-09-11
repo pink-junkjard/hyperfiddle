@@ -16,7 +16,7 @@
 (def schema #(list `->Schema %))
 
 (defn read-goog-math-long [s]
-  ; #goog.math.Long "65332980922449989"
+  ; #long "65332980922449989"
   ; Wrapped in string because the tag operates on a processed platform value
   ; (so Javascript has already damaged the long)
   #?(:cljs (.fromString goog.math.Long s))
@@ -26,7 +26,7 @@
 
 #?(:cljs
    (defn- impl-print ^String [^goog.math.Long o]
-     (str "#goog.math.Long " (pr-str (.toString o)))))
+     (str "#long " (pr-str (.toString o)))))
 
 #?(:cljs
    (extend-type goog.math.Long

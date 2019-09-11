@@ -1,5 +1,5 @@
 {
- goog.math.Long hyperfiddle.readers/goog-math-long
+ long hyperfiddle.readers/goog-math-long
  dbname hyperfiddle.readers/dbname
  entity hyperfiddle.readers/entity
  uri hyperfiddle.readers/uri

@@ -90,8 +90,8 @@
 #?(:cljs
    (deftest long
      (test-all-forms (.fromString goog.math.Long "65332980922449989")
-                     #goog.math.Long "65332980922449989"
-                     "#goog.math.Long \"65332980922449989\""
+                     #long "65332980922449989"
+                     "#long \"65332980922449989\""
                      "[\"~#'\",\"~i65332980922449989\"]")))
 
 (deftest schema
