@@ -249,28 +249,29 @@
                          ?id (hf/id element-ctx ?record)]
                      ((:on-change select-props) ?id))))]])
 
-(defn- select-needle-typeahead [{rt :runtime pid :partition-id :as ctx} value
+(defn- select-needle-typeahead [{rt :runtime :as parent-ctx} options-pid value
                                 ; todo these props need cleaned up, shouldn't be adapting them over and over again
                                 select-props options-props]
-  [:div {:key pid}
-   [iframe/stale-browse ctx typeahead-error typeahead-success select-props
+  [:div {:key options-pid}
+   [iframe/stale-browse (context/set-partition parent-ctx options-pid)
+    typeahead-error typeahead-success select-props
     {
      #_#_"delay" 200
-     "isLoading" (runtime/loading? rt pid)
+     "isLoading" (runtime/loading? rt options-pid)
      #_#_"minLength" 2
      "filterBy" (constantly true)                           ; no client side filtering
      "onSearch" (fn [s]
-                  (-> (mlet [args (context/build-args+ ctx @(:hypercrud.browser/link ctx))
-                             route (context/build-route+ args ctx)]
+                  (-> (mlet [args (context/build-args+ parent-ctx @(:hypercrud.browser/link parent-ctx))
+                             route (context/build-route+ args parent-ctx)]
                         (if (and s (:hf/where select-props))
                           (->> (route/fill-where (:hf/where select-props) s)
                                (assoc route ::route/where)
                                route/validate-route+)
                           (return route)))
                       (either/branch
-                        (fn [e] (runtime/set-error rt pid e))
+                        (fn [e] (runtime/set-error rt options-pid e))
                         (fn [route]
-                          (runtime/set-route rt pid route)))))
+                          (runtime/set-route rt options-pid route)))))
 
      ; Must return string otherwise "invariant undefined"; you can pr-str from userland
      "labelKey" (comp str (:option-label select-props))
@@ -305,21 +306,20 @@
              (let [options-pid (context/build-pid-from-link ctx link-ctx nil)]
                ; hopefully we are in a unique enough parent-ctx slot, otherwise pid clashes may happen (no occlusion or route)
                (runtime/create-partition (:runtime ctx) (:partition-id ctx) options-pid)
-               (let [options-ctx (context/set-partition link-ctx options-pid)]
-                 (mlet [[select-props options-props] (options-value-bridge+ ctx props)]
-                   (return [select-needle-typeahead options-ctx (hf/data ctx) select-props options-props])))))
+               (mlet [[select-props options-props] (options-value-bridge+ ctx props)]
+                 (return [select-needle-typeahead link-ctx options-pid (hf/data ctx) select-props options-props]))))
            (fn [[occluded-ctx initial-route]]
-             (let [options-pid (context/build-pid-from-link ctx link-ctx initial-route)
-                   unbrowsed-options-ctx (context/set-partition occluded-ctx options-pid)]
+             (let [options-pid (context/build-pid-from-link ctx link-ctx initial-route)]
                (cond
                  ; hybrid, use the existing iframe to render initial options, but use the needle to filter on server
                  (:hf/where props)
                  (mlet [[select-props options-props] (options-value-bridge+ ctx props)]
-                   (return [select-needle-typeahead unbrowsed-options-ctx (hf/data ctx) select-props options-props]))
+                   (return [select-needle-typeahead occluded-ctx options-pid (hf/data ctx) select-props options-props]))
 
                  ; iframe (data is local), complete-route, and no needle
                  ; just use client side filtering on the intial options
-                 :else (->> (base/browse-partition+ unbrowsed-options-ctx)
+                 :else (->> (context/set-partition occluded-ctx options-pid)
+                            (base/browse-partition+)
                             (cats/fmap (fn [options-ctx] [typeahead-html nil options-ctx (assoc props ::value-ctx ctx)])))))
              )))
        (either/branch
