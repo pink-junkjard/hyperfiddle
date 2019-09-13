@@ -495,7 +495,7 @@ nil. call site must wrap with a Reagent component"          ; is this just hyper
        [:<> {:key k}
         (hint val ctx props)
         (when-let [unfilled-where (:hf/where props)]
-          [needle-input unfilled-where ctx {:placeholder "filter" :class "form-control"}])
+          [needle-input unfilled-where ctx {:placeholder (pr-str unfilled-where) :class "form-control"}])
         (condp some [(type @(:hypercrud.browser/qfind ctx))] ; spread-rows
 
           #{FindRel FindColl}
