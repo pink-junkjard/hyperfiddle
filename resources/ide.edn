@@ -1,8 +1,8 @@
 ; AUTO-GENERATED FILE - DO NOT EDIT BY HAND
 ; AUTO-GENERATED FILE - DO NOT EDIT BY HAND
 ;
-; generated at: Thu Sep 05 17:01:14 EDT 2019
-; basis: 17829
+; generated at: Mon Sep 16 17:11:44 EDT 2019
+; basis: 17830
 ;
 ; AUTO-GENERATED FILE - DO NOT EDIT BY HAND
 ; AUTO-GENERATED FILE - DO NOT EDIT BY HAND
@@ -170,7 +170,7 @@
   :fiddle/css ".-hyperfiddle-ide-entry-point-fiddles table {\n  width: 100%;\n}\n.-hyperfiddle-ide-entry-point-fiddles tr > td:first-child {\n  width: 1.5em;\n}"
   :fiddle/ident :hyperfiddle.ide/entry-point-fiddles
   :fiddle/query "[:find \n (pull ?e [:hyperfiddle/starred \n           :fiddle/ident \n           :db/id])\n (max ?tx)\n :where \n [?e :fiddle/ident ?ident]\n (or-join [?e]\n          ; todo *subject* unsupported on peer\n          #_(and \n            [(ground hyperfiddle.io.bindings/*subject*) ?user-id]\n            [?e :hyperfiddle/owners ?user-id])\n          [(missing? $ ?e :hyperfiddle/owners)])\n [?e _ _ ?tx]]"
-  :fiddle/renderer "(if (= \"nodejs\" *target*)\n  (hyperfiddle.ui.loading/loading-page)\n  [:div.container-fluid props\n   (when (empty? (:hyperfiddle.route/where @(:hypercrud.browser/route ctx)))\n     [:<>\n      [:p \"My starred fiddles\"]\n      (let [[as _] ((juxt filter remove) (comp :hyperfiddle/starred first) val)]\n        [user/links-list ctx as])\n      [:p \"My recent fiddles\"]\n      [user/links-list ctx (->> val (sort-by second) reverse (take 5))]])\n   [:p \"All my fiddles\"]\n   [:div.form-group\n    [hyperfiddle.ui/needle-input '[[(clojure.string/includes? ?ident %)]] ctx\n     {:id \"hyperfiddle/entry-point-needle\"\n      :style {:display \"inline-block\"}                       ; bootstrap styles are half imported, wonky hacks\n      :class \"col-sm-10 form-control\"\n      :auto-complete \"off\"\n      #_#_:auto-focus true                                   ; page sroll pos gets lost, otherwise this is great\n      :placeholder \":fiddle/ident filter\"}]]\n   [user/links-list ctx (user/sort-by-fiddle-ident val)]]\n  )"
+  :fiddle/renderer "(if (= \"nodejs\" *target*)\n  (hyperfiddle.ui.loading/loading-page)\n  [:div.container-fluid props\n   (when (empty? (:hyperfiddle.route/where @(:hypercrud.browser/route ctx)))\n     [:<>\n      [:p \"My starred fiddles\"]\n      (let [[as _] ((juxt filter remove) (comp :hyperfiddle/starred first) val)]\n        [user/links-list ctx as])\n      [:p \"My recent fiddles\"]\n      [user/links-list ctx (->> val (sort-by second) reverse (take 5))]])\n   [:p \"All my fiddles\"]\n   [:div.form-group\n    [hyperfiddle.ui/needle-input '[[(str ?ident) ?si] [(.contains ?si %)]] ctx\n     {:id \"hyperfiddle/entry-point-needle\"\n      :style {:display \"inline-block\"}                       ; bootstrap styles are half imported, wonky hacks\n      :class \"col-sm-10 form-control\"\n      :auto-complete \"off\"\n      #_#_:auto-focus true                                   ; page sroll pos gets lost, otherwise this is great\n      :placeholder \":fiddle/ident filter\"}]]\n   [user/links-list ctx (user/sort-by-fiddle-ident val)]]\n  )"
   :fiddle/type :query}
  {:db/id "16"
   :fiddle/css ".hyperfiddle-ide-env-content {\n  flex: 1 1;\n  overflow: auto;\n}"
@@ -195,7 +195,7 @@
   :fiddle/ident :hyperfiddle.ide/fiddle-index
   :fiddle/markdown "### Recently modified fiddles"
   :fiddle/query "[:find \n (pull ?e [:hyperfiddle/starred \n           :fiddle/ident])\n (max ?tx)\n ?entrypoint\n :where\n [(ground true) ?entrypoint]\n [?e :fiddle/ident ?ident]\n [?e _ _ ?tx]]"
-  :fiddle/renderer "[:<>\n [:div.form-group\n  [hyperfiddle.ui/needle-input '[[(clojure.string/includes? ?ident %)]] ctx\n   {:style {:display \"inline-block\"}                       ; bootstrap styles are half imported, wonky hacks\n    :class \"form-control\"\n    :type \"text\"\n    :on-change #(reset! needle (.. % -target -value))\n    :auto-complete \"off\"\n    #_#_:auto-focus true                                   ; page sroll pos gets lost, otherwise this is great\n    :placeholder \"filter\"}]]\n [:div.row\n  [:div.col-sm-12\n   (let [{:keys [:hypercrud.browser/fiddle]} ctx]\n     [:div props\n      [hyperfiddle.ui/markdown (:fiddle/markdown @fiddle) ctx]\n      [js/user.domain.fiddle-list ctx]])]]]"
+  :fiddle/renderer "[:<>\n [:div.form-group\n  [hyperfiddle.ui/needle-input '[[(str ?ident) ?si]\n                                 [(.contains ?si %)]] ctx\n   {:style {:display \"inline-block\"}                       ; bootstrap styles are half imported, wonky hacks\n    :class \"form-control\"\n    :type \"text\"\n    :on-change #(reset! needle (.. % -target -value))\n    :auto-complete \"off\"\n    #_#_:auto-focus true                                   ; page sroll pos gets lost, otherwise this is great\n    :placeholder \"filter\"}]]\n [:div.row\n  [:div.col-sm-12\n   (let [{:keys [:hypercrud.browser/fiddle]} ctx]\n     [:div props\n      [hyperfiddle.ui/markdown (:fiddle/markdown @fiddle) ctx]\n      [js/user.domain.fiddle-list ctx]])]]]"
   :fiddle/type :query}
  {:db/id "10"
   :fiddle/ident :hyperfiddle.ide/fiddle-options
