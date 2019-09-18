@@ -17,9 +17,10 @@
                                                     hide-archived (cons '(not-join [?ident]
                                                                                    [(namespace ?ident) ?ns]
                                                                                    ; "zzz/" and "zzz.", we are inconsistent
-                                                                                   [(clojure.string/starts-with? ?ns "zzz")]))
+                                                                                   [(.startsWith ?ns "zzz")]))
                                                     hide-datomic (cons '[(> ?attr 62)])
-                                                    (seq needle) (cons [(list 'clojure.string/includes? '?ident needle)]))
+                                                    (seq needle) (into ['[(str ?ident) ?si]
+                                                                        [(list '.contains '?si needle)]]))
                                                   vec)]
                                    (->> (if (seq where)
                                           (assoc @route :hyperfiddle.route/where where)
