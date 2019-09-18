@@ -28,7 +28,8 @@
                        (r/atom))
         databases (zipmap (keys schemas) (repeatedly (constantly {})))
         domain (reify domain/Domain
-                 (databases [domain] databases))]
+                 (databases [domain] databases)
+                 (memoize [domain f] (memoize f)))]
     (reify
       runtime/HF-Runtime
       (domain [rt] domain)
