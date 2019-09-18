@@ -24,7 +24,8 @@
                                                (map (juxt :domain.database/name :domain.database/record))
                                                (into {}))
                                :environment (assoc environment :domain/disable-javascript (:domain/disable-javascript user-domain-record))
-                               :?datomic-client ?datomic-client}]]
+                               :?datomic-client ?datomic-client
+                               :memoize-cache (atom nil)}]]
     (->> (reader/read-edn-string+ (:domain/home-route user-domain-record))
          (cats/=<< route/validate-route+)
          (cats/fmap (fn [home-route] (ide-domain/map->IdeEdnishDomain (assoc partial-domain :home-route home-route)))))))

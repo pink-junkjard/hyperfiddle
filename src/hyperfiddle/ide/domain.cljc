@@ -52,7 +52,7 @@
               true :405}}])
 
 (defrecord IdeDomain [basis fiddle-dbname databases environment home-route build ?datomic-client
-                      html-root-id]
+                      html-root-id memoize-cache]
   domain/Domain
   (basis [domain] basis)
   (type-name [domain] (str *ns* "/" "IdeDomain"))
@@ -80,16 +80,22 @@
       (ide-system-fiddle/hydrate fiddle-ident (::user-dbname->ide domain))
       (system-fiddle/hydrate fiddle-ident)))
   #?(:clj (connect [domain dbname] (d/dyna-connect (domain/database domain dbname) ?datomic-client)))
+  (memoize [domain f]
+    (if-let [f (get @memoize-cache f)]
+      f
+      (let [ret (clojure.core/memoize f)]
+        (swap! memoize-cache assoc f ret)
+        ret)))
   )
 
 (domains-transit/register-handlers
   IdeDomain
   (str 'hyperfiddle.ide.domain/IdeDomain)
-  #(-> (into {} %) (dissoc :?datomic-client))
-  map->IdeDomain)
+  #(-> (into {} %) (dissoc :?datomic-client :memoize-cache))
+  #(-> (into {} %) (assoc :memoize-cache (atom nil)) map->IdeDomain))
 
 ; shitty code duplication because we cant pass our api-routes data structure as props (no regex equality)
-(defrecord IdeEdnishDomain [basis fiddle-dbname databases environment home-route ?datomic-client]
+(defrecord IdeEdnishDomain [basis fiddle-dbname databases environment home-route ?datomic-client memoize-cache]
   domain/Domain
   (basis [domain] basis)
   (type-name [domain] (str *ns* "/" "IdeEdnishDomain"))
@@ -102,13 +108,19 @@
   (system-fiddle? [domain fiddle-ident] (system-fiddle/system-fiddle? fiddle-ident))
   (hydrate-system-fiddle [domain fiddle-ident] (system-fiddle/hydrate fiddle-ident))
   #?(:clj (connect [domain dbname] (d/dyna-connect (domain/database domain dbname) ?datomic-client)))
+  (memoize [domain f]
+    (if-let [f (get @memoize-cache f)]
+      f
+      (let [ret (clojure.core/memoize f)]
+        (swap! memoize-cache assoc f ret)
+        ret)))
   )
 
 (domains-transit/register-handlers
   IdeEdnishDomain
   (str 'hyperfiddle.ide.domain/IdeEdnishDomain)
-  #(-> (into {} %) (dissoc :?datomic-client))
-  map->IdeEdnishDomain)
+  #(-> (into {} %) (dissoc :?datomic-client :memoize-cache))
+  #(-> (into {} %) (assoc :memoize-cache (atom nil)) map->IdeEdnishDomain))
 
 (defn build
   [?datomic-client basis
@@ -148,7 +160,8 @@
                                (into {}))
        ::user-domain+ user-domain+
        :?datomic-client ?datomic-client
-       :html-root-id "ide-root"}
+       :html-root-id "ide-root"
+       ::memoize-cache (atom nil)}
       map->IdeDomain))
 
 (defn build-from-user-domain
