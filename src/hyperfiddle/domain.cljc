@@ -1,4 +1,5 @@
 (ns hyperfiddle.domain
+  (:refer-clojure :exclude [memoize])
   (:require
     [bidi.bidi :as bidi]
     [clojure.set :as set]
@@ -33,6 +34,7 @@
   (system-fiddle? [domain fiddle-ident])
   (hydrate-system-fiddle [domain fiddle-ident])
   #?(:clj (connect [domain dbname]))
+  (memoize [domain f])
   )
 
 (defn database [domain dbname]

@@ -20,7 +20,7 @@
                      ::home-route])
     #(contains? (:databases %) (:fiddle-dbname %))))
 
-(defrecord EdnishDomain [basis fiddle-dbname databases environment home-route ?datomic-client]
+(defrecord EdnishDomain [basis fiddle-dbname databases environment home-route ?datomic-client memoize-cache]
   domain/Domain
   (basis [domain] basis)
   (type-name [domain] (str *ns* "/" "EdnishDomain"))
@@ -33,10 +33,16 @@
   (system-fiddle? [domain fiddle-ident] (system-fiddle/system-fiddle? fiddle-ident))
   (hydrate-system-fiddle [domain fiddle-ident] (system-fiddle/hydrate fiddle-ident))
   #?(:clj (connect [domain dbname] (d/dyna-connect (domain/database domain dbname) ?datomic-client)))
+  (memoize [domain f]
+    (if-let [f (get @memoize-cache f)]
+      f
+      (let [ret (clojure.core/memoize f)]
+        (swap! memoize-cache assoc f ret)
+        ret)))
   )
 
 (domains-transit/register-handlers
   EdnishDomain
   (str 'hyperfiddle.domains.ednish/EdnishDomain)
-  #(-> (into {} %) (dissoc :?datomic-client))
-  map->EdnishDomain)
+  #(-> (into {} %) (dissoc :?datomic-client :memoize-cache))
+  #(-> (into {} %) (assoc :memoize-cache (atom nil)) map->EdnishDomain))

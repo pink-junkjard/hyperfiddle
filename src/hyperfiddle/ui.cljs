@@ -7,7 +7,6 @@
     [clojure.string :as string]
     [contrib.css :refer [css css-slugify]]
     [contrib.data :refer [unqualify]]
-    [contrib.eval :as eval]
     [contrib.pprint :refer [pprint-str]]
     [contrib.reactive :as r]
     [contrib.hfrecom]
@@ -36,13 +35,11 @@
     [hyperfiddle.ui.util :refer [writable-entity?]]))
 
 
-(let [memoized-eval-expr-str!+ (memoize eval/eval-expr-str!+) ; don't actually need to safely eval, just want to memoize exceptions)
-      ; defer eval until render cycle inside userportal
-      eval-renderer-comp (fn [fiddle-renderer-str & args]
+(let [eval-renderer-comp (fn [fiddle-renderer-str val ctx props]
                            (either/branch
-                             (memoized-eval-expr-str!+ fiddle-renderer-str)
+                             (context/eval-expr-str!+ ctx fiddle-renderer-str)
                              (fn [e] (throw e))
-                             (fn [f] (into [f] args))))]
+                             (fn [f] (into [f val ctx props]))))]
   (defn attr-renderer-control [val ctx & [props]]
     ; The only way to stabilize this is for this type signature to become a react class.
     (when-let [user-f (->> (second (context/eav ctx))
@@ -50,6 +47,7 @@
                            blank->nil)]
       [user-portal (ui-error/error-comp ctx) nil
        ; ?user-f is stable due to memoizing eval (and only due to this)
+       ; defer eval until render cycle inside userportal
        [eval-renderer-comp user-f val ctx props]])))
 
 (declare result)

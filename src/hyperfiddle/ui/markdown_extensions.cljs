@@ -17,12 +17,10 @@
     [taoensso.timbre :as timbre]))
 
 
-(def memoized-safe-eval
-  (memoize
-    (fn [code-str]
-      (if (blank->nil code-str)
-        (eval/eval-expr-str!+ code-str)
-        (either/left nil)))))
+(defn memoized-safe-eval [ctx code-str]
+  (if (blank->nil code-str)
+    (context/eval-expr-str!+ ctx code-str)
+    (either/left nil)))
 
 (declare markdown)                                          ; mutual recursion, it would be letfn if wasn't react components
 
@@ -50,8 +48,8 @@
    (or (:children props) content)])
 
 (defmethod md-ext :f [_ content argument props ctx]
-  (let [content (some->> content memoized-safe-eval (unwrap #(timbre/warn %)))
-        argument (some->> argument memoized-safe-eval (unwrap (constantly argument)))] ; If argument doesn't parse as Clojure, treat as text
+  (let [content (some->> content (memoized-safe-eval ctx) (unwrap #(timbre/warn %)))
+        argument (some->> argument (memoized-safe-eval ctx) (unwrap (constantly argument)))] ; If argument doesn't parse as Clojure, treat as text
 
     (cond
 
@@ -98,27 +96,27 @@
     [contrib.ui/code (assoc props :value content)]))
 
 (defmethod md-ext :render [_ content argument props ctx]
-  (->> (memoized-safe-eval (str "(fn [ctx] \n" content "\n)"))
+  (->> (memoized-safe-eval ctx (str "(fn [ctx] \n" content "\n)"))
        (fmap (fn [f] (f ctx)))
        (unwrap #(timbre/warn %))))
 
 (defmethod md-ext :browse [_ content argument props ctx]
   (let [[_ srel sclass] (re-find #"([^ ]*) ?(.*)" argument)
-        rel (some->> srel memoized-safe-eval (unwrap #(timbre/warn %)))
-        class (some->> sclass memoized-safe-eval (unwrap #(timbre/warn %))) ; corcs
-        ?f (some->> content memoized-safe-eval (unwrap #(timbre/warn %)))]
+        rel (some->> srel (memoized-safe-eval ctx) (unwrap #(timbre/warn %)))
+        class (some->> sclass (memoized-safe-eval ctx) (unwrap #(timbre/warn %))) ; corcs
+        ?f (some->> content (memoized-safe-eval ctx) (unwrap #(timbre/warn %)))]
     (hyperfiddle.ui/browse class ctx ?f props)))
 
 (defmethod md-ext :link [_ content argument props ctx]
   (let [#_#_[_ rel-s class-s] (re-find #"([^ ]*) ?(.*)" argument)
-        ?class (some->> argument memoized-safe-eval (unwrap #(timbre/warn %))) ; :class is mandatory now
+        ?class (some->> argument (memoized-safe-eval ctx) (unwrap #(timbre/warn %))) ; :class is mandatory now
         ; https://github.com/medfreeman/remark-generic-extensions/issues/45
         label (or-str content (some-> ?class name))]
     (hyperfiddle.ui/link ?class ctx label props)))
 
 (defmethod md-ext :result [_ content argument props ctx]
   (let [ctx (assoc ctx ::unp true)]
-    (if-let [f (some->> content memoized-safe-eval (unwrap #(timbre/warn %)))]
+    (if-let [f (some->> content (memoized-safe-eval ctx) (unwrap #(timbre/warn %)))]
       [f ctx]
       (hyperfiddle.ui/result
         (:hypercrud.browser/result ctx) #_(hypercrud.browser.context/data ctx) ; backwards compat
@@ -127,12 +125,12 @@
 
 (defmethod md-ext :value [_ content argument props ctx]
   (let [path (unwrap #(timbre/warn %) (memoized-read-edn-string+ (str "[" argument "]")))
-        ?f (some->> content memoized-safe-eval (unwrap #(timbre/warn %)))]
+        ?f (some->> content (memoized-safe-eval ctx) (unwrap #(timbre/warn %)))]
     (hyperfiddle.ui/value path ctx ?f props)))
 
 (defmethod md-ext :field [_ content argument props ctx]
   (let [path (unwrap #(timbre/warn %) (memoized-read-edn-string+ (str "[" argument "]")))
-        ?f (some->> content memoized-safe-eval (unwrap #(timbre/warn %)))]
+        ?f (some->> content (memoized-safe-eval ctx) (unwrap #(timbre/warn %)))]
     (hyperfiddle.ui/field path ctx ?f (-> props
                                           (update :class css "unp")
                                           (update :label-fn contrib.eval/ensure-fn)))))

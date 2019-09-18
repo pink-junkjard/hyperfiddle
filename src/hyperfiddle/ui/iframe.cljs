@@ -3,7 +3,6 @@
     [cats.monad.either :as either]
     [clojure.spec.alpha :as s]
     [contrib.css :refer [css css-slugify]]
-    [contrib.eval :as eval]
     [contrib.eval-cljs :as eval-cljs]
     [contrib.pprint :refer [pprint-str]]
     [contrib.reactive :as r]
@@ -12,6 +11,7 @@
     [contrib.ui]
     [contrib.ui.safe-render :refer [user-portal]]
     [hypercrud.browser.base :as base]
+    [hypercrud.browser.context :as context]
     [hyperfiddle.runtime :as runtime]
     [hyperfiddle.ui.error :as ui-error]
     [hyperfiddle.ui.stale :as stale]))
@@ -27,8 +27,6 @@
 (defn- fiddle-css-renderer [s] [:style {:dangerouslySetInnerHTML {:__html @s}}])
 
 (defn- build-wrapped-render-expr-str [user-str] (str "(fn [val ctx props]\n" user-str ")"))
-
-(def ^:private eval-renderer (memoize (fn [code-str & cache-bust] (eval/eval-expr-str!+ code-str))))
 
 (defn- fiddle-renderer-cmp [value ctx props & bust-component-did-update]
   (let [last-cljs-ns (atom nil)]                            ; don't spam the compiler - memoize buffer of 1
@@ -50,7 +48,7 @@
                [user-renderer value ctx props]
                (-> @(r/cursor (:hypercrud.browser/fiddle ctx) [:fiddle/renderer])
                    build-wrapped-render-expr-str
-                   (eval-renderer cljs-ns)
+                   (->> (context/eval-expr-str!+ ctx))
                    (either/branch
                      (fn [e] (throw e))
                      (fn [f] [f value ctx props]))))

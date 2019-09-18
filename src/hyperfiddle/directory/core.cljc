@@ -62,7 +62,8 @@
                                                                    (map (juxt :domain.database/name :domain.database/record))
                                                                    (into {}))
                                                    :environment (assoc environment :domain/disable-javascript (:domain/disable-javascript datomic-record))
-                                                   :?datomic-client ?datomic-client}]]
+                                                   :?datomic-client ?datomic-client
+                                                   :memoize-cache (atom nil)}]]
                         (if (:domain/router datomic-record)
                           (->> (reader/read-edn-string+ (:domain/router datomic-record))
                                (cats/fmap (fn [router] (map->BidiDomain (assoc partial-domain :router router)))))

@@ -13,6 +13,7 @@
     [contrib.validation]
     [datascript.parser #?@(:cljs [:refer [FindRel FindColl FindTuple FindScalar Variable Aggregate Pull]])]
     [hypercrud.browser.q-util]
+    [hyperfiddle.domain :as domain]
     [hypercrud.types.DbName :refer [#?(:cljs DbName)]]
     [hypercrud.types.ThinEntity :refer [->ThinEntity #?(:cljs ThinEntity)]]
     [hyperfiddle.api :as hf]
@@ -959,29 +960,34 @@ a speculative db/id."
       :scalar
       v)))
 
-(let [eval-string!+ (memoize eval/eval-expr-str!+)]
-  (defn build-args+ "Params are EAV-typed (uncolored)"
-    ;There is a ctx per argument if we are element-level tuple.
-    [ctx link]
-    {:post [(s/assert either? %)]}
-    ; if at element level, zip with the find-elements, so do this N times.
-    ; That assumes the target query is a query of one arg. If it takes N args, we can apply as tuple.
-    ; If they misalign thats an error. Return the tuple of args.
-    (mlet [formula-ctx-closure (if-let [formula-str (contrib.string/blank->nil (:link/formula link))]
-                                 (eval-string!+ (str "(fn [ctx] \n" formula-str "\n)"))
-                                 (either/right (constantly (constantly nil))))
-           formula-fn (try-either (formula-ctx-closure ctx))
+; controlled memoization, this will correctly bust on cljs-ns changes in the UI
+(let [f (fn [s cljs-ns] (eval/eval-expr-str!+ s))]
+  (defn eval-expr-str!+ [{:keys [:hypercrud.browser/fiddle] :as ctx} s]
+    (let [memoized-f (domain/memoize (runtime/domain (:runtime ctx)) f)]
+      (memoized-f s @(r/cursor fiddle [:fiddle/cljs-ns])))))
 
-           ; V legacy is tuple, it should be scalar by here (tuple the ctx, not the v)
-           :let [[e a v] (eav ctx)]
+(defn build-args+ "Params are EAV-typed (uncolored)"
+  ;There is a ctx per argument if we are element-level tuple.
+  [ctx link]
+  {:post [(s/assert either? %)]}
+  ; if at element level, zip with the find-elements, so do this N times.
+  ; That assumes the target query is a query of one arg. If it takes N args, we can apply as tuple.
+  ; If they misalign thats an error. Return the tuple of args.
+  (mlet [formula-ctx-closure (if-let [formula-str (contrib.string/blank->nil (:link/formula link))]
+                               (eval-expr-str!+ ctx (str "(fn [ctx] \n" formula-str "\n)"))
+                               (either/right (constantly (constantly nil))))
+         formula-fn (try-either (formula-ctx-closure ctx))
 
-           ; Documented behavior is v in, tuple out, no colors.
-           arg (try-either (formula-fn v))]
-      ; Don't normalize, must handle tuple dimension properly.
-      ; For now assume no tuple.
-      (return
-        ; !link[⬅︎ Slack Storm](:dustingetz.storm/view)
-        (if arg [arg])))))
+         ; V legacy is tuple, it should be scalar by here (tuple the ctx, not the v)
+         :let [[e a v] (eav ctx)]
+
+         ; Documented behavior is v in, tuple out, no colors.
+         arg (try-either (formula-fn v))]
+    ; Don't normalize, must handle tuple dimension properly.
+    ; For now assume no tuple.
+    (return
+      ; !link[⬅︎ Slack Storm](:dustingetz.storm/view)
+      (if arg [arg]))))
 
 (defn ^:export build-route+ "There may not be a route! Fiddle is sometimes optional" ; build-route+
   [args ctx]
@@ -1041,21 +1047,15 @@ a speculative db/id."
   (if-let [link-ref (:hypercrud.browser/link ?ctx)]
     @(r/fmap-> link-ref :link/fiddle)))
 
-(let [safe-eval-string #(try-either (eval/eval-expr-str! %))
-      memoized-read-string (memoize safe-eval-string)]
-  (defn link-tx-read-memoized! "Parse the keyword here and ignore the error, once migrated to keyword
-  this doesn't happen"
-    [kw-str]                                                ; TODO migrate type to keyword
-    (let [x (if (blank->nil kw-str)
-              (memoized-read-string kw-str)
-              (either/right nil))]
-      (unwrap (constantly nil) x))))
-
-(defn link-tx [?ctx]
+(defn link-tx [ctx]
   {:post [(or (keyword? %)
               (nil? %))]}
-  (if-let [link-ref (:hypercrud.browser/link ?ctx)]
-    (link-tx-read-memoized! @(r/fmap-> link-ref :link/tx-fn))))
+  (when-let [link-ref (:hypercrud.browser/link ctx)]
+    (let [kw-str @(r/cursor link-ref [:link/tx-fn])         ; TODO migrate type to keyword
+          x (if (blank->nil kw-str)
+              (eval-expr-str!+ ctx kw-str)                  ; Parse the keyword here and ignore the error, once migrated to keyword this doesn't happen
+              (either/right nil))]
+      (unwrap (constantly nil) x))))
 
 (defn hash-portable [v]
   ; Transactions have db/id longs and longs hash differently on cljs vs clj

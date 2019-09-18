@@ -11,7 +11,7 @@
     [hyperfiddle.system-fiddle :as system-fiddle]))
 
 
-(defrecord BidiDomain [basis fiddle-dbname databases environment router ?datomic-client]
+(defrecord BidiDomain [basis fiddle-dbname databases environment router ?datomic-client memoize-cache]
   domain/Domain
   (basis [domain] basis)
   (type-name [domain] (str *ns* "/" "BidiDomain"))
@@ -27,10 +27,17 @@
   (api-routes [domain] routes/routes)
   (system-fiddle? [domain fiddle-ident] (system-fiddle/system-fiddle? fiddle-ident))
   (hydrate-system-fiddle [domain fiddle-ident] (system-fiddle/hydrate fiddle-ident))
-  #?(:clj (connect [domain dbname] (d/dyna-connect (domain/database domain dbname) ?datomic-client))))
+  #?(:clj (connect [domain dbname] (d/dyna-connect (domain/database domain dbname) ?datomic-client)))
+  (memoize [domain f]
+    (if-let [f (get @memoize-cache f)]
+      f
+      (let [ret (clojure.core/memoize f)]
+        (swap! memoize-cache assoc f ret)
+        ret)))
+  )
 
 (domains-transit/register-handlers
   BidiDomain
   (str 'hyperfiddle.domains.bidi/BidiDomain)
-  #(-> (into {} %) (dissoc :?datomic-client))
-  map->BidiDomain)
+  #(-> (into {} %) (dissoc :?datomic-client :memoize-cache))
+  #(-> (into {} %) (assoc :memoize-cache (atom nil)) map->BidiDomain))
