@@ -161,7 +161,7 @@
        ::user-domain+ user-domain+
        :?datomic-client ?datomic-client
        :html-root-id "ide-root"
-       ::memoize-cache (atom nil)}
+       :memoize-cache (atom nil)}
       map->IdeDomain))
 
 (defn build-from-user-domain
