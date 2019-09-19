@@ -246,7 +246,7 @@ User renderers should not be exposed to the reaction."
                                    (->> (concat #_[fiddle-ident] (::route/datomic-args route))
                                         (map pr-str) (interpose " ") (apply str)))]))))))
 
-(letfn [(prompt [link ?label]
+(letfn [(prompt [link ctx ?label]
           (or ?label
               (->> (set (:link/class link))
                    (remove #(= "hf" (namespace %)))         ; "iframe" is not a good name
@@ -256,20 +256,21 @@ User renderers should not be exposed to the reaction."
                    blank->nil)
               (some-> link :link/fiddle :fiddle/ident name)
               ; todo link/tx-fn should be a kw already, @(r/cursor link-ref [:link/tx-fn])
-              (some-> (context/link-tx {:hypercrud.browser/link (r/pure link)}) name)))]
+              (some-> (context/link-tx (assoc ctx :hypercrud.browser/link (r/pure link))) name)))]
   (defn ui-from-link [link-ref ctx & [props ?label]]
     {:pre [link-ref (r/reactive? link-ref)]}
     ; Once this link changes, pretty much everything below here needs to recompute
     ; Reactions are unlikely to be faster than render-tree-pruning.
-    (let [has-tx-fn (boolean (context/link-tx {:hypercrud.browser/link link-ref})) ; todo link/tx-fn should be a kw already, @(r/cursor link-ref [:link/tx-fn])
+    (let [has-tx-fn (boolean (context/link-tx (assoc (select-keys ctx [:runtime :hypercrud.browser/fiddle])
+                                                :hypercrud.browser/link link-ref))) ; todo link/tx-fn should be a kw already, @(r/cursor link-ref [:link/tx-fn])
           is-iframe (some #{:hf/iframe} @(r/cursor link-ref [:link/class]))]
       (cond
         (and has-tx-fn (nil? @(r/cursor link-ref [:link/fiddle])))
-        [effect-cmp ctx link-ref props @(r/fmap-> link-ref (prompt ?label))]
+        [effect-cmp ctx link-ref props @(r/fmap-> link-ref (prompt (select-keys ctx [:runtime :hypercrud.browser/fiddle]) ?label))]
 
         (or has-tx-fn (and is-iframe (:iframe-as-popover props)))
         (let [props (dissoc props :iframe-as-popover)]
-          [popover-cmp ctx link-ref props @(r/fmap-> link-ref (prompt ?label))])
+          [popover-cmp ctx link-ref props @(r/fmap-> link-ref (prompt (select-keys ctx [:runtime :hypercrud.browser/fiddle]) ?label))])
 
         is-iframe
         (let [+route-and-ctx (context/refocus-build-route-and-occlude+ ctx link-ref) ; Can fail if formula dependency isn't satisfied
@@ -299,7 +300,7 @@ User renderers should not be exposed to the reaction."
                  (let [props (dissoc props :tooltip)]
                    ; what about class - flagged
                    ; No eav, the route is the same info
-                   [anchor link-ctx props @(r/fmap-> link-ref (prompt ?label))])])))))
+                   [anchor link-ctx props @(r/fmap-> link-ref (prompt (select-keys ctx [:runtime :hypercrud.browser/fiddle]) ?label))])])))))
 
 (defn ^:export link "Render a link. :hf/iframes have managed loading component."
   [corcs ctx & [?label props]]
