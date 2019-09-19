@@ -51,7 +51,7 @@
                                     (resolve 'hyperfiddle.io.datomic.peer/q))
       (and db-name @client-supported) (do (require 'hyperfiddle.io.datomic.client)
                                           (resolve 'hyperfiddle.io.datomic.client/q))
-      (and (nil? uri) (nil? db-name)) (throw (ex-info "Database not well formed, must specify a db-name or uri to connect to" {}))
+      (and (nil? uri) (nil? db-name)) (throw (ex-info "Database not well formed, must specify a db-name or uri to connect to" {:dbname dbname}))
       (and uri (not @peer-supported)) (throw (ex-info "Unable to resolve datomic peer library on classpath" {:database/uri uri}))
       (and db-name (not @client-supported)) (throw (ex-info "Unable to resolve datomic client library on classpath" {:database/db-name db-name}))
       )))
