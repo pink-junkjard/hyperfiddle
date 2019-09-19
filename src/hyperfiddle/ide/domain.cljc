@@ -145,10 +145,10 @@
                                                :database/auto-transact true
                                                :database/color "#777")]))
                                      (into {}))]
-                    (-> (into user-dbs ide-dbs)
-                        (assoc "$" (assoc (get user-databases user-fiddle-dbname)
-                                     :database/auto-transact false
-                                     :database/color (color/color-for-name user-fiddle-dbname)))))
+                    (cond-> (into user-dbs ide-dbs)
+                      user-fiddle-dbname (assoc "$" (assoc (get user-databases user-fiddle-dbname)
+                                                      :database/auto-transact false
+                                                      :database/color (color/color-for-name user-fiddle-dbname)))))
        :environment ide-environment
        :home-route ide-home-route
        ::user-dbname->ide (->> user-databases
