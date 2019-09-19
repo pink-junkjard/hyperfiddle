@@ -32,7 +32,8 @@
     [hyperfiddle.ui.select$]
     [hyperfiddle.ui.sort :as sort]
     [hyperfiddle.ui.stale :as stale]
-    [hyperfiddle.ui.util :refer [writable-entity?]]))
+    [hyperfiddle.ui.util :refer [writable-entity?]]
+    [spec-coerce.alpha]))
 
 
 (let [eval-renderer-comp (fn [fiddle-renderer-str val ctx props]
@@ -425,7 +426,7 @@ User renderers should not be exposed to the reaction."
      :on-change (fn [_ needle]
                   (->> (if (empty? needle)
                          (dissoc @route ::route/where)
-                         (assoc @route ::route/where (route/fill-where unfilled-where needle)))
+                         (assoc @route ::route/where (route/fill-where unfilled-where (spec-coerce.alpha/coerce (:hf/where-spec input-props) needle))))
                        (runtime/set-route (:runtime ctx) (:partition-id ctx)))))
    contrib.ui/text])
 
@@ -494,7 +495,9 @@ nil. call site must wrap with a Reagent component"          ; is this just hyper
        [:<> {:key k}
         (hint val ctx props)
         (when-let [unfilled-where (:hf/where props)]
-          [needle-input unfilled-where ctx {:placeholder (pr-str unfilled-where) :class "form-control"}])
+          (let [props (merge {:placeholder (pr-str unfilled-where) :class "form-control"}
+                             (select-keys props [:hf/where :hf/where-spec]))]
+            [needle-input unfilled-where ctx props]))
         (condp some [(type @(:hypercrud.browser/qfind ctx))] ; spread-rows
 
           #{FindRel FindColl}
