@@ -426,7 +426,9 @@ User renderers should not be exposed to the reaction."
      :on-change (fn [_ needle]
                   (->> (if (empty? needle)
                          (dissoc @route ::route/where)
-                         (assoc @route ::route/where (route/fill-where unfilled-where (spec-coerce.alpha/coerce (:hf/where-spec input-props) needle))))
+                         (assoc @route ::route/where (route/fill-where unfilled-where (if-let [spec (:hf/where-spec input-props)]
+                                                                                        (spec-coerce.alpha/coerce spec needle)
+                                                                                        needle))))
                        (runtime/set-route (:runtime ctx) (:partition-id ctx)))))
    contrib.ui/text])
 
