@@ -120,8 +120,7 @@
                       [[match msg] (re-find #"^.+ :db.error/not-an-entity (.+)$" error-str)]
                       [:db.error/not-an-entity msg
                        "Hint: If this is a schema attribute, does it exist?
-                       This can happen if you both create a schema entity and use it in the
-                       same transaction. Transact the schema before using it. Also try auto-transact."]
+                       This can happen if you create a schema entity and then try to use it in the same transaction."]
                       [[match msg] (re-find #"^.+ :db.error/wrong-type-for-attribute (.+)$" error-str)] [:db.error/wrong-type-for-attribute msg]
                       [[match msg] (re-find #"^.+ :hyperfiddle.error/basis-stale (.+)$" error-str)] [:hyperfiddle.error/basis-stale msg]
 
