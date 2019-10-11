@@ -20,7 +20,8 @@
                                                                                    [(.startsWith ?ns "zzz")]))
                                                     hide-datomic (cons '[(> ?attr 62)])
                                                     (seq needle) (into ['[(str ?ident) ?si]
-                                                                        [(list '.contains '?si needle)]]))
+                                                                        '[(.toLowerCase ?si) ?si']
+                                                                        [(list '.contains '?si' (.toLowerCase needle))]]))
                                                   vec)]
                                    (->> (if (seq where)
                                           (assoc @route :hyperfiddle.route/where where)
