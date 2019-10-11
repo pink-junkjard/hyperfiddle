@@ -1,6 +1,7 @@
 (ns hyperfiddle.local-storage-sync
   (:require
     [contrib.component :as component]
+    [contrib.document :refer [document-location!]]
     [contrib.local-storage :as local-storage]
     [hyperfiddle.domain :as domain]
     [hyperfiddle.io.basis :as basis]
@@ -82,7 +83,7 @@
     (try
       (let [changing-route (when-not (runtime/parent-pid rt pid)
                              (let [existing-route (runtime/get-route rt pid)
-                                   route (domain/url-decode (runtime/domain rt) (str js/document.location.pathname js/document.location.hash))]
+                                   route (domain/url-decode (runtime/domain rt) (document-location!))]
                                (when-not (route/equal-without-frag? existing-route route)
                                  (state/dispatch! rt [:stage-route pid route])
                                  true)))]
