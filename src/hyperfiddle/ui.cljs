@@ -432,13 +432,25 @@ User renderers should not be exposed to the reaction."
                        (runtime/set-route (:runtime ctx) (:partition-id ctx)))))
    contrib.ui/text])
 
+(s/def :hf/where any?)
+(s/def :hf/where-spec any?)
+
+(defn needle-input2 [ctx props]
+  {:pre [(s/assert :hf/where props)]}
+  (let [unfilled-where (:hf/where props)
+        props (merge {:placeholder (pr-str unfilled-where) :class "form-control"}
+                     (select-keys props [:hf/where :hf/where-spec]))]
+    [needle-input unfilled-where ctx props]))
+
 (defn hint [val {:keys [hypercrud.browser/fiddle] :as ctx} props]
   (case @(r/fmap :fiddle/type fiddle)
     :entity (when (empty? val)
-              [:div.alert.alert-warning "Warning: invalid route (d/pull requires an entity argument). To add a tempid entity to the URL, click here: "
+              [:div.hyperfiddle.alert.alert-warning "Warning: invalid route (d/pull requires an entity argument). To add a tempid entity to the URL, click here: "
                [:a {:href "~entity('$','tempid')"} [:code "~entity('$','tempid')"]] "."])
     :query (when (= base/browser-query-limit (count val))
-             [:div.alert.alert-warning (str/format "Warning: Query resultset has been truncated to %s records." base/browser-query-limit)])
+             [:div.hyperfiddle.alert.alert-warning
+              (str/format "Warning: Query resultset has been truncated to %s records."
+                          base/browser-query-limit)])
     :blank nil
     ))
 
@@ -497,9 +509,7 @@ nil. call site must wrap with a Reagent component"          ; is this just hyper
        [:<> {:key k}
         (hint val ctx props)
         (when-let [unfilled-where (:hf/where props)]
-          (let [props (merge {:placeholder (pr-str unfilled-where) :class "form-control"}
-                             (select-keys props [:hf/where :hf/where-spec]))]
-            [needle-input unfilled-where ctx props]))
+          [needle-input2 ctx props])
         (condp some [(type @(:hypercrud.browser/qfind ctx))] ; spread-rows
 
           #{FindRel FindColl}
