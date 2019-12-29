@@ -85,7 +85,7 @@
                         (directory/hydrate-app-domain (some-> (:?datomic-client env) deref) io local-basis [:domain/ident "www"])
                         (-> (hydrate-ide-domain (some-> (:?datomic-client env) deref) io local-basis app-domain-ident)
                             (p/then #(assoc %
-                                       ::service-uri (http-service/service-uri (:PUBLIC_SERVICE_HTTP_SCHEME env) fqdn (:PUBLIC_SERVICE_HTTP_PORT env))
+                                       ::service-uri (http-service/service-uri (:PUBLIC_SERVICE_HTTP_SCHEME env) fqdn (:PUBLIC_SERVICE_HTTP_PORT env)) ; can public port be determined from the request?
                                        ::ide-domain ide-domain
                                        ::app-domain-ident app-domain-ident
 
