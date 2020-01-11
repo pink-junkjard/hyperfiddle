@@ -1,6 +1,7 @@
 {:paths ["src" "resources"]
  :deps {
         aysylu/loom {:mvn/version "1.0.2"}
+        backtick {:mvn/version "0.3.3"}
         bidi {:mvn/version "2.1.5"}
         com.cognitect/transit-clj {:mvn/version "0.8.313"}
         com.cognitect/transit-cljs {:mvn/version "0.8.256"}

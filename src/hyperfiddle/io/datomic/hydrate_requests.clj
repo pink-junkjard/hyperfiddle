@@ -5,12 +5,14 @@
     [cats.monad.exception :as exception]
     [clojure.set :as set]
     [clojure.string :as string]
+    [clojure.walk :refer [postwalk]]
     [contrib.data :refer [cond-let map-values parse-query-element]]
     [contrib.datomic]
     [contrib.pprint :refer [pprint-str]]
     [contrib.try$ :refer [try-either]]
     [hypercrud.types.EntityRequest]
     [hypercrud.types.QueryRequest]
+    [hypercrud.types.DbRef :refer [->DbRef]]
     [hyperfiddle.domain :as domain]
     [hyperfiddle.io.bindings]                               ; userland
     [hyperfiddle.io.datomic :as d]
@@ -18,7 +20,7 @@
   (:import
     (hypercrud.types.DbRef DbRef)
     (hypercrud.types.EntityRequest EntityRequest)
-    (hypercrud.types.QueryRequest QueryRequest)))
+    (hypercrud.types.QueryRequest QueryRequest EvalRequest)))
 
 
 (defrecord SecureDbWith [db id->tempid])
@@ -46,6 +48,20 @@
                     (assoc :query query
                            :args (map #(parameter % get-secure-db-with) params)))]
     (q arg-map)))
+
+(def ^:dynamic *$* nil)
+
+(defmethod hydrate-request* EvalRequest [{:keys [form pid]} domain get-secure-db-with]
+  {:pre [form]}
+  (let [form' (->> form
+                   (postwalk (fn [sym]
+                              (if (and (symbol? sym)
+                                       (= (name sym) "$") #_(clojure.string/starts-with? (name sym) "$"))
+                                `*$*
+                                sym)))
+                   doall)]
+    (binding [*$* (:db (get-secure-db-with "$" pid))]
+      (eval form'))))
 
 ; todo i18n
 (def ERROR-BRANCH-PAST ":hyperfiddle.error/basis-stale Branching the past is currently unsupported, please refresh your basis by refreshing the page")
@@ -154,7 +170,9 @@
        (map-values extract-tempid-lookup+)))
 
 (defn hydrate-request [domain get-secure-db-with+ request ?subject]
-  {:pre [(or (instance? EntityRequest request) (instance? QueryRequest request))]}
+  {:pre [(or (instance? EntityRequest request)
+             (instance? QueryRequest request)
+             (instance? EvalRequest request))]}
   (binding [hyperfiddle.io.bindings/*subject* ?subject]
     (either/branch-left
       (try-either (hydrate-request* request domain (comp exception/extract get-secure-db-with+)))
@@ -163,7 +181,9 @@
 (defn hydrate-requests [domain local-basis requests partitions ?subject]
   {:pre [requests
          (not-any? nil? requests)
-         (every? #(or (instance? EntityRequest %) (instance? QueryRequest %)) requests)]}
+         (every? #(or (instance? EntityRequest %)
+                      (instance? QueryRequest %)
+                      (instance? EvalRequest %)) requests)]}
   (let [db-with-lookup (atom {})
         local-basis (into {} local-basis)                   ; :: ([dbname 1234]), but there are some duck type shenanigans happening
         get-secure-db-with+ (build-get-secure-db-with+ domain (constantly partitions) db-with-lookup local-basis)

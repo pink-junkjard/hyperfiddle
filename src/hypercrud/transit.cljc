@@ -11,7 +11,8 @@
     [hypercrud.types.DbRef :refer [->DbRef #?(:cljs DbRef)]]
     [hypercrud.types.EntityRequest :refer [->EntityRequest #?(:cljs EntityRequest)]]
     [hypercrud.types.Err :refer [->Err #?(:cljs Err)]]
-    [hypercrud.types.QueryRequest :refer [->QueryRequest #?(:cljs QueryRequest)]]
+    [hypercrud.types.QueryRequest :refer [->QueryRequest #?(:cljs QueryRequest)
+                                          ->EvalRequest #?(:cljs EvalRequest)]]
     [hypercrud.types.ThinEntity :refer [->ThinEntity #?(:cljs ThinEntity)]])
   #?(:clj
      (:import
@@ -23,7 +24,7 @@
        (hypercrud.types.DbRef DbRef)
        (hypercrud.types.EntityRequest EntityRequest)
        (hypercrud.types.Err Err)
-       (hypercrud.types.QueryRequest QueryRequest)
+       (hypercrud.types.QueryRequest QueryRequest EvalRequest)
        (hypercrud.types.ThinEntity ThinEntity)
        (java.io ByteArrayInputStream ByteArrayOutputStream))))
 
@@ -34,6 +35,7 @@
    "DbName" (t/read-handler ->DbName)
    "DbRef" (t/read-handler #(apply ->DbRef %))
    "EReq" (t/read-handler #(apply ->EntityRequest %))
+   "EvalReq" (t/read-handler #(apply ->EvalRequest %))
    "err" (t/read-handler ->Err)
    "QReq" (t/read-handler #(apply ->QueryRequest %))
    "entity" (t/read-handler #(apply ->ThinEntity %))
@@ -57,6 +59,7 @@
    EntityRequest (t/write-handler (constantly "EReq") (fn [v] [(:e v) (:db v) (:pull-exp v)]))
    Err (t/write-handler (constantly "err") #(:msg %))
    QueryRequest (t/write-handler (constantly "QReq") (fn [v] [(:query v) (:params v) (:opts v)]))
+   EvalRequest (t/write-handler (constantly "EvalReq") (fn [v] [(:form v) (:pid v)]))
    ThinEntity (t/write-handler (constantly "entity") (fn [^ThinEntity v] [(.-dbname v) (.-id v)]))
    Left (t/write-handler (constantly "left-v") (fn [v] (vector (cats/extract v))))
    Right (t/write-handler (constantly "right-v") (fn [v] (vector (cats/extract v))))

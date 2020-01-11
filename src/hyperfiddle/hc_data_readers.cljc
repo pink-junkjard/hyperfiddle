@@ -8,7 +8,7 @@
     [hypercrud.types.DbRef :refer [map->DbRef]]
     [hypercrud.types.EntityRequest :refer [map->EntityRequest]]
     [hypercrud.types.Err :refer [map->Err]]
-    [hypercrud.types.QueryRequest :refer [map->QueryRequest]]
+    [hypercrud.types.QueryRequest :refer [map->QueryRequest map->EvalRequest]]
     [hypercrud.types.ThinEntity :refer [read-ThinEntity]]
     [contrib.uri :refer [read-URI]]))
 
@@ -26,4 +26,6 @@
    'hypercrud.types.DbRef.DbRef map->DbRef
    'hypercrud.types.EntityRequest.EntityRequest map->EntityRequest
    'hypercrud.types.Err.Err map->Err
-   'hypercrud.types.QueryRequest.QueryRequest map->QueryRequest})
+   'hypercrud.types.QueryRequest.QueryRequest map->QueryRequest
+   'hypercrud.types.QueryRequest.EvalRequest map->EvalRequest
+   })

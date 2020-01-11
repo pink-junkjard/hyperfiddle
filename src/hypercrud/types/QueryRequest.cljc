@@ -2,3 +2,4 @@
 
 
 (defrecord QueryRequest [query params opts])
+(defrecord EvalRequest [form pid])

@@ -1,7 +1,11 @@
 (ns hyperfiddle.readers-test
-  (:require [clojure.test :refer [deftest is]]
+  #?(:cljs
+     (:require-macros [backtick :refer [template]]))
+  (:require
+    #?(:clj [backtick :refer [template]])
+            [clojure.test :refer [deftest is]]
             [contrib.datomic]
-            [contrib.eval :as eval]
+            [contrib.eval :as eval :refer [eval-expr-str!]]
             [contrib.reader :as reader :refer [read-edn-string!]]
             #?(:cljs [goog.math])
             [hyperfiddle.readers]
@@ -10,7 +14,7 @@
             [hypercrud.types.ThinEntity :refer [->ThinEntity]]
             [hypercrud.types.EntityRequest :refer [->EntityRequest]]
             [hypercrud.types.Err :refer [->Err]]
-            [hypercrud.types.QueryRequest :refer [->QueryRequest]]
+            [hypercrud.types.QueryRequest :refer [->QueryRequest ->EvalRequest]]
             [contrib.uri :refer [->URI]])
   (:import #?(:clj java.util.Date)))
 
@@ -74,6 +78,35 @@
                   #hypercrud.types.QueryRequest.QueryRequest{:query "foo" :params "bar" :opts "baz"}
                   "#hypercrud.types.QueryRequest.QueryRequest{:query \"foo\" :params \"bar\" :opts \"baz\"}"
                   "{\"~#QReq\":[\"foo\",\"bar\",\"baz\"]}"))
+
+(comment
+  (test-edn-read {:form 'foo} (pr-str {:form 'foo}))
+
+  (read-edn-string! "{:form ~(inc 1)}")
+  (eval-expr-str! "`{:form ~(inc 1)}")
+
+  (eval-expr-str! "(template {:form ~(inc 1)})")
+  (reader/read-string "{:form ~(inc 1)}")
+  (eval `(template ~(reader/read-string "{:form ~(inc 1)}")))
+
+  (= {:form 'foo}
+     (read-edn-string! "{:form foo}")
+     (eval-expr-str! "{:form 'foo}")
+     #_(read-edn-string! "{:form 'foo}")
+     )
+  )
+
+; Test saffolding needs to be improved to distinguish readers
+#_(deftest EvalReq []
+                 (test-all-forms (->EvalRequest "foo")
+                   #hypercrud.types.QueryRequest.EvalRequest{:form "foo"}
+                   "#hypercrud.types.QueryRequest.EvalRequest{:form \"foo\"}"
+                   "{\"~#EvalReq\":[\"foo\"]}")
+              (test-all-forms #_(->EvalRequest '(datomic.api/entity :db/ident foo [:db/ident *]))
+                              (->EvalRequest 'foo)
+                              #hypercrud.types.QueryRequest.EvalRequest{:form 'foo}
+                              "#hypercrud.types.QueryRequest.EvalRequest{:form foo}"
+                              "{\"~#EvalReq\":[\"~$foo\"]}"))
 
 (deftest uri []
   (test-all-forms (->URI "foo")

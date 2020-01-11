@@ -1,5 +1,8 @@
 (ns hypercrud.browser.base
+ #?(:cljs
+    (:require-macros [backtick :refer [template]]))
   (:require
+    #?(:clj [backtick :refer [template]])
     [cats.core :as cats :refer [mlet return]]
     [cats.monad.either :as either]
     [clojure.string :as string]
@@ -10,7 +13,7 @@
     [hypercrud.browser.context :as context]
     [hypercrud.types.DbName :refer [#?(:cljs DbName)]]
     [hypercrud.types.EntityRequest :refer [->EntityRequest]]
-    [hypercrud.types.QueryRequest :refer [->QueryRequest]]
+    [hypercrud.types.QueryRequest :refer [->QueryRequest ->EvalRequest]]
     [hypercrud.types.ThinEntity :refer [#?(:cljs ThinEntity)]]
     [hyperfiddle.domain :as domain]
     [hyperfiddle.fiddle :as fiddle]
@@ -54,6 +57,7 @@
                                                     (return record))
                   :entity (either/right record) #_(mlet [pull (memoized-read-edn-string+ (:fiddle/pull record))]
                                                     (return (assoc record :fiddle/pull pull)))
+                  :eval (either/right record)
                   :blank (either/right record))]
     (return (fiddle/apply-defaults fiddle))))
 
@@ -111,6 +115,13 @@
                                (seq (::route/where route)) ((partial apply query/append-where-clauses) (::route/where route)))]
                        (return (->QueryRequest q query-args {:limit browser-query-limit})))))
 
+    :eval                                                   ; '(datomic.api/pull $ [:db/ident '*] :db/ident)
+    (let [form (-> #_(memoized-read-edn-string+ (:fiddle/eval fiddle))
+                 (reader/memoized-read-string+ (:fiddle/eval fiddle))
+                 (either/branch (constantly nil) identity))]
+      ; dbval is reconstructed from the pid on the backend
+      (either/right (->EvalRequest form pid)))
+
     :entity
     (let [args (::route/datomic-args route)                 ; Missing entity param is valid state now https://github.com/hyperfiddle/hyperfiddle/issues/268
           [dbname ?e] (if false #_(instance? DbName (first args))
@@ -141,10 +152,15 @@
              (either/right nil))
          ; todo runtime should prevent invalid routes from being set
          route (route/validate-route+ route)                ; terminate immediately on a bad route
+         ;:let [_ (println "route " route)]
          route (try-either (route/invert-route route (partial runtime/tempid->id! rt pid)))
+         ;:let [_ (println "route " route)]
          r-fiddle @(r/apply-inner-r (r/track hydrate-fiddle+ rt pid (::route/fiddle route)))
+         ;:let [_ (println "fiddle " @r-fiddle)]
          r-request @(r/apply-inner-r (r/fmap->> r-fiddle (request-for-fiddle+ rt pid route)))
+         ;:let [_ (println "request " @r-request)]
          r-result @(r/apply-inner-r (r/fmap->> r-request (nil-or-hydrate+ rt pid)))
+         ;:let [_ (println "result " @r-result)]
          ctx (-> ctx
                  ; route should be a ref, provided by the caller, that we fmap over
                  ; because it is not, this is obviously fragile and will break on any change to the route

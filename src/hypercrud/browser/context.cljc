@@ -523,6 +523,7 @@ a speculative db/id."
   ; todo fiddle should already be valid
   (mlet [r-qparsed @(r/apply-inner-r (r/fmap hyperfiddle.fiddle/parse-fiddle-query+ r-fiddle))
          _ (if (and (not= :blank @(r/cursor r-fiddle [:fiddle/type]))
+                    (not= :eval @(r/cursor r-fiddle [:fiddle/type]))
                     @(r/fmap (r/comp nil? :qfind) r-qparsed))
              (either/left (ex-info "Invalid qfind" {}))     ; how would this ever happen?
              (either/right nil))
@@ -733,6 +734,7 @@ a speculative db/id."
     ; could also dispatch on qfind. Is fiddle/type unnecessary now?
     (condp some [(:fiddle/type @r-fiddle)]
       #{:blank} []
+      #{:eval} []                                           ; what to do here? We need to like model it
       #{:query :entity} [[(:fiddle/ident @r-fiddle)
                           ; inference is lazy
                           ; But it needs to add something, so that we know that it is inferrable now

@@ -19,7 +19,7 @@
 
 (s/def :fiddle/ident keyword?)
 (s/def :fiddle/uuid uuid?)
-(s/def :fiddle/type #{:blank :entity :query})
+(s/def :fiddle/type #{:blank :entity :query :eval})
 (s/def :fiddle/query string?)
 #_(s/def :fiddle/query-needle string?)
 (s/def :fiddle/pull string?)
@@ -42,8 +42,8 @@
 (s/def :hyperfiddle/owners (s/coll-of uuid?))
 
 (defmulti fiddle-type :fiddle/type)
-(defmethod fiddle-type :blank [_]
-  (s/keys :req [:fiddle/ident]))
+(defmethod fiddle-type :blank [_] (s/keys :req [:fiddle/ident]))
+(defmethod fiddle-type :eval [_] (s/keys :req [:fiddle/ident]))
 (defmethod fiddle-type :query [_]
   (s/keys :req [:fiddle/ident
                 :fiddle/query]))
@@ -103,6 +103,7 @@
                      (case (get-in link [:link/fiddle :fiddle/type] ((:fiddle/type fiddle-defaults) (:link/fiddle link)))
                        :query "identity" #_(infer-query-formula (get-in link [:link/fiddle :fiddle/query] ((:fiddle/query fiddle-defaults) (:link/fiddle link))))
                        :entity "identity"
+                       :eval "identity"
 
                        ; this is the case where the v is inferred but we don't actually want it, like a toplevel iframe for a FindScalar.
                        ; Update: can use :db/id for the dependent iframe, use :fiddleident for a standalone iframe ? or naked (no :link/attr)
@@ -151,9 +152,10 @@
 
 (def fiddle-defaults
   {:fiddle/markdown (fn [fiddle] (str/fmt "### %s" (some-> fiddle :fiddle/ident str)))
-   :fiddle/pull (constantly "[:db/id *]")
+   :fiddle/pull (constantly "[:db/id\n *]")
    :fiddle/pull-database (constantly "$")
    :fiddle/query (constantly (template/load-resource "fiddle-query-default.edn"))
+   :fiddle/eval (constantly "[{:foo (inc 42)}]")
    :fiddle/renderer (constantly default-renderer-str)
    :fiddle/type (constantly :blank)})                       ; Toggling default to :query degrades perf in ide
 
@@ -177,6 +179,7 @@
                   (update :fiddle/pull-database or-str ((:fiddle/pull-database fiddle-defaults) fiddle))
                   (cond->
                     (empty? (:fiddle/pull fiddle)) (assoc :fiddle/pull ((:fiddle/pull fiddle-defaults) fiddle))))
+      :eval (update fiddle :fiddle/eval or-str ((:fiddle/eval fiddle-defaults) fiddle))
       :blank fiddle)
     (update fiddle :fiddle/markdown or-str ((:fiddle/markdown fiddle-defaults) fiddle))
     (update fiddle :fiddle/renderer or-str ((:fiddle/renderer fiddle-defaults) fiddle))))
@@ -220,6 +223,7 @@
 (defn parse-fiddle-query+ [{:keys [fiddle/type fiddle/query fiddle/pull fiddle/pull-database]}]
   (case type
     :blank (right nil)
+    :eval (right nil)
     :entity (>>= (contrib.reader/memoized-read-edn-string+ pull)
                  (fn [pull]
                    (try-either
