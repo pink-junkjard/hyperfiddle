@@ -45,6 +45,17 @@
         [hyper-control (context/v ctx) ctx (with-fiddle-default {:class "pull-database"} val :fiddle/pull-database)]))]
    [:span.schema "schema: " (schema-links ctx-fiddle-type)]])
 
+(defmethod hf/render #{:fiddle/type
+                       :hyperfiddle/ide}
+  [ctx props]
+  (let [props (assoc props
+                :class "qe"
+                :options [{:value :query :label "query"}
+                          {:value :entity :label "pull"}
+                          {:value :eval :label "eval"}
+                          {:value :blank :label "static"}])]
+    [hyperfiddle.ui.controls/radio-group (hf/data ctx) ctx props]))
+
 (defmethod hf/render #{:link/fiddle
                        :hyperfiddle/ide}
   [ctx props]
@@ -93,7 +104,9 @@
         (field [:db/id] ctx)]))
    ctx props])
 
-;(defmethod hf/render :fiddle/type [ctx props])
+(defmethod hf/render #{:fiddle/eval} [ctx props] [hyperfiddle.ui.controls/code (hf/data ctx) ctx props])
+(defmethod hf/render #{:fiddle/pull} [ctx props] [hyperfiddle.ui.controls/code (hf/data ctx) ctx props])
+(defmethod hf/render #{:fiddle/query} [ctx props] [hyperfiddle.ui.controls/code (hf/data ctx) ctx props])
 
 (def tabs
   {:hf/query
@@ -119,6 +132,7 @@
 
          #_[:div.query-needle.cm-wrap
             [value [:fiddle/query-needle] ctx hyper-control (with-fiddle-default props val :fiddle/query-needle)]]]
+        :eval ^{:key "eval"} [value [:fiddle/eval] ctx hyper-control (with-fiddle-default props val :fiddle/eval)]
         :blank nil)])
 
    :hf/links
