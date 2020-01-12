@@ -1,7 +1,7 @@
 (ns contrib.string
   (:require
-    [clojure.string :as string]
-    [contrib.data :refer [orp]]
+    [clojure.string :as string :refer [join split]]
+    [contrib.data :refer [orp pad]]
     [cuerdas.core :as str]))
 
 
@@ -43,3 +43,12 @@
   #_(->> (range) (map (comp keyword str char #(+ % (int \a))))))
 
 (defn or-str [a b] (orp seq a b))
+
+#?(:cljs                                                    ; todo clj
+   (defn lpad-str [n zero s]
+     (-> s
+         (split "")
+         reverse                                            ; make it a left pad
+         (->> (pad 2 zero))                                 ; this is a right-pad
+         reverse
+         join)))

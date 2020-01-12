@@ -8,7 +8,7 @@
     [contrib.reader :as reader]
     [contrib.string :refer [empty->nil]]
     [contrib.ui :refer [debounced]]                         ; avoid collisions
-    [contrib.ui.recom-date :refer [recom-date]]
+    [contrib.ui.recom-date :refer [recom-date recom-time]]
     [contrib.ui.tooltip :refer [tooltip-thick]]
     [contrib.uri :refer [is-uri?]]
     [datascript.parser :refer [FindRel FindColl FindTuple FindScalar Variable Aggregate Pull]]
@@ -188,7 +188,7 @@
 
 (defn ^:export instant [val ctx & [props]]
   (let [props (assoc props :value val :on-change (with-entity-change! ctx))]
-    [recom-date props]))
+    [:<> [recom-date props] [recom-time props]]))
 
 (defn- code-comp [ctx]
   (case (:hyperfiddle.ui/layout ctx :hyperfiddle.ui.layout/block)

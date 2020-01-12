@@ -41,3 +41,8 @@
   (is (= (count (doall (abc))) 26))
   (is (= (last (abc)) :z))
   )
+
+(deftest lpad-str-1
+  []
+  #?(:cljs
+     (is (= "01" (contrib.string/lpad-str 2 "0" (str 1))))))
