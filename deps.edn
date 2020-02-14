@@ -3,6 +3,7 @@
         aysylu/loom {:mvn/version "1.0.2"}
         backtick {:mvn/version "0.3.3"}
         bidi {:mvn/version "2.1.5"}
+        com.auth0/java-jwt {:mvn/version "3.7.0"}
         com.cognitect/transit-clj {:mvn/version "0.8.313"}
         com.cognitect/transit-cljs {:mvn/version "0.8.256"}
         com.datomic/client-api {:mvn/version "0.8.13"}
@@ -12,7 +13,10 @@
         funcool/cats {:mvn/version "2.3.2"}
         funcool/cuerdas {:mvn/version "2.0.6"}
         funcool/promesa {:mvn/version "1.9.0"}
+        hiccup {:mvn/version "1.0.5"}
         io.nervous/kvlt {:mvn/version "0.1.4"}
+        io.pedestal/pedestal.service {:mvn/version "0.5.5"}
+        org.apache.commons/commons-lang3 {:mvn/version "3.8.1"}
         org.clojars.akiel/spec-coerce {:mvn/version "0.4.0"}
         org.clojure/clojure {:mvn/version "1.10.0"}
         org.clojure/clojurescript {:mvn/version "1.10.339"}
