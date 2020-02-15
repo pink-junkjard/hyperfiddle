@@ -1,5 +1,5 @@
 {
-  "name": "hyperfiddle-tests",
+  "name": "hyperfiddle",
   "version": "0.3.0",
   "repository": "git@github.com:hyperfiddle/hyperfiddle.git",
   "dependencies": {
@@ -7,12 +7,17 @@
     "base-64": "0.1.0",
     "create-react-class": "^15.6.3",
     "eventsource": "1.0.7",
+    "keypress.js": "2.1.5",
     "prop-types": "15.6.2",
+    "parinfer-codemirror": "^1.4.2",
+    "raphael": "^2.2.7",
     "react": "16.5.2",
     "react-bootstrap-typeahead": "^3.4.5",
     "react-dom": "16.5.2",
     "remark": "^10.0.1",
+    "remark-comments": "1.2.4",
     "remark-react": "^5.0.0",
+    "remark-toc": "5.1.1",
     "request": "2.88.0",
     "websocket": "1.0.28"
   }
