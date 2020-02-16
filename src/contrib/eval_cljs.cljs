@@ -1,16 +1,18 @@
 (ns contrib.eval-cljs
-  (:require-macros
-    [contrib.eval-cljs :refer [build-cljsjs-empty-state]])
   (:require
     [cljs.analyzer :as ana]
     [cljs.js :as cljs]
+    [cljs.env :as env]
+    [shadow.cljs.bootstrap.browser :as boot]
     [cljs.tagged-literals :as tags]
-    [cognitect.transit]
     [hyperfiddle.hc_data_readers :refer [hc-data-readers]]
-    [hyperfiddle.readers :as hc-readers]))
+    [hyperfiddle.readers :as hc-readers]
+    [promesa.core :as p]))
 
 
-(def ^:private -cljsjs-empty-state (build-cljsjs-empty-state))
+(defonce compile-state-ref (env/default-compiler-env))
+
+(def booted ((p/promisify boot/init) compile-state-ref {:path "/static/dev/boot"}))
 
 (defn eval-statement-str! [eval-in-ns code-str]
   {:pre [(string? code-str)]}
@@ -22,8 +24,8 @@
                                              'long hc-readers/goog-math-long
                                              'schema hc-readers/schema})]
     (let [r (atom nil)]
-      (when-not (contains? (::ana/namespaces @-cljsjs-empty-state) eval-in-ns)
-        (cljs/eval-str -cljsjs-empty-state
+      (when-not (contains? (::ana/namespaces @compile-state-ref) eval-in-ns)
+        (cljs/eval-str compile-state-ref
                        (str "(ns " eval-in-ns ")")
                        nil
                        {:eval cljs/js-eval
@@ -32,7 +34,7 @@
                        (partial reset! r))
         (when-let [error (:error @r)]
           (throw error)))
-      (cljs/eval-str -cljsjs-empty-state
+      (cljs/eval-str compile-state-ref
                      code-str
                      nil
                      {:eval cljs/js-eval
@@ -51,7 +53,7 @@
                                              'long hc-readers/goog-math-long
                                              'schema hc-readers/schema})]
     (let [r (atom nil)
-          _ (cljs/eval-str -cljsjs-empty-state
+          _ (cljs/eval-str compile-state-ref
                            code-str
                            nil
                            {:eval cljs/js-eval
