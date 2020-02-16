@@ -219,14 +219,15 @@
   (interceptor/on-request
     ::log-request
     (fn [request]
-      (timbre/info {:remote-addr (:remote-addr request)
-                    :host (:server-name request)
-                    :port (:server-port request)
-                    :method (string/upper-case (name (:request-method request)))
-                    :uri (:uri request)
-                    :protocol (:protocol request)
-                    :referer (get-in request [:headers "referer"])
-                    :user-agent (get-in request [:headers "user-agent"])})
+      (if-not (-> request :uri (clojure.string/starts-with? "/static"))
+        (timbre/info {:remote-addr (:remote-addr request)
+                      :host        (:server-name request)
+                      :port        (:server-port request)
+                      :method      (string/upper-case (name (:request-method request)))
+                      :uri         (:uri request)
+                      :protocol    (:protocol request)
+                      :referer     (get-in request [:headers "referer"])
+                      :user-agent  (get-in request [:headers "user-agent"])}))
       request)))
 
 (defn build-router [env]

@@ -63,7 +63,8 @@
   (let [path (get-in context [:request :path-info])
         request-method (get-in context [:request :request-method])
         {:keys [handler route-params]} (domain/api-match-path domain path :request-method request-method)]
-    (timbre/info "ide-router:" (pr-str handler) (pr-str request-method) (pr-str path))
+    (if-not (-> context :request :uri (clojure.string/starts-with? "/static"))
+      (timbre/info "ide-router:" (pr-str handler) (pr-str request-method) (pr-str path)))
     (cond
       (= (some-> handler namespace) "user")
       (either/branch
