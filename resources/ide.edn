@@ -39,8 +39,6 @@
              :renderer "(fn [value ctx props]\n  (let [props (assoc props :debounce/interval contrib.ui/default-debounce-ms)]\n    [hyperfiddle.ui.controls/code value ctx props]))"}
  #:attribute{:ident :fiddle/renderer
              :renderer "(fn [value ctx props]\n  (let [props (assoc props :debounce/interval contrib.ui/default-debounce-ms)]\n    [hyperfiddle.ui.controls/code value ctx props]))"}
- #:attribute{:ident :fiddle/type
-             :renderer "(fn [value ctx props]\n  (let [props (assoc props\n                :class \"qe\"\n                :options [{:value :query :label \"query\"}\n                          {:value :entity :label \"pull\"}\n                          {:value :blank :label \"static\"}])]\n    [hyperfiddle.ui.controls/radio-group value ctx props]))"}
  #:attribute{:ident :project/code
              :renderer "hyperfiddle.ui.controls/code"}
  #:attribute{:ident :project/css
