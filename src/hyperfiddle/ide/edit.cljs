@@ -56,6 +56,7 @@
                                :alt-key-pressed false
                                :display-mode :hypercrud.browser.browser-ui/user
                                :show-route-editor false
+                               ::editor-open false
                                ; specifically deref and re-wrap this ref on mount because we are tracking deviation from this value
                                :staleness (when preview-rt
                                             (preview/ide-partition-reference preview-rt (:partition-id ctx)))})
@@ -81,7 +82,9 @@
                   ; todo build the preview-rt here
                   [preview/preview-toolbar preview-rt (:partition-id ctx) preview-rt/preview-pid preview-state])))]
 
-         ::topnav/right-child [fiddle-src/fiddle-src-tabs tab-state]}]
+         ::topnav/right-child
+         (if @(r/cursor preview-state [::editor-open])
+           [fiddle-src/fiddle-src-tabs tab-state])}]
 
        [:div (select-keys props [:class])
         [:div {:class "-hyperfiddle-ide-preview"}
@@ -105,12 +108,13 @@
                     [preview/preview-effects preview-ctx (:partition-id ctx) preview-state]
                     [staging/inline-stage preview-ctx]]))))]
 
-        [:div.fiddle-editor-col
-         [hyperfiddle.ui/link
-          :hyperfiddle/ide ctx nil
-          {::fiddle-src/tab-state tab-state
-           :class (css "fiddle-editor devsrc" #_(hyperfiddle.ui.iframe/auto-ui-css-class ctx))
-           :user-renderer hyperfiddle.ide.fiddles.fiddle-src/fiddle-src-renderer}]
-         ; In case of datoms-conflict, render outside the :hyperfiddle/ide iframe
-         [hyperfiddle.ide/ide-stage ctx]]
+        (if @(r/cursor preview-state [::editor-open])
+          [:div.fiddle-editor-col
+           [hyperfiddle.ui/link
+            :hyperfiddle/ide ctx nil
+            {::fiddle-src/tab-state tab-state
+             :class (css "fiddle-editor devsrc" #_(hyperfiddle.ui.iframe/auto-ui-css-class ctx))
+             :user-renderer hyperfiddle.ide.fiddles.fiddle-src/fiddle-src-renderer}]
+           ; In case of datoms-conflict, render outside the :hyperfiddle/ide iframe
+           [hyperfiddle.ide/ide-stage ctx]])
         ]])))

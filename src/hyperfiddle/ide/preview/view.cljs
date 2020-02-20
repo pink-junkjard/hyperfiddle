@@ -137,9 +137,11 @@
                                              "prevent_repeat" true
                                              "on_keydown" #(swap! preview-state assoc :alt-key-pressed true)
                                              "on_keyup" #(swap! preview-state assoc :alt-key-pressed false)}
+                                            {"keys" "alt escape"
+                                             "on_keydown" #(swap! preview-state update :hyperfiddle.ide.edit/editor-open not)}
                                             {"keys" "alt enter"
                                              "on_keydown" #(refresh! rt ide-pid preview-pid preview-state)}
-                                            {"keys" "ctrl `"
+                                            {"keys" "alt `"
                                              "on_keydown" (fn []
                                                             (swap! preview-state update :display-mode
                                                                    #(if (not= :hypercrud.browser.browser-ui/user %)
