@@ -164,10 +164,10 @@
        :memoize-cache (atom nil)}
       map->IdeDomain))
 
-(defn build-from-user-domain
-  ([user-domain $src-uri-or-db-name]
-   (build-from-user-domain user-domain $src-uri-or-db-name {}))
-  ([user-domain $src-uri-or-db-name ide-environment & {:as ide-databases}]
+(defn build-from-user-domain                                ; todo delete
+  ([user-domain $src-uri-or-db-name config]
+   (build-from-user-domain user-domain $src-uri-or-db-name {} config))
+  ([user-domain $src-uri-or-db-name ide-environment config & {:as ide-databases}]
    {:pre [(instance? EdnishDomain user-domain)
           (s/valid? ednish-domain/spec user-domain)
           (s/valid? (s/nilable :hyperfiddle.domain/databases) ide-databases)]}
@@ -182,4 +182,5 @@
                      {:database/db-name $src-uri-or-db-name})}
            ide-databases)
      "$src"
-     :ide-environment ide-environment)))
+     :ide-environment ide-environment
+     :ide-home-route (when (= (:home-route-default config) :user) (:home-route user-domain)))))
