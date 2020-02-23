@@ -182,4 +182,5 @@
            ide-databases)
      "$src"
      :ide-environment ide-environment
-     :ide-home-route (when (= (:home-route-default config) :user) (:home-route user-domain)))))
+     :ide-home-route (when-not (= (:hf/home-route-default config) :hf/fiddle-index)
+                       (:home-route user-domain)))))
