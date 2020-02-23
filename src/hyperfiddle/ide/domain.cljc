@@ -127,8 +127,7 @@
    user-databases user-fiddle-dbname user-domain+
    ide-databases ide-fiddle-dbname
    & {:keys [ide-environment ide-home-route]
-      :or {ide-environment {}
-           ide-home-route {::route/fiddle :hyperfiddle.ide/home}}}]
+      :or {ide-environment {}}}]
   (-> {:basis basis
        :fiddle-dbname ide-fiddle-dbname
        :databases (let [user-dbs (->> (dissoc user-databases user-fiddle-dbname)
@@ -150,7 +149,7 @@
                                                       :database/auto-transact false
                                                       :database/color (color/color-for-name user-fiddle-dbname)))))
        :environment ide-environment
-       :home-route ide-home-route
+       :home-route (or ide-home-route {::route/fiddle :hyperfiddle.ide/home})
        ::user-dbname->ide (->> user-databases
                                (map (fn [[dbname db]]
                                       [dbname
