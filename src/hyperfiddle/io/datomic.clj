@@ -1,7 +1,8 @@
 (ns hyperfiddle.io.datomic
   (:require
     [hypercrud.types.DbRef]
-    [hyperfiddle.domain :as domain])
+    [hyperfiddle.domain :as domain]
+    [taoensso.timbre :as timbre])
   (:import
     (hypercrud.types.DbRef DbRef)
     (java.io FileNotFoundException)))
@@ -43,15 +44,26 @@
     (and db-name (not @client-supported)) (throw (ex-info "Unable to resolve datomic client library on classpath" {:database/db-name db-name}))
     ))
 
-(defn qf [domain params]
-  (let [{:keys [dbname]} (some #(when (instance? DbRef %) %) params)
-        {:keys [database/uri database/db-name]} (domain/database domain dbname)]
+(defn qf2 "private internal version, TODO unify"
+  [hf-db]
+  (let [{:keys [database/uri database/db-name]} hf-db]
     (cond
       (and uri @peer-supported) (do (require 'hyperfiddle.io.datomic.peer)
                                     (resolve 'hyperfiddle.io.datomic.peer/q))
       (and db-name @client-supported) (do (require 'hyperfiddle.io.datomic.client)
                                           (resolve 'hyperfiddle.io.datomic.client/q))
-      (and (nil? uri) (nil? db-name)) (throw (ex-info "Database not well formed, must specify a db-name or uri to connect to" {:dbname dbname}))
+      (and (nil? uri) (nil? db-name)) (throw (ex-info "Database not well formed, must specify a db-name or uri to connect to" {:dbname
+                                                                                                                               ; This param was dbname per qf, is that the same?
+                                                                                                                               db-name}))
       (and uri (not @peer-supported)) (throw (ex-info "Unable to resolve datomic peer library on classpath" {:database/uri uri}))
-      (and db-name (not @client-supported)) (throw (ex-info "Unable to resolve datomic client library on classpath" {:database/db-name db-name}))
-      )))
+      (and db-name (not @client-supported)) (throw (ex-info "Unable to resolve datomic client library on classpath" {:database/db-name db-name})))))
+
+(defn qf
+  "Resolve a datomic query function from a Datomic product line (adapted to a consistent interface)
+  to query a :domain/database indicated as a hyperfiddle parameter. You can have both client and peer
+  databases available, thus you have to look at the :domain/database config to know for sure which Datomic
+  product line is needed. This interface is really confusing and needs work"
+  [domain params]
+  (let [{:keys [dbname branch]} (some #(when (instance? DbRef %) %) params) ; TODO lift this sentinel type out?
+        {:keys [database/uri database/db-name] :as hf-db} (domain/database domain dbname)]
+    (qf2 hf-db)))

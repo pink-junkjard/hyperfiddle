@@ -106,7 +106,7 @@
           (= a :db/id) dbid
           is-reverse-nav (make-reverse-attr this a)
           :else
-          (-> (a (.-schema-by-attr this))
+          (-> (a (.-schema-by-attr this))                   ; can be nil if UI asks for attribute that is missing from schema
               (contrib.data/update-existing :db/valueType smart-lookup-ref-no-tempids)
               (contrib.data/update-existing :db/cardinality smart-lookup-ref-no-tempids)
               (contrib.data/update-existing :db/isComponent smart-lookup-ref-no-tempids)

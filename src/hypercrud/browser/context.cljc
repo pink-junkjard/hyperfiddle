@@ -1120,6 +1120,8 @@ a speculative db/id."
     (eav ctx))
   (attr [ctx]
     (attr ctx))
+  (attr [ctx a]
+    (attr ctx a))
   (element [ctx]
     (element ctx))
   (identity? [ctx]
@@ -1138,6 +1140,8 @@ a speculative db/id."
     (qfind-level? ctx))
   (row-key [ctx row]
     (row-key ctx row))
+  (spread-attributes [ctx]
+    (spread-attributes ctx))
   (link-tx [ctx]
     (link-tx ctx))
   (v [ctx]

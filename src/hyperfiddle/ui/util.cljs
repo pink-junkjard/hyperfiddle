@@ -4,6 +4,7 @@
     [contrib.reactive :as r]
     [contrib.string :refer [empty->nil]]
     [hypercrud.browser.context :as context]
+    [hyperfiddle.api :as hf]
     [hyperfiddle.security.client :as security]
     [hyperfiddle.runtime :as runtime]
     [taoensso.timbre :as timbre]))
@@ -43,5 +44,8 @@
 (defn writable-entity? [ctx]
   (and
     ; If the db/id was not pulled, we cannot write through to the entity
-    (boolean (let [[e a v] @(:hypercrud.browser/eav ctx)] e))
+    (boolean (hf/e ctx))
     @(r/track security/writable-entity? (:hypercrud.browser/parent ctx))))
+
+(defn writable-attr? [ctx]
+  (true? (:hyperfiddle/whitelist-attribute (hf/attr ctx))))

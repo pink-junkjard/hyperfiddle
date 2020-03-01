@@ -2,9 +2,11 @@
   (:require
     [clojure.set :as set]
     [contrib.datomic-tx :as tx]
+    [contrib.pprint :refer [pprint-datoms-str]]
     [contrib.reactive :as r]
     [contrib.ui :refer [debounced]]
     [hypercrud.browser.context :as context]
+    [hyperfiddle.api :as hf]
     [hyperfiddle.runtime :as runtime]
     [hyperfiddle.ui :refer [field markdown]]
     [hyperfiddle.ui.util :refer [entity-change->tx]]))
@@ -79,6 +81,10 @@
                                                                (r/partial entity-change->tx ctx))]
                                         [hyperfiddle.ui/hyper-control val ctx (assoc props :on-change on-change!)]))]
     (fn [val ctx props]
+      ;(println (pr-str (:hypercrud.browser/result ctx)))
+      ;(println (pr-str (:hypercrud.browser/result-enclosure ctx)))
+      ;(println (pr-str (:hypercrud.browser/schema ctx)))
+      ;(println (pr-str (:hypercrud.browser/element ctx)))
       (let [ctx (update ctx :hypercrud.browser/data (partial r/track reactive-merge))
             ctx (-> (update ctx :hypercrud.browser/result (partial r/track reactive-merge))
                     (context/index-result))
@@ -98,4 +104,22 @@
          [markdown "!block[Careful: below is not validated, don't stage invalid schema]{.alert .alert-warning style=\"margin-bottom: 0\"}"]
          (field [:db/isComponent] ctx nil {:disabled (not valid-attr?)})
          (field [:db/fulltext] ctx nil {:disabled (not valid-attr?)})
+
+         [:div.p "Additional attributes"]
+         (let [is-whitelist-attr-installed
+               #_(hf/attr ctx :hyperfiddle/whitelist-attribute) ; requires browse-element for ::schema which hasn't happened
+               (context/focus ctx [:hyperfiddle/whitelist-attribute])]
+           (if is-whitelist-attr-installed
+             (field [:hyperfiddle/whitelist-attribute] ctx nil)
+             [:<>
+              [:div "missing :hyperfiddle/whitelist-attribute, please transact the following into app db:"]
+              [:pre (contrib.pprint/pprint-datoms-str
+                      [[:db/add "a" :db/cardinality :db.cardinality/one]
+                       [:db/add "a" :db/valueType :db.type/boolean]
+                       [:db/add "a" :db/ident :hyperfiddle/whitelist-attribute]])]]))
+         (doall
+           (for [[k _] (hf/spread-attributes ctx)
+                 :when (not= "db" (namespace k))]
+             (field [k] ctx)))
+
          ]))))

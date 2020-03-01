@@ -48,6 +48,7 @@
            ; if the fiddle-db is broken (duplicate datoms), then attr-renderers and project WILL short it
            attr-renderers (project/hydrate-attr-renderers aux-rt pid local-basis partitions)
            project (project/hydrate-project-record aux-rt pid local-basis partitions)]
+      (timbre/debug "fiddle:" (pr-str (:hyperfiddle.route/fiddle route)))
       (let [db-with-lookup (atom {})
             initial-state {::runtime/user-id ?subject
                            ; should this be constructed with reducers?
