@@ -46,3 +46,8 @@
   []
   #?(:cljs
      (is (= "01" (contrib.string/lpad-str 2 "0" (str 1))))))
+
+(deftest str-last-n-1
+  (is (= (contrib.string/str-last-n 4 "0123456789")
+         "6789"))
+  )
