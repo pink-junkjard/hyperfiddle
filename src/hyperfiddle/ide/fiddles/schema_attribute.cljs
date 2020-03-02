@@ -116,7 +116,9 @@
               [:pre (contrib.pprint/pprint-datoms-str
                       [[:db/add "a" :db/cardinality :db.cardinality/one]
                        [:db/add "a" :db/valueType :db.type/boolean]
-                       [:db/add "a" :db/ident :hyperfiddle/whitelist-attribute]])]]))
+                       [:db/add "a" :db/ident :hyperfiddle/whitelist-attribute]
+                       [:db/add "a" :hyperfiddle/whitelist-attribute true] ; this attribute is also whitelisted by default to defeat chicken/egg
+                       ])]]))
          (doall
            (for [[k _] (hf/spread-attributes ctx)
                  :when (not= "db" (namespace k))]

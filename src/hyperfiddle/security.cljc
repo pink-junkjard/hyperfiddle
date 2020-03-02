@@ -64,7 +64,9 @@
        ; Make sure they can add :hyperfiddle/whitelist-attr schema attribute the first time
        ; through the staging area (otherwise would have to do it out of band)
        (-> (set whitelist)
-           (conj :db/ident :db/valueType :db/unique :db/cardinality)))))
+           (conj :db/ident :db/valueType :db/unique :db/cardinality
+                 :hyperfiddle/whitelist-attribute           ; this is allowed by default, otherwise you can only set it true out-of-band
+                 )))))
 
 #?(:clj
    (defn tx-attrs-pass-whitelist? [domain dbname $ subject tx]
