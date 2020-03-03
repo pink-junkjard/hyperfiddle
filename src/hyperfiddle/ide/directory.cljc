@@ -43,17 +43,19 @@
     (return
       (ide-domain/build
         ?datomic-client domains-basis
-        (->> (:domain/databases user-datomic-record)
-             (map (juxt :domain.database/name :domain.database/record))
-             (into {}))
-        user-fiddle-dbname
-        (build-user+ domains-basis user-datomic-record ?datomic-client)
-        (->> (:domain/databases ide-datomic-record)
-             (map (juxt :domain.database/name :domain.database/record))
-             (into {}))
-        fiddle-dbname
+        :user-databases (->> (:domain/databases user-datomic-record)
+                          (map (juxt :domain.database/name :domain.database/record))
+                          (into {}))
+        :user-fiddle-dbname user-fiddle-dbname
+        :user-domain+ (build-user+ domains-basis user-datomic-record ?datomic-client)
+        :ide-databases (->> (:domain/databases ide-datomic-record)
+                         (map (juxt :domain.database/name :domain.database/record))
+                         (into {}))
+        :ide-fiddle-dbname fiddle-dbname
+
         :ide-environment environment
-        :ide-home-route home-route))))
+        :ide-home-route home-route
+        ))))
 
 (defn- hydrate-ide-domain [?datomic-client io local-basis app-domain-ident]
   (let [requests [(->EntityRequest [:domain/ident "hyperfiddle"] (->DbRef "$domains" foundation/root-pid) directory/domain-pull)

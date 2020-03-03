@@ -113,8 +113,8 @@
       f
       (let [ret (clojure.core/memoize f)]
         (swap! memoize-cache assoc f ret)
-        ret)))
-  )
+        ret))))
+
 
 (domains-transit/register-handlers
   IdeEdnishDomain
@@ -124,11 +124,9 @@
 
 (defn build
   [?datomic-client basis
-   user-databases user-fiddle-dbname user-domain+
-   ide-databases ide-fiddle-dbname
-   & {:keys [ide-environment ide-home-route]
-      :or {ide-environment {}
-           ide-home-route {::route/fiddle :hyperfiddle.ide/home}}}]
+   & {:keys [user-databases user-fiddle-dbname user-domain+
+           ide-databases ide-fiddle-dbname
+           ide-environment ide-home-route]}]
   (-> {:basis basis
        :fiddle-dbname ide-fiddle-dbname
        :databases (let [user-dbs (->> (dissoc user-databases user-fiddle-dbname)
@@ -149,8 +147,8 @@
                       user-fiddle-dbname (assoc "$" (assoc (get user-databases user-fiddle-dbname)
                                                       :database/auto-transact false
                                                       :database/color (color/color-for-name user-fiddle-dbname)))))
-       :environment ide-environment
-       :home-route ide-home-route
+       :environment (or ide-environment {})
+       :home-route (or ide-home-route {::route/fiddle :hyperfiddle.ide/home})
        ::user-dbname->ide (->> user-databases
                                (map (fn [[dbname db]]
                                       [dbname
@@ -165,22 +163,22 @@
       map->IdeDomain))
 
 (defn build-from-user-domain                                ; todo delete
-  ([user-domain $src-uri-or-db-name config]
-   (build-from-user-domain user-domain $src-uri-or-db-name {} config))
-  ([user-domain $src-uri-or-db-name ide-environment config & {:as ide-databases}]
+  ([user-domain {:keys [config src-uri ide-environment ide-databases] :as opts}]
    {:pre [(instance? EdnishDomain user-domain)
           (s/valid? ednish-domain/spec user-domain)
           (s/valid? (s/nilable :hyperfiddle.domain/databases) ide-databases)]}
    (build
      (:?datomic-client user-domain)
      (domain/basis user-domain)
-     (domain/databases user-domain)
-     (domain/fiddle-dbname user-domain)
-     (-> user-domain map->IdeEdnishDomain either/right)
-     (into {"$src" (if (is-uri? $src-uri-or-db-name)
-                     {:database/uri $src-uri-or-db-name}
-                     {:database/db-name $src-uri-or-db-name})}
-           ide-databases)
-     "$src"
-     :ide-environment ide-environment
-     :ide-home-route (when (= (:home-route-default config) :user) (:home-route user-domain)))))
+     :user-databases     (domain/databases user-domain)
+     :user-fiddle-dbname (domain/fiddle-dbname user-domain)
+     :user-domain+       (-> user-domain map->IdeEdnishDomain either/right)
+     :ide-databases      (into {"$src" (if (is-uri? src-uri)
+                                         {:database/uri src-uri}
+                                         {:database/db-name src-uri})}
+                           ide-databases)
+     :ide-fiddle-dbname  "$src"
+     :ide-environment    ide-environment
+     :ide-home-route     (case (:default-route config)
+                           :user (:home-route user-domain)
+                           nil))))
