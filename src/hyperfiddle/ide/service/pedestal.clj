@@ -63,34 +63,39 @@
   (let [path (get-in context [:request :path-info])
         request-method (get-in context [:request :request-method])
         {:keys [handler route-params]} (domain/api-match-path domain path :request-method request-method)]
+
     (if-not (-> context :request :uri (clojure.string/starts-with? "/static"))
       (timbre/info "ide-router:" (pr-str handler) (pr-str request-method) (pr-str path)))
-    (cond
-      (= (some-> handler namespace) "user")
-      (either/branch
-        (get-in context [:request :domain ::ide-domain/user-domain+])
-        (fn [e]
-          (timbre/error e)
-          (throw e))
-        (fn [user-domain]
-          (let [context (update context :request #(-> (dissoc % :jwt) ; this is brittle
-                                                      (assoc :domain user-domain
-                                                             :route-params route-params)))]
-            (handle-route (keyword (name handler)) env context))))
 
-      (and (= :ssr handler)
-           (= "demo" (::ide-directory/app-domain-ident domain))
-           (nil? (get-in context [:request :user-id]))
-           (not (string/starts-with? path "/:hyperfiddle.ide!please-login/")))
-      ; todo this logic should be injected into demo domain record
-      (let [inner-route (domain/url-decode domain path)
-            url (domain/url-encode domain {::route/fiddle :hyperfiddle.ide/please-login
-                                           ::route/datomic-args [inner-route]})]
-        (-> context
-            (assoc-in [:response :status] 302)
-            (assoc-in [:response :headers "Location"] url)))
+    (handle-route handler env (assoc-in context [:request :route-params] route-params))
 
-      :else (handle-route handler env (assoc-in context [:request :route-params] route-params)))))
+    ;(cond
+    ;  (= (some-> handler namespace) "user")
+    ;  (either/branch
+    ;    (get-in context [:request :domain ::ide-domain/user-domain+])
+    ;    (fn [e]
+    ;      (timbre/error e)
+    ;      (throw e))
+    ;    (fn [user-domain]
+    ;      (let [context (update context :request #(-> (dissoc % :jwt) ; this is brittle
+    ;                                                  (assoc :domain user-domain
+    ;                                                         :route-params route-params)))]
+    ;        (handle-route (keyword (name handler)) env context))))
+    ;
+    ;  (and (= :ssr handler)
+    ;       (= "demo" (::ide-directory/app-domain-ident domain))
+    ;       (nil? (get-in context [:request :user-id]))
+    ;       (not (string/starts-with? path "/:hyperfiddle.ide!please-login/")))
+    ;  ; todo this logic should be injected into demo domain record
+    ;  (let [inner-route (domain/url-decode domain path)
+    ;        url (domain/url-encode domain {::route/fiddle :hyperfiddle.ide/please-login
+    ;                                       ::route/datomic-args [inner-route]})]
+    ;    (-> context
+    ;        (assoc-in [:response :status] 302)
+    ;        (assoc-in [:response :headers "Location"] url)))
+    ;
+    ;  :else (handle-route handler env (assoc-in context [:request :route-params] route-params))
+      ))
 
 (defmethod service-domain/route IdeDomain [domain env context]
   (enqueue context [(let [#_#_{:keys [cookie-name jwt-secret jwt-issuer]} (-> (get-in context [:request :domain])
