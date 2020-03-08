@@ -40,12 +40,9 @@
 
 (defn attr-whitelist-query [$]
   {:query '[:find [?ident ...] :where
-            [:db.part/db :db.install/attribute ?attr]
-            [?attr :db/ident ?ident]
-
-            ; this attribute might not be installed, they have to add it manually at stage
-            ; If not installed, the query throws
-            [?attr :hyperfiddle/whitelist-attribute true]]
+            [?attr :db/ident ?ident]                        ; transactor functions have idents
+            #_[:db.part/db :db.install/attribute ?attr]     ; transactor functions are not installed
+            [?attr :hyperfiddle/whitelist-attribute true]]  ; If hf attr not installed, this clause throws
    :args [$]
    :limit -1
    #_#_:offset nil})
