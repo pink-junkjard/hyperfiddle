@@ -1,7 +1,8 @@
 (ns contrib.datomic-tx
   (:require
     [clojure.set :as set]
-    [contrib.datomic :refer [tempid?]]))
+    [contrib.datomic :refer [tempid? cardinality? ref?
+                             ref-one? ref-many? scalar-one? scalar-many?]]))
 
 
 (defn edit-entity "o/n are sets in the :many case"
@@ -119,49 +120,90 @@
                                       (= [op e a] [:db/add e-needle a-needle]))))]
     v))
 
-; ignores component, not useful imo
-(defn ^:legacy pulled-tree-children [schema entity]
-  ; Need schema for component. How can you walk a pulled-tree without inspecting component?
-  ; If it turns out we don't need component, we can dispatch on map?/coll? and not need schema.
-  (mapcat (fn [[attr v]]
-            (let [{:keys [:db/cardinality :db/valueType]} (get schema attr)]
-              (case [(:db/ident valueType) (:db/ident cardinality)]
-                [:db.type/ref :db.cardinality/one] [v]
-                [:db.type/ref :db.cardinality/many] (vec v)
-                [])))
-          entity))
+(defn flatten-map-stmt
+  "Flatten a single Datomic map-form statement into equivalent vector-form statements. Recursive. See test case."
+  [schema {e :db/id :as m}]
+  (let [e (or e (str (hash m) #_(gensym)))]                 ; gensym tempids are unstable for unit tests
+    (->> (seq m)                                            ; iterate as seq for compatibility with #Entity
+         (filter (fn [[a v]] (not= :db/id a)))              ; db/id is virtual attribute, not a statement
+         ; Don't need to suupport (id, ident, lookup-ref) because transactor will unify the tempid
+         (mapcat (fn [[a v]]
 
-(defn any-ref->dbid "Safe for ref and primitive vals"
-  [v]
-  (cond
-    (map? v) (:db/id v)
-    :else v))
+                   (cond
+                     (ref-one? schema a)                    ; :employee/manager
+                     (let [m v
+                           e' (or (:db/id m)                ; {:person/name "Earnest"}
+                                  (str (hash m)))]
+                       (concat (flatten-map-stmt schema (assoc m :db/id e'))
+                               [[:db/add e a e']]))
 
-(defn ^:legacy entity->statements
-  "Only need schema to recurse into component entities. valueType and cardinality is determined dynamically.
-  If schema is omitted, don't recurse refs."
-  [{dbid :db/id :as entity} & [schema]]
-  ;; dissoc :db/id, it is done as a seq/filter for compatibility with #Entity
-  (assert (nil? schema) "todo component recursion")
-  (let [dbid (or dbid (str (hash entity)))]
-    (->> (seq entity)
-         (filter (fn [[k v]] (not= :db/id k)))
+                     (ref-many? schema a)                   ; :person/siblings
+                     (->> v                                 ; [{:person/name "Cindy"} {:person/name "David"}]
+                          (mapcat (fn [m]                   ; {:person/name "Cindy"}
+                                    (let [e' (or (:db/id m)
+                                                 (str (hash m)))]
+                                      (concat (flatten-map-stmt schema (assoc m :db/id e'))
+                                              [[:db/add e a e']]))
+                                    )))
 
-         (mapcat (fn [[attr v]]
-                   ; dont care about refs - just pass them through blindly, they are #DbId and will just work
-                   (if (vector? v)
-                     (mapv (fn [v] [:db/add dbid attr (any-ref->dbid v)]) v)
-                     [[:db/add dbid attr (any-ref->dbid v)]]))))))
+                     (scalar-one? schema a)                 ; :person/name
+                     [[:db/add e a v]]                      ; "Bob"
 
-; ignores component - pretty useless imo
-(defn ^:legacy pulled-tree->statements [schema pulled-tree]
-  (->> (tree-seq map? #(pulled-tree-children schema %) pulled-tree)
-       (mapcat entity->statements)))
+                     (scalar-many? schema a)                ; :person/liked-tags
+                     (->> v                                 ; [:movies :ice-cream :clojure]
+                          (mapv (fn [v]
+                                  [:db/add e a v])))
 
-(defn normalize-tx "Normalize a Datomic transaction by flattening any map-form Datomic statements into tuple-form"
-  [schema tx]
-  (mapcat (partial pulled-tree->statements schema)
-          tx))
+                     ))))))
+
+(defn ^:legacy flatten-tx
+  "Normalize a Datomic transaction by flattening any map-form Datomic statements into tuple-form"
+  [schema mixed-form-tx]
+  (->> mixed-form-tx
+       (mapcat (fn [stmt]
+                 (if (map? stmt)                            ; map-form stmt expands to N vector-form stmts
+                   (flatten-map-stmt schema stmt)
+                   [stmt])))
+       vec))
+
+(comment
+  (def schema)
+  (->> [[:db/add "a" :person/name "Alice"]
+        {:person/name "Bob"
+         :person/parents [{:person/name "Cindy"}
+                          {:person/name "David"}]}]
+       (flatten-tx schema))
+  )
+
+(defn filter-tx
+  "run predicate on each stmt of tx, traversing map forms without altering them"
+  [schema f? tx]
+  (->> tx
+       (flatten-tx schema)                                  ; flatten map-form stmts for targetted error messages on forbidden oeav
+       (filter (fn [[o :as stmt]]
+                 ; stmt can be map-form, or vector form [o e a v], or a function invocation
+                 ; function calls share namespace with attributes, so whitelist approach still works
+                 (f? stmt)))))
+
+(comment
+  [[:db/add "a" :person/name "Alice"]
+   {:person/name "Bob"
+    :person/parents [{:person/name "Cindy"}
+                     {:person/name "David"}]}
+   [:db/retract 42 :person/name "Ernie"]
+   [:db/retract [:person/name "Ernie"] :person/name "Ernie"]
+   [:db/retractEntity 43]
+   [:db/retractEntity [:person/name "Fred"]]
+   [:db/cas [:person/name "Gandalf"] :person/age 22 23]
+   [:user.fn/foo 'x 'y 'z 'q 'r]
+   [:esub.fn/sign-up-by-uuid (:db/id *user*) (java.util.UUID/fromString id)]
+   [:sub.fn/ensure-sub-status (:db/id *user*)]
+   ]
+
+  [[:db/add :db/retractEntity :hyperfiddle/whitelist-attribute true]
+   [:db/add :db/cas :hyperfiddle/whitelist-attribute true]]
+
+  )
 
 ;(defn ^:legacy entity-components [schema entity]
 ;  (mapcat (fn [[attr v]]

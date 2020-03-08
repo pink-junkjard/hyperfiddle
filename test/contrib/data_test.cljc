@@ -5,7 +5,8 @@
     [contrib.data :refer [xorxs
                           cond-let map-pad pad rtrim-coll fix-arity fvor take-to ungroup dissoc-nils
                           compare-by-index ancestry-common ancestry-divergence merge-by collect orp
-                          assoc-if keywordize]]))
+                          assoc-if keywordize
+                          qualify unqualify]]))
 
 
 (comment
@@ -165,4 +166,18 @@
 
 (deftest keywordize'
   (is (= (keywordize ":yo") (keywordize "yo") :yo))
+  )
+
+(deftest unqualify'
+  (is (= (unqualify nil) nil))
+  (is (= (unqualify :db.cardinality/one) :one))
+  (is (= (unqualify :one) :one))
+  )
+
+(deftest qualify'
+  (is (= (qualify :foo nil) nil))
+  (is (thrown? AssertionError (qualify nil nil)))
+  (is (= (qualify :foo :bar) :foo/bar))
+  (is (thrown? AssertionError (qualify :baz/flux :bar)))
+  (is (thrown? AssertionError (qualify nil :bar)))
   )

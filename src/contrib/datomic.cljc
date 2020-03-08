@@ -67,6 +67,8 @@
 (comment
   (cardinality nil :user/teachers)
   )
+
+; These can support unqualified keywords
 (defn cardinality? [this a k] (= k (cardinality this a)))
 (defn isComponent [this a] (get (attr this a) :db/isComponent)) ; follows Datomic naming case conventions
 (defn valueType [this a] (get (attr this a) :db/valueType))
@@ -243,11 +245,23 @@ Shape is normalized to match the shape of the Datomic result, e.g. [:user/a-ref]
   (count (filter #(cardinality? schema % :db.cardinality/many))))
 
 (defn ref-one?
-  ([schema] (fn [a] (ref-one? schema a)))
+  ([schema] (fn [a] (ref-one? schema a)))                   ; curried?
   ([schema a]
    {:pre [#_(satisfies? SchemaIndexedNormalized schema)]}
    (and (valueType? schema a :db.type/ref)
         (cardinality? schema a :db.cardinality/one))))
+
+(defn ref-many? [schema a]
+  (and (ref? schema a)
+       (cardinality? schema a :db.cardinality/many)))
+
+(defn scalar-one? [schema a]
+  (and (not (ref? schema a))
+       (cardinality? schema a :db.cardinality/one)))
+
+(defn scalar-many? [schema a]
+  (and (not (ref? schema a))
+       (cardinality? schema a :db.cardinality/many)))
 
 (defn pullshape-get [pullshape a]                           ; arg order is like 'get
   (-> pullshape

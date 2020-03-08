@@ -207,9 +207,21 @@
 (defn assoc-if [m k v]
   (conj m (if v [k v])))
 
-(defn unqualify [?qualified-kw]
+(defn unqualify
+  "Strip namespace from keyword, discarding it and return unqualified keyword. Nil-safe.
+  (unqualify :db.type/ref) -> :ref"
+  [?qualified-kw]
   (if ?qualified-kw
     (keyword (name ?qualified-kw))))
+
+(defn qualify
+  "Qualify a keyword with a namespace. If already qualified, replace the namespace. Nil-safe.
+  (qualify :db :isComponent) -> :db/isComponent"
+  [ns ?k]
+  (assert ns)
+  (assert (not (namespace ns)))
+  (if ?k
+    (keyword (name ns) (str (name ?k)))))
 
 (defn keywordize [s]
   (if (= \: (first s))
