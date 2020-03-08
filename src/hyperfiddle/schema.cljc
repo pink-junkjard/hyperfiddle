@@ -39,13 +39,15 @@
   "Hacks for namespace hyperfiddle.security which due to bootstrapping cannot be hydrated in-band.
   See https://github.com/hyperfiddle/hyperfiddle/issues/1003"
   [domain db-name $]
-  ((hyperfiddle.io.datomic/qf domain [(let [branch nil] ; qf ignores branch
-                                        (DbRef. db-name branch))])
-   {:query '[:find (pull ?attr [*
-                                {:db/valueType [:db/ident]
-                                 :db/cardinality [:db/ident]
-                                 :db/unique [:db/ident]}])
-             :where [:db.part/db :db.install/attribute ?attr]]
-    :args [$]
-    :limit -1
-    #_#_:offset nil}))
+  (let [result ((hyperfiddle.io.datomic/qf domain [(let [branch nil] ; qf ignores branch
+                                                     (DbRef. db-name branch))])
+                {:query '[:find (pull ?attr [*
+                                             {:db/valueType [:db/ident]
+                                              :db/cardinality [:db/ident]
+                                              :db/unique [:db/ident]}])
+                          :where [:db.part/db :db.install/attribute ?attr]]
+                 :args [$]
+                 :limit -1
+                 #_#_:offset nil})
+        result (mapv first result)]                         ; Datomic Cloud doesn't have FindColl pull syntax
+    (contrib.datomic/indexed-schema result)))
