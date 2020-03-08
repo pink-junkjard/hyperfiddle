@@ -92,7 +92,10 @@
        (timbre/debug "forbidden statements: " forbidden-stmts)
        (if (empty? forbidden-stmts)
          tx
-         (throw (let [msg (str "stmts: " (pr-str forbidden-stmts) " forbidden due to transaction whitelist: " (pr-str whitelist))]
-                  (ex-info msg {:hf/anomoly msg
+         (throw (let [msg (str "Forbidden statements: \n\n"
+                               (pprint-datoms-str forbidden-stmts) "\n\n"
+                               "are forbidden due to transaction whitelist: \n\n"
+                               (pprint-str whitelist))]
+                  (ex-info msg {}  #_{:hf/anomoly msg
                                 :hf/forbidden-statements forbidden-stmts
                                 :hf/transaction-whitelist whitelist})))))))
