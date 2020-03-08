@@ -69,19 +69,6 @@
                  )))))
 
 #?(:clj
-   (defn tx-permitted? [domain dbname $ subject tx]
-     ; pass the $ or pass the schema? passing the schema is faster in the client case to optimize that query
-     ; The spaghetti code upstack is too much, just do the query
-     (let [whitelist (whitelist $ domain dbname)
-           schema (hyperfiddle.schema/-summon-schema-out-of-band domain dbname $)
-           forbidden-stmts (tx-forbidden-stmts schema whitelist tx)
-           is-pass (empty? forbidden-stmts)]
-       #_(timbre/debug "database whitelist" whitelist)
-       #_(timbre/debug "validating tx" (pr-str tx))
-       #_(timbre/debug "passed attr whitelist?" is-pass "forbidden attrs: " forbidden-stmts)
-       is-pass)))
-
-#?(:clj
    (defn tx-operation-whitelist! [$ domain dbname subject tx]
      (let [whitelist (whitelist $ domain dbname)
            schema (hyperfiddle.schema/-summon-schema-out-of-band domain dbname $)
