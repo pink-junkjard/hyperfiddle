@@ -5,7 +5,8 @@
     #?(:clj [hyperfiddle.schema])
     [contrib.datomic-tx :refer [remove-tx]]
     [contrib.pprint :refer [pprint-str pprint-datoms-str]]
-    [taoensso.timbre :as timbre])
+    [taoensso.timbre :as timbre]
+    [hyperfiddle.domain :as domain])
   #?(:clj
      (:import
        (hypercrud.types.DbRef DbRef))))
@@ -60,13 +61,8 @@
                          ; datomic.impl.Exceptions$IllegalArgumentExceptionInfo:
                          ; :db.error/not-an-entity Unable to resolve entity: :hyperfiddle/whitelist-attribute
                          nil))]
-
-       ; Make sure they can add :hyperfiddle/whitelist-attr schema attribute the first time
-       ; through the staging area (otherwise would have to do it out of band)
-       (-> (set whitelist)
-           (conj :db/ident :db/valueType :db/unique :db/cardinality
-                 :hyperfiddle/whitelist-attribute           ; this is allowed by default, otherwise you can only set it true out-of-band
-                 )))))
+       (into (set whitelist)
+             (:hf/transaction-operation-whitelist (domain/database domain db-name))))))
 
 #?(:clj
    (defn tx-operation-whitelist! [$ domain dbname subject tx]
@@ -81,5 +77,5 @@
                                "are forbidden due to transaction whitelist: \n\n"
                                (pprint-str whitelist))]
                   (ex-info msg {}  #_{:hf/anomoly msg
-                                :hf/forbidden-statements forbidden-stmts
-                                :hf/transaction-whitelist whitelist})))))))
+                                      :hf/forbidden-statements forbidden-stmts
+                                      :hf/transaction-whitelist whitelist})))))))
