@@ -2,11 +2,13 @@
   (:require
     #?(:clj [hyperfiddle.io.datomic])
     #?(:clj [hyperfiddle.domain])
+    #?(:clj [hyperfiddle.schema])
+    [contrib.datomic-tx :refer [remove-tx]]
+    [contrib.pprint :refer [pprint-str pprint-datoms-str]]
     [taoensso.timbre :as timbre])
   #?(:clj
      (:import
-       (hypercrud.types.DbRef DbRef)
-       (datomic.impl Exceptions$IllegalArgumentExceptionInfo))))
+       (hypercrud.types.DbRef DbRef))))
 
 
 (def root "hyperfiddle.security/root")                      ; todo uuid/real account
@@ -28,12 +30,13 @@
     tx
     (throw (tx-validation-failure))))
 
-(defn tx-forbidden-attrs [whitelist tx]
-  (let [tx-as (map (fn [[o e a v :as stmt]]
-                     a)
-                   tx)
-        #_#_is-valid (clojure.set/superset? attr-whitelist tx-as)]
-    (clojure.set/difference (set tx-as) (set whitelist))))
+(defn tx-forbidden-stmts [schema whitelist tx]
+  (->> tx
+       (remove-tx schema                                    ; handles map-form transactions and tx fns
+                  (fn [[o & [e a v :as args] :as stmt]]
+                    (condp some [o]
+                      #{:db/add :db/retract} (contains? whitelist a) ; typical edits are secured by attribute
+                      (contains? whitelist o))))))          ; transaction functions are secured by txfn name
 
 (defn attr-whitelist-query [$]
   {:query '[:find [?ident ...] :where
@@ -69,24 +72,27 @@
                  )))))
 
 #?(:clj
-   (defn tx-attrs-pass-whitelist? [domain dbname $ subject tx]
+   (defn tx-permitted? [domain dbname $ subject tx]
      ; pass the $ or pass the schema? passing the schema is faster in the client case to optimize that query
      ; The spaghetti code upstack is too much, just do the query
      (let [whitelist (whitelist $ domain dbname)
-           forbidden-attrs (tx-forbidden-attrs whitelist tx)
-           is-pass (empty? forbidden-attrs)]
+           schema (hyperfiddle.schema/-summon-schema-out-of-band domain dbname $)
+           forbidden-stmts (tx-forbidden-stmts schema whitelist tx)
+           is-pass (empty? forbidden-stmts)]
        #_(timbre/debug "database whitelist" whitelist)
        #_(timbre/debug "validating tx" (pr-str tx))
-       #_(timbre/debug "passed attr whitelist?" is-pass "forbidden attrs: " forbidden-attrs)
+       #_(timbre/debug "passed attr whitelist?" is-pass "forbidden attrs: " forbidden-stmts)
        is-pass)))
 
 #?(:clj
-   (defn attr-whitelist! [$ domain dbname subject tx]       ; new param
-     (let [whitelist (conj (whitelist $ domain dbname) :swing/whitelist-attribute)
-           forbidden-as (tx-forbidden-attrs whitelist tx)]
-       (if (empty? forbidden-as)
+   (defn tx-operation-whitelist! [$ domain dbname subject tx]
+     (let [whitelist (whitelist $ domain dbname)
+           schema (hyperfiddle.schema/-summon-schema-out-of-band domain dbname $)
+           forbidden-stmts (tx-forbidden-stmts schema whitelist tx)]
+       (timbre/debug "forbidden statements: " forbidden-stmts)
+       (if (empty? forbidden-stmts)
          tx
-         (throw (let [msg (str "attributes: " (pr-str forbidden-as) " not on writable attribute whitelist: " (pr-str whitelist))]
+         (throw (let [msg (str "stmts: " (pr-str forbidden-stmts) " forbidden due to transaction whitelist: " (pr-str whitelist))]
                   (ex-info msg {:hf/anomoly msg
-                                :hf/forbidden-attributes forbidden-as
-                                :hf/whitelisted-attributes whitelist})))))))
+                                :hf/forbidden-statements forbidden-stmts
+                                :hf/transaction-whitelist whitelist})))))))

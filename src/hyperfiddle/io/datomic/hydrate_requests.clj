@@ -97,7 +97,7 @@
                                             ; - schema, in non-local datomic configurations we should reuse the schema we have
                                             ; - the domain's relevant hf-db with security metadata e.g. database owners
                                             ; - maybe: the dbval with basis right before this tx, to allow for additional queries (slow in non-local datomic config)
-                                            _ (if (hyperfiddle.security/tx-attrs-pass-whitelist? #_schema domain dbname db-with nil tx)
+                                            _ (if (hyperfiddle.security/tx-permitted? #_schema domain dbname db-with nil tx)
                                                 (exception/success nil)
                                                 (exception/failure (RuntimeException. (str "staged tx for " dbname " failed validation"))))
                                             ;_ (assert schema "needed for d/with") ; not available for hydrate-schemas in request bootstrapping

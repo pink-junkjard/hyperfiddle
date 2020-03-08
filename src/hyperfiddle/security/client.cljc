@@ -39,7 +39,7 @@
      :can-create? (fn [hf-db subject ctx] (owned-by? hf-db subject))
      :writable-entity? (fn [hf-db subject ctx] (owned-by? hf-db subject))}))
 
-(def attr-whitelist
+(def stmt-whitelist
   {:subject-can-transact? (constantly (either/right))
    :can-create? (constantly false)
    :writable-entity? (fn [hf-db subject ctx]
@@ -75,7 +75,7 @@
 (let [memoized-safe-eval-string (memoize eval-expr-str!+)]
   (defn- eval-client-sec [hf-db]
     (case (get-in hf-db [:database/write-security :db/ident] ::security/allow-anonymous) ; todo yank this default
-      ::security/attr-whitelist (right attr-whitelist)
+      ::security/tx-operation-whitelist (right stmt-whitelist)
       ::security/allow-anonymous (right allow-anonymous)
       ::security/authenticated-users-only (right authenticated-users-only)
       ::security/owner-only (right owner-only)

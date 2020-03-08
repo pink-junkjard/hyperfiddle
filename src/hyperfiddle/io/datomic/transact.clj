@@ -13,7 +13,7 @@
     (let [hf-db (domain/database domain dbname)
           f (case (get-in hf-db [:database/write-security :db/ident] ::security/allow-anonymous) ; todo yank this default
               ; see parallel structure @ hyperfiddle.security.client/eval-client-sec
-              :hyperfiddle.security/attr-whitelist security/attr-whitelist!
+              :hyperfiddle.security/tx-operation-whitelist security/tx-operation-whitelist!
               ::security/owner-only security/write-owner-only
               ::security/authenticated-users-only security/write-authenticated-users-only
               ::security/allow-anonymous security/write-allow-anonymous

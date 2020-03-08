@@ -185,6 +185,9 @@
                  ; function calls share namespace with attributes, so whitelist approach still works
                  (f? stmt)))))
 
+(defn remove-tx [schema f? tx]
+  (filter-tx schema (complement f?) tx))
+
 (comment
   [[:db/add "a" :person/name "Alice"]
    {:person/name "Bob"
