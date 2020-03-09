@@ -5,9 +5,11 @@
     [contrib.string :refer [empty->nil]]
     [hypercrud.browser.context :as context]
     [hyperfiddle.api :as hf]
+    [hyperfiddle.security]
     [hyperfiddle.security.client :as security]
     [hyperfiddle.runtime :as runtime]
-    [taoensso.timbre :as timbre]))
+    [taoensso.timbre :as timbre]
+    [hyperfiddle.domain :as domain]))
 
 
 (defn entity-change->tx                                     ; :Many editor is probably not idiomatic
@@ -48,4 +50,9 @@
     @(r/track security/writable-entity? (:hypercrud.browser/parent ctx))))
 
 (defn writable-attr? [ctx]
-  (true? (:hyperfiddle/whitelist-attribute (hf/attr ctx))))
+  (let [domain (runtime/domain (:runtime ctx))
+        database (domain/database domain (context/dbname ctx))]
+    (if (= (get-in database [:database/write-security :db/ident] ::security/allow-anonymous)
+           :hyperfiddle.security/tx-operation-whitelist)
+      (true? (:hyperfiddle/whitelist-attribute (hf/attr ctx)))
+      true)))
