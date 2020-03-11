@@ -1,11 +1,12 @@
-(ns hyperfiddle.service.pedestal.core
+(ns hyperfiddle.service.pedestal
   (:require
     [clojure.string :as string]
     [promesa.core :as p]
     [taoensso.timbre :as timbre]
     [cognitect.transit :as transit]
     [hypercrud.transit :as hc-t]
-    [hyperfiddle.core]                                      ; public deps
+    [contrib.pprint]
+    [hyperfiddle.core]
     [hyperfiddle.service.cookie :as cookie]
     [hyperfiddle.service.jwt :as jwt]
     [hypercrud.types.Err :refer [->Err]]
@@ -22,6 +23,7 @@
     [ring.middleware.file :as file]
     [ring.middleware.resource :as resource]
     [ring.util.response :as ring-resp])
+
   (:import
     [com.auth0.jwt.exceptions JWTVerificationException]
     [java.io OutputStreamWriter OutputStream]
@@ -29,51 +31,43 @@
     org.apache.commons.lang3.StringEscapeUtils))
 
 
-(defprotocol HandleRequest
-  (start [H])
-  (routes [H])
-  (uri [H context])
-  (request [H context])
-  (dispatch [H context])
-  ;(render [H context])
-  ;(run-IO [H context])
-  (serve [H context]))
+; Todo defprotocol HF-Server
+;(defprotocol HF-Server
+;  (config [S])
+;  (start [S config])
+;  (stop [S]))
 
-(def interceptor io.pedestal.interceptor/interceptor)
-(def enqueue io.pedestal.interceptor.chain/enqueue)
-(def terminate io.pedestal.interceptor.chain/terminate)
+
+(def interceptor  io.pedestal.interceptor/interceptor)
+(def enqueue      io.pedestal.interceptor.chain/enqueue)
+(def terminate    io.pedestal.interceptor.chain/terminate)
 
 (defn base-config []
   {::http/type              :jetty
    ::http/allowed-origins   {:allowed-origins (constantly true)}
-   ::http/container-options {:context-configurator (fn [^org.eclipse.jetty.servlet.ServletContextHandler c]
-                                                     (let [gzip-handler (org.eclipse.jetty.server.handler.gzip.GzipHandler.)]
-                                                       (.setGzipHandler c gzip-handler)
-                                                       (.addIncludedMethods gzip-handler (into-array ["GET" "POST"])))
-                                                     c)}
+   ::http/container-options {:context-configurator
+                             (fn [^org.eclipse.jetty.servlet.ServletContextHandler c]
+                               (let [gzip-handler (org.eclipse.jetty.server.handler.gzip.GzipHandler.)]
+                                 (.setGzipHandler c gzip-handler)
+                                 (.addIncludedMethods gzip-handler (into-array ["GET" "POST"]))
+                                 c))}
    ::http/secure-headers    {:content-security-policy-settings (secure-headers/content-security-policy-header {:object-src "'none'"})
                              :content-type-settings            (secure-headers/content-type-header)}})
 
-(defn route-via [H]
-  (let [H (interceptor H)]
-    (io.pedestal.http.route/expand-routes
-      #{["/" :any H :route-name :index]
-        ["/*" :any H :route-name :wildcard]})))
-
-(defn via [context f]
-  (enqueue context (interceptor f)))
+(defn via
+  ([i] (interceptor (if (fn? i) {:name :via :enter i}
+                                i)))
+  ([context i] (enqueue context [(via i)])))
 
 (defn with-data-params [context]
   (-> context
-      (via
-        (body-params/body-params
-          (body-params/default-parser-map
-            :edn-options {:readers *data-readers*}
-            :transit-options [{:handlers hc-t/read-handlers}])))
-      (via
-        (fn [context]
-          (let [{:keys [json-params edn-params transit-params]} (:request context)]
-            (assoc-in context [:request :body-params] (or json-params edn-params transit-params)))))))
+      (via (body-params/body-params
+             (body-params/default-parser-map
+               :edn-options {:readers *data-readers*}
+               :transit-options [{:handlers hc-t/read-handlers}])))
+      (via (fn [context]
+             (let [{:keys [json-params edn-params transit-params]} (:request context)]
+               (assoc-in context [:request :body-params] (or json-params edn-params transit-params)))))))
 
 (defn with-cookies [context]
   (enqueue context [ring-middlewares/cookies]))
@@ -155,38 +149,15 @@
   (-> context
       (via (content-negotiation/negotiate-content (keys content-transformers)))
       (via auto-content-type-interceptor)
-      (via (fn [context]
-             (promise->chan
-               (try (let [response (run (:request context))]
-                      (assoc context :response (cond-> response
-                                                 (not (:status response)) ring-resp/response)))
-                    (catch Exception e
-                      (timbre/error e)
-                      (e->response e))))))))
-
-(defn- static-content [with-request mime-type-by-extension root-path context]
-  (let [filename (str "/" (get-in context [:request :route-params :resource-name]))
-        mime-type (or (mime-type-by-extension filename) "application/octet-stream")
-        accept (get-in context [:request :headers "accept"])]
-    (assoc context
-      :response
-      (if (or (nil? accept)                                 ; nil accept headers are ok
-            (content-negotiation/best-match
-              (content-negotiation/best-match-fn [mime-type])
-              (content-negotiation/parse-accept-* accept)))
-        (-> {:request-method (get-in context [:request :request-method])
-             :path-info filename}
-            (with-request root-path)
-            (assoc-in [:headers "Content-Type"] mime-type))
-        {:status 406
-         :body "Not Acceptable"
-         :headers {}}))))
-
-(defn static-resource [mime-type-by-extension root-path context]
-  (static-content resource/resource-request mime-type-by-extension root-path context))
-
-(defn static-file [mime-type-by-extension root-path context]
-  (static-content file/file-request mime-type-by-extension root-path context))
+      (via {:name  ::run-io
+            :enter (fn [context]
+                     (promise->chan
+                       (try (let [response (run (:request context))]
+                              (assoc context :response (cond-> response
+                                                         (not (:status response)) ring-resp/response)))
+                            (catch Exception e
+                              (timbre/error e)
+                              (e->response e)))))})))
 
 (defn with-user-id [cookie-name cookie-domain jwt-secret jwt-issuer]
   {:name ::with-user-id
@@ -241,6 +212,35 @@
                       :user-agent  (get-in request [:headers "user-agent"])}))
       request)))
 
+(defn- static-content [with-request mime-type-by-extension root-path context]
+  (let [filename (str "/" (get-in context [:request :route-params :resource-name]))
+        mime-type (or (mime-type-by-extension filename) "application/octet-stream")
+        accept (get-in context [:request :headers "accept"])]
+    (assoc context
+      :response
+      (if (or (nil? accept)                                 ; nil accept headers are ok
+            (content-negotiation/best-match
+              (content-negotiation/best-match-fn [mime-type])
+              (content-negotiation/parse-accept-* accept)))
+        (-> {:request-method (get-in context [:request :request-method])
+             :path-info filename}
+            (with-request root-path)
+            (assoc-in [:headers "Content-Type"] mime-type))
+        {:status 406
+         :body "Not Acceptable"
+         :headers {}}))))
+
+(defn static-resource [mime-type-by-extension root-path context]
+  (static-content resource/resource-request mime-type-by-extension root-path context))
+
+(defn static-file [mime-type-by-extension root-path context]
+  (static-content file/file-request mime-type-by-extension root-path context))
+
+(defn static-file-resolve [root-path context]
+  (static-content file/file-request
+                  #(org.eclipse.jetty.http.MimeTypes/getDefaultMimeByExtension %)
+                  root-path
+                  context))
 
 ;(defn domain [domain-provider]
 ;  {:name ::domain

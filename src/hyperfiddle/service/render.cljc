@@ -1,4 +1,4 @@
-(ns hyperfiddle.service.ssr
+(ns hyperfiddle.service.render
   (:require
     [cats.monad.either :as either]
     [contrib.data :as data]
@@ -15,7 +15,8 @@
     #?(:cljs [hyperfiddle.ui.error :as ui-error])
     [hyperfiddle.ui.loading :as loading]
     [promesa.core :as p]
-    #?(:cljs [reagent.dom.server :as reagent-server])))
+    #?(:cljs [reagent.dom.server :as reagent-server])
+    [hyperfiddle.service.resolve :as R]))
 
 
 (deftype RT [domain io state-atom]
@@ -73,7 +74,7 @@
             [:script {:id "preamble" :src (domain/api-path-for (runtime/domain rt) :static-resource :build build :resource-name "browser.js")}]
             [:script {:id "main" :src (domain/api-path-for (runtime/domain rt) :static-resource :build build :resource-name "main.js")}]]))])
 
-(defn bootstrap-html-cmp [env domain io route user-id]
+(defn render [env domain io route user-id]
   (let [initial-state {::runtime/auto-transact (data/map-values
                                                  (fn [hf-db]
                                                    (if-some [auto-tx (:database/auto-transact hf-db)]

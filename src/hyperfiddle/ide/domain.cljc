@@ -1,6 +1,6 @@
 (ns hyperfiddle.ide.domain
   (:require
-    [hyperfiddle.etc.etc :refer :all]
+    [hyperfiddle.etc.etc :refer [in-ns?]]
     [hyperfiddle.service.resolve :as resolve]
     [hyperfiddle.domain :as domain :refer [#?(:cljs EdnishDomain)]]
     [hyperfiddle.ide.routing :as ide-routing]
@@ -48,7 +48,7 @@
 
   (system-fiddle? [domain fiddle-ident]
     (or (in-ns? 'hyperfiddle.ide.schema fiddle-ident)
-      system-fiddle/system-fiddle? fiddle-ident))
+      (system-fiddle/system-fiddle? fiddle-ident)))
 
   (hydrate-system-fiddle [domain fiddle-ident]
     (cond
