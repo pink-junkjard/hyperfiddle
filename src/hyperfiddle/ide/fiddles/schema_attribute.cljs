@@ -95,8 +95,10 @@
         [:div.container-fluid.-hyperfiddle-ide-schema-editor-attribute props
          [markdown "See [Datomic schema docs](https://docs.datomic.com/on-prem/schema.html)."]
          (field [:db/ident] ctx ident-f)
-         (field [:db/valueType] ctx valueType-and-cardinality-f {:options "valueType-options"})
-         (field [:db/cardinality] ctx valueType-and-cardinality-f {:options "cardinality-options"})
+         (field [:db/valueType] ctx valueType-and-cardinality-f {:options "valueType-options"
+                                                                 :option-label (comp name :db/ident)})
+         (field [:db/cardinality] ctx valueType-and-cardinality-f {:options "cardinality-options"
+                                                                   :option-label (comp name :db/ident)})
 
          ; The rule is you can't stage anything until it's a valid Datomic attribute.
          ; So only the special attrs are editable at first.
@@ -122,11 +124,9 @@
                         [[:db/add "a" :db/cardinality :db.cardinality/one]
                          [:db/add "a" :db/valueType :db.type/boolean]
                          [:db/add "a" :db/ident :hyperfiddle/whitelist-attribute]
-                         [:db/add "a" :hyperfiddle/whitelist-attribute true] ; this attribute is also whitelisted by default to defeat chicken/egg
-                         ])]]))
+                         [:db/add "a" :hyperfiddle/whitelist-attribute true]])]])) ; this attribute is also whitelisted by default to defeat chicken/egg
+
            (doall
              (for [[k _] (hf/spread-attributes ctx)
                    :when (not= "db" (namespace k))]
-               (field [k] ctx)))
-
-         ]]))))
+               (field [k] ctx)))]]))))
