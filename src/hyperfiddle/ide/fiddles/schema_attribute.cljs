@@ -94,6 +94,8 @@
             is-ref? @(r/fmap is-ref? (:hypercrud.browser/result ctx))]
         [:div.container-fluid.-hyperfiddle-ide-schema-editor-attribute props
          [markdown "See [Datomic schema docs](https://docs.datomic.com/on-prem/schema.html)."]
+         ; disable the following fields if they ALL have already been filled out
+         ; currently, if they are changed after filled out it causes page error
          (field [:db/ident] ctx ident-f {:disabled valid-attr?})
          (field [:db/valueType] ctx valueType-and-cardinality-f {:disabled valid-attr?
                                                                  :options "valueType-options"
