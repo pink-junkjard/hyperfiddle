@@ -94,11 +94,13 @@
             is-ref? @(r/fmap is-ref? (:hypercrud.browser/result ctx))]
         [:div.container-fluid.-hyperfiddle-ide-schema-editor-attribute props
          [markdown "See [Datomic schema docs](https://docs.datomic.com/on-prem/schema.html)."]
-         (field [:db/ident] ctx ident-f)
-         (field [:db/valueType] ctx valueType-and-cardinality-f {:options "valueType-options"
+         (field [:db/ident] ctx ident-f {:disabled valid-attr?})
+         (field [:db/valueType] ctx valueType-and-cardinality-f {:disabled valid-attr?
+                                                                 :options "valueType-options"
                                                                  :option-label (comp name :db/ident)})
          (field [:db/cardinality] ctx valueType-and-cardinality-f {:options "cardinality-options"
-                                                                   :option-label (comp name :db/ident)})
+                                                                   :option-label (comp name :db/ident)
+                                                                   :disabled valid-attr?})
 
          ; The rule is you can't stage anything until it's a valid Datomic attribute.
          ; So only the special attrs are editable at first.
