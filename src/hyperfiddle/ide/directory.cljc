@@ -42,7 +42,8 @@
                                     identity)]]
     (return
       (ide-domain/build
-        ?datomic-client domains-basis
+        :?datomic-client ?datomic-client
+        :basis domains-basis
         :user-databases (->> (:domain/databases user-datomic-record)
                           (map (juxt :domain.database/name :domain.database/record))
                           (into {}))

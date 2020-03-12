@@ -7,7 +7,6 @@
     [hypercrud.transit :as hc-t]
     [hypercrud.browser.context :refer [map->Context]]
     [hyperfiddle.domain :as domain]
-    [hyperfiddle.domains.transit :as domains-transit]
     [hyperfiddle.foundation :as foundation]
     [hyperfiddle.runtime :as runtime]
     [hyperfiddle.runtime-impl :as runtime-impl]
@@ -69,7 +68,7 @@
 
      (-> (runtime/domain rt) domain/environment :domain/disable-javascript not)
      (into [(inner-html :script {:id "params" :type "application/transit-json"} (hc-t/encode client-params))
-            (inner-html :script {:id "domain" :type "application/transit-json"} (domains-transit/encode (runtime/domain rt)))
+            (inner-html :script {:id "domain" :type "application/transit-json"} (domain/encode (runtime/domain rt)))
             (inner-html :script {:id "state" :type "application/transit-json"} (hc-t/encode @(state/state rt)))
             [:script {:id "preamble" :src (domain/api-path-for (runtime/domain rt) :static-resource :build build :resource-name "browser.js")}]
             [:script {:id "main" :src (domain/api-path-for (runtime/domain rt) :static-resource :build build :resource-name "main.js")}]]))])

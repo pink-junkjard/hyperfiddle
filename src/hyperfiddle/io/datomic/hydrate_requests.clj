@@ -44,7 +44,7 @@
 
 (defmethod hydrate-request* QueryRequest [{:keys [query params opts]} domain get-secure-db-with]
   (assert query "hydrate: missing query")
-  (let [q (d/qf domain params)
+  (let [q (d/qf (domain/databases domain) params)
         arg-map (-> (select-keys opts [:limit :offset])
                     (assoc :query query
                            :args (map #(parameter % get-secure-db-with) params)))]

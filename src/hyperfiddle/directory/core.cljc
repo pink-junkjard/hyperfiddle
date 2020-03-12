@@ -6,13 +6,10 @@
     [contrib.uri :refer [is-uri?]]
     [hypercrud.types.DbRef :refer [->DbRef]]
     [hypercrud.types.EntityRequest :refer [->EntityRequest]]
-    [hyperfiddle.domain :as domain]
-    [hyperfiddle.domains.bidi :refer [map->BidiDomain]]
-    [hyperfiddle.domains.ednish :refer [map->EdnishDomain]]
+    [hyperfiddle.domain :as domain :refer [map->EdnishDomain map->BidiDomain]]
     [hyperfiddle.foundation :as foundation]
     [hyperfiddle.io.core :as io]
     #?(:clj [hyperfiddle.io.datomic :as d])
-    [hyperfiddle.io.routes :as routes]
     [hyperfiddle.route :as route]
     [promesa.core :as p]))
 
@@ -89,4 +86,4 @@
                                       {:database/uri directory-uri-or-db-name}
                                       {:database/db-name directory-uri-or-db-name})})
     (environment [domain] {})
-    (api-routes [domain] routes/routes)))
+    (api-routes [domain] domain/routes)))

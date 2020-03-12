@@ -1,7 +1,6 @@
 (ns hyperfiddle.io.datomic
   (:require
-    [hypercrud.types.DbRef]
-    [hyperfiddle.domain :as domain])
+    [hypercrud.types.DbRef])
   (:import
     (hypercrud.types.DbRef DbRef)
     (java.io FileNotFoundException)))
@@ -43,9 +42,9 @@
     (and db-name (not @client-supported)) (throw (ex-info "Unable to resolve datomic client library on classpath" {:database/db-name db-name}))
     ))
 
-(defn qf [domain params]
+(defn qf [dbs params]
   (let [{:keys [dbname]} (some #(when (instance? DbRef %) %) params)
-        {:keys [database/uri database/db-name]} (domain/database domain dbname)]
+        {:keys [database/uri database/db-name]} (get dbs dbname)]
     (cond
       (and uri @peer-supported) (do (require 'hyperfiddle.io.datomic.peer)
                                     (resolve 'hyperfiddle.io.datomic.peer/q))
