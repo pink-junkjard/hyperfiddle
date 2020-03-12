@@ -29,6 +29,15 @@
     org.apache.commons.lang3.StringEscapeUtils))
 
 
+(defprotocol HandleRequest
+  (start [H])
+  (routes [H])
+  (uri [H context])
+  (request [H context])
+  (dispatch [H context])
+  ;(render [H context])
+  ;(run-IO [H context])
+  (serve [H context]))
 
 (def interceptor io.pedestal.interceptor/interceptor)
 (def enqueue io.pedestal.interceptor.chain/enqueue)
