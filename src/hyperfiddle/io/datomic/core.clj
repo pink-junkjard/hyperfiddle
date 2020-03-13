@@ -1,4 +1,4 @@
-(ns hyperfiddle.io.datomic
+(ns hyperfiddle.io.datomic.core
   (:require
     [hypercrud.types.DbRef])
   (:import

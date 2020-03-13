@@ -3,7 +3,7 @@
     [contrib.datomic-peer]                                  ; query helpers
     [datomic.api :as d-peer]
     [datascript.parser :as parser]
-    [hyperfiddle.io.datomic :refer [ConnectionFacade DbFacade]]
+    [hyperfiddle.io.datomic.core :refer [ConnectionFacade DbFacade]]
     [hyperfiddle.query]                                     ; query helpers
     [taoensso.timbre :as timbre])
   (:import

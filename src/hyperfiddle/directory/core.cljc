@@ -9,7 +9,7 @@
     [hyperfiddle.domain :as domain :refer [map->EdnishDomain map->BidiDomain]]
     [hyperfiddle.foundation :as foundation]
     [hyperfiddle.io.core :as io]
-    #?(:clj [hyperfiddle.io.datomic :as d])
+    #?(:clj [hyperfiddle.io.datomic.core :as d])
     [hyperfiddle.route :as route]
     [promesa.core :as p]))
 

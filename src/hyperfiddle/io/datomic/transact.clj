@@ -3,7 +3,7 @@
     [cats.monad.either :as either]
     [contrib.eval :as eval]
     [hyperfiddle.domain :as domain]
-    [hyperfiddle.io.datomic :as d]
+    [hyperfiddle.io.datomic.core :as d]
     [hyperfiddle.security :as security]
     [taoensso.timbre :as timbre]))
 

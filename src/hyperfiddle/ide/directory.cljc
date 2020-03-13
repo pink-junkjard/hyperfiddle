@@ -10,7 +10,6 @@
     [hyperfiddle.ide.domain :as ide-domain]
     [hyperfiddle.io.core :as io]
     [hyperfiddle.route :as route]
-    [hyperfiddle.service.http :as http-service]
     [promesa.core :as p]))
 
 

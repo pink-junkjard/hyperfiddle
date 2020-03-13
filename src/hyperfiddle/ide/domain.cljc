@@ -12,7 +12,7 @@
     [cats.monad.either :as either]
     [clojure.spec.alpha :as s]
     [contrib.uri :refer [is-uri?]]
-    #?(:clj [hyperfiddle.io.datomic :as d]))
+    #?(:clj [hyperfiddle.io.datomic.core :as d]))
   #?(:clj
      (:import
        (hyperfiddle.domain EdnishDomain))))

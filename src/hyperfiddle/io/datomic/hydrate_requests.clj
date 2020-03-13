@@ -16,7 +16,7 @@
     [hyperfiddle.api :as hf]
     [hyperfiddle.domain :as domain]
     [hyperfiddle.io.bindings]                               ; userland
-    [hyperfiddle.io.datomic :as d]
+    [hyperfiddle.io.datomic.core :as d]
     [taoensso.timbre :as timbre])
   (:import
     (hypercrud.types.DbRef DbRef)

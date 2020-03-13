@@ -7,7 +7,7 @@
     [hyperfiddle.database.color :as color]
     [cognitect.transit :as t]
     [hypercrud.transit :as hc-t]
-    #?(:clj [hyperfiddle.io.datomic :as d])
+    #?(:clj [hyperfiddle.io.datomic.core :as d])
     [hypercrud.browser.router-bidi :as router-bidi]
 
     [bidi.bidi :as bidi]
