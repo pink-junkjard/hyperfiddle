@@ -23,16 +23,15 @@
 
   (attr [R topic ks])
   (set-attr [R topic ks val])
-  (uri-for [R topic location])
 
+  (uri-for [R topic location])
   (request [R topic])
   (dispatch [R topic])
+
   (render [R topic])
   (serve [R topic])
-
-  (io [R topic])                                            ; Todo
-  (run-io [R topic])
-  )
+  (IO [R topic])
+  (run-IO [R topic f]))
 
 ;(defprotocol HF-Resolve-In) ; Todo
 

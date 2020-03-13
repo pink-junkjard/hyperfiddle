@@ -5,12 +5,13 @@
     [taoensso.timbre :as timbre]
     [cognitect.transit :as transit]
     [hypercrud.transit :as hc-t]
+    [clojure.core.async :refer [chan put!]]
     [contrib.pprint]
+    [hyperfiddle.etc.etc :refer :all]
     [hyperfiddle.core]
     [hyperfiddle.service.cookie :as cookie]
     [hyperfiddle.service.jwt :as jwt]
     [hypercrud.types.Err :refer [->Err]]
-    [clojure.core.async :refer [chan put!]]
 
     [io.pedestal.http :as http]
     [io.pedestal.http.content-negotiation :as content-negotiation]
@@ -33,16 +34,21 @@
 
 ; Todo defprotocol HF-Server
 ;(defprotocol HF-Server
-;  (config [S])
-;  (start [S config])
-;  (stop [S]))
+;  ...)
 
 
 (def interceptor  io.pedestal.interceptor/interceptor)
 (def enqueue      io.pedestal.interceptor.chain/enqueue)
 (def terminate    io.pedestal.interceptor.chain/terminate)
 
-(defn base-config []
+(defn via
+  ([i] (interceptor
+         (if (fn? i) {:name  ::via
+                      :enter (with-scope i)}
+                     i)))
+  ([context i] (enqueue context [(via i)])))
+
+(def base-config
   {::http/type              :jetty
    ::http/allowed-origins   {:allowed-origins (constantly true)}
    ::http/container-options {:context-configurator
@@ -54,10 +60,9 @@
    ::http/secure-headers    {:content-security-policy-settings (secure-headers/content-security-policy-header {:object-src "'none'"})
                              :content-type-settings            (secure-headers/content-type-header)}})
 
-(defn via
-  ([i] (interceptor (if (fn? i) {:name :via :enter i}
-                                i)))
-  ([context i] (enqueue context [(via i)])))
+(defn init [config]
+  (http/create-server
+    (into base-config config)))
 
 (defn with-data-params [context]
   (-> context
@@ -71,12 +76,6 @@
 
 (defn with-cookies [context]
   (enqueue context [ring-middlewares/cookies]))
-
-(defn e->response [e]
-  ; todo there are a subset of requests that are cacheable
-  {:status (or (:hyperfiddle.io/http-status-code (ex-data e)) 500)
-   :headers {}                                              ; todo retry-after on 503
-   :body (->Err (.getMessage e))})
 
 ;; This is copied from the pedestal source code, it is private
 (defn- print-fn
@@ -126,38 +125,30 @@
       (update :body (get content-transformers content-type))
       (assoc-in [:headers "Content-Type"] content-type)))
 
-(defn auto-content-type [context]
-  (cond-> context
-    (nil? (get-in context [:response :headers "Content-Type"]))
-    (update :response coerce-to (get-in context [:request :accept :field] "text/plain"))))
+(defn response [context r]
+  {:pre [(:status r)]}
+  (assoc context :response r))
 
-(def auto-content-type-interceptor (interceptor/after ::auto-content-type auto-content-type))
-
-(defn promise->chan [context]
-  (if-not (p/promise? (:response context))
-    context
-    (let [channel (chan)]
-      (-> (:response context)
-          (p/then (fn [response]
-                    (put! channel (assoc context :response response))))
-          (p/catch (fn [err]
-                     (timbre/error err)
-                     (put! channel (assoc context :response {:status 500 :body (pr-str err)})))))
-      channel)))
-
-(defn run-io [context run]
+(defn run-IO [context f]
   (-> context
       (via (content-negotiation/negotiate-content (keys content-transformers)))
-      (via auto-content-type-interceptor)
+      (via (interceptor/after ::auto-content-type
+             (fn auto-content-type [context]
+               (cond-> context
+                 (nil? (get-in context [:response :headers "Content-Type"]))
+                 (update :response coerce-to (get-in context [:request :accept :field] "text/plain"))))))
       (via {:name  ::run-io
             :enter (fn [context]
-                     (promise->chan
-                       (try (let [response (run (:request context))]
-                              (assoc context :response (cond-> response
-                                                         (not (:status response)) ring-resp/response)))
-                            (catch Exception e
+                     (do-async-as-chan
+                       (try (let [context (from-async (f context))]
+                              (assert (-> context :response :status))
+                              context)
+                            (catch Error e
                               (timbre/error e)
-                              (e->response e)))))})))
+                              {:status  (or (:hyperfiddle.io/http-status-code (ex-data e)) 500)
+                               :headers {}                  ; todo retry-after on 503
+                               :body    (->Err (.getMessage e))}))))
+            })))
 
 (defn with-user-id [cookie-name cookie-domain jwt-secret jwt-issuer]
   {:name ::with-user-id
@@ -241,50 +232,3 @@
                   #(org.eclipse.jetty.http.MimeTypes/getDefaultMimeByExtension %)
                   root-path
                   context))
-
-;(defn domain [domain-provider]
-;  {:name ::domain
-;   :enter (cond
-;            (instance? Domain domain-provider) #(assoc-in % [:request :domain] domain-provider)
-;            (fn? domain-provider) (fn [context]
-;                                    (let [channel (chan)]
-;                                      (p/branch
-;                                        (domain-provider (get-in context [:request :server-name]))
-;                                        (fn [domain]
-;                                          (put! channel (assoc-in context [:request :domain] domain)))
-;                                        (fn [e]
-;                                          (timbre/error e)
-;                                          (let [context (-> context
-;                                                            terminate
-;                                                            ; todo idomatic way of handling this
-;                                                            ; http://pedestal.io/reference/error-handling
-;                                                            ; (io.pedestal.interceptor.chain/execute [...])
-;                                                            ((:enter (content-negotiation/negotiate-content (keys content-transformers))))
-;                                                            (assoc :response (e->response e))
-;                                                            auto-content-type)]
-;                                            (put! channel context))))
-;                                      channel))
-;            :else (throw (ex-info "Must supply domain value or function" {:value domain-provider})))})
-
-;(defn build-router [env]
-;  {:name ::router
-;   :enter (fn [context] (service-domain/route (get-in context [:request :domain]) env context))})
-
-;(defmethod service-domain/route :default [domain env context]
-;  (let [path (get-in context [:request :path-info])
-;        request-method (get-in context [:request :request-method])
-;        {:keys [handler route-params]} (domain/api-match-path domain path :request-method request-method)]
-;    (timbre/info "router:" (pr-str handler) (pr-str request-method) (pr-str path))
-;    (handle-route handler env (assoc-in context [:request :route-params] route-params))))
-
-;(defn routes [env domain-provider]
-;  (let [interceptors [(body-params/body-params
-;                        (body-params/default-parser-map :edn-options {:readers *data-readers*}
-;                                                        :transit-options [{:handlers hc-t/read-handlers}]))
-;                      interceptors/combine-body-params
-;                      ring-middlewares/cookies
-;                      (interceptors/domain domain-provider)
-;                      (interceptors/build-router env)]]
-;    (expand-routes
-;      #{["/" :any interceptors :route-name :index]
-;        ["/*" :any interceptors :route-name :wildcard]})))
