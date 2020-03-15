@@ -53,7 +53,8 @@
                  hyperfiddle.ide.directory/ide-domain] :as domain} (runtime/domain (:runtime ctx))
          {:keys [domain client-id]} (get-in (domain/environment domain) [:auth0 ide-domain])
          redirect-uri (str service-uri (domain/api-path-for (runtime/domain (:runtime ctx)) :hyperfiddle.ide/auth0-redirect))]
-     (str domain "/login?"
+     (str "https://" domain "/"
+          "login?"
           "client=" client-id
           "&scope=" "openid email profile"
           "&state=" (base64-url-safe/encode state)

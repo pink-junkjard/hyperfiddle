@@ -1,6 +1,6 @@
 (ns hyperfiddle.ide.authenticate
   (:require
-    #?(:cljs ["oauth/lib/oauth2" :refer [OAuth2]])
+    #?(:cljs ["oauth/lib/oauth2" :refer [OAuth2]])          ; nodejs only
     [cats.core :refer [mlet return]]
     [cats.labs.promise]
     #?(:cljs [goog.object :as object])
@@ -10,7 +10,8 @@
     [hyperfiddle.foundation :as foundation]
     [hyperfiddle.io.core :as io]
     [hyperfiddle.service.jwt :as jwt]
-    [promesa.core :as p])
+    [promesa.core :as p]
+    [taoensso.timbre :as timbre])
   #?(:clj
      (:import
        (com.auth0.client.auth AuthAPI)
@@ -41,8 +42,10 @@
                                 (if e (reject! e) (resolve! (object/get params "id_token")))))))))))
 
 (defn login [env domain service-uri io oauth-authorization-code]
+  ;(assert false "die before login cookie set")
   (mlet [encoded-id-token (fetch-id-token env domain service-uri oauth-authorization-code)
-         id-token (let [verify (jwt/build-verifier (:AUTH0_CLIENT_SECRET env) (str (:AUTH0_DOMAIN env) "/"))]
+         id-token (let [verify (jwt/build-verifier (:AUTH0_CLIENT_SECRET env)
+                                                   (:AUTH0_DOMAIN env))]
                     (p/do* (verify encoded-id-token)))
          basis (io/sync io #{"$users"})
          user-record (->> (map->EntityRequest {:e [:user/sub (:sub id-token)]

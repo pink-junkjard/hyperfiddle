@@ -5,7 +5,7 @@
     [contrib.base-64-url-safe :as base64-url-safe]
     [goog.object :as object]
     [hyperfiddle.domain :as domain]
-    [hyperfiddle.ide.authenticate :as auth]
+    [hyperfiddle.ide.authenticate]
     [hyperfiddle.ide.directory :as ide-directory]           ; immoral
     [hyperfiddle.ide.domain :as ide-domain :refer [IdeDomain]]
     [hyperfiddle.ide.service.core :as ide-service]
@@ -37,7 +37,7 @@
                  (transact! [io tx-groups]
                    ; todo who is this executed on behalf of? system/root or the end user?
                    (http-client/transact! domain service-uri tx-groups)))]
-        (-> (auth/login env domain service-uri io (-> req .-query .-code))
+        (-> (hyperfiddle.ide.authenticate/login env domain service-uri io (-> req .-query .-code))
             (p/then (fn [jwt]
                       (doto res
                         (.cookie ide-service/cookie-name jwt (-> (::ide-directory/ide-domain domain)
@@ -84,6 +84,9 @@
   (let [#_#_{:keys [cookie-name jwt-secret jwt-issuer]} (-> (get-in context [:request :domain])
                                                             domain/environment-secure :jwt)
         cookie-domain (::ide-directory/ide-domain domain)
-        mw (middleware/with-user-id ide-service/cookie-name cookie-domain (:AUTH0_CLIENT_SECRET env) (str (:AUTH0_DOMAIN env) "/"))
+        mw (middleware/with-user-id ide-service/cookie-name
+                                    cookie-domain
+                                    (:AUTH0_CLIENT_SECRET env)
+                                    (:AUTH0_DOMAIN env))
         next (fn [] (ide-routing domain env req res))]
     (mw req res next)))

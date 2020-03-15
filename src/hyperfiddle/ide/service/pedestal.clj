@@ -5,7 +5,7 @@
     [clojure.string :as string]
     [contrib.base-64-url-safe :as base64-url-safe]
     [hyperfiddle.domain :as domain]
-    [hyperfiddle.ide.authenticate :as auth]
+    [hyperfiddle.ide.authenticate]
     [hyperfiddle.ide.directory :as ide-directory]           ; immoral
     [hyperfiddle.ide.domain :as ide-domain]
     [hyperfiddle.ide.service.core :as ide-service]
@@ -39,7 +39,7 @@
              (transact! [io tx-groups]
                ; todo who is this executed on behalf of? system/root or the end user?
                (p/do* (transact! (:domain req) nil tx-groups))))]
-    (-> (auth/login env (:domain req) (interceptors/service-uri env req) io (get-in req [:query-params :code]))
+    (-> (hyperfiddle.ide.authenticate/login env (:domain req) (interceptors/service-uri env req) io (get-in req [:query-params :code]))
         (p/then (fn [jwt]
                   {:status 302
                    :headers {"Location" (-> (get-in req [:query-params :state]) base64-url-safe/decode)}
@@ -97,7 +97,10 @@
                                                                               domain/environment-secure :jwt)
                           cookie-domain (::ide-directory/ide-domain domain)]
                       (interceptor/interceptor
-                        (interceptors/with-user-id ide-service/cookie-name cookie-domain (:AUTH0_CLIENT_SECRET env) (str (:AUTH0_DOMAIN env) "/"))))
+                        (interceptors/with-user-id ide-service/cookie-name
+                                                   cookie-domain
+                                                   (:AUTH0_CLIENT_SECRET env)
+                                                   (:AUTH0_DOMAIN env))))
                     (interceptor/interceptor
                       {:name :ide-routing
                        :enter (partial ide-routing domain env)})]))

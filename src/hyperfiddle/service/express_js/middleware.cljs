@@ -60,9 +60,9 @@
                                      (send-platform-response res)))))
     :else (throw (ex-info "Must supply domain value or function" {:value domain-provider}))))
 
-(defn with-user-id [cookie-name cookie-domain jwt-secret jwt-issuer]
+(defn with-user-id [cookie-name cookie-domain jwt-secret auth0-domain]
   (fn [req res next]
-    (let [verify (jwt/build-verifier jwt-secret jwt-issuer)]
+    (let [verify (jwt/build-verifier jwt-secret auth0-domain)]
       ; todo support auth bearer
       (try
         (let [jwt-cookie (some-> req .-cookies (object/get cookie-name))]
