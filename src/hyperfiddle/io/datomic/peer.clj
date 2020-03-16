@@ -1,6 +1,5 @@
 (ns hyperfiddle.io.datomic.peer
   (:require
-    [contrib.datomic-peer]                                  ; query helpers
     [datomic.api :as d-peer]
     [datascript.parser :as parser]
     [hyperfiddle.io.datomic.core :refer [ConnectionFacade DbFacade]]
