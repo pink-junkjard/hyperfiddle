@@ -1,19 +1,86 @@
 (ns hyperfiddle.service.resolve)
 
-(def mode
-  (if (not (some-> (resolve 'user/dev-mode) deref))
-    :prod
-    :dev))
+(def mode #?(:clj user/mode
+             :cljs (-> js/document (.getElementById "build") .-innerHTML)))
 
-(def dev
-  (= mode :dev))
+(def dev (or (= mode :dev)(= mode "dev")))
 
-(def api-version-tag "0.0.1")
+(def api-version-tag (if dev "dev" "0.0.1"))
 
-(def assets {:mode #{:web :shadow}
-             :path "./.serve"
-             :url  "/static/dev"})
+(def locations
+  {:assets {:url  "/static/_"
+            :path "./.serve"}})
 
+(defn api-routes [route-ns]
+  {"global-basis" {:get (keyword route-ns "global-basis")
+                   #".+" (keyword route-ns "404")
+                   true (keyword route-ns "405")}
+
+   ["hydrate-requests/" [#"[^/]*" :local-basis]] {:post (keyword route-ns "hydrate-requests")
+                                                  #".+" (keyword route-ns "404")
+                                                  true (keyword route-ns "405")}
+
+   ["hydrate-route/" [#"[^/]*" :local-basis] "/" [#"[^/]*" :partition-id] "/" [#".*" :encoded-route]]
+   {:get (keyword route-ns "hydrate-route")
+    :post (keyword route-ns "hydrate-route")
+    true (keyword route-ns "405")}
+
+   ["local-basis/" [#"[^/]*" :global-basis] "/" [#".*" :encoded-route]]
+   {:get (keyword route-ns "local-basis")
+    :post (keyword route-ns "local-basis")
+    true (keyword route-ns "405")}
+
+   "sync" {:post (keyword route-ns "sync")
+           #".+" (keyword route-ns "404")
+           true (keyword route-ns "405")}
+
+   "transact" {:post (keyword route-ns "transact")
+               #".+" (keyword route-ns "404")
+               true (keyword route-ns "405")}
+
+   true (keyword route-ns "404")})
+
+(def domain-routes
+  ["/" {"api/" {(str api-version-tag "/") (api-routes nil)
+                [[#"[^/]*" :version] "/"] {true :force-refresh}
+                true                      :404}
+        "static/" {[:build "/" [#".+" :resource-name]] {:get :static-resource
+                                                        true :405}
+                   true :404}
+        "favicon.ico" :favicon
+        true {:get :ssr
+              true :405}}])
+
+(def ide-routes
+  ["/" {"api/"        {(str api-version-tag "/") (api-routes nil)
+                       [[#"[^/]*" :version] "/"]    {true :force-refresh}
+                       true                         :404}
+        "api-user/"   {(str api-version-tag "/") (api-routes "user")
+                       [[#"[^/]*" :version] "/"]    {true :force-refresh}
+                       true                         :404}
+        "auth0"       {:get  :hyperfiddle.ide/auth0-redirect
+                       #".+" :404
+                       true  :405}
+        "logout"      {:post :hyperfiddle.ide/logout
+                       #".+" :404
+                       true  :405}
+        "static/"     {[:build "/" [#".+" :resource-name]] {:get :static-resource
+                                                            true :405}
+                       true                                :404}
+        "favicon.ico" :favicon
+        true          {:get :ssr
+                       true :405}}])
+
+(def ide-user-routes
+  ["/" {"api-user/" {(str api-version-tag "/") (api-routes nil)
+                     [[#"[^/]*" :version] "/"]    {true :force-refresh}
+                     true                         :404}
+        ; todo this static path conflicts with the ide
+        "static/"   {[:build "/" [#".+" :resource-name]] {:get :static-resource
+                                                          true :405}
+                     true                                :404}
+        true        {:get :ssr
+                     true :405}}])
 
 (defprotocol HF-Resolve
   :extend-via-metadata true

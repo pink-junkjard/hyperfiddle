@@ -1,7 +1,7 @@
 (ns hyperfiddle.domain
   (:refer-clojure :exclude [memoize])
   (:require
-    [hyperfiddle.service.resolve :as resolve]
+    [hyperfiddle.service.resolve :as R]
     [hyperfiddle.route :as route]
     [hyperfiddle.system-fiddle :as system-fiddle]
     [hyperfiddle.database.color :as color]
@@ -81,8 +81,6 @@
                      ::home-route])
     #(contains? (:databases %) (:fiddle-dbname %))))
 
-(declare api routes)
-
 (defrecord EdnishDomain [basis fiddle-dbname databases environment home-route ?datomic-client memoize-cache]
   Domain
   (basis [domain] basis)
@@ -92,7 +90,7 @@
   (environment [domain] environment)
   (url-decode [domain s] (route/url-decode s home-route))
   (url-encode [domain route] (route/url-encode route home-route))
-  (api-routes [domain] routes)
+  (api-routes [domain] R/domain-routes)
   (system-fiddle? [domain fiddle-ident] (system-fiddle/system-fiddle? fiddle-ident))
   (hydrate-system-fiddle [domain fiddle-ident] (system-fiddle/hydrate fiddle-ident))
   #?(:clj (connect [domain dbname] (d/dyna-connect (database domain dbname) ?datomic-client)))
@@ -116,7 +114,7 @@
       (fn [e] (route/decoding-error e s))
       identity))
   (url-encode [domain route] (router-bidi/encode router route))
-  (api-routes [domain] routes)
+  (api-routes [domain] R/domain-routes)
   (system-fiddle? [domain fiddle-ident] (system-fiddle/system-fiddle? fiddle-ident))
   (hydrate-system-fiddle [domain fiddle-ident] (system-fiddle/hydrate fiddle-ident))
   #?(:clj (connect [domain dbname] (d/dyna-connect (database domain dbname) ?datomic-client)))
@@ -158,44 +156,3 @@
   (str 'hyperfiddle.domain/BidiDomain)
   #(-> (into {} %) (dissoc :?datomic-client :memoize-cache))
   #(-> (into {} %) (assoc :memoize-cache (atom nil)) map->BidiDomain))
-
-
-(defn api [route-ns]
-  {"global-basis" {:get (keyword route-ns "global-basis")
-                   #".+" (keyword route-ns "404")
-                   true (keyword route-ns "405")}
-
-   ["hydrate-requests/" [#"[^/]*" :local-basis]] {:post (keyword route-ns "hydrate-requests")
-                                                  #".+" (keyword route-ns "404")
-                                                  true (keyword route-ns "405")}
-
-   ["hydrate-route/" [#"[^/]*" :local-basis] "/" [#"[^/]*" :partition-id] "/" [#".*" :encoded-route]]
-   {:get (keyword route-ns "hydrate-route")
-    :post (keyword route-ns "hydrate-route")
-    true (keyword route-ns "405")}
-
-   ["local-basis/" [#"[^/]*" :global-basis] "/" [#".*" :encoded-route]]
-   {:get (keyword route-ns "local-basis")
-    :post (keyword route-ns "local-basis")
-    true (keyword route-ns "405")}
-
-   "sync" {:post (keyword route-ns "sync")
-           #".+" (keyword route-ns "404")
-           true (keyword route-ns "405")}
-
-   "transact" {:post (keyword route-ns "transact")
-               #".+" (keyword route-ns "404")
-               true (keyword route-ns "405")}
-
-   true (keyword route-ns "404")})
-
-(def routes
-  ["/" {"api/" {(str resolve/api-version-tag "/") (api nil)
-                [[#"[^/]*" :version] "/"] {true :force-refresh}
-                true                      :404}
-        "static/" {[:build "/" [#".+" :resource-name]] {:get :static-resource
-                                                        true :405}
-                   true :404}
-        "favicon.ico" :favicon
-        true {:get :ssr
-              true :405}}])

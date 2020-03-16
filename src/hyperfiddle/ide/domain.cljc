@@ -1,7 +1,7 @@
 (ns hyperfiddle.ide.domain
   (:require
+    [hyperfiddle.service.resolve :as R]
     [hyperfiddle.etc.etc :refer [in-ns?]]
-    [hyperfiddle.service.resolve :as resolve]
     [hyperfiddle.domain :as domain :refer [#?(:cljs EdnishDomain)]]
     [hyperfiddle.ide.routing :as ide-routing]
     [hyperfiddle.ide.system-fiddle :as ide-system-fiddle]
@@ -19,8 +19,6 @@
 
 
 (def user-dbname-prefix "$user.")
-
-(declare routes nested-user-routes)
 
 (defrecord IdeDomain [basis fiddle-dbname databases environment home-route build ?datomic-client
                       html-root-id memoize-cache]
@@ -44,7 +42,7 @@
         route)
       home-route))
 
-  (api-routes [domain] routes)
+  (api-routes [domain] R/ide-routes)
 
   (system-fiddle? [domain fiddle-ident]
     (or (in-ns? 'hyperfiddle.ide.schema fiddle-ident)
@@ -73,7 +71,7 @@
   (environment [domain] environment)
   (url-decode [domain s] (route/url-decode s home-route))
   (url-encode [domain route] (route/url-encode route home-route))
-  (api-routes [domain] nested-user-routes)
+  (api-routes [domain] R/ide-user-routes)
   (system-fiddle? [domain fiddle-ident] (system-fiddle/system-fiddle? fiddle-ident))
   (hydrate-system-fiddle [domain fiddle-ident] (system-fiddle/hydrate fiddle-ident))
   #?(:clj (connect [domain dbname] (d/dyna-connect (domain/database domain dbname) ?datomic-client)))
@@ -83,38 +81,6 @@
       (let [ret (clojure.core/memoize f)]
         (swap! memoize-cache assoc f ret)
         ret))))
-
-(def routes
-  ["/" {"api/"        {(str resolve/api-version-tag "/") (domain/api nil)
-                       [[#"[^/]*" :version] "/"]    {true :force-refresh}
-                       true                         :404}
-        "api-user/"   {(str resolve/api-version-tag "/") (domain/api "user")
-                       [[#"[^/]*" :version] "/"]    {true :force-refresh}
-                       true                         :404}
-        "auth0"       {:get  :hyperfiddle.ide/auth0-redirect
-                       #".+" :404
-                       true  :405}
-        "logout"      {:post :hyperfiddle.ide/logout
-                       #".+" :404
-                       true  :405}
-        "static/"     {[:build "/" [#".+" :resource-name]] {:get :static-resource
-                                                            true :405}
-                       true                                :404}
-        "favicon.ico" :favicon
-        true          {:get :ssr
-                       true :405}}])
-
-(def nested-user-routes
-  ["/" {"api-user/" {(str resolve/api-version-tag "/") (domain/api nil)
-                     [[#"[^/]*" :version] "/"]    {true :force-refresh}
-                     true                         :404}
-        ; todo this static path conflicts with the ide
-        "static/"   {[:build "/" [#".+" :resource-name]] {:get :static-resource
-                                                          true :405}
-                     true                                :404}
-        true        {:get :ssr
-                     true :405}}])
-
 
 (defn build
   [& {:keys [?datomic-client basis
