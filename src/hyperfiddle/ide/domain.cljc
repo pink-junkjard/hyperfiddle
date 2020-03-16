@@ -1,7 +1,7 @@
 (ns hyperfiddle.ide.domain
   (:require
     [hyperfiddle.service.resolve :as R]
-    [hyperfiddle.etc.etc :refer [in-ns?]]
+    [contrib.etc :refer [in-ns?]]
     [hyperfiddle.domain :as domain :refer [#?(:cljs EdnishDomain)]]
     [hyperfiddle.ide.routing :as ide-routing]
     [hyperfiddle.ide.system-fiddle :as ide-system-fiddle]

@@ -2,7 +2,7 @@
   (:refer-clojure :exclude [sync])
   (:require
     [hyperfiddle.service.resolve :as R]
-    [hyperfiddle.etc.etc :refer :all]
+    [contrib.do :refer :all]
     [hyperfiddle.domain :as domain]
     [hyperfiddle.ide.authenticate :as auth]
     [hyperfiddle.ide.directory :as ide-directory]           ; immoral

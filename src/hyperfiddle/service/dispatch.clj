@@ -10,8 +10,9 @@
     [contrib.ednish :as ednish]
     [contrib.reader :refer [read-edn-string!]]
 
+    [contrib.do :refer :all]
+    [hyperfiddle.scope :refer :all]
     [hyperfiddle.service.resolve :as R]
-    [hyperfiddle.etc.etc :refer :all]
     [hyperfiddle.service.render :as render]
     [hyperfiddle.service.pedestal :as hf-http]
     [hyperfiddle.domain :as domain]
