@@ -15,6 +15,8 @@
     [taoensso.timbre :as timbre]))
 
 
+; These security models don't compose yet, eventually they will need to
+
 (def allow-anonymous
   {:subject-can-transact? (constantly (either/right))
    :can-create? (constantly true)
@@ -36,6 +38,13 @@
                                                   (either/left "Writes restricted")))
      :can-create? (fn [hf-db subject ctx] (owned-by? hf-db subject))
      :writable-entity? (fn [hf-db subject ctx] (owned-by? hf-db subject))}))
+
+(def stmt-whitelist
+  {:subject-can-transact? (constantly (either/right))
+   :can-create? (constantly false)
+   :writable-entity? (fn [hf-db subject ctx]
+                       ; Attribute whitelist is not implemented here, this is about entity level writes
+                       true)})
 
 (let [parent-m (fn parent-m [ctx]
                  (if (:db/isComponent (context/attr ctx (context/a ctx)))
@@ -66,6 +75,7 @@
 (let [memoized-safe-eval-string (memoize eval-expr-str!+)]
   (defn- eval-client-sec [hf-db]
     (case (get-in hf-db [:database/write-security :db/ident] ::security/allow-anonymous) ; todo yank this default
+      ::security/tx-operation-whitelist (right stmt-whitelist)
       ::security/allow-anonymous (right allow-anonymous)
       ::security/authenticated-users-only (right authenticated-users-only)
       ::security/owner-only (right owner-only)

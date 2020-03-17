@@ -2,7 +2,7 @@
   (:require
     [cats.core :as cats :refer [mlet]]
     [cats.monad.either :as either]
-    [cats.monad.exception :as exception]
+    [cats.monad.exception :as exception :refer [try-on success]]
     [clojure.set :as set]
     [clojure.string :as string]
     [clojure.walk :refer [postwalk]]
@@ -17,6 +17,7 @@
     [hyperfiddle.domain :as domain]
     [hyperfiddle.io.bindings]                               ; userland
     [hyperfiddle.io.datomic.core :as d]
+    [hyperfiddle.security]
     [taoensso.timbre :as timbre])
   (:import
     (hypercrud.types.DbRef DbRef)
@@ -70,6 +71,7 @@
               (get-secure-db-from-branch+ partitions (get-in partitions [pid :parent-pid]) dbname)
               (or (get-in @db-with-lookup [pid dbname])
                   (let [tx (get-in partitions [pid :stage dbname])
+                        _ (timbre/debug "tx:" #_domain dbname (pr-str tx))
                         db-with+ (mlet [t (or (some-> (get local-basis dbname) exception/success)
                                               (exception/failure (ex-info (str "Basis not found") {:dbname dbname :local-basis local-basis})))
                                         init-db-with (if-let [parent-pid (get-in partitions [pid :parent-pid])]
@@ -89,11 +91,22 @@
                                                 ; however this is fine, since the original t is already known good
                                                 (exception/failure (RuntimeException. ERROR-BRANCH-PAST))
                                                 (exception/success nil))
-                                            _ (let [validate-tx (constantly true)] ; todo look up tx validator
-                                                (if (validate-tx tx)
-                                                  (exception/success nil)
-                                                  (exception/failure (RuntimeException. (str "staged tx for " dbname " failed validation")))))
-                                            {:keys [db-after tempids]} (exception/try-on (d/with db-with {:tx-data tx}))]
+
+                                            ; Must Hydrate schemas to validate the stage
+                                            ; Validator needs:
+                                            ; - schema, in non-local datomic configurations we should reuse the schema we have
+                                            ; - the domain's relevant hf-db with security metadata e.g. database owners
+                                            ; - maybe: the dbval with basis right before this tx, to allow for additional queries (slow in non-local datomic config)
+                                            _ (let [hf-db (domain/database domain dbname)]
+                                                (if (= (get-in hf-db [:database/write-security :db/ident] :hyperfiddle.security/allow-anonymous)
+                                                       :hyperfiddle.security/tx-operation-whitelist)
+                                                  (try-on (hyperfiddle.security/tx-operation-whitelist! db-with domain dbname nil tx))
+                                                  (success nil)))
+                                            ;_ (assert schema "needed for d/with") ; not available for hydrate-schemas in request bootstrapping
+                                            {:keys [db-after tempids]} (exception/try-on (d/with db-with {:tx-data tx
+                                                                                                          #_(if-not schema
+                                                                                                            tx ; bootstrapping
+                                                                                                            (coerce-tx schema tx))}))]
                                        ; as-of/basis-t gymnastics:
                                        ; https://gist.github.com/dustingetz/39f28f148942728c13edef1c7d8baebf/ee35a6af327feba443339176d371d9c7eaff4e51#file-datomic-d-with-interactions-with-d-as-of-clj-L35
                                        ; https://forum.datomic.com/t/interactions-of-d-basis-t-d-as-of-d-with/219
@@ -179,6 +192,7 @@
          (every? #(or (instance? EntityRequest %)
                       (instance? QueryRequest %)
                       (instance? EvalRequest %)) requests)]}
+  (timbre/debug "hydrate-requests:" (pr-str requests))
   (let [db-with-lookup (atom {})
         local-basis (into {} local-basis)                   ; :: ([dbname 1234]), but there are some duck type shenanigans happening
         get-secure-db-with+ (build-get-secure-db-with+ domain (constantly partitions) db-with-lookup local-basis)

@@ -3,7 +3,8 @@
   (:require
     [contrib.data :as data]
     [contrib.datomic :refer [indexed-schema]]
-    [contrib.datomic-tx :refer [edit-entity into-tx normalize-tx]]
+    [contrib.datomic-tx :refer [edit-entity into-tx
+                                filter-tx flatten-tx flatten-map-stmt]]
     [clojure.set :as set]
     [clojure.test :refer [deftest is testing]]))
 
@@ -360,7 +361,7 @@
                    {:db/ident :district/region, :db/valueType :db.type/ref, :db/cardinality :db.cardinality/one, :db/doc "A district region enum value"}]
         schema (indexed-schema schema-tx)]
 
-    (is (= (normalize-tx schema schema-tx)
+    (is (= (flatten-tx schema schema-tx)
            [[:db/add "-700968933" :db/ident :community/name]
             [:db/add "-700968933" :db/valueType :db.type/string]
             [:db/add "-700968933" :db/cardinality :db.cardinality/one]
@@ -406,3 +407,76 @@
             [:db/add "492450710" :db/cardinality :db.cardinality/one]
             [:db/add "492450710" :db/doc "A district region enum value"]]
            ))))
+
+(def simple-schema
+  (contrib.datomic/indexed-schema
+    [{:db/ident :person/name, :db/valueType {:db/ident :db.type/string}, :db/cardinality {:db/ident :db.cardinality/one}}
+     {:db/ident :person/liked-tags, :db/valueType {:db/ident :db.type/keyword}, :db/cardinality {:db/ident :db.cardinality/many}}
+     {:db/ident :employee/manager, :db/valueType {:db/ident :db.type/ref}, :db/cardinality {:db/ident :db.cardinality/one}}
+     {:db/ident :person/siblings, :db/valueType {:db/ident :db.type/ref}, :db/cardinality {:db/ident :db.cardinality/many}}
+     {:db/ident :person/age, :db/valueType {:db/ident :db.type/long}, :db/cardinality {:db/ident :db.cardinality/one}}]))
+
+(def map-form-stmt
+  {:person/name "Bob"                                       ; scalar one
+   :person/liked-tags [:movies :ice-cream :clojure]         ; scalar many
+   :employee/manager {:person/name "Earnest"}               ; ref one
+   :person/siblings [{:person/name "Cindy"}                 ; ref many
+                     {:person/name "David"}]})
+
+(def diverse-tx
+  [map-form-stmt
+   {:person/name "Frank"}
+   [:db/add "g" :person/name "Geralt"]
+   [:db/cas 1 :person/age 41 42]
+   [:user.fn/foo 'x 'y 'z 'q 'r]])
+
+(deftest flatten-map-stmt'
+  (is (= (flatten-map-stmt
+           simple-schema
+           map-form-stmt)
+         [[:db/add "-1131796780" :person/name "Bob"]
+          [:db/add "-1131796780" :person/liked-tags :movies]
+          [:db/add "-1131796780" :person/liked-tags :ice-cream]
+          [:db/add "-1131796780" :person/liked-tags :clojure]
+          [:db/add "-2113069627" :person/name "Earnest"]
+          [:db/add "-1131796780" :employee/manager "-2113069627"]
+          [:db/add "-279635706" :person/name "Cindy"]
+          [:db/add "-1131796780" :person/siblings "-279635706"]
+          [:db/add "278413082" :person/name "David"]
+          [:db/add "-1131796780" :person/siblings "278413082"]]))
+  )
+
+(deftest flatten-tx'
+  (is (= (flatten-tx
+           simple-schema
+           diverse-tx)
+         [[:db/add "-1131796780" :person/name "Bob"]
+          [:db/add "-1131796780" :person/liked-tags :movies]
+          [:db/add "-1131796780" :person/liked-tags :ice-cream]
+          [:db/add "-1131796780" :person/liked-tags :clojure]
+          [:db/add "-2113069627" :person/name "Earnest"]
+          [:db/add "-1131796780" :employee/manager "-2113069627"]
+          [:db/add "-279635706" :person/name "Cindy"]
+          [:db/add "-1131796780" :person/siblings "-279635706"]
+          [:db/add "278413082" :person/name "David"]
+          [:db/add "-1131796780" :person/siblings "278413082"]
+          [:db/add "974316117" :person/name "Frank"]
+          [:db/add "g" :person/name "Geralt"]
+          [:db/cas 1 :person/age 41 42]
+          [:user.fn/foo 'x 'y 'z 'q 'r]]
+         ))
+  )
+
+(deftest filter-tx'
+  (is (= (filter-tx simple-schema (constantly true) diverse-tx)
+         diverse-tx))
+  (is (= (filter-tx simple-schema (constantly false) diverse-tx)
+         []))
+  (is (= (filter-tx
+           simple-schema
+           (fn [[o :as stmt]]
+             (nil? (#{:db/add} o)))
+           diverse-tx)
+         [[:db/cas 1 :person/age 41 42]
+          [:user.fn/foo 'x 'y 'z 'q 'r]]))
+  )

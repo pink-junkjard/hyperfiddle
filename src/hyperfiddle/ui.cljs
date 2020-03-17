@@ -32,7 +32,7 @@
     [hyperfiddle.ui.select$]
     [hyperfiddle.ui.sort :as sort]
     [hyperfiddle.ui.stale :as stale]
-    [hyperfiddle.ui.util :refer [writable-entity?]]
+    [hyperfiddle.ui.util :refer [writable-entity? writable-attr?]]
     [spec-coerce.alpha]))
 
 
@@ -191,7 +191,9 @@
 
 (defn- value-props [props ctx]
   (as-> props props
-    (update props :disabled #(or % (not @(r/track writable-entity? ctx))))
+    (update props :disabled #(or %
+                                 (not @(r/track writable-entity? ctx))
+                                 (not @(r/track writable-attr? ctx))))
     (cond-> props (context/leaf-invalid? ctx) (assoc :is-invalid true))
     (update props :class css (if (:disabled props) "disabled"))))
 
@@ -202,7 +204,7 @@ User renderers should not be exposed to the reaction."
   (let [ctx (context/focus ctx relative-path)
         props (-> (update props :class css (semantic-css ctx))
                   (value-props ctx))]
-    [(or ?f hyper-control) (hypercrud.browser.context/data ctx) ctx props]))
+    [(or ?f hyper-control) (hf/data ctx) ctx props]))
 
 (defn ^:export anchor [ctx props & children]
   (let [route (route/legacy-route-adapter (:route props))   ; todo migrate fiddles and remove

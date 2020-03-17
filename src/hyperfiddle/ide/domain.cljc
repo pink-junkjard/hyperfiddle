@@ -86,7 +86,7 @@
   [& {:keys [?datomic-client basis
              user-databases user-fiddle-dbname user-domain+
              ide-databases ide-fiddle-dbname
-             ide-environment default-route]}]
+             ide-environment ide-home-route]}]
   (map->IdeDomain
     {:basis             basis
      :fiddle-dbname     ide-fiddle-dbname
@@ -109,7 +109,7 @@
                                                             :database/auto-transact false
                                                             :database/color (color/color-for-name user-fiddle-dbname)))))
      :environment       (or ide-environment {})
-     :home-route        (or default-route {::route/fiddle :hyperfiddle.ide/home})
+     :home-route        (or ide-home-route {::route/fiddle :hyperfiddle.ide/home})
      ::user-dbname->ide (->> user-databases
                           (map (fn [[dbname db]]
                                  [dbname
@@ -139,9 +139,9 @@
                            ide-databases)
      :ide-fiddle-dbname  "$src"
      :ide-environment    ide-environment
-     :default-route     (case (:default-route config)
-                           :user (:home-route user-domain)
-                           nil))))
+     :ide-home-route     (case (:default-route config)
+                           :fiddle-index {::route/fiddle :hyperfiddle.ide/home}
+                           nil (:home-route user-domain)))))
 
 (domain/register-handlers
   IdeDomain

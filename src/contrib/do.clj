@@ -6,7 +6,7 @@
     [promesa.async]))
 
 (defn as-either [v]
-  (if (either/either? v) (either/right v)))
+  (if (either/either? v) v (either/right v)))
 
 (defmacro do-result [& body]
   `(as-either (try ~@body

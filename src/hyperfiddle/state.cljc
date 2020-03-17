@@ -172,7 +172,7 @@
 
 (defn user-id-reducer [user-id action & args]
   (case action
-    :set-user-id (first args)
+    :set-user-id (first args)                               ; dead action?
     user-id))
 
 (def reducer-map {:hyperfiddle.runtime/global-basis global-basis-reducer

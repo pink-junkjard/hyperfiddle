@@ -7,7 +7,7 @@
 
 (defprotocol Browser
   (a [ctx])
-  (attr [ctx])
+  (attr [ctx] [ctx a])
   (browse-element [ctx i])
   (data [ctx])
   (eav [ctx])
@@ -19,6 +19,7 @@
   (link-tx [ctx])
   (qfind [ctx])
   (qfind-level? [ctx])
+  (spread-attributes [ctx])
   (id [ctx pulltree])
   (row-key [ctx row])
   (tempid! [ctx] [ctx dbname])

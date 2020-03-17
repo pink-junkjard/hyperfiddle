@@ -2,15 +2,19 @@
   (:require
     #?(:clj [clojure.walk :as walk])
     #?(:clj [contrib.data :refer [map-values]])
-    #?(:cljs [jsonwebtoken :as jwt]))
+    #?(:cljs [jsonwebtoken :as jwt])                        ; nodejs only
+    [taoensso.timbre :as timbre])
   #?(:clj
      (:import (com.auth0.jwt JWT)
               (com.auth0.jwt.algorithms Algorithm))))
 
-(defn build-verifier [secret issuer]
+(defn auth0-domain->issuer [auth0-domain]
+  (str "https://" auth0-domain "/"))
+
+(defn build-verifier [secret auth0-domain]
   #?(:clj  (let [jwt-verifier (-> (Algorithm/HMAC256 secret)
                                   (JWT/require)
-                                  (.withIssuer issuer)
+                                  (.withIssuer (auth0-domain->issuer auth0-domain))
                                   (.build))]
              (fn [token]
                (-> (.verify jwt-verifier token)

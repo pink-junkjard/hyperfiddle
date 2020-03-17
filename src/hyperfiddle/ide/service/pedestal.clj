@@ -4,7 +4,7 @@
     [hyperfiddle.service.resolve :as R]
     [contrib.do :refer :all]
     [hyperfiddle.domain :as domain]
-    [hyperfiddle.ide.authenticate :as auth]
+    [hyperfiddle.ide.authenticate]
     [hyperfiddle.ide.directory :as ide-directory]           ; immoral
     [hyperfiddle.ide.domain :as ide-domain]
     [hyperfiddle.ide.service.core :as ide-service]
@@ -34,7 +34,8 @@
           (hf-http/with-user-id ide-service/cookie-name
             cookie-domain
             (:AUTH0_CLIENT_SECRET env)
-            (str (:AUTH0_DOMAIN env) "/"))))
+            (:AUTH0_DOMAIN env))))
+
       (hf-http/via
         (fn [context]
           (let [domain (get-in context [:request :domain])
@@ -44,10 +45,17 @@
             (when-not (= (:handler route) :static-resource)
               (timbre/info "ide-router:" (pr-str (:handler route)) (pr-str method) (pr-str path)))
 
-            (-> context
-                (assoc-in [:request :handler] (:handler route))
-                (assoc-in [:request :route-params] (:route-params route))
-                dispatch/endpoint)))
+            (case (namespace (:handler route))
+              nil (-> context
+                      (assoc-in [:request :handler] (:handler route))
+                      (assoc-in [:request :route-params] (:route-params route))
+                      dispatch/endpoint)
+
+              "user" (dispatch/endpoint
+                       (update context :request #(-> (dissoc % :jwt) ; this is brittle
+                                                     (assoc :domain (from-result (::ide-domain/user-domain+ domain))
+                                                            :handler (keyword (name (:handler route)))
+                                                            :route-params (:route-params route))))))))
         )))
 
 (defmethod dispatch/endpoint :hyperfiddle.ide/auth0-redirect [context]
@@ -68,7 +76,7 @@
                    ; todo who is this executed on behalf of? system/root or the end user?
                    (p/do* (transact! domain nil tx-groups))))
 
-            jwt (from-async (auth/login env domain (R/via context R/uri-for :/) io (-> request :query-params :code)))]
+            jwt (from-async (hyperfiddle.ide.authenticate/login env domain (R/via context R/uri-for :/) io (-> request :query-params :code)))]
 
         {:status  302
          :headers {"Location" (-> (get-in request [:query-params :state]) base64-url-safe/decode)}
@@ -89,41 +97,3 @@
                                              (assoc :value (get-in request [:cookies ide-service/cookie-name :value])
                                                     :expires "Thu, 01 Jan 1970 00:00:00 GMT"))}
        :body    ""})))
-
-;(defn ide-routing [domain env context]
-;  (let [path (get-in context [:request :path-info])
-;        request-method (get-in context [:request :request-method])
-;        {:keys [handler route-params]} (domain/api-match-path domain path :request-method request-method)]
-;
-;    ;(if (not (= handler :static-resource))
-;    ;  (timbre/info "ide-router:" (pr-str handler) (pr-str request-method) (pr-str path)))
-;
-;    (dispatch/handle-route handler env (assoc-in context [:request :route-params] route-params))
-;
-;    ;(cond
-;    ;  (= (some-> handler namespace) "user")
-;    ;  (either/branch
-;    ;    (get-in context [:request :domain ::ide-domain/user-domain+])
-;    ;    (fn [e]
-;    ;      (timbre/error e)
-;    ;      (throw e))
-;    ;    (fn [user-domain]
-;    ;      (let [context (update context :request #(-> (dissoc % :jwt) ; this is brittle
-;    ;                                                  (assoc :domain user-domain
-;    ;                                                         :route-params route-params)))]
-;    ;        (handle-route (keyword (name handler)) env context))))
-;    ;
-;    ;  (and (= :ssr handler)
-;    ;       (= "demo" (::ide-directory/app-domain-ident domain))
-;    ;       (nil? (get-in context [:request :user-id]))
-;    ;       (not (string/starts-with? path "/:hyperfiddle.ide!please-login/")))
-;    ;  ; todo this logic should be injected into demo domain record
-;    ;  (let [inner-route (domain/url-decode domain path)
-;    ;        url (domain/url-encode domain {::route/fiddle :hyperfiddle.ide/please-login
-;    ;                                       ::route/datomic-args [inner-route]})]
-;    ;    (-> context
-;    ;        (assoc-in [:response :status] 302)
-;    ;        (assoc-in [:response :headers "Location"] url)))
-;    ;
-;    ;  :else (handle-route handler env (assoc-in context [:request :route-params] route-params))
-;      ))

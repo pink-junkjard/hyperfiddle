@@ -52,3 +52,6 @@
          (->> (pad 2 zero))                                 ; this is a right-pad
          reverse
          join)))
+
+(defn str-last-n [n s]
+  (.substring s (max 0 (- (.length s) n))))

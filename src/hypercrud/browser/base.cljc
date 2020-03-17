@@ -73,6 +73,14 @@
 ; UI runs it as validation for tooltip warnings (does the query match the params)
 (defn request-for-fiddle+ [rt pid route fiddle]             ; no ctx
   (case (:fiddle/type fiddle)
+    ; Needles, which should really be query params. Query params can be resolved client-side with code splicing?
+    ; How does this impact routing? Server rendering?
+
+    ; Schema editor - many params
+    ; Sub requests - peer function, no params other than entity
+
+    ; Can we just do sub requests first, no need for splicing?
+
     :query (mlet [q (reader/memoized-read-string+ (:fiddle/query fiddle)) ; todo why read-string instead of read-edn-string?
                   needle-clauses (either/right nil) #_(reader/memoized-read-edn-string+ (:fiddle/query-needle fiddle))
                   :let [[inputs appended-$] (if-let [in (:in (query/q->map q))]
