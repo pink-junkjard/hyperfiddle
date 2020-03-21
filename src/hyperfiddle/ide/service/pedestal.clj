@@ -79,7 +79,7 @@
             (handle-route (keyword (name handler)) env context))))
 
       (and (= :ssr handler)
-           (= "demo" (::ide-directory/app-domain-ident domain))
+           (not (nil? (:AUTH0_DOMAIN env)))                 ; if there is an auth0 config, require logins
            (nil? (get-in context [:request :user-id]))
            (not (string/starts-with? path "/:hyperfiddle.ide!please-login/")))
       ; todo this logic should be injected into demo domain record
