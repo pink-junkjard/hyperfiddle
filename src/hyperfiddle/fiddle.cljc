@@ -160,7 +160,7 @@
    :fiddle/pull (constantly "[:db/id\n *]")
    :fiddle/pull-database (constantly "$")
    :fiddle/query (constantly (load-resource "fiddle-query-default.edn"))
-   :fiddle/eval (constantly "[{:foo (inc 42)}]")
+   :fiddle/eval (constantly "(->> \n  (datomic.api/q\n   '[:in $ \n     :find [(pull ?e [:db/ident]) ...]     ; Final value must match FindColl pattern as here\n     :where [?e :db/ident]]\n   hyperfiddle.api/*$*)\n  (sort-by :db/ident)\n  (take 20))\n")
    :fiddle/renderer (constantly default-renderer-str)
    :fiddle/type (constantly :blank)})                       ; Toggling default to :query degrades perf in ide
 
