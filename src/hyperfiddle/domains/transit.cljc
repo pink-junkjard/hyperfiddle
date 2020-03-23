@@ -4,8 +4,8 @@
     [hypercrud.transit :as hc-t]))
 
 
-(def ^:private read-handlers (atom hc-t/read-handlers))
-(def ^:private write-handlers (atom hc-t/write-handlers))
+(def ^:private read-handlers (atom @hc-t/read-handlers))
+(def ^:private write-handlers (atom @hc-t/write-handlers))
 
 (defn register-handlers [c tag rep-fn from-rep]
   (swap! read-handlers assoc tag (t/read-handler from-rep))

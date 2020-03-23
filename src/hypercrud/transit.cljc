@@ -30,7 +30,7 @@
 
 
 (def read-handlers
-  {
+  (atom {
    "schema-v" (t/read-handler #(apply ->Schema %))
    "DbName" (t/read-handler ->DbName)
    "DbRef" (t/read-handler #(apply ->DbRef %))
@@ -50,10 +50,10 @@
    "success-v" (t/read-handler #(apply exception/success %))
    "ex-info" (t/read-handler #(apply ex-info %))
    "sorted-map" (t/read-handler #(into (sorted-map) %))
-   })
+   }))
 
 (def write-handlers
-  {
+  (atom {
    Schema (t/write-handler (constantly "schema-v") (fn [^Schema v] (vector (.-schema-by-attr v))))
    DbName (t/write-handler (constantly "DbName") (fn [v] (:dbname v)))
    DbRef (t/write-handler (constantly "DbRef") (fn [v] [(:dbname v) (:branch v)]))
@@ -69,14 +69,19 @@
    ExceptionInfo (t/write-handler (constantly "ex-info") (fn [ex] [(ex-message ex) (ex-data ex) (ex-cause ex)]))
    #?@(:cljs [URI (t/write-handler (constantly "r") (fn [v] (.-uri-str v)))])
    #?@(:clj [clojure.lang.PersistentTreeMap (t/write-handler (constantly "sorted-map") (fn [v] (into {} v)))])
-   })
+   }))
+
+(defn register-handler!
+  [type tag encode decode]
+  (swap! write-handlers assoc type (t/write-handler (constantly tag) encode))
+  (swap! read-handlers assoc tag (t/read-handler decode)))
 
 (def ^:dynamic *string-encoding* "UTF-8")
 
 (defn decode
   "Transit decode an object from `s`."
   [s & {:keys [type opts]
-        :or {type :json opts {:handlers read-handlers}}}]
+        :or {type :json opts {:handlers @read-handlers}}}]
   #?(:clj  (let [in (ByteArrayInputStream. (.getBytes s *string-encoding*))
                  rdr (t/reader in type opts)]
              (t/read rdr))
@@ -86,7 +91,7 @@
 (defn encode
   "Transit encode `x` into a String."
   [x & {:keys [type opts]
-        :or {type :json opts {:handlers write-handlers}}}]
+        :or {type :json opts {:handlers @write-handlers}}}]
   #?(:clj  (let [out (ByteArrayOutputStream.)
                  writer (t/writer out type opts)]
              (t/write writer x)
