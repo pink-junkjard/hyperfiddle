@@ -466,10 +466,7 @@
   )
 
 (deftest flatten-map-stmp|invalid-nested-map
-  (is (try (flatten-map-stmt simple-schema {:employee/manager {:person/address {:address/zip "1234"}}})
-           false
-           (catch Exception e
-             true))))
+  (is (thrown? Exception (flatten-map-stmt simple-schema {:employee/manager {:person/address {:address/zip "1234"}}}))))
 
 (deftest flatten-tx'
   (is (= (flatten-tx

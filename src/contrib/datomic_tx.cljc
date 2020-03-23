@@ -132,7 +132,7 @@
               (some (partial unique schema) (keys v)))
         (concat (flatten-map-stmt schema (assoc v :db/id e'))
                 [[:db/add e a e']])
-        (throw (Exception. "Nested Map Transactions must either be a component, or have a unique attribute"))))
+        (throw (ex-info "Nested Map Transactions must either be a component, or have a unique attribute" {:attribute a}))))
     [[:db/add e a v]]))
 
 (defn flatten-map-stmt
