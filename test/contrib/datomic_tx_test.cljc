@@ -410,18 +410,28 @@
 
 (def simple-schema
   (contrib.datomic/indexed-schema
-    [{:db/ident :person/name, :db/valueType {:db/ident :db.type/string}, :db/cardinality {:db/ident :db.cardinality/one}}
+    [{:db/ident :person/name, :db/valueType {:db/ident :db.type/string}, :db/cardinality {:db/ident :db.cardinality/one} :db/unique :db.unique/identity}
      {:db/ident :person/liked-tags, :db/valueType {:db/ident :db.type/keyword}, :db/cardinality {:db/ident :db.cardinality/many}}
      {:db/ident :employee/manager, :db/valueType {:db/ident :db.type/ref}, :db/cardinality {:db/ident :db.cardinality/one}}
      {:db/ident :person/siblings, :db/valueType {:db/ident :db.type/ref}, :db/cardinality {:db/ident :db.cardinality/many}}
-     {:db/ident :person/age, :db/valueType {:db/ident :db.type/long}, :db/cardinality {:db/ident :db.cardinality/one}}]))
+     {:db/ident :person/address, :db/valueType {:db/ident :db.type/ref}, :db/cardinality {:db/ident :db.cardinality/one}, :db/isComponent true}
+     {:db/ident :person/summerHomes, :db/valueType {:db/ident :db.type/ref}, :db/cardinality {:db/ident :db.cardinality/many}, :db/isComponent true}
+     {:db/ident :address/zip, :db/valueType {:db/ident :db.type/string}, :db/cardinality {:db/ident :db.cardinality/one}}
+     {:db/ident :person/age, :db/valueType {:db/ident :db.type/long}, :db/cardinality {:db/ident :db.cardinality/one}}
+     {:db/ident :person/bestFriend, :db/valueType {:db/ident :db.type/ref}, :db/cardinality {:db/ident :db.cardinality/one}}
+     {:db/ident :person/friends, :db/valueType {:db/ident :db.type/ref}, :db/cardinality {:db/ident :db.cardinality/many}}]))
 
 (def map-form-stmt
   {:person/name "Bob"                                       ; scalar one
+   :person/address {:address/zip "12345"}                   ; ref one component
+   :person/summerHomes [{:address/zip "11111"}              ; ref many component
+                        {:address/zip "22222"}]
    :person/liked-tags [:movies :ice-cream :clojure]         ; scalar many
    :employee/manager {:person/name "Earnest"}               ; ref one
    :person/siblings [{:person/name "Cindy"}                 ; ref many
-                     {:person/name "David"}]})
+                     {:person/name "David"}]
+   :person/bestFriend "Benjamin"
+   :person/friends ["Harry", "Yennefer"]})
 
 (def diverse-tx
   [map-form-stmt
@@ -430,21 +440,33 @@
    [:db/cas 1 :person/age 41 42]
    [:user.fn/foo 'x 'y 'z 'q 'r]])
 
-(deftest flatten-map-stmt'
+(deftest flatten-map-stmt|simple
   (is (= (flatten-map-stmt
            simple-schema
            map-form-stmt)
-         [[:db/add "-1131796780" :person/name "Bob"]
-          [:db/add "-1131796780" :person/liked-tags :movies]
-          [:db/add "-1131796780" :person/liked-tags :ice-cream]
-          [:db/add "-1131796780" :person/liked-tags :clojure]
+         [[:db/add "2141158636" :person/name "Bob"]
+          [:db/add "-545257583" :address/zip "12345"]
+          [:db/add "2141158636" :person/address "-545257583"]
+          [:db/add "-39529585" :address/zip "11111"]
+          [:db/add "2141158636" :person/summerHomes "-39529585"]
+          [:db/add "-1618477697" :address/zip "22222"]
+          [:db/add "2141158636" :person/summerHomes "-1618477697"]
+          [:db/add "2141158636" :person/liked-tags :movies]
+          [:db/add "2141158636" :person/liked-tags :ice-cream]
+          [:db/add "2141158636" :person/liked-tags :clojure]
           [:db/add "-2113069627" :person/name "Earnest"]
-          [:db/add "-1131796780" :employee/manager "-2113069627"]
+          [:db/add "2141158636" :employee/manager "-2113069627"]
           [:db/add "-279635706" :person/name "Cindy"]
-          [:db/add "-1131796780" :person/siblings "-279635706"]
+          [:db/add "2141158636" :person/siblings "-279635706"]
           [:db/add "278413082" :person/name "David"]
-          [:db/add "-1131796780" :person/siblings "278413082"]]))
+          [:db/add "2141158636" :person/siblings "278413082"]
+          [:db/add "2141158636" :person/bestFriend "Benjamin"]
+          [:db/add "2141158636" :person/friends "Harry"]
+          [:db/add "2141158636" :person/friends "Yennefer"]]))
   )
+
+(deftest flatten-map-stmp|invalid-nested-map
+  (is (thrown? Exception (flatten-map-stmt simple-schema {:employee/manager {:person/address {:address/zip "1234"}}}))))
 
 (deftest flatten-tx'
   (is (= (flatten-tx
