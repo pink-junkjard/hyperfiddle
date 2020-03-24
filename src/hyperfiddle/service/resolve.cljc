@@ -109,11 +109,15 @@
 (defn via [task f & args]
   (apply f (from task) task args))
 
-(defn assoc-with [val R]
+(defn assoc-with
+  "adds an association with the resolver somewhere. so given some value, you can get back to R, which is what R/from does"
+  [val R]
   (vary-meta val
     (fn [M]
       (apply merge
         (or M {})
         {`from (fn R-from [& _] R)}
         (for [method (->> HF-Resolve :method-builders keys)]
+          ; lets you call methods on R from the proxy object
+          ; https://github.com/clojure/clojure/blob/master/changes.md#22-protocol-extension-by-metadata
           {(symbol method) (fn R-proxy [_ & args] (apply @method R args))})))))
