@@ -3,6 +3,7 @@
   (:require
     [hyperfiddle.service.resolve :as R]
     [contrib.do :refer :all]
+    [contrib.data :refer [unqualify]]
     [hyperfiddle.domain :as domain]
     [hyperfiddle.ide.authenticate]
     [hyperfiddle.ide.directory :as ide-directory]           ; immoral
@@ -45,17 +46,35 @@
             (when-not (= (:handler route) :static-resource)
               (timbre/info "ide-router:" (pr-str (:handler route)) (pr-str method) (pr-str path)))
 
-            (case (namespace (:handler route))
-              nil (-> context
-                      (assoc-in [:request :handler] (:handler route))
-                      (assoc-in [:request :route-params] (:route-params route))
-                      dispatch/endpoint)
+            (cond
 
-              "user" (dispatch/endpoint
-                       (update context :request #(-> (dissoc % :jwt) ; this is brittle
-                                                     (assoc :domain (from-result (::ide-domain/user-domain+ domain))
-                                                            :handler (keyword (name (:handler route)))
-                                                            :route-params (:route-params route))))))))
+              (let [is-auth-configured (-> (R/from context) :config :env :AUTH0_DOMAIN nil? not)
+                    is-ssr (= :ssr (unqualify (:handler route)))
+                    is-no-subject (nil? (get-in context [:request :user-id]))
+                    prevent-infinite-redirect (not (clojure.string/starts-with? path "/:hyperfiddle.ide!please-login/"))]
+                (and is-ssr
+                     is-auth-configured                        ; if there is an auth0 config, require logins
+                     is-no-subject
+                     prevent-infinite-redirect))
+              (let [inner-route (domain/url-decode domain path)
+                    url (domain/url-encode domain {::route/fiddle :hyperfiddle.ide/please-login
+                                                   ::route/datomic-args [inner-route]})]
+                (-> context
+                    (assoc-in [:response :status] 302)
+                    (assoc-in [:response :headers "Location"] url)))
+
+              (= "user" (namespace (:handler route)))
+              (dispatch/endpoint
+                (update context :request #(-> (dissoc % :jwt) ; this is brittle
+                                              (assoc :domain (from-result (::ide-domain/user-domain+ domain))
+                                                     :handler (keyword (name (:handler route)))
+                                                     :route-params (:route-params route)))))
+
+              (nil? (namespace (:handler route)))
+              (-> context
+                  (assoc-in [:request :handler] (:handler route))
+                  (assoc-in [:request :route-params] (:route-params route))
+                  dispatch/endpoint))))
         )))
 
 (defmethod dispatch/endpoint :hyperfiddle.ide/auth0-redirect [context]
