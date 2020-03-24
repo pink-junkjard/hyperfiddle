@@ -39,7 +39,7 @@
   "Hacks for namespace hyperfiddle.security which due to bootstrapping cannot be hydrated in-band.
   See https://github.com/hyperfiddle/hyperfiddle/issues/1003"
   [domain db-name $]
-  (let [result ((hyperfiddle.io.datomic/qf domain [(let [branch nil] ; qf ignores branch
+  (let [result ((hyperfiddle.io.datomic.core/qf domain [(let [branch nil] ; qf ignores branch
                                                      (DbRef. db-name branch))])
                 {:query '[:find (pull ?attr [*
                                              {:db/valueType [:db/ident]

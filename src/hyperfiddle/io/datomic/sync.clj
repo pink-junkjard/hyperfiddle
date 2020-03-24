@@ -2,7 +2,7 @@
   (:refer-clojure :exclude [sync])
   (:require
     [hyperfiddle.domain :as domain]
-    [hyperfiddle.io.datomic :as d]
+    [hyperfiddle.io.datomic.core :as d]
     [taoensso.timbre :as timbre]))
 
 

@@ -3,7 +3,7 @@
     [cats.monad.either :as either]
     [contrib.eval :as eval]
     [hyperfiddle.domain :as domain]
-    [hyperfiddle.io.datomic :as d]
+    [hyperfiddle.io.datomic.core :as d]
     [hyperfiddle.security :as security]
     [taoensso.timbre :as timbre]))
 
@@ -44,7 +44,7 @@
                                    ; Security can query the database e.g. for attribute whitelist
                                    (let [$ (->> (hyperfiddle.domain/connect domain dbname)
                                                 ; no basis on transacts nor staging areas
-                                                (hyperfiddle.io.datomic/with-db))]
+                                                (hyperfiddle.io.datomic.core/with-db))]
                                      [dbname (process-tx $ domain dbname subject tx)])))
                             (doall)                         ; allow any exceptions to fire before transacting anythng
                             (map (fn [[dbname dtx]]

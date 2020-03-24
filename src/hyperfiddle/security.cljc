@@ -1,6 +1,6 @@
 (ns hyperfiddle.security
   (:require
-    #?(:clj [hyperfiddle.io.datomic])
+    #?(:clj [hyperfiddle.io.datomic.core])
     #?(:clj [hyperfiddle.domain])
     #?(:clj [hyperfiddle.schema])
     [contrib.datomic-tx :refer [remove-tx]]
@@ -54,7 +54,7 @@
      {:pre [$ domain db-name]}
      ; TODO this is IO for non-local datomic configurations
      (let [whitelist (try
-                       ((hyperfiddle.io.datomic/qf domain [(let [branch nil] ; qf ignores branch
+                       ((hyperfiddle.io.datomic.core/qf domain [(let [branch nil] ; qf ignores branch
                                                              (DbRef. db-name branch))])
                         (attr-whitelist-query $))
                        (catch Exception e

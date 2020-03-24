@@ -3,7 +3,7 @@
     [contrib.performance :as perf]
     [datomic.client.api :as d-client]
     [datomic.client.impl.shared]
-    [hyperfiddle.io.datomic :refer [ConnectionFacade DbFacade]]
+    [hyperfiddle.io.datomic.core :refer [ConnectionFacade DbFacade]]
     [taoensso.timbre :as timbre])
   (:import
     (datomic.client.impl.shared Connection Db)))

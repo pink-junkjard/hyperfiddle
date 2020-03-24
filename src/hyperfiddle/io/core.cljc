@@ -3,7 +3,10 @@
   (:require
     [cats.core :as cats]
     [cats.monad.either :as either]
-    [promesa.core :as p]))
+    [promesa.core :as p]
+    [contrib.performance :as perf]
+    [hyperfiddle.domain :as domain]
+    [taoensso.timbre :as timbre]))
 
 
 (defprotocol IO
@@ -24,3 +27,25 @@
     (p/resolved nil)
     (-> (hydrate-requests io local-basis partitions requests)
         (p/then (fn [{:keys [pulled-trees]}] (either/branch (cats/sequence pulled-trees) p/rejected p/resolved))))))
+
+(defn global-basis-for [io domain]
+  (perf/time-promise
+    (->> (domain/databases domain) keys set
+      (sync io)
+      (cats/fmap (fn [user-basis] {:domain {:t (domain/basis domain)
+                                            :hash (hash {:fiddle-dbname (domain/fiddle-dbname domain)
+                                                         :databases (->> (domain/databases domain)
+                                                                      (map (fn [[dbname database]]
+                                                                             ; todo switching between peer/client will break this hash
+                                                                             [dbname (select-keys database [:database/uri :database/db-name])]))
+                                                                      (into {}))
+                                                         :environment (domain/environment domain)
+                                                         :type-name (domain/type-name domain)})}
+                                   :user user-basis})))
+    (fn [err total-time]
+      (timbre/debugf "global-basis failure; total time: %sms" total-time))
+    (fn [success total-time]
+      (timbre/debugf "global-basis; total time: %sms" total-time))))
+
+(defn local-basis-for [io global-basis route]
+  (:user global-basis))

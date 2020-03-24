@@ -16,7 +16,7 @@
     [hyperfiddle.api :as hf]
     [hyperfiddle.domain :as domain]
     [hyperfiddle.io.bindings]                               ; userland
-    [hyperfiddle.io.datomic :as d]
+    [hyperfiddle.io.datomic.core :as d]
     [hyperfiddle.security]
     [taoensso.timbre :as timbre])
   (:import
@@ -45,7 +45,7 @@
 
 (defmethod hydrate-request* QueryRequest [{:keys [query params opts]} domain get-secure-db-with]
   (assert query "hydrate: missing query")
-  (let [q (d/qf domain params)
+  (let [q (d/qf (domain/databases domain) params)
         arg-map (-> (select-keys opts [:limit :offset])
                     (assoc :query query
                            :args (map #(parameter % get-secure-db-with) params)))]

@@ -10,7 +10,6 @@
     [hyperfiddle.ide.domain :as ide-domain]
     [hyperfiddle.io.core :as io]
     [hyperfiddle.route :as route]
-    [hyperfiddle.service.http :as http-service]
     [promesa.core :as p]))
 
 
@@ -42,18 +41,21 @@
                                     identity)]]
     (return
       (ide-domain/build
-        ?datomic-client domains-basis
-        (->> (:domain/databases user-datomic-record)
-             (map (juxt :domain.database/name :domain.database/record))
-             (into {}))
-        user-fiddle-dbname
-        (build-user+ domains-basis user-datomic-record ?datomic-client)
-        (->> (:domain/databases ide-datomic-record)
-             (map (juxt :domain.database/name :domain.database/record))
-             (into {}))
-        fiddle-dbname
+        :?datomic-client ?datomic-client
+        :basis domains-basis
+        :user-databases (->> (:domain/databases user-datomic-record)
+                          (map (juxt :domain.database/name :domain.database/record))
+                          (into {}))
+        :user-fiddle-dbname user-fiddle-dbname
+        :user-domain+ (build-user+ domains-basis user-datomic-record ?datomic-client)
+        :ide-databases (->> (:domain/databases ide-datomic-record)
+                         (map (juxt :domain.database/name :domain.database/record))
+                         (into {}))
+        :ide-fiddle-dbname fiddle-dbname
+
         :ide-environment environment
-        :ide-home-route home-route))))
+        :ide-home-route home-route
+        ))))
 
 (defn- hydrate-ide-domain [?datomic-client io local-basis app-domain-ident]
   (let [requests [(->EntityRequest [:domain/ident "hyperfiddle"] (->DbRef "$domains" foundation/root-pid) directory/domain-pull)
@@ -85,7 +87,7 @@
                         (directory/hydrate-app-domain (some-> (:?datomic-client env) deref) io local-basis [:domain/ident "www"])
                         (-> (hydrate-ide-domain (some-> (:?datomic-client env) deref) io local-basis app-domain-ident)
                             (p/then #(assoc %
-                                       ::service-uri (http-service/service-uri (:PUBLIC_SERVICE_HTTP_SCHEME env) fqdn (:PUBLIC_SERVICE_HTTP_PORT env)) ; can public port be determined from the request?
+                                       ;::service-uri (http-service/service-uri (:PUBLIC_SERVICE_HTTP_SCHEME env) fqdn (:PUBLIC_SERVICE_HTTP_PORT env)) ; can public port be determined from the request?
                                        ::ide-domain ide-domain
                                        ::app-domain-ident app-domain-ident
 

@@ -5,7 +5,6 @@
     [hyperfiddle.domain :as domain]
     [hyperfiddle.io.core :as io]
     [hyperfiddle.io.http-client :as http-client]
-    [hyperfiddle.io.local-basis :as local-basis]
     [promesa.core :as p]
     [taoensso.timbre :as timbre]))
 
@@ -25,7 +24,7 @@
         (p/catch (partial handle-401 domain))))
 
   (local-basis [io global-basis route]
-    (p/resolved (local-basis/local-basis io global-basis route)))
+    (p/resolved (io/local-basis-for io global-basis route)))
 
   (hydrate-route [io local-basis route pid partitions]
     (-> (http-client/hydrate-route! domain nil local-basis route pid partitions)
