@@ -24,7 +24,6 @@
                       html-root-id memoize-cache]
   domain/Domain
   (basis [domain] basis)
-  (type-name [domain] (str *ns* "/" "IdeDomain"))
   (fiddle-dbname [domain] fiddle-dbname)
   (databases [domain] databases)
   (environment [domain] environment)
@@ -65,7 +64,6 @@
 (defrecord IdeEdnishDomain [basis fiddle-dbname databases environment home-route ?datomic-client memoize-cache]
   domain/Domain
   (basis [domain] basis)
-  (type-name [domain] (str *ns* "/" "IdeEdnishDomain"))
   (fiddle-dbname [domain] fiddle-dbname)
   (databases [domain] databases)
   (environment [domain] environment)

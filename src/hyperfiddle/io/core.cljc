@@ -35,12 +35,12 @@
       (cats/fmap (fn [user-basis] {:domain {:t (domain/basis domain)
                                             :hash (hash {:fiddle-dbname (domain/fiddle-dbname domain)
                                                          :databases (->> (domain/databases domain)
-                                                                      (map (fn [[dbname database]]
-                                                                             ; todo switching between peer/client will break this hash
-                                                                             [dbname (select-keys database [:database/uri :database/db-name])]))
-                                                                      (into {}))
+                                                                         (map (fn [[dbname database]]
+                                                                                ; todo switching between peer/client will break this hash
+                                                                                [dbname (select-keys database [:database/uri :database/db-name])]))
+                                                                         (into {}))
                                                          :environment (domain/environment domain)
-                                                         :type-name (domain/type-name domain)})}
+                                                         :type-name (str (type domain))})}
                                    :user user-basis})))
     (fn [err total-time]
       (timbre/debugf "global-basis failure; total time: %sms" total-time))

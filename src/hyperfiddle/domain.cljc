@@ -26,7 +26,6 @@
 (def database-spec (s/keys :opt [:database/db-name :database/uri]))
 
 (s/def ::basis some?)
-(s/def ::type-name some?)
 (s/def ::fiddle-dbname dbname-spec)
 (s/def ::databases (s/map-of dbname-spec database-spec))
 (s/def ::environment map?)
@@ -34,7 +33,6 @@
 
 (defprotocol Domain
   (basis [domain])
-  (type-name [domain])
   (fiddle-dbname [domain])
   (databases [domain])
   (environment [domain])
@@ -84,7 +82,6 @@
 (defrecord EdnishDomain [basis fiddle-dbname databases environment home-route ?datomic-client memoize-cache]
   Domain
   (basis [domain] basis)
-  (type-name [domain] (str *ns* "/" "EdnishDomain"))
   (fiddle-dbname [domain] fiddle-dbname)
   (databases [domain] databases)
   (environment [domain] environment)
@@ -104,7 +101,6 @@
 (defrecord BidiDomain [basis fiddle-dbname databases environment router ?datomic-client memoize-cache]
   Domain
   (basis [domain] basis)
-  (type-name [domain] (str *ns* "/" "BidiDomain"))
   (fiddle-dbname [domain] fiddle-dbname)
   (databases [domain] databases)
   (environment [domain] environment)
