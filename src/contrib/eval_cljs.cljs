@@ -10,6 +10,8 @@
     [promesa.core :as p]))
 
 
+; See https://code.thheller.com/blog/shadow-cljs/2017/10/14/bootstrap-support.html
+
 (defonce compile-state-ref (env/default-compiler-env))
 
 (def booted ((p/promisify boot/init) compile-state-ref {:path "/static/dev/boot"}))
