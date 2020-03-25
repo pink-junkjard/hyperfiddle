@@ -19,6 +19,7 @@
 
 
 (defn fetch-id-token [env domain service-uri oauth-authorization-code]
+  {:pre [domain]}
   (let [redirect-path (domain/api-path-for domain :hyperfiddle.ide/auth0-redirect)
         _ (assert redirect-path)
         redirect-uri (str service-uri redirect-path)]
@@ -42,6 +43,7 @@
                                 (if e (reject! e) (resolve! (object/get params "id_token")))))))))))
 
 (defn login [env domain service-uri io oauth-authorization-code]
+  {:pre [env domain service-uri io oauth-authorization-code]}
   ;(assert false "die before login cookie set")
   (mlet [encoded-id-token (fetch-id-token env domain service-uri oauth-authorization-code)
          id-token (let [verify (jwt/build-verifier (:AUTH0_CLIENT_SECRET env)

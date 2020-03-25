@@ -70,7 +70,7 @@
                                                      :handler (keyword (name (:handler route)))
                                                      :route-params (:route-params route)))))
 
-              (nil? (namespace (:handler route)))
+              :else #_(nil? (namespace (:handler route)))
               (-> context
                   (assoc-in [:request :handler] (:handler route))
                   (assoc-in [:request :route-params] (:route-params route))
@@ -80,7 +80,7 @@
 (defmethod dispatch/endpoint :hyperfiddle.ide/auth0-redirect [context]
   (R/via context R/run-IO
     (fn [context]
-      (let [{:keys [domain] :as request} context
+      (let [{{:keys [domain] :as request} :request} context
             env (-> (R/from context) :config :env)
             io (reify io/IO
                  (hydrate-requests [io local-basis partitions requests]
@@ -97,22 +97,25 @@
 
             jwt (from-async (hyperfiddle.ide.authenticate/login env domain (R/via context R/uri-for :/) io (-> request :query-params :code)))]
 
-        {:status  302
-         :headers {"Location" (-> (get-in request [:query-params :state]) base64-url-safe/decode)}
-         :cookies {ide-service/cookie-name (-> domain ::ide-directory/ide-domain
-                                               (cookie/jwt-options-pedestal)
-                                               (assoc :value jwt
-                                                      #_#_:expires expiration))}
-         :body    ""})
+        (hf-http/response
+          context
+          {:status 302
+           :headers {"Location" (-> (get-in request [:query-params :state]) base64-url-safe/decode)}
+           :cookies {ide-service/cookie-name (-> domain ::ide-directory/ide-domain
+                                                 (cookie/jwt-options-pedestal)
+                                                 (assoc :value jwt
+                                                        #_#_:expires expiration))}
+           :body ""}))
       )))
 
 (defmethod dispatch/endpoint :hyperfiddle.ide/logout [context]
-  (hf-http/response context
-    (fn [{:keys [request]}]
-      {:status  302
-       :headers {"Location" "/"}
-       :cookies {ide-service/cookie-name (-> request :domain ::ide-directory/ide-domain
-                                             (cookie/jwt-options-pedestal)
-                                             (assoc :value (get-in request [:cookies ide-service/cookie-name :value])
-                                                    :expires "Thu, 01 Jan 1970 00:00:00 GMT"))}
-       :body    ""})))
+  (hf-http/response
+    context
+    {:status 302
+     :headers {"Location" "/"}
+     :cookies {ide-service/cookie-name (-> context :request :domain ::ide-directory/ide-domain
+                                           (cookie/jwt-options-pedestal)
+                                           (assoc :value (get-in (:request context) [:cookies ide-service/cookie-name :value])
+                                                  :expires "Thu, 01 Jan 1970 00:00:00 GMT"))}
+     :body ""}
+    ))
