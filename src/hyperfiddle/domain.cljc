@@ -4,7 +4,7 @@
     [hyperfiddle.service.resolve :as R]
     [hyperfiddle.route :as route]
     [hyperfiddle.system-fiddle :as system-fiddle]
-    [hyperfiddle.database.color :as color]
+    [hyperfiddle.ui.db-color :as color]
     [cognitect.transit :as t]
     [hypercrud.transit :as hc-t]
     #?(:clj [hyperfiddle.io.datomic.core :as d])

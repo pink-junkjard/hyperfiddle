@@ -7,7 +7,7 @@
     [hyperfiddle.ide.system-fiddle :as ide-system-fiddle]
     [hyperfiddle.route :as route]
     [hyperfiddle.system-fiddle :as system-fiddle]
-    [hyperfiddle.database.color :as color]
+    [hyperfiddle.ui.db-color :as color]
 
     [cats.monad.either :as either]
     [clojure.spec.alpha :as s]

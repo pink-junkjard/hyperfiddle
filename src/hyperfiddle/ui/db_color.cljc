@@ -1,4 +1,4 @@
-(ns hyperfiddle.database.color
+(ns hyperfiddle.ui.db-color
   (:require
     [cuerdas.core :as str]))
 
