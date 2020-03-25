@@ -12,7 +12,7 @@
 
 (defonce compile-state-ref (env/default-compiler-env))
 
-(def booted ((p/promisify boot/init) compile-state-ref {:path "/static/dev/boot"}))
+(def booted ((p/promisify boot/init) compile-state-ref {:path "/static/dev"}))
 
 (defn eval-statement-str! [eval-in-ns code-str]
   {:pre [(string? code-str)]}
