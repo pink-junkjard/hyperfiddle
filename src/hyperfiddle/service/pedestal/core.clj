@@ -64,7 +64,7 @@
 (defn routes [env domain-provider]
   (let [interceptors [(body-params/body-params
                         (body-params/default-parser-map :edn-options {:readers *data-readers*}
-                                                        :transit-options [{:handlers @hc-t/read-handlers}]))
+                                                        :transit-options [{:handlers hc-t/read-handlers}]))
                       interceptors/combine-body-params
                       ring-middlewares/cookies
                       (interceptors/domain domain-provider)
