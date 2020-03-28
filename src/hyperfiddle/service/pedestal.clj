@@ -70,7 +70,7 @@
       (via (body-params/body-params
              (body-params/default-parser-map
                :edn-options {:readers *data-readers*}
-               :transit-options [{:handlers hc-t/read-handlers}])))
+               :transit-options [{:handlers @hc-t/read-handlers}])))
       (via (fn [context]
              (let [{:keys [json-params edn-params transit-params]} (:request context)]
                (assoc-in context [:request :body-params] (or json-params edn-params transit-params)))))))
@@ -104,13 +104,13 @@
    "application/transit+json"
    (fn [body]
      (fn [^OutputStream output-stream]
-       (transit/write (transit/writer output-stream :json {:handlers hc-t/write-handlers}) body)
+       (transit/write (transit/writer output-stream :json {:handlers @hc-t/write-handlers}) body)
        (.flush output-stream)))
 
    "application/transit+msgpack"
    (fn [body]
      (fn [^OutputStream output-stream]
-       (transit/write (transit/writer output-stream :msgpack {:handlers hc-t/write-handlers}) body)
+       (transit/write (transit/writer output-stream :msgpack {:handlers @hc-t/write-handlers}) body)
        (.flush output-stream)))
 
    "text/html"

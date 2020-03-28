@@ -2,6 +2,7 @@
   (:require
     [hyperfiddle.service.resolve :as R]
     [contrib.etc :refer [in-ns?]]
+    [hypercrud.transit]
     [hyperfiddle.domain :as domain :refer [#?(:cljs EdnishDomain)]]
     [hyperfiddle.ide.routing :as ide-routing]
     [hyperfiddle.ide.system-fiddle :as ide-system-fiddle]
@@ -143,13 +144,13 @@
                            :fiddle-index {::route/fiddle :hyperfiddle.ide/home}
                            nil (:home-route user-domain)))))
 
-(domain/register-handlers
+(hypercrud.transit/register-handlers
   IdeDomain
   (str 'hyperfiddle.ide.domain/IdeDomain)
   #(-> (into {} %) (dissoc :?datomic-client :memoize-cache))
   #(-> (into {} %) (assoc :memoize-cache (atom nil)) map->IdeDomain))
 
-(domain/register-handlers
+(hypercrud.transit/register-handlers
   IdeEdnishDomain
   (str 'hyperfiddle.ide.domain/IdeEdnishDomain)
   #(-> (into {} %) (dissoc :?datomic-client :memoize-cache))

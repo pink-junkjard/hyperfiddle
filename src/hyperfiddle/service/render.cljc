@@ -69,7 +69,7 @@
       (concat
         (map (fn [[id val]] (inner-html :script {:id id :type "application/transit-json"} val))
           {"params" (hc-t/encode (:CLIENT_PARAMS env))
-           "domain" (domain/encode (runtime/domain rt))
+           "domain" (hc-t/encode (runtime/domain rt))
            "state"  (hc-t/encode @(state/state rt))})
         [[:script {:id "preamble" :src (domain/api-path-for (runtime/domain rt) :static-resource :build (:BUILD env) :resource-name "browser.js")}]
          [:script {:id "main" :src (domain/api-path-for (runtime/domain rt) :static-resource :build (:BUILD env) :resource-name "main.js")}]]))]])
