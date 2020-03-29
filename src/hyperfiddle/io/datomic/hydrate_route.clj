@@ -15,6 +15,7 @@
     [hyperfiddle.schema :as schema]
     [hyperfiddle.state :as state]
     [promesa.core :as p]
+    [hyperfiddle.scope :refer [scope]]
     [taoensso.timbre :as timbre]))
 
 
@@ -48,51 +49,51 @@
            ; if the fiddle-db is broken (duplicate datoms), then attr-renderers and project WILL short it
            attr-renderers (project/hydrate-attr-renderers aux-rt pid local-basis partitions)
            project (project/hydrate-project-record aux-rt pid local-basis partitions)]
-      (timbre/debug "fiddle:" (pr-str (:hyperfiddle.route/fiddle route)))
-      (let [db-with-lookup (atom {})
-            initial-state {::runtime/user-id ?subject
-                           ; should this be constructed with reducers?
-                           ; why dont we need to preheat the tempid lookups here for parent branches?
-                           ::runtime/partitions (update partitions pid assoc
-                                                        :attr-renderers attr-renderers
-                                                        :local-basis local-basis
-                                                        :project project ; todo this is needed once total, not once per partition
-                                                        :route route
-                                                        :schemas schemas)}
-            state-atom (r/atom (state/initialize initial-state))
-            partitions-f (fn []
-                           (->> (::runtime/partitions @state-atom)
-                                (map (fn [[k v]]
-                                       [k (select-keys v [:is-branched :partition-children :parent-pid :stage])]))
-                                (into {})))
-            get-secure-db-with+ (hydrate-requests/build-get-secure-db-with+ domain partitions-f db-with-lookup local-basis)
-            rt (->RT domain db-with-lookup get-secure-db-with+ state-atom ?subject)]
-        (perf/time (fn [total-time] (timbre/debugf "d/with total time: %sms" total-time))
-                   ; must d/with at the beginning otherwise tempid reversal breaks
-                   (do
-                     (doseq [[pid partition] partitions
-                             :when (boolean (:is-branched partition))
-                             [dbname _] (:stage partition)]
-                       (get-secure-db-with+ dbname pid))
-                     (doseq [pid (keys @db-with-lookup)]
-                       (swap! state-atom assoc-in [::runtime/partitions pid :tempid-lookups]
-                              (hydrate-requests/extract-tempid-lookups db-with-lookup pid)))))
-        (perf/time (fn [total-time]
-                     (timbre/debugf "request function %sms" total-time)
-                     (when (> total-time 500)
-                       (timbre/warnf "Slow request function %sms :: route: %s" total-time route)))
-                   (-> (base/browse-partition+ (map->Context {:ident nil :partition-id pid :runtime rt}))
-                       (either/branch
-                         (fn [e] (timbre/warn e))
-                         browser-request/requests)))
-        (-> @(state/state rt)
-            ::runtime/partitions
-            (select-keys (runtime/descendant-pids rt pid))
-            (->> (filter (fn [[pid p]] (some? (:route p))))
-                 (map (fn [[pid partition]]
-                        [pid (select-keys partition [:is-branched
-                                                     :partition-children
-                                                     :parent-pid
-                                                     :route :local-basis
-                                                     :attr-renderers :error :project :ptm :schemas :tempid-lookups])]))
-                 (into {})))))))
+      (scope [`hydrate-route (:hyperfiddle.route/fiddle route)]
+        (let [db-with-lookup (atom {})
+              initial-state {::runtime/user-id    ?subject
+                             ; should this be constructed with reducers?
+                             ; why dont we need to preheat the tempid lookups here for parent branches?
+                             ::runtime/partitions (update partitions pid assoc
+                                                    :attr-renderers attr-renderers
+                                                    :local-basis local-basis
+                                                    :project project ; todo this is needed once total, not once per partition
+                                                    :route route
+                                                    :schemas schemas)}
+              state-atom (r/atom (state/initialize initial-state))
+              partitions-f (fn []
+                             (->> (::runtime/partitions @state-atom)
+                                  (map (fn [[k v]]
+                                         [k (select-keys v [:is-branched :partition-children :parent-pid :stage])]))
+                                  (into {})))
+              get-secure-db-with+ (hydrate-requests/build-get-secure-db-with+ domain partitions-f db-with-lookup local-basis)
+              rt (->RT domain db-with-lookup get-secure-db-with+ state-atom ?subject)]
+
+          (perf/time (fn [t] (when (> t 500) (timbre/debugf "hydrate-route hydrate-requests/extract-tempid-lookups %sms" t)))
+            ; must d/with at the beginning otherwise tempid reversal breaks
+            (do
+              (doseq [[pid partition] partitions
+                      :when (boolean (:is-branched partition))
+                      [dbname _] (:stage partition)]
+                (get-secure-db-with+ dbname pid))
+              (doseq [pid (keys @db-with-lookup)]
+                (swap! state-atom assoc-in [::runtime/partitions pid :tempid-lookups]
+                  (hydrate-requests/extract-tempid-lookups db-with-lookup pid)))))
+
+          (perf/time (fn [t] (when (> t 500) (timbre/warnf "browser-request/requests %sms route: %s" t route)))
+            (-> (base/browse-partition+ (map->Context {:ident nil :partition-id pid :runtime rt}))
+                (either/branch
+                  (fn [e] (timbre/warn e))
+                  browser-request/requests)))
+
+          (-> @(state/state rt)
+              ::runtime/partitions
+              (select-keys (runtime/descendant-pids rt pid))
+              (->> (filter (fn [[pid p]] (some? (:route p))))
+                   (map (fn [[pid partition]]
+                          [pid (select-keys partition [:is-branched
+                                                       :partition-children
+                                                       :parent-pid
+                                                       :route :local-basis
+                                                       :attr-renderers :error :project :ptm :schemas :tempid-lookups])]))
+                   (into {}))))))))

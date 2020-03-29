@@ -18,6 +18,7 @@
     [hyperfiddle.io.bindings]                               ; userland
     [hyperfiddle.io.datomic.core :as d]
     [hyperfiddle.security]
+    [hyperfiddle.scope :refer [scope]]
     [taoensso.timbre :as timbre])
   (:import
     (hypercrud.types.DbRef DbRef)
@@ -71,7 +72,7 @@
               (get-secure-db-from-branch+ partitions (get-in partitions [pid :parent-pid]) dbname)
               (or (get-in @db-with-lookup [pid dbname])
                   (let [tx (get-in partitions [pid :stage dbname])
-                        _ (timbre/debug "tx:" #_domain dbname (pr-str tx))
+                        ;_ (timbre/debug "tx:" #_domain dbname (pr-str tx))
                         db-with+ (mlet [t (or (some-> (get local-basis dbname) exception/success)
                                               (exception/failure (ex-info (str "Basis not found") {:dbname dbname :local-basis local-basis})))
                                         init-db-with (if-let [parent-pid (get-in partitions [pid :parent-pid])]
@@ -192,13 +193,13 @@
          (every? #(or (instance? EntityRequest %)
                       (instance? QueryRequest %)
                       (instance? EvalRequest %)) requests)]}
-  (timbre/debug "hydrate-requests:" (pr-str requests))
-  (let [db-with-lookup (atom {})
-        local-basis (into {} local-basis)                   ; :: ([dbname 1234]), but there are some duck type shenanigans happening
-        get-secure-db-with+ (build-get-secure-db-with+ domain (constantly partitions) db-with-lookup local-basis)
-        pulled-trees (->> requests
-                          (map #(hydrate-request domain get-secure-db-with+ % ?subject))
-                          (doall))
-        tempid-lookups (map-values #(map-values extract-tempid-lookup+ %) @db-with-lookup)]
-    {:pulled-trees pulled-trees
-     :tempid-lookups tempid-lookups}))
+  (scope [`hydrate-requests requests]
+    (let [db-with-lookup (atom {})
+          local-basis (into {} local-basis)                 ; :: ([dbname 1234]), but there are some duck type shenanigans happening
+          get-secure-db-with+ (build-get-secure-db-with+ domain (constantly partitions) db-with-lookup local-basis)
+          pulled-trees (->> requests
+                            (map #(hydrate-request domain get-secure-db-with+ % ?subject))
+                            (doall))
+          tempid-lookups (map-values #(map-values extract-tempid-lookup+ %) @db-with-lookup)]
+      {:pulled-trees   pulled-trees
+       :tempid-lookups tempid-lookups})))

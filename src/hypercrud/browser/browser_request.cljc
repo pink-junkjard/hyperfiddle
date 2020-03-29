@@ -8,6 +8,7 @@
     [hypercrud.browser.context :as context]
     [hyperfiddle.data :as data]
     [hyperfiddle.runtime :as runtime]
+    [hyperfiddle.scope :refer [scope]]
     [taoensso.timbre :as timbre]))
 
 
@@ -23,7 +24,7 @@
           (condp = (runtime/get-route rt new-pid)
             nil (do (runtime/create-partition rt (:partition-id ctx) new-pid)
                     (runtime/set-route rt new-pid route))
-            route (timbre/warn "Revisiting already created pid. Potential performance issue" route)
+            route (timbre/debug "Revisiting already created pid. Potential performance issue" route)
             (throw (ex-info "pid generation non-unique" {:new-pid new-pid
                                                          :existing-route (runtime/get-route rt new-pid)
                                                          :route route
@@ -58,7 +59,6 @@
 ; index links by result-path
 ; [ctx route] (context/link slot :hf/iframe)
 
-
 ; Spread the slots
 ; at each slot foreach link Does the link match the slot?
 ; Accumulate a map of slot->#{links} (links is a sub index? {#{corcs}->link}
@@ -68,24 +68,27 @@
 (defn requests [ctx]
   ; More efficient to drive from links. But to do this, we need to refocus
   ; from the top, multiplying out for all possible dependencies.
-  (requests-here ctx)
-  (doseq [[_ ctx] (context/spread-result ctx)]
-    (requests-here ctx)                                     ; depend on result? Not sure if right
-    (doseq [[_ ctx] (context/spread-rows ctx)]
-      #_(requests-here ctx)
-      (doseq [[_ {el :hypercrud.browser/element :as ctx}] (context/spread-elements ctx)]
-        (case (unqualify (contrib.datomic/parser-type @el))
-          :variable nil #_(requests-here ctx)
-          :aggregate nil #_(requests-here ctx)
-          :pull (do (requests-here ctx)
-                    ; Dependent attr links, slow af though, so disabled for now.
-                    (request-attr-level ctx)))))
+  (scope [`requests ctx]
+    (scope 'requests-here
+      (requests-here ctx))
+    (scope 'spread
+      (doseq [[_ ctx] (context/spread-result ctx)]
+        (requests-here ctx)                                 ; depend on result? Not sure if right
+        (doseq [[_ ctx] (context/spread-rows ctx)]
+          #_(requests-here ctx)
+          (doseq [[_ {el :hypercrud.browser/element :as ctx}] (context/spread-elements ctx)]
+            (case (unqualify (contrib.datomic/parser-type @el))
+              :variable nil #_(requests-here ctx)
+              :aggregate nil #_(requests-here ctx)
+              :pull (do (requests-here ctx)
+                        ; Dependent attr links, slow af though, so disabled for now.
+                        (request-attr-level ctx)))))
 
-    ; no rows - independent
-    (doseq [[_ {el :hypercrud.browser/element :as ctx}] (context/spread-elements ctx)]
-      (case (unqualify (contrib.datomic/parser-type @el))
-        :variable nil #_(requests-here ctx)
-        :aggregate nil #_(requests-here ctx)
-        :pull (do (requests-here ctx)
-                  (request-attr-level ctx)))))
+        ; no rows - independent
+        (doseq [[_ {el :hypercrud.browser/element :as ctx}] (context/spread-elements ctx)]
+          (case (unqualify (contrib.datomic/parser-type @el))
+            :variable nil #_(requests-here ctx)
+            :aggregate nil #_(requests-here ctx)
+            :pull (do (requests-here ctx)
+                      (request-attr-level ctx)))))))
   (cross-streams ctx))

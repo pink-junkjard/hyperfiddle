@@ -1098,7 +1098,7 @@ a speculative db/id."
            ; visual-a de-dupes various identity columns which show exactly the same link
            #_(eav parent-ctx)]
         pid (str (hash (map pr-str v)))]
-    (timbre/debug {:pid pid :args v})
+    ;(timbre/debug {:pid pid :args v})
     pid))
 
 (defn set-partition [ctx partition-id]
