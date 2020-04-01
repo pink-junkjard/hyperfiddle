@@ -13,7 +13,8 @@
     [hypercrud.types.Err :refer [->Err #?(:cljs Err)]]
     [hypercrud.types.QueryRequest :refer [->QueryRequest #?(:cljs QueryRequest)
                                           ->EvalRequest #?(:cljs EvalRequest)]]
-    [hypercrud.types.ThinEntity :refer [->ThinEntity #?(:cljs ThinEntity)]])
+    [hypercrud.types.ThinEntity :refer [->ThinEntity #?(:cljs ThinEntity)]]
+    [contrib.orderedmap :refer [with-order ordered-map]])
   #?(:clj
      (:import
        (cats.monad.either Left Right)
@@ -50,6 +51,7 @@
      "success-v" (t/read-handler #(apply exception/success %))
      "ex-info" (t/read-handler #(apply ex-info %))
      "sorted-map" (t/read-handler #(into (sorted-map) %))
+     "ordered-map" (t/read-handler #(apply with-order %))
      }))
 
 (def write-handlers
@@ -69,6 +71,7 @@
      ExceptionInfo (t/write-handler (constantly "ex-info") (fn [ex] [(ex-message ex) (ex-data ex) (ex-cause ex)]))
      #?@(:cljs [URI (t/write-handler (constantly "r") (fn [v] (.-uri-str v)))])
      #?@(:clj [clojure.lang.PersistentTreeMap (t/write-handler (constantly "sorted-map") (fn [v] (into {} v)))])
+     #?@(:clj [contrib.orderedmap.PersistentOrderedMap (t/write-handler (constantly "ordered-map") (fn [omap] [(.backing-map omap) (.order omap)]))])
      }))
 
 (def ^:dynamic *string-encoding* "UTF-8")
