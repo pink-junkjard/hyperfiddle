@@ -1,13 +1,5 @@
 (ns contrib.orderedmap)
 
-
-
-
-#?(:clj
-   (gen-class :name PersistentOrderedMap
-              :prefix "annot-"
-              :methods []))
-
 (defn remove-one
   [v coll]
   (let [index (count (take-while (complement (partial = v)) coll))]
