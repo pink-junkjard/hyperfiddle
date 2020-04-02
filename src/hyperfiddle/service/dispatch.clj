@@ -63,7 +63,7 @@
     {:status 501 :body (str (pr-str tag) " not implemented")}))
 
 (defmethod endpoint :404 [context]
-  (assoc context :response (:status 404 :headers {} "Not found")))
+  (assoc context :response {:status 404 :headers {} :body "Not found"}))
 
 (defmethod endpoint :405 [context]
   (assoc context :response {:status 405 :headers {} :body "Method Not Allowed"}))
@@ -82,24 +82,29 @@
       (let [{:keys [domain user-id body-params route-params]} (:request context)
             local-basis (ednish/decode-uri (:local-basis route-params))
             {:keys [partitions requests]} body-params]
-        (->>
-          (hydrate-requests domain local-basis requests partitions user-id)
-          (perf/time
-            (fn [total-time]
-              (timbre/debugf "hydrate-requests: count %s, total time: %sms"
-                (count requests) total-time))))))))
+        (hf-http/response context {:status  200
+                                   :headers {}
+                                   :body    (->> (hydrate-requests domain local-basis requests partitions user-id)
+                                                 (perf/time
+                                                   (fn [total-time]
+                                                     (timbre/debugf "hydrate-requests: count %s, total time: %sms"
+                                                       (count requests) total-time))))})))))
 
 (defmethod endpoint :sync [context]
   (R/via context R/run-IO
     (fn [context]
       (let [{{:keys [domain user-id body-params]} :request} context]
-        (hf-http/response context (ds/sync domain body-params))))))
+        (hf-http/response context {:status  200
+                                   :headers {}
+                                   :body    (ds/sync domain body-params)})))))
 
 (defmethod endpoint :transact [context]
   (R/via context R/run-IO
     (fn [context]
       (let [{{:keys [domain user-id body-params]} :request} context]
-        (hf-http/response context (transact! domain user-id body-params))))))
+        (hf-http/response context {:status  200
+                                   :headers {}
+                                   :body    (transact! domain user-id body-params)})))))
 
 (deftype IOImpl [domain ?subject]
   io/IO
