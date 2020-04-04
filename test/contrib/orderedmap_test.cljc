@@ -38,3 +38,16 @@
      (is (= (vals (dissoc m 29)) (range 1 29)))
      (is (= (map vector (range 1 29) (range 1 29)) (seq (dissoc m 29)))))))
 
+
+(deftest orderedmap|reduce-kv
+  (let [m (apply ordered-map (interleave (range 1 30) (range 1 30)))]
+    (testing
+      "Ordered Map reduce-kv"
+      (is (= (vec (range 1 30)) (reduce-kv (fn [acc k v] (conj acc k)) [] m))))))
+
+(deftest orderedmap|iterator
+  (let [m (apply ordered-map (interleave (range 1 30) (range 1 30)))
+        iter (.iterator m)]
+    (testing
+      "Ordered Map Iterator"
+      (is (reduce (fn [acc kv] (if (and (.hasNext iter) (= (.next iter) kv)) true (reduced false))) true m)))))

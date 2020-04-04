@@ -7,157 +7,123 @@
       coll
       (into (subvec coll 0 index) (subvec coll (inc index))))))
 
+#?(:cljs (declare PersistentOrderedMap))
+
+#?(:cljs
+   (deftype OrderedMapIter [m order-iter]
+     Object
+     (hasNext [_]
+       (.hasNext order-iter))
+     (next [_]
+       (let [k (.next order-iter)]
+         (MapEntry. k (-lookup m k))))
+     (remove [_] (js/Error. "Unsupported operation")))
+   :clj
+   (deftype OrderedMapIter [m order-iter]
+     java.util.Iterator
+     (hasNext [_]
+       (.hasNext order-iter))
+     (next [_]
+       (let [k (.next order-iter)]
+         (clojure.lang.MapEntry. k (get m k))))
+     (remove [_] ))
+   )
+
 #?(:cljs
    (deftype TransientOrderedMap [^:mutable ^boolean edit
                                  ^:mutable root
-                                 ^:mutable count
-                                 ^:mutable order
-                                 ^:mutable ^boolean has-nil?
-                                 ^:mutable nil-val]
+                                 ^:mutable order]
      Object
      (conj! [tcoll o]
        (if edit
          (cond
            (map-entry? o)
            (.assoc! tcoll (key o) (val o))
-           ​
            (vector? o)
            (.assoc! tcoll (o 0) (o 1))
-           ​
            :else
            (loop [es (seq o) tcoll tcoll]
              (if-let [e (first es)]
                (recur (next es)
-                      (.assoc! tcoll (key e) (val e)))
+                      (-assoc! tcoll (key e) (val e)))
                tcoll)))
          (throw (js/Error. "conj! after persistent"))))
-     ​
-     (assoc! [tcoll k v]
-       (if edit
-         (if (nil? k)
-           (do (if (identical? nil-val v)
-                 nil
-                 (do
-                   (set! order (conj (filterv (complement nil?) order) nil))
-                   (set! nil-val v)))
-               (if has-nil?
-                 nil
-                 (do (set! count (inc count))
-                     (set! has-nil? true)))
-               tcoll)
-           (let [added-leaf? (Box. false)
-                 node (-> (if (nil? root)
-                            (.-EMPTY BitmapIndexedNode)
-                            root)
-                          (.inode-assoc! edit 0 (hash k) k v added-leaf?))]
-             ; (if (identical? node root)
-             ;   nil
-             (do (set! order (conj order k))
-                 (set! root node))
-             (if ^boolean (.-val added-leaf?)
-               (set! count (inc count)))
-             tcoll))
-         (throw (js/Error. "assoc! after persistent!"))))
-     ​
-     (without! [tcoll k]
-       (if edit
-         (if (nil? k)
-           (if has-nil?
-             (do (set! has-nil? false)
-                 (set! nil-val nil)
-                 (set! count (dec count))
-                 (set! order (filterv (complement nil?) order))
-                 tcoll)
-             tcoll)
-           (if (nil? root)
-             tcoll
-             (let [removed-leaf? (Box. false)
-                   node (.inode-without! root edit 0 (hash k) k removed-leaf?)]
-               (if (identical? node root)
-                 nil
-                 (do (set! root node)
-                     (set! order (filterv (complement (partial = k)) order))))
-               (if ^boolean (.-val removed-leaf?)
-                 (set! count (dec count)))
-               tcoll)))
-         (throw (js/Error. "dissoc! after persistent!"))))
-     ​
-     (persistent! [tcoll]
-       (if edit
-         (do (set! edit nil)
-             (PersistentOrderedMap. nil count root order has-nil? nil-val nil))
-         (throw (js/Error. "persistent! called twice"))))
-     ​
      ICounted
      (-count [coll]
        (if edit
-         count
+         (count root)
          (throw (js/Error. "count after persistent!"))))
-     ​
+
      ILookup
      (-lookup [tcoll k]
-       (if (nil? k)
-         (if has-nil?
-           nil-val)
-         (if (nil? root)
-           nil
-           (.inode-lookup root 0 (hash k) k))))
-     ​
+       (-lookup root k))
+
      (-lookup [tcoll k not-found]
-       (if (nil? k)
-         (if has-nil?
-           nil-val
-           not-found)
-         (if (nil? root)
-           not-found
-           (.inode-lookup root 0 (hash k) k not-found))))
-     ​
+       (-lookup root k not-found))
+
      ITransientCollection
      (-conj! [tcoll val] (.conj! tcoll val))
-     ​
-     (-persistent! [tcoll] (.persistent! tcoll))
-     ​
+
+     (-persistent! [tcoll]
+       (if edit
+         (do (set! edit nil)
+             (PersistentOrderedMap. root order))
+         (throw (js/Error. "persistent! called twice"))))
+
      ITransientAssociative
-     (-assoc! [tcoll key val] (.assoc! tcoll key val))
-     ​
+     (-assoc! [tcoll k v]
+       (if edit
+         (do (-assoc! root k v)
+             (-conj! order k)
+             tcoll)
+         (throw (js/Error. "assoc! after persistent!"))))
+
      ITransientMap
-     (-dissoc! [tcoll key] (.without! tcoll key))
-     ​
+     (-dissoc! [tcoll k]
+       (if edit
+         (if-not (contains? root k)
+           tcoll
+           (do (-dissoc! root k)
+               (set! order (transient (remove-one k (persistent! order))))))
+         (throw (js/Error. "dissoc! after persistent!"))))
+
      IFn
      (-invoke [tcoll key]
        (-lookup tcoll key))
      (-invoke [tcoll key not-found]
-       (-lookup tcoll key not-found)))
-   )
-
+       (-lookup tcoll key not-found))))
 
 #?(:cljs
-   (deftype PersistentOrderedMap [meta cnt root order ^boolean has-nil? nil-val ^:mutable __hash]
+   (deftype PersistentOrderedMap [backing-map order]
      Object
      (toString [coll]
-       (apply str (drop-last (interleave order (map #(-lookup coll %) order) (repeat ", ")))))
+       (str "{"
+            (apply str
+                   (drop-last
+                     (interleave order
+                                 (repeat \space)
+                                 (map #(or (get backing-map %) "nil") order)
+                                 (repeat ", "))))
+            "}"))
 
      (equiv [this other]
        (-equiv this other))
 
      ICloneable
-     (-clone [_] (PersistentOrderedMap. meta cnt root order has-nil? nil-val __hash))
+     (-clone [_] (PersistentOrderedMap. backing-map order))
 
      IIterable
      (-iterator [coll]
-       (let [root-iter (if ^boolean root (-iterator root) (nil-iter))]
-         (if has-nil?
-           (HashMapIter. nil-val root-iter false)
-           root-iter)))
+       (OrderedMapIter. backing-map (-iterator order)))
 
      IWithMeta
      (-with-meta [coll new-meta]
        (if (identical? new-meta meta)
          coll
-         (PersistentOrderedMap. new-meta cnt root order has-nil? nil-val __hash)))
+         (PersistentOrderedMap. (with-meta backing-map new-meta) order)))
 
      IMeta
-     (-meta [coll] meta)
+     (-meta [coll] (meta backing-map))
 
      ICollection
      (-conj [coll entry]
@@ -179,78 +145,44 @@
      (-equiv [coll other] (equiv-map coll other))
 
      IHash
-     (-hash [coll] (caching-hash coll hash-unordered-coll __hash))
+     (-hash [coll] (hash backing-map))
 
      ISeqable
      (-seq [coll]
-       (when (pos? cnt)
-         (let [s (if-not (nil? root) (map (fn [k] (MapEntry. k (-lookup coll k) nil)) order))]
-           (if has-nil?
-             (cons (MapEntry. nil nil-val nil) s)
-             s))))
+       (map (fn [k] (MapEntry. k (-lookup coll k) nil)) order))
 
      ICounted
-     (-count [coll] cnt)
+     (-count [coll] (count order))
 
      ILookup
      (-lookup [coll k]
        (-lookup coll k nil))
 
      (-lookup [coll k not-found]
-       (cond (nil? k) (if has-nil?
-                        nil-val
-                        not-found)
-             (nil? root) not-found
-             :else (.inode-lookup root 0 (hash k) k not-found)))
+       (-lookup backing-map k not-found))
 
      IAssociative
      (-assoc [coll k v]
-       (if (nil? k)
-         (if (and has-nil? (identical? v nil-val))
-           coll
-           (PersistentOrderedMap. meta (if has-nil? cnt (inc cnt)) root (conj (filterv (complement nil?) order) nil) true v nil))
-         (let [added-leaf? (Box. false)
-               new-root (-> (if (nil? root)
-                              (.-EMPTY BitmapIndexedNode)
-                              root)
-                            (.inode-assoc 0 (hash k) k v added-leaf?))]
-           (if (identical? new-root root)
-             coll
-             (let [order (if (.-val added-leaf?) (conj (filterv (complement (partial = k)) order) k) order)]
-               (PersistentOrderedMap. meta (if ^boolean (.-val added-leaf?) (inc cnt) cnt) new-root order has-nil? nil-val nil))))))
+       (if (identical? (-lookup backing-map k) v)
+         coll
+         (PersistentOrderedMap. (-assoc backing-map k v) (conj order k))))
 
      (-contains-key? [coll k]
-       (cond (nil? k) has-nil?
-             (nil? root) false
-             :else (not (identical? (.inode-lookup root 0 (hash k) k lookup-sentinel)
-                                    lookup-sentinel))))
+       (-contains-key? backing-map k))
 
      IFind
      (-find [coll k]
-       (cond
-         (nil? k) (when has-nil? (MapEntry. nil nil-val nil))
-         (nil? root) nil
-         :else (.inode-find root 0 (hash k) k nil)))
+       (-find backing-map k))
 
      IMap
      (-dissoc [coll k]
-       (cond (nil? k) (if has-nil?
-                        (PersistentOrderedMap. meta (dec cnt) root (filterv (complement nil?) order) false nil nil)
-                        coll)
-             (nil? root) coll
-             :else
-             (let [new-root (.inode-without root 0 (hash k) k)]
-               (if (identical? new-root root)
-                 coll
-                 (PersistentOrderedMap. meta (dec cnt) new-root (filterv (complement (partial = k)) order) has-nil? nil-val nil)))))
+       (if-not (-contains-key? backing-map k)
+         coll
+         (PersistentOrderedMap. (dissoc backing-map k) (remove-one k order))))
 
      IKVReduce
      (-kv-reduce [coll f init]
-       (let [init (if has-nil? (f init nil nil-val) init)]
-         (cond
-           (reduced? init) @init
-           (not (nil? root)) (unreduced (.kv-reduce root f init))
-           :else init)))
+       (reduce (fn [acc [k v]] (apply f [acc k v])) init coll))
 
      IFn
      (-invoke [coll k]
@@ -261,7 +193,7 @@
 
      IEditableCollection
      (-as-transient [coll]
-       (TransientOrderedMap. (js-obj) root cnt order has-nil? nil-val)))
+       (TransientOrderedMap. (js-obj) (transient backing-map) (transient order))))
 
    ; ____________________________________________________________________________________________________
    ; ----------------------------------------------------------------------------------------------------
@@ -278,7 +210,7 @@
                       (drop-last
                         (interleave order
                                     (repeat \space)
-                                    (map #(get backing-map % "nil") order)
+                                    (map #(or (get backing-map %) "nil") order)
                                     (repeat ", "))))))
 
      clojure.lang.IPersistentMap
@@ -303,7 +235,7 @@
 
      java.lang.Iterable
      (iterator [_]
-       (.iterator backing-map))
+       (OrderedMapIter. backing-map (.iterator order)))
 
      clojure.lang.IPersistentCollection
      (count [_]
@@ -319,32 +251,28 @@
      (seq [_]
        (map #(.entryAt backing-map %) order))
 
+     clojure.lang.IKVReduce
+     (kvreduce [coll f init]
+       (reduce (fn [acc [k v]] (apply f [acc k v])) init coll))
+
      clojure.lang.ILookup
      (valAt [_ k]
        (.valAt backing-map k))
      (valAt [_ k not-found]
-       (.valAt backing-map k not-found))
+       (.valAt backing-map k not-found))))
 
-     )
-   )
 
 #?(:clj
    (defmethod print-method PersistentOrderedMap [v ^java.io.Writer w]
      (.write w (.toString v))))
 
 #?(:cljs
-   (def ^:private empty-ordered-map
-     (mix-collection-hash 2 0))
-   )
-
-#?(:cljs
-   (set! (.-EMPTY PersistentOrderedMap) (PersistentOrderedMap. nil 0 nil [] false nil empty-ordered-map))
+   (set! (.-EMPTY PersistentOrderedMap) (PersistentOrderedMap. {} []))
    :clj
    (do
      (->
        (create-ns 'contrib.orderedmap.PersistentOrderedMap)
-       (intern 'EMPTY (PersistentOrderedMap. {} []))))
-   )
+       (intern 'EMPTY (PersistentOrderedMap. {} [])))))
 
 (defn ordered-map
   [& keyvals]
@@ -353,14 +281,13 @@
          out-order (transient [])]
     (if in
       (recur (nnext in) (assoc! out-map (first in) (second in)) (conj! out-order (first in)))
-      #?(:cljs (PersistentOrderedMap. (persistent! out-map) 0 nil (persistent! out-order))
-         :clj  (PersistentOrderedMap. (persistent! out-map) (persistent! out-order))))))
+      (let [om (persistent! out-map)
+            oo (persistent! out-order)]
+        (PersistentOrderedMap. om oo)))))
 
 (defn with-order
   [m order]
   #?(:cljs
-     (PersistentOrderedMap. m 0 nil
-                            (into (vec order) (keys (reduce dissoc m order)))
-                            false nil nil)
-    :clj
-     (PersistentOrderedMap. {} [])))
+     (PersistentOrderedMap. m order)
+     :clj
+     (PersistentOrderedMap. m order)))
