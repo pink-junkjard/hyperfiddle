@@ -1,5 +1,6 @@
 (ns hyperfiddle.service.render
   (:require
+    [cats.core :refer [fmap]]
     [cats.monad.either :as either]
     [contrib.data :as data]
     [contrib.reactive :as r]
@@ -54,7 +55,30 @@
                   {:http-status-code (or http-status-code 200)
                    :component [main-html config rt]})))))
 
+(defn- clear-vals
+  "Replace map vals with {} while preserving keys"
+  [m]
+  (reduce-kv (fn [acc k v]
+               (assoc acc k {}))
+    {} m))
+
+(defn omit-secure-keys [domain]
+  (-> domain
+    (update-in [:config] dissoc :auth0)
+    (update-in [:config :domain :databases] clear-vals)
+    (update-in [:databases] clear-vals)
+    (update-in [:hyperfiddle.ide.domain/user-domain+]
+      (fn [v+]
+        (fmap (fn [v]
+                (-> v
+                  (update-in [:config] dissoc :auth0)
+                  (update-in [:config :domain :databases] clear-vals)
+                  (update-in [:databases] clear-vals)))
+          v+)))))
+; Test this with a deep-def in main-html
+
 (defn- main-html [config rt]
+  ;(def dustin (runtime/domain rt))
   [:html {:lang "en"}
    [:head
     [:title "Hyperfiddle" #_(str (:hyperfiddle.route/fiddle (runtime/get-route rt foundation/root-pid)))]
@@ -71,7 +95,7 @@
       (concat
         (map (fn [[id val]] (inner-html :script {:id id :type "application/transit-json"} val))
           {#_#_"params" (hc-t/encode (:CLIENT_PARAMS env))
-           "domain" (hc-t/encode (runtime/domain rt))
+           "domain" (-> (runtime/domain rt) omit-secure-keys hc-t/encode)
            "state"  (hc-t/encode @(state/state rt))})
         [[:script {:id "preamble" :src (domain/api-path-for (runtime/domain rt) :static-resource :build (:git/describe config) :resource-name "browser.js")}]
          [:script {:id "main" :src (domain/api-path-for (runtime/domain rt) :static-resource :build (:git/describe config) :resource-name "main.js")}]]))]])
