@@ -108,8 +108,7 @@
       :cljs [tag (assoc-in props [:dangerouslySetInnerHTML :__html] html)])))
 
 (defn root-html-str [rt]
-  (let [ctx (map->Context {:ident nil
-                           :runtime rt
+  (let [ctx (map->Context {:runtime rt
                            :partition-id foundation/root-pid})]
     #?(:clj  (loading/page (runtime/domain (:runtime ctx)))
        :cljs (try

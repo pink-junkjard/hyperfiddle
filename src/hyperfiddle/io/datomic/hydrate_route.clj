@@ -81,7 +81,7 @@
                      (timbre/debugf "request function %sms" total-time)
                      (when (> total-time 500)
                        (timbre/warnf "Slow request function %sms :: route: %s" total-time route)))
-                   (-> (base/browse-partition+ (map->Context {:ident nil :partition-id pid :runtime rt}))
+                   (-> (base/browse-partition+ (map->Context {:partition-id pid :runtime rt}))
                        (either/branch
                          (fn [e] (timbre/warn e))
                          browser-request/requests)))

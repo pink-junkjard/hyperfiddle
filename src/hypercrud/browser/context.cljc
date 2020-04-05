@@ -1104,7 +1104,7 @@ a speculative db/id."
 (defn set-partition [ctx partition-id]
   (clean (assoc ctx :partition-id partition-id)))
 
-(defrecord Context [ident]
+(defrecord Context []
   hf/Browser
   (data [ctx]
     (data ctx))
