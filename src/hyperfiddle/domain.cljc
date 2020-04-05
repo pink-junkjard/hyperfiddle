@@ -25,6 +25,7 @@
 (s/def :database/uri is-uri?)
 (def database-spec (s/keys :opt [:database/db-name :database/uri]))
 
+(s/def ::config map?)                                       ; can validate config too
 (s/def ::basis some?)
 (s/def ::type-name some?)
 (s/def ::fiddle-dbname dbname-spec)
@@ -69,19 +70,19 @@
     "$ (default)"
     dbname))
 
-
 (s/def ::home-route (s/spec :hyperfiddle/route))
 
-(def spec-ednish
+(def spec-ednish-domain
   (s/and
-    (s/keys :req-un [::basis
+    (s/keys :req-un [:hyperfiddle.config/config
+                     ::basis
                      ::fiddle-dbname
                      ::databases
                      ::environment
                      ::home-route])
     #(contains? (:databases %) (:fiddle-dbname %))))
 
-(defrecord EdnishDomain [basis fiddle-dbname databases environment home-route ?datomic-client memoize-cache]
+(defrecord EdnishDomain [config basis fiddle-dbname databases environment home-route ?datomic-client memoize-cache]
   Domain
   (basis [domain] basis)
   (type-name [domain] (str *ns* "/" "EdnishDomain"))
@@ -90,7 +91,7 @@
   (environment [domain] environment)
   (url-decode [domain s] (route/url-decode s home-route))
   (url-encode [domain route] (route/url-encode route home-route))
-  (api-routes [domain] R/domain-routes)
+  (api-routes [domain] (R/domain-routes config))
   (system-fiddle? [domain fiddle-ident] (system-fiddle/system-fiddle? fiddle-ident))
   (hydrate-system-fiddle [domain fiddle-ident] (system-fiddle/hydrate fiddle-ident))
   #?(:clj (connect [domain dbname] (d/dyna-connect (database domain dbname) ?datomic-client)))
@@ -101,7 +102,7 @@
         (swap! memoize-cache assoc f ret)
         ret))))
 
-(defrecord BidiDomain [basis fiddle-dbname databases environment router ?datomic-client memoize-cache]
+(defrecord BidiDomain [config basis fiddle-dbname databases environment router ?datomic-client memoize-cache]
   Domain
   (basis [domain] basis)
   (type-name [domain] (str *ns* "/" "BidiDomain"))
@@ -114,7 +115,7 @@
       (fn [e] (route/decoding-error e s))
       identity))
   (url-encode [domain route] (router-bidi/encode router route))
-  (api-routes [domain] R/domain-routes)
+  (api-routes [domain] (R/domain-routes config))
   (system-fiddle? [domain fiddle-ident] (system-fiddle/system-fiddle? fiddle-ident))
   (hydrate-system-fiddle [domain fiddle-ident] (system-fiddle/hydrate fiddle-ident))
   #?(:clj (connect [domain dbname] (d/dyna-connect (database domain dbname) ?datomic-client)))

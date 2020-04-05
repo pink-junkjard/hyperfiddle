@@ -2,6 +2,7 @@
   (:require
     [hyperfiddle.service.resolve :as R]
     [contrib.etc :refer [in-ns?]]
+    [contrib.ct :refer [unwrap]]
     [hypercrud.transit]
     [hyperfiddle.domain :as domain :refer [#?(:cljs EdnishDomain)]]
     [hyperfiddle.ide.routing :as ide-routing]
@@ -10,7 +11,7 @@
     [hyperfiddle.system-fiddle :as system-fiddle]
     [hyperfiddle.database.color :as color]
 
-    [cats.monad.either :as either]
+    [cats.monad.either :as either :refer [either?]]
     [clojure.spec.alpha :as s]
     [contrib.uri :refer [is-uri?]]
     #?(:clj [hyperfiddle.io.datomic.core :as d]))
@@ -21,7 +22,29 @@
 
 (def user-dbname-prefix "$user.")
 
-(defrecord IdeDomain [basis fiddle-dbname databases environment home-route build ?datomic-client
+(defn either-of-domain? [v]
+  (and (either? v)
+    (s/valid? domain/spec-ednish-domain (unwrap (constantly nil) v))))
+
+(s/def ::user-domain+ either-of-domain?)
+(s/def ::?datomic-client any?)
+(s/def ::html-root-id string?)
+(s/def ::memoize-cache any?)
+(def spec-ide-domain
+  ; not finished, partial spec
+  (s/keys
+    :req-un [::domain/config
+             ::domain/basis
+             ::domain/fiddle-dbname
+             ::domain/databases
+             ::domain/environment
+             ::domain/home-route]
+    :req [::user-domain+]
+    :opt-un [::?datomic-client
+             ::html-root-id
+             ::memoize-cache]))
+
+(defrecord IdeDomain [config basis fiddle-dbname databases environment home-route build ?datomic-client
                       html-root-id memoize-cache]
   domain/Domain
   (basis [domain] basis)
@@ -43,7 +66,7 @@
         route)
       home-route))
 
-  (api-routes [domain] R/ide-routes)
+  (api-routes [domain] (R/ide-routes config))
 
   (system-fiddle? [domain fiddle-ident]
     (or (in-ns? 'hyperfiddle.ide.schema fiddle-ident)
@@ -63,7 +86,7 @@
         ret))))
 
 ; overlaps with EdnishDomain
-(defrecord IdeEdnishDomain [basis fiddle-dbname databases environment home-route ?datomic-client memoize-cache]
+(defrecord IdeEdnishDomain [config basis fiddle-dbname databases environment home-route ?datomic-client memoize-cache]
   domain/Domain
   (basis [domain] basis)
   (type-name [domain] (str *ns* "/" "IdeEdnishDomain"))
@@ -72,7 +95,7 @@
   (environment [domain] environment)
   (url-decode [domain s] (route/url-decode s home-route))
   (url-encode [domain route] (route/url-encode route home-route))
-  (api-routes [domain] R/ide-user-routes)
+  (api-routes [domain] (R/ide-user-routes config))
   (system-fiddle? [domain fiddle-ident] (system-fiddle/system-fiddle? fiddle-ident))
   (hydrate-system-fiddle [domain fiddle-ident] (system-fiddle/hydrate fiddle-ident))
   #?(:clj (connect [domain dbname] (d/dyna-connect (domain/database domain dbname) ?datomic-client)))
@@ -84,12 +107,13 @@
         ret))))
 
 (defn build
-  [& {:keys [?datomic-client basis
+  [& {:keys [config ?datomic-client basis
              user-databases user-fiddle-dbname user-domain+
              ide-databases ide-fiddle-dbname
              ide-environment ide-home-route]}]
   (map->IdeDomain
-    {:basis             basis
+    {:config            config
+     :basis             basis
      :fiddle-dbname     ide-fiddle-dbname
      :databases         (let [user-dbs (->> (dissoc user-databases user-fiddle-dbname)
                                          (map (fn [[dbname db]]
@@ -126,9 +150,10 @@
 (defn build-from-user-domain                                ; todo delete
   ([user-domain {:keys [config src-uri ide-environment ide-databases] :as opts}]
    {:pre [(instance? EdnishDomain user-domain)
-          (s/valid? domain/spec-ednish user-domain)
+          (s/valid? domain/spec-ednish-domain user-domain)
           (s/valid? (s/nilable :hyperfiddle.domain/databases) ide-databases)]}
    (build
+     :config config
      :?datomic-client    (:?datomic-client user-domain)
      :basis              (domain/basis user-domain)
      :user-databases     (domain/databases user-domain)

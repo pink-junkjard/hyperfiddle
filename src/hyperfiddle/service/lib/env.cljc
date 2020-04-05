@@ -23,8 +23,7 @@
                          (-lookup [o k] (object/get raw-env k))
                          (-lookup [o k not-found] (object/get raw-env k not-found)))))))
   ([raw-env]
-   (let [required #{:BUILD
-                    :HF_HOSTNAMES
+   (let [required #{:HF_HOSTNAMES
                     :AUTH0_DOMAIN
                     :AUTH0_CLIENT_ID
                     :AUTH0_CLIENT_SECRET
