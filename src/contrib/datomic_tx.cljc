@@ -163,8 +163,7 @@
 
 
 
-(defn ^:legacy flatten-tx
-
+(defn flatten-tx
   "Normalize a Datomic transaction by flattening any map-form Datomic statements into tuple-form"
   [schema mixed-form-tx]
   (->> mixed-form-tx
@@ -173,15 +172,6 @@
                    (flatten-map-stmt schema stmt)
                    [stmt])))
        vec))
-
-(comment
-  (def schema)
-  (->> [[:db/add "a" :person/name "Alice"]
-        {:person/name "Bob"
-         :person/parents [{:person/name "Cindy"}
-                          {:person/name "David"}]}]
-       (flatten-tx schema))
-  )
 
 (defn filter-tx
   "run predicate on each stmt of tx, traversing map forms without altering them"
