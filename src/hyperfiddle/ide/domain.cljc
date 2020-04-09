@@ -66,7 +66,7 @@
         route)
       home-route))
 
-  (api-routes [domain] (R/ide-routes config))
+  (api-routes [domain] R/ide-routes)
 
   (system-fiddle? [domain fiddle-ident]
     (or (in-ns? 'hyperfiddle.ide.schema fiddle-ident)
@@ -95,7 +95,7 @@
   (environment [domain] environment)
   (url-decode [domain s] (route/url-decode s home-route))
   (url-encode [domain route] (route/url-encode route home-route))
-  (api-routes [domain] (R/ide-user-routes config))
+  (api-routes [domain] R/ide-user-routes)
   (system-fiddle? [domain fiddle-ident] (system-fiddle/system-fiddle? fiddle-ident))
   (hydrate-system-fiddle [domain fiddle-ident] (system-fiddle/hydrate fiddle-ident))
   #?(:clj (connect [domain dbname] (d/dyna-connect (domain/database domain dbname) ?datomic-client)))

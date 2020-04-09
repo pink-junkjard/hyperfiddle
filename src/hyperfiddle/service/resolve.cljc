@@ -34,10 +34,10 @@
 
    true (keyword route-ns "404")})
 
-(defn domain-routes [config]
-  ["/" {"api/"        {(str (:git/describe config) "/") (api-routes nil)
-                       [[#"[^/]*" :version] "/"]   {true :force-refresh}
-                       true                        :404}
+(def domain-routes
+  ["/" {"api/"        {"/"                       (api-routes nil)
+                       [[#"[^/]*" :version] "/"] {true :force-refresh}
+                       true                      :404}
         "static/"     {[:build "/" [#".+" :resource-name]] {:get :static-resource
                                                             true :405}
                        true                                :404}
@@ -45,14 +45,13 @@
         true          {:get :ssr
                        true :405}}])
 
-(defn ide-routes [config]
-  {:pre [(:git/describe config)]}
-  ["/" {"api/"        {(str (:git/describe config) "/") (api-routes nil)
-                       [[#"[^/]*" :version] "/"]    {true :force-refresh}
-                       true                         :404}
-        "api-user/"   {(str (:git/describe config) "/") (api-routes "user")
-                       [[#"[^/]*" :version] "/"]    {true :force-refresh}
-                       true                         :404}
+(def ide-routes
+  ["/" {"api/"        {"/"                       (api-routes nil)
+                       [[#"[^/]*" :version] "/"] {true :force-refresh}
+                       true                      :404}
+        "api-user/"   {"/"                       (api-routes "user")
+                       [[#"[^/]*" :version] "/"] {true :force-refresh}
+                       true                      :404}
         "auth0"       {:get  :hyperfiddle.ide/auth0-redirect
                        #".+" :404
                        true  :405}
@@ -66,10 +65,10 @@
         true          {:get :ssr
                        true :405}}])
 
-(defn ide-user-routes [config]
-  ["/" {"api-user/" {(str (:git/describe config) "/") (api-routes nil)
-                     [[#"[^/]*" :version] "/"]    {true :force-refresh}
-                     true                         :404}
+(def ide-user-routes
+  ["/" {"api-user/" {"/"                       (api-routes nil)
+                     [[#"[^/]*" :version] "/"] {true :force-refresh}
+                     true                      :404}
         ; todo this static path conflicts with the ide
         "static/"   {[:build "/" [#".+" :resource-name]] {:get :static-resource
                                                           true :405}
