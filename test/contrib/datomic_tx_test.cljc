@@ -362,9 +362,18 @@
 
 (def seattle-schema (indexed-schema seattle-schema-tx))
 
+(def datomic-schema
+  (indexed-schema
+    [{:db/ident :db/ident :db/valueType :db.type/ref :db/cardinality :db.cardinality/one :db/unique :db.unique/identity}
+     {:db/ident :db/cardinality :db/valueType :db.type/ref :db/cardinality :db.cardinality/one}
+     {:db/ident :db/unique :db/valueType :db.type/ref :db/cardinality :db.cardinality/one}
+     {:db/ident :db/valueType :db.type/ref :db/cardinality :db/cardinality :db.cardinality/one}
+     {:db/ident :db/fulltext :db/valueType :db.type/boolean :db/cardinality :db.cardinality/one}
+     {:db/ident :db/doc :db/valueType :db.type/string :db/cardinality :db.cardinality/one}]))
+
 (deftest normalize-tx-1
   (let []
-    (is (= (flatten-tx seattle-schema seattle-schema-tx)
+    (is (= (flatten-tx datomic-schema seattle-schema-tx)
            [[:db/add "-700968933" :db/ident :community/name]
             [:db/add "-700968933" :db/valueType :db.type/string]
             [:db/add "-700968933" :db/cardinality :db.cardinality/one]
@@ -427,15 +436,15 @@
 (deftest flatten-tx|1
   (is (= (flatten-tx simple-schema [[:db/add "a" :person/name "Alice"]
                                     {:person/name "Bob"
-                                     :person/parents [{:person/name "Cindy"}
-                                                      {:person/name "David"}]}])
-        [[:db/add "a" :person/name "Alice"]
-         [:db/add "-11680893" :person/name "Bob"]
-         [:db/add "-11680893" :person/parents "-1"]
-         [:db/add "-11680893" :person/parents "-2"]
-         [:db/add "-1" :person/name "Cindy"]
-         [:db/add "-2" :person/name "David"]
-         ]))
+                                     :person/siblings [{:person/name "Cindy"}
+                                                       {:person/name "David"}]}])
+         [[:db/add "a" :person/name "Alice"]
+          [:db/add "776434203" :person/name "Bob"]
+          [:db/add "-279635706" :person/name "Cindy"]
+          [:db/add "776434203" :person/siblings "-279635706"]
+          [:db/add "278413082" :person/name "David"]
+          [:db/add "776434203" :person/siblings "278413082"]]
+         ))
   )
 
 (def map-form-stmt

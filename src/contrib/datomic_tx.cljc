@@ -158,7 +158,7 @@
                      (->> v                                 ; [:movies :ice-cream :clojure]
                           (mapv (fn [v]
                                   [:db/add e a v])))
-
+                     :else (throw (ex-info "Flatten Map Statement | Attribute not defined as ref in schema" {:schema schema :attribute a}))
                      ))))))
 
 
