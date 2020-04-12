@@ -63,7 +63,7 @@
     (hf-http/response context {:status 501 :body (str (pr-str tag) " not implemented")})))
 
 (defmethod endpoint :404 [context]
-  (hf-http/response context {:status 404 :headers {} "Not found"}))
+  (hf-http/response context {:status 404 :headers {} :body "Not found"}))
 
 (defmethod endpoint :405 [context]
   (hf-http/response context {:status 405 :headers {} :body "Method Not Allowed"}))
