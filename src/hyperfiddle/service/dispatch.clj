@@ -63,7 +63,7 @@
     {:status 501 :body (str (pr-str tag) " not implemented")}))
 
 (defmethod endpoint :404 [context]
-  (assoc context :response (:status 404 :headers {} "Not found")))
+  (assoc context :response {:status 404 :headers {} "Not found"}))
 
 (defmethod endpoint :405 [context]
   (assoc context :response {:status 405 :headers {} :body "Method Not Allowed"}))
@@ -97,10 +97,11 @@
 
 (defmethod endpoint :transact [context]
   (R/via context R/run-IO
-    (fn [context]
-      (let [{{:keys [domain user-id body-params]} :request} context]
-        (transact! domain user-id body-params)
-        (hf-http/response context {:status 200})))))
+         (fn [context]
+           (let [{{:keys [domain user-id body-params]} :request} context]
+             (hf-http/response context {:status  200
+                                        :headers {}
+                                        :body    (transact! domain user-id body-params)})))))
 
 (deftype IOImpl [domain ?subject]
   io/IO
