@@ -28,14 +28,14 @@
   (-> context
       (hf-http/via
         (let [domain (:domain (R/from context))
-              env (-> (R/from context) :config :env)
+              config (:config (R/from context))
               cookie-domain (::ide-directory/ide-domain domain)]
           #_#_{:keys [cookie-name jwt-secret jwt-issuer]} (-> (get-in context [:request :domain])
                                                               domain/environment-secure :jwt)
           (hf-http/with-user-id ide-service/cookie-name
             cookie-domain
-            (:AUTH0_CLIENT_SECRET env)
-            (:AUTH0_DOMAIN env))))
+            (-> config :auth0 :client-secret)
+            (-> config :auth0 :domain))))
 
       (hf-http/via
         (fn [context]
@@ -48,7 +48,7 @@
 
             (cond
 
-              (let [is-auth-configured (-> (R/from context) :config :env :AUTH0_DOMAIN nil? not)
+              (let [is-auth-configured (-> (R/from context) :config :auth0 :domain nil? not)
                     is-ssr (= :ssr (unqualify (:handler route)))
                     is-no-subject (nil? (get-in context [:request :user-id]))
                     prevent-infinite-redirect (not (clojure.string/starts-with? path "/:hyperfiddle.ide!please-login/"))]
@@ -81,7 +81,6 @@
   (R/via context R/run-IO
     (fn [context]
       (let [{{:keys [domain] :as request} :request} context
-            env (-> (R/from context) :config :env)
             io (reify io/IO
                  (hydrate-requests [io local-basis partitions requests]
                    ; todo who is this executed on behalf of? system/root or the end user?
@@ -95,7 +94,12 @@
                    ; todo who is this executed on behalf of? system/root or the end user?
                    (p/do* (transact! domain nil tx-groups))))
 
-            jwt (from-async (hyperfiddle.ide.authenticate/login env domain (R/via context R/uri-for :/) io (-> request :query-params :code)))]
+            jwt (from-async (hyperfiddle.ide.authenticate/login
+                              (:config (R/from context))
+                              domain
+                              (R/via context R/uri-for :/)
+                              io
+                              (-> request :query-params :code)))]
 
         (hf-http/response
           context
