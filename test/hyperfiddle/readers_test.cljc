@@ -97,16 +97,16 @@
   )
 
 ; Test saffolding needs to be improved to distinguish readers
-#_(deftest EvalReq []
-                 (test-all-forms (->EvalRequest "foo" "pid" {:hyperfiddle.route/where nil})
-                   #hypercrud.types.QueryRequest.EvalRequest{:form "foo"}
-                   "#hypercrud.types.QueryRequest.EvalRequest{:form \"foo\"}"
-                   "{\"~#EvalReq\":[\"foo\"]}")
-              (test-all-forms #_(->EvalRequest '(datomic.api/entity :db/ident foo [:db/ident *]))
-                              (->EvalRequest 'foo)
-                              #hypercrud.types.QueryRequest.EvalRequest{:form 'foo}
-                              "#hypercrud.types.QueryRequest.EvalRequest{:form foo}"
-                              "{\"~#EvalReq\":[\"~$foo\"]}"))
+;(deftest EvalReq []
+;                 (test-all-forms (->EvalRequest "foo" "pid" {:hyperfiddle.route/where nil})
+;                   #hypercrud.types.QueryRequest.EvalRequest{:form "foo"}
+;                   "#hypercrud.types.QueryRequest.EvalRequest{:form \"foo\"}"
+;                   "{\"~#EvalReq\":[\"foo\"]}")
+;              (test-all-forms #_(->EvalRequest '(datomic.api/entity :db/ident foo [:db/ident *]))
+;                              (->EvalRequest 'foo)
+;                              #hypercrud.types.QueryRequest.EvalRequest{:form 'foo}
+;                              "#hypercrud.types.QueryRequest.EvalRequest{:form foo}"
+;                              "{\"~#EvalReq\":[\"~$foo\"]}"))
 
 (deftest uri []
   (test-all-forms (->URI "foo")
