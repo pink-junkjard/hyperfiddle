@@ -99,7 +99,8 @@
   (R/via context R/run-IO
     (fn [context]
       (let [{{:keys [domain user-id body-params]} :request} context]
-        (hf-http/response context (transact! domain user-id body-params))))))
+        (transact! domain user-id body-params)
+        (hf-http/response context {:status 200})))))
 
 (deftype IOImpl [domain ?subject]
   io/IO

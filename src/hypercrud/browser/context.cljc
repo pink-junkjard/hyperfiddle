@@ -313,7 +313,9 @@ a speculative db/id."
 
                                          :scalar
                                          ; Sets are an index that evaluate to the key.
-                                         set))))))))
+                                         set)))))
+     nil (throw (ex-info "Invalid Schema Cardinality" {:schema (contrib.datomic/cardinality @(:hypercrud.browser/schema ctx) a) :attribute a})))))
+
 
 (defn data "Works in any context and infers the right stuff"
   [{qfind :hypercrud.browser/qfind :as ctx}]
