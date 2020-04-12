@@ -60,18 +60,19 @@
 
 (defmethod endpoint :default [context]
   (let [tag (-> context :request :handler)]
-    {:status 501 :body (str (pr-str tag) " not implemented")}))
+    (hf-http/response context {:status 501 :body (str (pr-str tag) " not implemented")})))
 
 (defmethod endpoint :404 [context]
-  (assoc context :response {:status 404 :headers {} "Not found"}))
+  (hf-http/response context {:status 404 :headers {} "Not found"}))
 
 (defmethod endpoint :405 [context]
-  (assoc context :response {:status 405 :headers {} :body "Method Not Allowed"}))
+  (hf-http/response context {:status 405 :headers {} :body "Method Not Allowed"}))
 
 (defmethod endpoint :force-refresh [context]
-  (assoc context :response {:status 404 #_410 :body "Please refresh your browser"}))
+  (hf-http/response context {:status 404 #_410 :body "Please refresh your browser"}))
 
-(defmethod endpoint :favicon [context] (assoc context :response {:status 204}))
+(defmethod endpoint :favicon [context]
+  (hf-http/response context {:status 204}))
 
 (defmethod endpoint :static-resource [context]
   (R/via context R/serve))
