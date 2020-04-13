@@ -292,6 +292,7 @@ a speculative db/id."
   ([ctx a]                                                  ; eav order of init issues, ::eav depends on this in :many
    {:pre [(> (pull-depth ctx) 0)]}
    (assert (not (:hypercrud.browser/head-sentinel ctx)) "this whole flag is trouble, not sure if this assert is strictly necessary")
+   (assert (boolean (hf/attr ctx a)) (str "attribute " a " not in :hypercrud.browser/schema"))
    (case (contrib.datomic/cardinality @(:hypercrud.browser/schema ctx) a)
 
      ; For absense of schema provider, we can inspect result here
