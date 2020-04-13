@@ -492,7 +492,7 @@
   )
 
 (deftest flatten-map-stmp|invalid-nested-map
-  (is (thrown? Exception (flatten-map-stmt simple-schema {:employee/manager {:person/address {:address/zip "1234"}}}))))
+  (is (thrown? #?(:clj RuntimeException :cljs js/Error) (flatten-map-stmt simple-schema {:employee/manager {:person/address {:address/zip "1234"}}}))))
 
 (deftest flatten-tx'
   (is (= (flatten-tx

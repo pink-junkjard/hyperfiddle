@@ -121,7 +121,7 @@
                   "{\"~#t\":\"2017-12-31\"}"))
 
 #?(:cljs
-   (deftest long
+   (deftest long|1
      (test-all-forms (.fromString goog.math.Long "65332980922449989")
                      #long "65332980922449989"
                      "#long \"65332980922449989\""
