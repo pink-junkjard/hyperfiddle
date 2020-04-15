@@ -25,18 +25,21 @@
 
 
 (defmethod dispatch/via-domain IdeDomain [context]
-  (-> context
-      (hf-http/via
-        (let [domain (:domain (R/from context))
-              config (:config (R/from context))
-              cookie-domain (::ide-directory/ide-domain domain)]
-          #_#_{:keys [cookie-name jwt-secret jwt-issuer]} (-> (get-in context [:request :domain])
-                                                              domain/environment-secure :jwt)
-          (hf-http/with-user-id ide-service/cookie-name
-            cookie-domain
-            (-> config :auth0 :client-secret)
-            (-> config :auth0 :domain))))
+  (let [domain (:domain (R/from context))
+        cookie-domain (::ide-directory/ide-domain domain)
+        {:keys [auth0]} (:config (R/from context))
+        #_#_{:keys [cookie-name jwt-secret jwt-issuer]} (-> (get-in context [:request :domain])
+                                                          domain/environment-secure :jwt)]
+    (cond-> context
 
+      auth0
+      (hf-http/via
+        (hf-http/with-user-id ide-service/cookie-name
+          cookie-domain
+          (:client-secret auth0)
+          (:domain auth0)))
+
+      true
       (hf-http/via
         (fn [context]
           (let [domain (get-in context [:request :domain])

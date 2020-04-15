@@ -43,6 +43,8 @@
 (def terminate    io.pedestal.interceptor.chain/terminate)
 
 (defn via
+  "Shorthand for enqueue, it lets you compose interceptors easily. This is tricky because we’re doing composition
+  with -> which then composes a stack of interceptors. You have to keep both steps in mind."
   ([i] (interceptor
          (if (fn? i) {:name  ::via
                       :enter (with-scope i)}
@@ -152,6 +154,7 @@
             })))
 
 (defn with-user-id [cookie-name cookie-domain jwt-secret jwt-issuer]
+  {:pre [cookie-name cookie-domain jwt-secret jwt-issuer]}
   {:name ::with-user-id
    :enter (fn [context]
             (let [verify (fn [& args]
