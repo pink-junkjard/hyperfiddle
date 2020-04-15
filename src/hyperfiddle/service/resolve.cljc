@@ -1,4 +1,5 @@
-(ns hyperfiddle.service.resolve)
+(ns hyperfiddle.service.resolve
+  (:require [contrib.etc :refer [tag]]))
 
 (def mode #?(:clj user/mode
              :cljs (-> js/document (.getElementById "build") .-innerHTML)))
@@ -82,38 +83,39 @@
         true        {:get :ssr
                      true :405}}])
 
-(defprotocol HF-Resolve
-  :extend-via-metadata true
+(def ^:dynamic *Rs [])
 
-  (setup [R])
-  (handle [R request])
+(defmacro with [R & body]
+  `(binding [*Rs (conj *Rs R)]
+     ~@body))
 
-  (attr [R topic ks])
-  (set-attr [R topic ks val])
+(defmulti aspects (fn [R] (.getTypeName (type R))))
 
-  (uri-for [R topic location])
-  (request [R topic])
-  (dispatch [R topic])
+(defn tag-fragments [t]
+  (assert (keyword? t))
+  (clojure.string/split (name t) #"."))
 
-  (render [R topic])
-  (serve [R topic])
-  (IO [R topic])
-  (run-IO [R topic f]))
+(defn R-for [topic]
+  (some (fn [R] (if (topic (aspects R)) R)) (reverse *Rs)))
 
-;(defprotocol HF-Resolve-In) ; Todo
+(defn ! [& action]
+  (assert (not (empty? *Rs)) "called in resolve context")
+  (let [[topic _] (tag-fragments (tag action))
+        R (R-for topic)]
+    (assert (fn? (get (topic (aspects R)) (tag action))) (str "has handler for " action))
+    (apply (get (topic (aspects R)) (tag action)) R (rest action))))
 
-(defprotocol Resolve-From
-  :extend-via-metadata true
-  (from [topic]))
+(defn repr [R]
+  (if-let [repr-fn (:repr (aspects R))]
+    (repr-fn R)
+    R))
 
-(defn via [task f & args]
-  (apply f (from task) task args))
+(defmacro log [& args]
+  (with-meta
+    `(taoensso.timbre/info ~@args)
+    (meta &form)))
 
-(defn assoc-with [val R]
-  (vary-meta val
-    (fn [M]
-      (apply merge
-        (or M {})
-        {`from (fn R-from [& _] R)}
-        (for [method (->> HF-Resolve :method-builders keys)]
-          {(symbol method) (fn R-proxy [_ & args] (apply @method R args))})))))
+(defn cont [f]
+  (let [*Rs' *Rs]
+    (fn [& args]
+      (binding [*Rs *Rs'] (apply f args)))))
