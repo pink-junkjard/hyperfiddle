@@ -2,7 +2,8 @@
   (:require
     [clojure.walk :refer [prewalk]]
     [datomic.api :as d]
-    [loom.alg-generic :as loom]))
+    [loom.alg-generic :as loom]
+    [hyperfiddle.api :as hf]))
 
 
 (defn ref? [$ k]
@@ -65,7 +66,7 @@
 
 (defn entity-history
   []
-  (let [{:keys [hyperfiddle.route/datomic-args]} hyperfiddle.api/*route*
+  (let [{:keys [hyperfiddle.route/datomic-args]} hf/*route*
         [id-thin-entity] datomic-args
         id (.id id-thin-entity)]
     (->>
