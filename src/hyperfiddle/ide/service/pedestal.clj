@@ -78,7 +78,7 @@
                   (assoc-in [:request :handler] (:handler route))
                   (assoc-in [:request :route-params] (:route-params route))
                   dispatch/endpoint))))
-        )))
+        ))))
 
 (defmethod dispatch/endpoint :hyperfiddle.ide/auth0-redirect [context]
   (R/via context R/run-IO
