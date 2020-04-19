@@ -12,6 +12,7 @@
     [contrib.ui.codemirror :refer [-codemirror]]
     [contrib.ui.tooltip :refer [tooltip]]
     [contrib.ui.remark :as remark]
+    [contrib.ui.tooltip :refer [tooltip-thick]]
     [goog.functions :as functions]
     [re-com.core :as re-com]
     [reagent.core :as reagent]
@@ -37,6 +38,16 @@
   {:b "xxx", :os ["aaa" nil], :discards ("aaa" nil), :rest ()}
   {:b "aaa", :os ["aaa"], :discards (), :rest ("aaa")}
   {:b "bbb", :os ["aaa"], :discards ("aaa"), :rest ()})
+
+(defn ^:export validation-error
+  [props values]
+  (into
+    [:ul.validation-content props]
+    (map (fn [ve] [:li ve]) (map second values))))
+
+(defn invalid-message-popup
+  [{:keys [invalid-message]} & content]
+  (into [tooltip-thick [validation-error {} invalid-message]] content))
 
 (let [debounce (memoize functions/debounce)
       debounced-adapter (fn [os-ref f n]
@@ -132,12 +143,15 @@
 
 (let [target-value (fn [e] (.. e -target -value))]          ; letfn not working #470
   (defn text [props]
-    (let [props (-> (assoc props :type "text")
+    (let [invalid-messages @(:invalid-message props)
+          props (-> (assoc props :type "text")
                     (dissoc :is-invalid)
-                    (cond-> (:is-invalid props) (update :class css "invalid"))
-                    (update-existing :on-change r/comp target-value))]
-      [:input (select-keys props [:type :value :default-value :on-change :class :style :read-only :disabled
-                                  :placeholder])])))
+                    (cond-> (seq invalid-messages) (update :class css "invalid"))
+                    (update-existing :on-change r/comp target-value))
+          control [:input (select-keys props [:type :value :default-value :on-change :class :style :read-only :disabled :placeholder])]]
+    (if-not (empty? invalid-messages)
+      [invalid-message-popup {:invalid-message invalid-messages} control]
+      control))))
 
 (let [parse-string (fn [s]                                  ; letfn not working #470
                      (let [v (some-> s contrib.reader/read-edn-string!)]

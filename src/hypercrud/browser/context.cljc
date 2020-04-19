@@ -12,7 +12,6 @@
     [contrib.try$ :refer [try-either]]
     [contrib.validation]
     [datascript.parser #?@(:cljs [:refer [FindRel FindColl FindTuple FindScalar Variable Aggregate Pull]])]
-    [contrib.spec :refer [describe]]
     [hypercrud.browser.q-util]
     [hyperfiddle.domain :as domain]
     [hypercrud.types.DbName :refer [#?(:cljs DbName)]]
@@ -21,8 +20,7 @@
     [hyperfiddle.fiddle]
     [hyperfiddle.route :as route]
     [hyperfiddle.runtime :as runtime]
-    [taoensso.timbre :as timbre]
-    [spec-tools.core :as st])
+    [taoensso.timbre :as timbre])
   #?(:clj
      (:import
        (datascript.parser FindRel FindColl FindTuple FindScalar Variable Aggregate Pull)
@@ -563,22 +561,16 @@ a speculative db/id."
     @(:hypercrud.browser/qfind ctx)
     @(:hypercrud.browser/result ctx)))
 
-
-
-(describe :asdf/qwer {:reason "Community name can not be empty"})
-
-(s/def :asdf/qwer
-  (s/coll-of (s/keys :req [:community/name :community/neighborhood])))
-
-(describe :community/name {:reason "Community name can't contain capital letters"})
-
-(s/def :community/name
-  #(empty? (filter #{\A \B \C \D \E \F \G \H \I \J \K \L \M \N \O \P \Q \R \S \T \U \V \W \X \Y \Z} %)))
+(defn validation-hints-enclosure! [ctx]
+  (contrib.validation/validate
+    (s/get-spec @(r/fmap-> (:hypercrud.browser/fiddle ctx) :fiddle/ident))
+    @(:hypercrud.browser/result ctx)
+    ; i dont think fallback v
+    (partial row-key ctx)))
 
 (defn result [ctx r-result]                                 ; r-result must not be loading
   {:pre [r-result
          (:hypercrud.browser/fiddle ctx)]}
-
   (as-> ctx ctx
     (assoc ctx :hypercrud.browser/result r-result)          ; can be nil if no qfind
     (assoc ctx                                              ; uses result
@@ -586,11 +578,7 @@ a speculative db/id."
       ; because how would you have data without a working schema?
       ; this may not prove true with the laziness of reactions
       :hypercrud.browser/result-enclosure (r/track result-enclosure! ctx)
-      :hypercrud.browser/validation-hints (contrib.validation/validate
-                                            (s/get-spec @(r/fmap-> (:hypercrud.browser/fiddle ctx) :fiddle/ident))
-                                            @(:hypercrud.browser/result ctx)
-                                            ; i dont think fallback v
-                                            (partial row-key ctx)))
+      :hypercrud.browser/validation-hints (r/track validation-hints-enclosure! ctx))
     ; index-result implicitly depends on eav in the tempid reversal stable entity code.
     ; Conceptually, it should be after qfind and before EAV.
     (index-result ctx)))                                    ; in row case, now indexed, but path is not aligned yet
@@ -704,14 +692,13 @@ a speculative db/id."
       )))
 
 (defn validation-hints-here [ctx]
-  (for [[path hint] (:hypercrud.browser/validation-hints ctx)
+  (for [[path hint] @(:hypercrud.browser/validation-hints ctx)
         :when (= path (:hypercrud.browser/result-path ctx))
         :let [a (last path)]]
-    (do
-      [a hint])))
+    [a hint]))
 
 (defn tree-invalid? "For popover buttons (fiddle level)" [ctx]
-  (->> (:hypercrud.browser/validation-hints ctx)
+  (->> @(:hypercrud.browser/validation-hints ctx)
        seq boolean))
 
 (defn leaf-invalid? "The thing that styles red" [ctx]

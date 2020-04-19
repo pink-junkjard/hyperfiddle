@@ -65,9 +65,13 @@
        :find datascript.parser/parse-find type))
 
 (defn q [{:keys [query limit offset] :as arg-map}]
+  ; Should return vectors, not seqs
+  ; Datomic query result sets are associative
+  ; Hyperfiddle UI relies on this
+  ; Be careful to respect the type morphism of datomic
   (let [result (d-peer/query (dissoc arg-map :limit :offset))]
     (if (contains? #{FindColl FindRel} (q-find-type query))
-      (cond->> result
-        offset (drop offset)
-        (and limit (not= -1 limit)) (take limit))
+      (cond-> result
+        offset (subvec offset)
+        (and limit (not= -1 limit)) (subvec 0 limit))
       result)))
