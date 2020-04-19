@@ -1,5 +1,6 @@
 (ns contrib.datomic-peer
   (:require
+    [hyperfiddle.api]
     [clojure.walk :refer [prewalk]]
     [datomic.api :as d]
     [loom.alg-generic :as loom]
