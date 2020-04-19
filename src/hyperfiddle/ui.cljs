@@ -15,6 +15,7 @@
     [contrib.ui.safe-render :refer [user-portal]]
     [contrib.ui.tooltip :refer [tooltip tooltip-props]]
     [contrib.validation]
+    [contrib.ui.tooltip :refer [tooltip-thick]]
     [cuerdas.core :as str]
     [datascript.parser :refer [FindRel FindColl FindTuple FindScalar Variable Aggregate Pull]]
     [hypercrud.browser.base :as base]
@@ -145,11 +146,20 @@
     :else
     [:pre (pr-str "render: no match for eav: " (context/eav ctx))]))
 
+(defn ^:export validation-error
+  [props values]
+  (into
+    [:ul.validation-content props]
+    (map (fn [ve] [:li ve]) values)))
+
 (defn ^:export hyper-control "Val is for userland field renderers, our builtin controls use ctx and ignore val."
   [val ctx & [props]]
   {:post [%]}
-  (or (attr-renderer-control val ctx props)                 ; compat
-      (hf/render ctx props)))
+  (let [control (or (attr-renderer-control val ctx props)   ; compat
+                    (hf/render ctx props))]
+    (if-let [validation (:validation props)]
+      [tooltip-thick [validation-error {} validation] control]
+      control)))
 
 (defn ^:export hyper-label [_ ctx & [props]]                ; props has sort :on-click
   (let [?element (:hypercrud.browser/element ctx)
@@ -194,7 +204,10 @@
     (update props :disabled #(or %
                                  (not @(r/track writable-entity? ctx))
                                  (not @(r/track writable-attr? ctx))))
-    (cond-> props (context/leaf-invalid? ctx) (assoc :is-invalid true))
+    (if-let [validation (seq (context/validation-hints-here ctx))]
+      (assoc props :is-invalid true
+                   :validation (first (map second validation)))
+      props)
     (update props :class css (if (:disabled props) "disabled"))))
 
 (defn ^:export value "Relation level value renderer. Works in forms and lists but not tables (which need head/body structure).
