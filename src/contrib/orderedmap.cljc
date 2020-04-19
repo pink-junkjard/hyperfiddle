@@ -100,9 +100,9 @@
        (str "{"
             (apply str
                    (drop-last
-                     (interleave order
+                     (interleave (map pr-str order)
                                  (repeat \space)
-                                 (map #(or (get backing-map %) "nil") order)
+                                 (map #(pr-str (or (get backing-map %) nil)) order)
                                  (repeat ", "))))
             "}"))
 
@@ -208,9 +208,9 @@
        (format "{%s}"
                (apply str
                       (drop-last
-                        (interleave order
+                        (interleave (map pr-str order)
                                     (repeat \space)
-                                    (map #(or (get backing-map %) "nil") order)
+                                    (map #(pr-str (or (get backing-map %) nil)) order)
                                     (repeat ", "))))))
 
      clojure.lang.IPersistentMap
