@@ -190,12 +190,14 @@
          (apply css))))
 
 (defn- value-props [props ctx]
-  (as-> props props
-    (update props :disabled #(or %
-                                 (not @(r/track writable-entity? ctx))
-                                 (not @(r/track writable-attr? ctx))))
-    (assoc props :invalid-message (r/track context/validation-hints-here ctx))
-    (update props :class css (if (:disabled props) "disabled"))))
+  (let [r-validation-hints (r/track context/validation-hints-here ctx)]
+    (as-> props props
+          (update props :disabled #(or %
+                                       (not @(r/track writable-entity? ctx))
+                                       (not @(r/track writable-attr? ctx))))
+          (assoc props :invalid-message r-validation-hints)
+          (assoc props :is-invalid (seq @r-validation-hints))
+          (update props :class css (if (:disabled props) "disabled")))))
 
 (defn ^:export value "Relation level value renderer. Works in forms and lists but not tables (which need head/body structure).
 User renderers should not be exposed to the reaction."
