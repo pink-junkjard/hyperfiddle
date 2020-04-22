@@ -55,25 +55,29 @@
                   {:http-status-code (or http-status-code 200)
                    :component [main-html config rt]})))))
 
-(defn- clear-vals
-  "Replace map vals with {} while preserving keys"
-  [m]
+(defn restrict-inner-map-vals
+  "Given a map of maps, restrict the inner maps by ks"
+  [m & [ks]]
   (reduce-kv (fn [acc k v]
-               (assoc acc k {}))
+               ; v is inner map
+               ; (select-keys {:a 1 :b 2} nil) => {}
+               (assoc acc k (select-keys v ks)))
     {} m))
+
+(def db-allowed-keys [:database/db-name :database/write-security :hf/transaction-operation-whitelist])
 
 (defn omit-secure-keys [domain]
   (-> domain
     (update-in [:config] dissoc :auth0)
-    (update-in [:config :domain :databases] clear-vals)
-    (update-in [:databases] clear-vals)
+    (update-in [:config :domain :databases] restrict-inner-map-vals db-allowed-keys)
+    (update-in [:databases] restrict-inner-map-vals db-allowed-keys)
     (update-in [:hyperfiddle.ide.domain/user-domain+]
       (fn [v+]
         (fmap (fn [v]
                 (-> v
                   (update-in [:config] dissoc :auth0)
-                  (update-in [:config :domain :databases] clear-vals)
-                  (update-in [:databases] clear-vals)))
+                  (update-in [:config :domain :databases] restrict-inner-map-vals db-allowed-keys)
+                  (update-in [:databases] restrict-inner-map-vals db-allowed-keys)))
           v+)))))
 ; Test this with a deep-def in main-html
 
