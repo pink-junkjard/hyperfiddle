@@ -87,9 +87,9 @@
   {:pre [e a v]}
   [[:db/retract e a v]])
 
-(defmethod tx :db.fn/retractEntity [ctx [e a v] props]
+(defmethod tx :db/retractEntity [ctx [e a v] props]
   {:pre [v]}
-  [[:db.fn/retractEntity v]])
+  [[:db/retractEntity v]])
 
 ; Compat
 
@@ -109,6 +109,6 @@
   {:pre [e a v]}
   [[:db/retract e a v]])
 
-(defmethod txfn :db.fn/retractEntity [_ _ _ v ctx]
+(defmethod txfn :db/retractEntity [_ _ _ v ctx]
   {:pre [v]}
-  [[:db.fn/retractEntity v]])
+  [[:db/retractEntity v]])

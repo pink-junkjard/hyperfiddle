@@ -136,10 +136,10 @@
                                        dbname (str src-db)
                                        schema (some-> (get schemas dbname) deref)]
                                    (cond
-                                     (contrib.datomic/attr? schema a :db.unique/identity) ":db.fn/retractEntity"
-                                     (contrib.datomic/isComponent schema a) ":db.fn/retractEntity"
+                                     (contrib.datomic/attr? schema a :db.unique/identity) ":db/retractEntity"
+                                     (contrib.datomic/isComponent schema a) ":db/retractEntity"
                                      (contrib.datomic/attr? schema a :db.type/ref) ":db/retract"
-                                     :else ":db.fn/retractEntity")) ; legacy compat, remove
+                                     :else ":db/retractEntity")) ; legacy compat, remove
                    nil))})
 
 ; to be manually kept in sync with hf.ui/fiddle
