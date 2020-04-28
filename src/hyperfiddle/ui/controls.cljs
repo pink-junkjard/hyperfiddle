@@ -20,7 +20,7 @@
     [hyperfiddle.ui.docstring :refer [semantic-docstring]]
     [hyperfiddle.ui.select$ :refer [select]]
     [hyperfiddle.ui.util :refer [entity-change->tx with-entity-change!]]
-    [taoensso.timbre]))
+    [taoensso.timbre :refer [debug]]))
 
 (defn label-with-docs [label help-md props]
   [tooltip-thick (if help-md [:div.hyperfiddle.docstring [contrib.ui/markdown help-md]])
@@ -321,15 +321,28 @@
          ; Cardinality :many not needed, because as soon as we assoc one value, we rehydrate typed
          [contrib.ui/edn props])])))
 
+(defn validation-error [props values]
+  (into
+    [:ul.validation-content props]                          ; missing .hyperfiddle- css prefix
+    (map (fn [ve] [:li ve]) (map second values))))
+
+(defn invalid-message-popup [{:keys [::hf/invalid-messages]} content]
+  (if (seq @invalid-messages)
+    [tooltip-thick [validation-error {} @invalid-messages] content]
+    content))
+
 (let [on-change (fn [ctx o n]
                   (->> (entity-change->tx ctx (empty->nil o) (empty->nil n))
                        (runtime/with-tx (:runtime ctx) (:partition-id ctx) (context/dbname ctx))))]
   (defn ^:export string [val ctx & [props]]
     [:div.hyperfiddle-input-group
-     (let [props (assoc props
-                   :value val
-                   :on-change (r/partial on-change ctx))]
-       [debounced props contrib.ui/text #_contrib.ui/textarea])
+     [invalid-message-popup (select-keys props [::hf/invalid-messages])
+      (let [invalid-messages (some-> props ::hf/invalid-messages deref)
+            props' (-> props
+                     (assoc :value val :on-change (r/partial on-change ctx))
+                     (dissoc ::hf/invalid-messages :is-invalid)
+                     (cond-> (seq invalid-messages) (update :class contrib.css/css "invalid")))]
+        [debounced props' contrib.ui/text #_contrib.ui/textarea])]
      (render-related-links val ctx)]))
 
 (defn ^:export long [val ctx & [props]]

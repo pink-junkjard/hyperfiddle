@@ -81,7 +81,10 @@
 (defn q [{:keys [query limit offset] :as arg-map}]
   (let [result (d-peer/query (dissoc arg-map :limit :offset))]
     (if (contains? #{FindColl FindRel} (q-find-type query))
-      (cond->> result
-        offset (drop offset)
-        (and limit (not= -1 limit)) (take limit))
+      (cond-> result
+        ; Datomic queries naturally return vectors (not seqs) and
+        ; Hyperfiddle UI relies on Datomic results being associative.
+        ; Be careful to preserve the vector type here.
+        offset (subvec offset)
+        (and limit (not= -1 limit)) (subvec 0 (min limit (count result))))
       result)))

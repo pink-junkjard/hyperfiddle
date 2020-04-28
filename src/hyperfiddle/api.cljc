@@ -1,10 +1,10 @@
 (ns hyperfiddle.api                                         ; cljs can always import this
   (:require
-    [contrib.ct :refer [unwrap]]
-    [contrib.data :refer [unqualify]]
-    [contrib.reactive :as r]
+    [clojure.spec.alpha :as s]
     [taoensso.timbre :as timbre]))
 
+
+; This protocol can be multimethods
 (defprotocol Browser
   (a [ctx])
   (attr [ctx] [ctx a])
@@ -29,13 +29,19 @@
   (display-mode [ctx])
   (display-mode? [ctx k]))
 
-(declare render-dispatch)
+;(def def-validation-message hypercrud.browser.context/def-validation-message)
+; Circular dependencies and :require order problems. This is a static operation, no ctx dependency.
+; But hyperfiddle.api can only have protocols, no concrete impls for the require order to work.
+; Protocols and methods need a dispatch parameter, and static fns don't have one.
+(defmulti def-validation-message (fn [pred & [s]] :default))
 
 (defmulti tx (fn [ctx eav props]
                (let [dispatch-v (hyperfiddle.api/link-tx ctx)]
                  ; UX - users actually want to see this in console
                  (timbre/info "hf/tx: " dispatch-v " eav: " (pr-str eav))
                  dispatch-v)))
+
+(declare render-dispatch)
 
 ; Dispatch is a set
 (defmulti render (fn [ctx props]
@@ -112,3 +118,8 @@
 (defmethod txfn :db/retractEntity [_ _ _ v ctx]
   {:pre [v]}
   [[:db/retractEntity v]])
+
+; All hyperfiddle specs should be here in this namespace
+; Spec2 schema/select should be used to group them, not their namespace
+
+(s/def ::invalid-messages (s/coll-of string?))
