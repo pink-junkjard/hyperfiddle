@@ -50,7 +50,7 @@
 
   (system-fiddle? [domain fiddle-ident])
   (hydrate-system-fiddle [domain fiddle-ident])
-  #?(:clj (connect [domain dbname]))
+  #?(:clj (connect [domain dbname] [domain dbname on-created!]))
   (memoize [domain f]))
 
 
@@ -100,6 +100,7 @@
   (system-fiddle? [domain fiddle-ident] (system-fiddle/system-fiddle? fiddle-ident))
   (hydrate-system-fiddle [domain fiddle-ident] (system-fiddle/hydrate fiddle-ident))
   #?(:clj (connect [domain dbname] (d/dyna-connect (database domain dbname) ?datomic-client)))
+  #?(:clj (connect [domain dbname on-created!] (d/dyna-connect (database domain dbname) ?datomic-client on-created!)))
   (memoize [domain f]
     (if-let [f (get @memoize-cache f)]
       f
