@@ -195,7 +195,7 @@
                                        (not @(r/track writable-entity? ctx))
                                        (not @(r/track writable-attr? ctx))))
           (assoc props ::hf/invalid-messages r-validation-hints) ; why would this be null
-          (assoc props :is-invalid (boolean (seq @r-validation-hints)))
+          (assoc props ::hf/is-invalid (boolean (seq @r-validation-hints)))
           (update props :class css (if (:disabled props) "disabled")))))
 
 (defn ^:export value "Relation level value renderer. Works in forms and lists but not tables (which need head/body structure).

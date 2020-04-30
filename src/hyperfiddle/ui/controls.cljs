@@ -164,8 +164,10 @@
 
 (defn ^:export keyword [val ctx & [props]]
   [:div.hyperfiddle-input-group
-   (let [props (merge {:value val :on-change (with-entity-change! ctx)}
-                      props)]
+   (let [props (-> props
+                 (assoc :value val :on-change (with-entity-change! ctx))
+                 (cond-> (::hf/is-invalid props) (update :class contrib.css/css "invalid"))
+                 (dissoc ::hf/invalid-messages ::hf/is-invalid))] ; this dissoc should be inverted to select-keys whitelist
      [debounced props contrib.ui/keyword])
    (hf-remove val ctx)                                      ; why? They can just backspace it
    (render-related-links val ctx)])
@@ -287,9 +289,9 @@
 
 (defn ^:export radio-group [val ctx & [props]]
   (into [:span.radio-group (-> (select-keys props [:class])
-                               (update :class contrib.css/css (when (:is-invalid props) "invalid")))]
+                               (update :class contrib.css/css (when (::hf/is-invalid props) "invalid")))]
         (->> (:options props)
-             (map (let [props (dissoc props :is-invalid :class :options)]
+             (map (let [props (dissoc props ::hf/is-invalid :class :options)]
                     (fn [option-props]
                       [contrib.ui/radio-with-label
                        (-> (merge props option-props)
@@ -336,12 +338,12 @@
                        (runtime/with-tx (:runtime ctx) (:partition-id ctx) (context/dbname ctx))))]
   (defn ^:export string [val ctx & [props]]
     [:div.hyperfiddle-input-group
-     [invalid-message-popup (select-keys props [::hf/invalid-messages])
-      (let [invalid-messages (some-> props ::hf/invalid-messages deref)
+     [invalid-message-popup (select-keys props [::hf/invalid-messages]) ; accounted for by ::hf/is-invalid
+      (let [
             props' (-> props
                      (assoc :value val :on-change (r/partial on-change ctx))
-                     (dissoc ::hf/invalid-messages :is-invalid)
-                     (cond-> (seq invalid-messages) (update :class contrib.css/css "invalid")))]
+                     (dissoc ::hf/invalid-messages ::hf/is-invalid)
+                     (cond-> (::hf/is-invalid props) (update :class contrib.css/css "invalid")))]
         [debounced props' contrib.ui/text #_contrib.ui/textarea])]
      (render-related-links val ctx)]))
 
@@ -358,7 +360,7 @@
                   :checked (clojure.core/boolean val)
                   :on-change (with-entity-change! ctx))]
       [contrib.ui/easy-checkbox
-       (select-keys props [:class :style :is-invalid :checked :on-change :disabled])])] ; readonly?
+       (select-keys props [:class :style ::hf/is-invalid :checked :on-change :disabled])])] ; readonly?
    (render-related-links val ctx)])
 
 (let [adapter (fn [e]

@@ -16,7 +16,8 @@
     [goog.functions :as functions]
     [re-com.core :as re-com]
     [reagent.core :as reagent]
-    [taoensso.timbre :as timbre]))
+    [taoensso.timbre :as timbre]
+    [hyperfiddle.api :as hf]))
 
 
 (def default-debounce-ms 350)
@@ -101,8 +102,8 @@
        (fn [state props parse-string to-string cmp & args]
          (let [s-value @(r/cursor state [:s-value])
                props (-> (assoc props :value s-value)
-                         (assoc :is-invalid (or (try (parse-string s-value) false (catch :default e true))
-                                                (:is-invalid props)))
+                         (assoc ::hf/is-invalid (or (try (parse-string s-value) false (catch :default e true))
+                                                (::hf/is-invalid props)))
                          (update-existing :on-blur (fn [f]
                                                      (r/partial on-blur state f)))
                          (update :on-change (fn [f]
@@ -129,7 +130,7 @@
   (defn checkbox [props]
     [:input (-> (assoc props :type "checkbox")
                 (update-existing :on-change r/comp checked)
-                (select-keys [:type :checked :on-change :disabled :read-only :class :style #_:is-invalid]))]))
+                (select-keys [:type :checked :on-change :disabled :read-only :class :style #_::hf/is-invalid]))]))
 
 (let [target-value (fn [e] (.. e -target -value))]          ; letfn not working #470
   (defn text [props]
@@ -188,7 +189,7 @@
     [-codemirror props]))
 
 (defn ^:export code-inline-block [props]
-  ; (when (:is-invalid props) {:class "invalid"})
+  ; (when (::hf/is-invalid props) {:class "invalid"})
   (text props))
 
 (defn ^:export cm-edn [props]

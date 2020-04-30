@@ -33,7 +33,7 @@
 ; Circular dependencies and :require order problems. This is a static operation, no ctx dependency.
 ; But hyperfiddle.api can only have protocols, no concrete impls for the require order to work.
 ; Protocols and methods need a dispatch parameter, and static fns don't have one.
-(defmulti def-validation-message (fn [pred & [s]] :default))
+(defmulti def-validation-message (fn [pred & [s]] :default)) ; describe-invalid-reason
 
 (defmulti tx (fn [ctx eav props]
                (let [dispatch-v (hyperfiddle.api/link-tx ctx)]
@@ -119,7 +119,10 @@
   {:pre [v]}
   [[:db/retractEntity v]])
 
-; All hyperfiddle specs should be here in this namespace
-; Spec2 schema/select should be used to group them, not their namespace
+; All hyperfiddle specs should be here in this namespace.
+; Namespaces other than "hyperfiddle" are henceforth forbidden and all legacy namespaces should be migrated.
+; If you feel the need to organize attributes that "traverse together" use a comment in this file
+; or (future) use spec2 schema & select.
 
 (s/def ::invalid-messages (s/coll-of string?))
+(s/def ::is-invalid boolean?)
