@@ -9,7 +9,8 @@
 
 (def config {:domain {:databases
                       {"$" {:database/uri #uri "datomic:mem://app-db"}
-                       #_#_"$hyperfiddle" {:database/uri #uri "datomic:mem://hyperfiddle"}
+                       ; $hyperfiddle is required by the spec despite not being used in this context
+                       "$hyperfiddle" {:database/uri #uri "datomic:mem://hyperfiddle"}
                        #_#_"$users" {:database/uri #uri "datomic:mem://hyperfiddle-users"}}}})
 
 (def config (hyperfiddle.config/get-config config))

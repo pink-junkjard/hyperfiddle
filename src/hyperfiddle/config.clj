@@ -30,10 +30,10 @@
     :req-un [::scheme
              ::host
              ::port
-             ::public-service-http-port
-             ::public-service-http-scheme
              ::domain]
-    :opt-un [::auth0]
+    :opt-un [::auth0
+             ::public-service-http-port
+             ::public-service-http-scheme]
     :req [:git/describe]))
 
 (defn get-config [config & [more-config]]
