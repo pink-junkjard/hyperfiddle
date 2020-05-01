@@ -329,7 +329,8 @@
     (map (fn [ve] [:li ve]) (map second values))))
 
 (defn invalid-message-popup [{:keys [::hf/invalid-messages]} content]
-  (if (seq @invalid-messages)
+  (if (some-> invalid-messages deref seq)
+    ; Fix css todo
     [tooltip-thick [validation-error {} @invalid-messages] content]
     content))
 
