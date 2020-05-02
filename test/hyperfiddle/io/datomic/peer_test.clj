@@ -24,25 +24,25 @@
 (deftest limit-1
   (def conn (hyperfiddle.domain/connect domain "$"))
   (def $ (-> (hyperfiddle.io.datomic.core/db conn)
-           (with [{:db/ident :scratch/email :db/valueType :db.type/string :db/cardinality :db.cardinality/one}
-                  {:db/ident :scratch/gender :db/valueType :db.type/ref :db/cardinality :db.cardinality/one}
-                  {:db/ident :scratch/shirt-size :db/valueType :db.type/ref :db/cardinality :db.cardinality/one}
-                  {:db/ident :scratch/type :db/valueType :db.type/keyword :db/cardinality :db.cardinality/one}])
-           (with [{:scratch/type :scratch/gender :db/ident :scratch/male}
-                  {:scratch/type :scratch/gender :db/ident :scratch/female}])
-           (with [{:scratch/type :scratch/shirt-size :db/ident :scratch/mens-small :scratch/gender :scratch/male}
-                  {:scratch/type :scratch/shirt-size :db/ident :scratch/mens-medium :scratch/gender :scratch/male}
-                  {:scratch/type :scratch/shirt-size :db/ident :scratch/mens-large :scratch/gender :scratch/male}
-                  {:scratch/type :scratch/shirt-size :db/ident :scratch/womens-small :scratch/gender :scratch/female}
-                  {:scratch/type :scratch/shirt-size :db/ident :scratch/womens-medium :scratch/gender :scratch/female}
-                  {:scratch/type :scratch/shirt-size :db/ident :scratch/womens-large :scratch/gender :scratch/female}])
-           (with [{:scratch/email "alice@example.com" :scratch/gender :scratch/female :scratch/shirt-size :scratch/womens-large}
-                  {:scratch/email "bob@example.com" :scratch/gender :scratch/male :scratch/shirt-size :scratch/mens-large}
-                  {:scratch/email "charlie@example.com" :scratch/gender :scratch/male :scratch/shirt-size :scratch/mens-medium}])))
+           (with [{:db/ident :dustingetz/email :db/valueType :db.type/string :db/cardinality :db.cardinality/one}
+                  {:db/ident :dustingetz/gender :db/valueType :db.type/ref :db/cardinality :db.cardinality/one}
+                  {:db/ident :dustingetz/shirt-size :db/valueType :db.type/ref :db/cardinality :db.cardinality/one}
+                  {:db/ident :dustingetz/type :db/valueType :db.type/keyword :db/cardinality :db.cardinality/one}])
+           (with [{:dustingetz/type :dustingetz/gender :db/ident :dustingetz/male}
+                  {:dustingetz/type :dustingetz/gender :db/ident :dustingetz/female}])
+           (with [{:dustingetz/type :dustingetz/shirt-size :db/ident :dustingetz/mens-small :dustingetz/gender :dustingetz/male}
+                  {:dustingetz/type :dustingetz/shirt-size :db/ident :dustingetz/mens-medium :dustingetz/gender :dustingetz/male}
+                  {:dustingetz/type :dustingetz/shirt-size :db/ident :dustingetz/mens-large :dustingetz/gender :dustingetz/male}
+                  {:dustingetz/type :dustingetz/shirt-size :db/ident :dustingetz/womens-small :dustingetz/gender :dustingetz/female}
+                  {:dustingetz/type :dustingetz/shirt-size :db/ident :dustingetz/womens-medium :dustingetz/gender :dustingetz/female}
+                  {:dustingetz/type :dustingetz/shirt-size :db/ident :dustingetz/womens-large :dustingetz/gender :dustingetz/female}])
+           (with [{:dustingetz/email "alice@example.com" :dustingetz/gender :dustingetz/female :dustingetz/shirt-size :dustingetz/womens-large}
+                  {:dustingetz/email "bob@example.com" :dustingetz/gender :dustingetz/male :dustingetz/shirt-size :dustingetz/mens-large}
+                  {:dustingetz/email "charlie@example.com" :dustingetz/gender :dustingetz/male :dustingetz/shirt-size :dustingetz/mens-medium}])))
   (def q (hyperfiddle.io.datomic.core/qf2 (hyperfiddle.domain/database domain "$")))
 
   (is (= [17592186045428 17592186045429 17592186045430]
-        (q {:query '[:find [?e ...] :where [?e :scratch/email]] :args [$] :limit 50})
-        (q {:query '[:find [?e ...] :where [?e :scratch/email]] :args [$] :limit -1})
-        (q {:query '[:find [?e ...] :where [?e :scratch/email]] :args [$]})))
+        (q {:query '[:find [?e ...] :where [?e :dustingetz/email]] :args [$] :limit 50})
+        (q {:query '[:find [?e ...] :where [?e :dustingetz/email]] :args [$] :limit -1})
+        (q {:query '[:find [?e ...] :where [?e :dustingetz/email]] :args [$]})))
   )

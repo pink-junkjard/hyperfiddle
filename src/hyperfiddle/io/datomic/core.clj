@@ -6,7 +6,7 @@
     (java.io FileNotFoundException)))
 
 
-(defprotocol ConnectionFacade
+(defprotocol ConnectionFacade                               ; move to hyperfiddle.api
   :extend-via-metadata true
   (basis [conn])
   (db [conn])
